@@ -1,6 +1,7 @@
 /// lib/screens/graphing_screen.dart:
 
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../engine/calculator_engine.dart';
 
 /// A screen for plotting and interacting with 2D function graphs.
@@ -12,7 +13,7 @@ class GraphingScreen extends StatefulWidget {
 }
 
 class _GraphingScreenState extends State<GraphingScreen> {
-  List<String> _functions = ['x^2 - 2', 'sin(x)'];
+  List<String> _functions = ['x^2', 'sin(x)'];
   double _scale = 1.0;
   Offset _offset = Offset.zero;
   Offset? _panStart;
@@ -37,6 +38,12 @@ class _GraphingScreenState extends State<GraphingScreen> {
     });
   }
 
+  void _removeFunction(int index) {
+    setState(() {
+      _functions.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,7 +63,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
               onScaleUpdate: (details) {
                 setState(() {
                   _offset = details.localFocalPoint - _panStart!;
-                  // A clamp to prevent zooming too far in or out.
+                  // Clamp scale to prevent zooming too far in or out
                   _scale = details.scale.clamp(0.2, 5.0);
                 });
               },
@@ -67,7 +74,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
                   offset: _offset,
                   engine: _engine,
                 ),
-                child: Container(),
+                size: Size.infinite,
               ),
             ),
           ),
@@ -84,9 +91,11 @@ class _GraphingScreenState extends State<GraphingScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Enter a function of x',
                           border: OutlineInputBorder(),
+                          hintText: 'e.g., x^2, sin(x), x^3-2*x',
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.add_chart),
                       onPressed: _addFunction,
@@ -94,13 +103,37 @@ class _GraphingScreenState extends State<GraphingScreen> {
                     ),
                   ],
                 ),
-                // TODO: Add a list of current functions with options to hide or delete.
+                const SizedBox(height: 8),
+                // List of current functions
+                SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _functions.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: Chip(
+                          label: Text(_functions[index]),
+                          backgroundColor: _getColorForFunction(index).withOpacity(0.3),
+                          onDeleted: () => _removeFunction(index),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getColorForFunction(int index) {
+    final colors = [Colors.cyan, Colors.yellow, Colors.pinkAccent, Colors.green];
+    return colors[index % colors.length];
   }
 }
 
@@ -133,48 +166,107 @@ class GraphPainter extends CustomPainter {
     final centerX = size.width / 2 + offset.dx;
     final centerY = size.height / 2 + offset.dy;
 
-    // A factor to scale the math coordinates.
-    final double unit = size.width / (10 * scale);
+    // Scale factor for mathematical coordinates
+    final double unit = (size.width / 20) * scale; // Show about ±10 units by default
 
     // Draw grid lines
-    for (int i = 1; i < 10; i++) {
-       canvas.drawLine(Offset(centerX + i * unit, 0), Offset(centerX + i * unit, size.height), gridPaint);
-       canvas.drawLine(Offset(centerX - i * unit, 0), Offset(centerX - i * unit, size.height), gridPaint);
-       canvas.drawLine(Offset(0, centerY + i * unit), Offset(size.width, centerY + i * unit), gridPaint);
-       canvas.drawLine(Offset(0, centerY - i * unit), Offset(size.width, centerY - i * unit), gridPaint);
+    final int gridSpacing = 1;
+    for (int i = -20; i <= 20; i++) {
+      if (i != 0) {
+        // Vertical grid lines
+        final x = centerX + i * unit;
+        if (x >= 0 && x <= size.width) {
+          canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+        }
+        
+        // Horizontal grid lines
+        final y = centerY + i * unit;
+        if (y >= 0 && y <= size.height) {
+          canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+        }
+      }
     }
 
     // Draw main axes
     canvas.drawLine(Offset(0, centerY), Offset(size.width, centerY), axisPaint);
     canvas.drawLine(Offset(centerX, 0), Offset(centerX, size.height), axisPaint);
 
+    // Draw axis labels
+    _drawAxisLabels(canvas, size, centerX, centerY, unit);
+
     // Plot each function
-    for (final func in functions) {
+    for (int funcIndex = 0; funcIndex < functions.length; funcIndex++) {
+      final func = functions[funcIndex];
+      paint.color = _getColorForFunction(funcIndex);
+      
       final path = Path();
-      paint.color = _getColorForFunction(functions.indexOf(func));
       bool hasMoved = false;
 
-      for (double pixelX = 0; pixelX < size.width; pixelX++) {
+      // Sample points for plotting
+      for (double pixelX = 0; pixelX <= size.width; pixelX += 2) {
         double mathX = (pixelX - centerX) / unit;
         
         try {
+          // Replace x with actual value and evaluate
           String expressionWithX = func.replaceAll('x', '($mathX)');
           double mathY = double.parse(engine.evaluate(expressionWithX));
+          
+          // Convert back to screen coordinates
           double pixelY = centerY - mathY * unit;
 
-          if (!hasMoved) {
-            path.moveTo(pixelX, pixelY);
-            hasMoved = true;
-          } else if (pixelY.isFinite && pixelY > -size.height && pixelY < size.height * 2) {
-             path.lineTo(pixelX, pixelY);
+          // Only draw if within reasonable bounds
+          if (mathY.isFinite && pixelY > -size.height && pixelY < size.height * 2) {
+            if (!hasMoved) {
+              path.moveTo(pixelX, pixelY);
+              hasMoved = true;
+            } else {
+              path.lineTo(pixelX, pixelY);
+            }
           } else {
-             hasMoved = false;
+            hasMoved = false; // Break the line for discontinuities
           }
         } catch (e) {
-          hasMoved = false;
+          hasMoved = false; // Break the line on evaluation errors
         }
       }
+      
       canvas.drawPath(path, paint);
+    }
+  }
+
+  void _drawAxisLabels(Canvas canvas, Size size, double centerX, double centerY, double unit) {
+    final textPaint = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+    
+    // Draw x-axis labels
+    for (int i = -10; i <= 10; i++) {
+      if (i == 0) continue; // Skip origin
+      
+      final x = centerX + i * unit;
+      if (x >= 20 && x <= size.width - 20) {
+        textPaint.text = TextSpan(
+          text: i.toString(),
+          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+        );
+        textPaint.layout();
+        textPaint.paint(canvas, Offset(x - textPaint.width / 2, centerY + 5));
+      }
+    }
+    
+    // Draw y-axis labels  
+    for (int i = -10; i <= 10; i++) {
+      if (i == 0) continue; // Skip origin
+      
+      final y = centerY - i * unit;
+      if (y >= 20 && y <= size.height - 20) {
+        textPaint.text = TextSpan(
+          text: i.toString(),
+          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+        );
+        textPaint.layout();
+        textPaint.paint(canvas, Offset(centerX + 5, y - textPaint.height / 2));
+      }
     }
   }
 
@@ -186,7 +278,7 @@ class GraphPainter extends CustomPainter {
   }
 
   Color _getColorForFunction(int index) {
-    final colors = [Colors.cyan, Colors.yellow[600]!, Colors.pinkAccent];
+    final colors = [Colors.cyan, Colors.yellow, Colors.pinkAccent, Colors.green];
     return colors[index % colors.length];
   }
 }

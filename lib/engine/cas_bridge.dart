@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 // --- C function signatures ---
-// Note: Pointer<Utf8> is used for C-style strings (char*).
 typedef _EvaluateC = Pointer<Utf8> Function(Pointer<Utf8> expression);
 typedef _SolveC = Pointer<Utf8> Function(Pointer<Utf8> expression, Pointer<Utf8> symbol);
 typedef _FreeStringC = Void Function(Pointer<Utf8> str);
@@ -39,15 +38,31 @@ class CASBridge {
 
   /// Helper to find the correct library file based on the operating system.
   String _getLibraryPath() {
-    if (Platform.isMacOS || Platform.isIOS) {
-      // NOTE: For iOS, you typically link against a framework.
-      // This might require a different path or setup.
-      return 'libcas_wrapper.dylib';
+    if (Platform.isMacOS) {
+      // For macOS app bundles, try the bundle path first
+      try {
+        // Try app bundle paths
+        final bundlePaths = [
+          'libcas_wrapper.dylib', // Relative to app
+          './libcas_wrapper.dylib',
+        ];
+        
+        for (final path in bundlePaths) {
+          if (File(path).existsSync()) {
+            print('Found native library at: $path');
+            return path;
+          }
+        }
+        
+        // Fallback - for now, just throw the exception to use fallback
+        throw Exception('Library not found in app bundle');
+      } catch (e) {
+        print('Native library search failed: $e');
+        rethrow;
+      }
     }
-    if (Platform.isWindows) {
-      return 'cas_wrapper.dll';
-    }
-    // Default for Android and Linux.
-    return 'libcas_wrapper.so';
+    
+    // Default fallback for other platforms
+    throw Exception('Platform not supported for native library');
   }
 }

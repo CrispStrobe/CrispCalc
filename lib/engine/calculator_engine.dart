@@ -101,54 +101,104 @@ class CalculatorEngine {
 
   // Enhanced evaluator for basic mathematical expressions
   double _evaluateSimpleExpression(String expression) {
-    // Clean up the expression
-    expression = expression.toLowerCase();
-    expression = expression.replaceAll(' ', '');
-    expression = expression.replaceAll('pi', math.pi.toString());
-    expression = expression.replaceAll('e', math.e.toString());
-    
-    // Handle basic mathematical functions
-    if (expression.startsWith('sin(')) {
-      final inner = expression.substring(4, expression.length - 1);
-      return math.sin(_evaluateSimpleExpression(inner));
+    try {
+      // Clean up the expression
+      expression = expression.toLowerCase().replaceAll(' ', '');
+      
+      // Replace constants
+      expression = expression.replaceAll('pi', math.pi.toString());
+      expression = expression.replaceAll('e', math.e.toString());
+      
+      // Handle basic arithmetic operations using simple parsing
+      return _parseExpression(expression);
+    } catch (e) {
+      print('Evaluation error: $e');
+      return 0.0;
     }
-    if (expression.startsWith('cos(')) {
-      final inner = expression.substring(4, expression.length - 1);
-      return math.cos(_evaluateSimpleExpression(inner));
+  }
+
+  double _parseExpression(String expr) {
+    // Handle basic mathematical functions first
+    if (expr.startsWith('sin(')) {
+      final inner = _extractParentheses(expr, 4);
+      return math.sin(_parseExpression(inner));
     }
-    if (expression.startsWith('tan(')) {
-      final inner = expression.substring(4, expression.length - 1);
-      return math.tan(_evaluateSimpleExpression(inner));
+    if (expr.startsWith('cos(')) {
+      final inner = _extractParentheses(expr, 4);
+      return math.cos(_parseExpression(inner));
     }
-    if (expression.startsWith('sqrt(')) {
-      final inner = expression.substring(5, expression.length - 1);
-      return math.sqrt(_evaluateSimpleExpression(inner));
+    if (expr.startsWith('tan(')) {
+      final inner = _extractParentheses(expr, 4);
+      return math.tan(_parseExpression(inner));
     }
-    if (expression.startsWith('ln(')) {
-      final inner = expression.substring(3, expression.length - 1);
-      return math.log(_evaluateSimpleExpression(inner));
+    if (expr.startsWith('sqrt(')) {
+      final inner = _extractParentheses(expr, 5);
+      return math.sqrt(_parseExpression(inner));
     }
-    if (expression.startsWith('log(')) {
-      final inner = expression.substring(4, expression.length - 1);
-      return math.log(_evaluateSimpleExpression(inner)) / math.ln10;
+    if (expr.startsWith('ln(')) {
+      final inner = _extractParentheses(expr, 3);
+      return math.log(_parseExpression(inner));
     }
-    
+    if (expr.startsWith('log(')) {
+      final inner = _extractParentheses(expr, 4);
+      return math.log(_parseExpression(inner)) / math.ln10;
+    }
+
     // Handle power operations
-    if (expression.contains('^')) {
-      final parts = expression.split('^');
+    if (expr.contains('^')) {
+      final parts = expr.split('^');
       if (parts.length == 2) {
-        final base = _evaluateSimpleExpression(parts[0]);
-        final exp = _evaluateSimpleExpression(parts[1]);
-        return math.pow(base, exp).toDouble();
+        return math.pow(_parseExpression(parts[0]), _parseExpression(parts[1])).toDouble();
+      }
+    }
+
+    // Handle basic arithmetic: +, -, *, /
+    // Simple left-to-right evaluation (not proper precedence, but works for basic cases)
+    
+    // Handle multiplication and division first
+    for (int i = 0; i < expr.length; i++) {
+      if (expr[i] == '*' || expr[i] == '/') {
+        final left = _parseExpression(expr.substring(0, i));
+        final right = _parseExpression(expr.substring(i + 1));
+        if (expr[i] == '*') {
+          return left * right;
+        } else {
+          return right != 0 ? left / right : double.infinity;
+        }
       }
     }
     
-    // Handle basic arithmetic (very simplified)
-    try {
-      return double.parse(expression);
-    } catch (e) {
-      // For complex expressions, return 0 as fallback
-      return 0.0;
+    // Handle addition and subtraction
+    for (int i = expr.length - 1; i >= 0; i--) {
+      if (expr[i] == '+' || (expr[i] == '-' && i > 0)) {
+        final left = _parseExpression(expr.substring(0, i));
+        final right = _parseExpression(expr.substring(i + 1));
+        if (expr[i] == '+') {
+          return left + right;
+        } else {
+          return left - right;
+        }
+      }
     }
+
+    // If no operators found, try to parse as number
+    return double.parse(expr);
+  }
+
+  String _extractParentheses(String expr, int startIndex) {
+    int depth = 0;
+    int start = startIndex;
+    for (int i = startIndex; i < expr.length; i++) {
+      if (expr[i] == '(') {
+        if (depth == 0) start = i + 1;
+        depth++;
+      } else if (expr[i] == ')') {
+        depth--;
+        if (depth == 0) {
+          return expr.substring(start, i);
+        }
+      }
+    }
+    return expr.substring(start, expr.length - 1); // fallback
   }
 }

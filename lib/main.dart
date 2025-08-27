@@ -1,6 +1,7 @@
 /// lib/main.dart:
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'screens/calculator_screen.dart';
 import 'screens/graphing_screen.dart';
@@ -10,7 +11,6 @@ void main() {
 }
 
 /// The root widget of the CrispCalc application.
-/// It sets up the MaterialApp, defines the theme, and specifies the home screen.
 class CrispCalcApp extends StatelessWidget {
   const CrispCalcApp({super.key});
 
@@ -36,8 +36,7 @@ class CrispCalcApp extends StatelessWidget {
   }
 }
 
-/// The main screen widget that contains the BottomNavigationBar for top-level navigation.
-/// It manages the state for the currently selected screen.
+/// The main screen widget with keyboard support and proper desktop sizing.
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -47,14 +46,34 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  late final List<Widget> _screens;
+  final FocusNode _focusNode = FocusNode();
 
-  // List of the main screens in the app.
-  static const List<Widget> _screens = <Widget>[
-    CalculatorScreen(),
-    GraphingScreen(),
-    PlaceholderScreen(title: 'Functions Library'),
-    PlaceholderScreen(title: 'Settings'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = <Widget>[
+      CalculatorScreen(onKeyEvent: _handleKeyEvent),
+      const GraphingScreen(),
+      const PlaceholderScreen(title: 'Functions Library'),
+      const PlaceholderScreen(title: 'Settings'),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && _selectedIndex == 0) {
+      // Forward keyboard events to calculator
+      final calculatorScreen = _screens[0] as CalculatorScreen;
+      return calculatorScreen.handleKeyboardInput(event);
+    }
+    return false;
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -65,10 +84,20 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack preserves the state of each screen when switching tabs.
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: Container(
+          constraints: const BoxConstraints(
+            minWidth: 400,
+            minHeight: 600,
+          ),
+          child: IndexedStack(
+            index: _selectedIndex,
+            children: _screens,
+          ),
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -115,12 +144,15 @@ class PlaceholderScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.construction, size: 60, color: Colors.grey),
-            const SizedBox(height: 16),
+            const Icon(Icons.construction, size: 80, color: Colors.grey),
+            const SizedBox(height: 24),
             Text(
               '$title\n(Coming Soon!)',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.grey,
+                fontSize: 24,
+              ),
             ),
           ],
         ),
