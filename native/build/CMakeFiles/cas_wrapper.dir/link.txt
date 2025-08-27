@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -dynamiclib -Wl,-headerpad_max_install_names -o libcas_wrapper.dylib -install_name @rpath/libcas_wrapper.dylib CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o  /opt/homebrew/lib/libsymengine.dylib /opt/homebrew/lib/libgmp.dylib

@@ -1,0 +1,30 @@
+name: crisp_calc
+description: A powerful CAS calculator built with Flutter and SymEngine
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # FFI for native interop
+  ffi: ^2.1.0
+  
+  # Math rendering
+  flutter_math_fork: ^0.7.2
+  
+  # Material Design Icons
+  material_design_icons_flutter: ^7.0.7296
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
