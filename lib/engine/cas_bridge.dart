@@ -21,48 +21,166 @@ class CASBridge {
   late final _FreeStringDart free_string;
 
   CASBridge() {
-    final dylib = DynamicLibrary.open(_getLibraryPath());
+    final libraryPath = _getLibraryPath();
+    print('Loading native library from: $libraryPath');
+    
+    try {
+      final dylib = DynamicLibrary.open(libraryPath);
 
-    evaluate = dylib
-        .lookup<NativeFunction<_EvaluateC>>('evaluate')
-        .asFunction<_EvaluateDart>();
+      evaluate = dylib
+          .lookup<NativeFunction<_EvaluateC>>('evaluate')
+          .asFunction<_EvaluateDart>();
 
-    solve = dylib
-        .lookup<NativeFunction<_SolveC>>('solve')
-        .asFunction<_SolveDart>();
+      solve = dylib
+          .lookup<NativeFunction<_SolveC>>('solve')
+          .asFunction<_SolveDart>();
 
-    free_string = dylib
-        .lookup<NativeFunction<_FreeStringC>>('free_string')
-        .asFunction<_FreeStringDart>();
+      free_string = dylib
+          .lookup<NativeFunction<_FreeStringC>>('free_string')
+          .asFunction<_FreeStringDart>();
+          
+      print('Native library loaded successfully');
+    } catch (e) {
+      throw Exception('Failed to load native library: $e');
+    }
   }
 
-  /// Helper to find the correct library file based on the operating system.
+  /// Comprehensive library path resolution for all deployment scenarios
   String _getLibraryPath() {
+    final libName = _getLibraryName();
+    print('Searching for native library: $libName');
+    
     if (Platform.isMacOS) {
-      // For macOS app bundles, try the bundle path first
+      return _findMacOSLibrary(libName);
+    } else if (Platform.isLinux) {
+      return _findLinuxLibrary(libName);
+    } else if (Platform.isWindows) {
+      return _findWindowsLibrary(libName);
+    }
+    
+    throw Exception('Unsupported platform: ${Platform.operatingSystem}');
+  }
+
+  String _getLibraryName() {
+    if (Platform.isMacOS) return 'libcas_wrapper.dylib';
+    if (Platform.isLinux) return 'libcas_wrapper.so';
+    if (Platform.isWindows) return 'cas_wrapper.dll';
+    throw Exception('Unsupported platform');
+  }
+
+  String _findMacOSLibrary(String libName) {
+    final searchPaths = <String>[];
+    
+    // Get the executable path for bundle-relative searches
+    final executablePath = Platform.resolvedExecutable;
+    final executableDir = Directory(executablePath).parent.path;
+    
+    // 1. Project root (for flutter run)
+    searchPaths.add(libName);
+    searchPaths.add('./$libName');
+    
+    // 2. Same directory as executable (for app bundle)
+    searchPaths.add('$executableDir/$libName');
+    
+    // 3. macOS app bundle structure
+    searchPaths.add('$executableDir/../Frameworks/$libName');
+    searchPaths.add('$executableDir/../Resources/$libName');
+    searchPaths.add('$executableDir/../MacOS/$libName');
+    
+    // 4. Relative to current working directory
+    final workingDir = Directory.current.path;
+    searchPaths.add('$workingDir/$libName');
+    searchPaths.add('$workingDir/native/build/$libName');
+    searchPaths.add('$workingDir/build/native/$libName');
+    
+    // 5. System library paths
+    searchPaths.add('/usr/local/lib/$libName');
+    searchPaths.add('/opt/homebrew/lib/$libName');
+    
+    return _findFirstExistingPath(searchPaths, libName);
+  }
+
+  String _findLinuxLibrary(String libName) {
+    final searchPaths = <String>[
+      libName,
+      './$libName',
+      './native/build/$libName',
+      './build/native/$libName',
+      '/usr/local/lib/$libName',
+      '/usr/lib/$libName',
+      '/lib/$libName',
+    ];
+    
+    return _findFirstExistingPath(searchPaths, libName);
+  }
+
+  String _findWindowsLibrary(String libName) {
+    final searchPaths = <String>[
+      libName,
+      '.\\$libName',
+      '.\\native\\build\\$libName',
+      '.\\build\\native\\$libName',
+    ];
+    
+    return _findFirstExistingPath(searchPaths, libName);
+  }
+
+  String _findFirstExistingPath(List<String> searchPaths, String libName) {
+    final checkedPaths = <String>[];
+    
+    for (final path in searchPaths) {
       try {
-        // Try app bundle paths
-        final bundlePaths = [
-          'libcas_wrapper.dylib', // Relative to app
-          './libcas_wrapper.dylib',
-        ];
+        final normalizedPath = _normalizePath(path);
+        checkedPaths.add(normalizedPath);
         
-        for (final path in bundlePaths) {
-          if (File(path).existsSync()) {
-            print('Found native library at: $path');
-            return path;
+        final file = File(normalizedPath);
+        if (file.existsSync()) {
+          final absolutePath = file.absolute.path;
+          print('Found native library at: $absolutePath');
+          
+          // Verify the file is readable and not empty
+          final stat = file.statSync();
+          if (stat.size > 0) {
+            return absolutePath;
+          } else {
+            print('Warning: Library file is empty: $absolutePath');
           }
         }
-        
-        // Fallback - for now, just throw the exception to use fallback
-        throw Exception('Library not found in app bundle');
       } catch (e) {
-        print('Native library search failed: $e');
-        rethrow;
+        // Continue searching if this path fails
+        print('Error checking path $path: $e');
+        continue;
       }
     }
     
-    // Default fallback for other platforms
-    throw Exception('Platform not supported for native library');
+    // Enhanced error message with all checked paths
+    final errorMessage = '''
+Native library ($libName) not found in any of the following locations:
+${checkedPaths.map((p) => '  • $p').join('\n')}
+
+To fix this issue:
+1. Build the native library: cd native && mkdir -p build && cd build && cmake .. && make
+2. Copy to project root: cp libcas_wrapper.dylib ../../
+3. Or run the bundle script: ./bundle_native_lib.sh
+
+Current working directory: ${Directory.current.path}
+Executable path: ${Platform.resolvedExecutable}
+''';
+    
+    throw Exception(errorMessage);
+  }
+
+  String _normalizePath(String path) {
+    // Convert relative paths to absolute and handle path separators
+    if (path.startsWith('./') || path.startsWith('.\\')) {
+      return '${Directory.current.path}${Platform.pathSeparator}${path.substring(2)}';
+    }
+    
+    if (!path.startsWith('/') && !path.contains(':')) {
+      // Relative path
+      return '${Directory.current.path}${Platform.pathSeparator}$path';
+    }
+    
+    return path;
   }
 }
