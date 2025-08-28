@@ -3,7 +3,6 @@
 #include <sstream>
 #include <cstring>
 
-// Use SymEngine C++ API instead of C API
 #include <symengine/basic.h>
 #include <symengine/symbol.h>
 #include <symengine/parser.h>
@@ -13,18 +12,18 @@
 
 using namespace SymEngine;
 
-extern "C" {
+// Helper to create a C-string for Dart.
+char* string_to_char_ptr(const std::string& s) {
+    return strdup(s.c_str());
+}
 
+extern "C" {
     __attribute__((visibility("default"))) __attribute__((used))
     char* evaluate(const char* input_expr) {
         try {
-            // Parse the expression using C++ API
             RCP<const Basic> expr = parse(std::string(input_expr));
-            
-            // Convert to double value if possible
             double result = eval_double(*expr);
             
-            // Convert result to string
             std::ostringstream oss;
             oss << result;
             std::string result_str = oss.str();
@@ -36,54 +35,44 @@ extern "C" {
                     result_str.pop_back();
                 }
             }
-            
-            return strdup(result_str.c_str());
+            return string_to_char_ptr(result_str);
         } catch (const std::exception& e) {
-            return strdup("Error");
+            return string_to_char_ptr("Error");
         }
     }
 
     __attribute__((visibility("default"))) __attribute__((used))
     char* solve(const char* input_expr, const char* symbol_name) {
         try {
-            // Parse the expression
             RCP<const Basic> expr = parse(std::string(input_expr));
-            
-            // Create the symbol
             RCP<const Symbol> sym = symbol(std::string(symbol_name));
-            
-            // Try to solve - this returns RCP<const Set>
             RCP<const Set> solution_set = solve_poly(expr, sym);
             
-            // Check if it's a FiniteSet and extract elements
             if (is_a<FiniteSet>(*solution_set)) {
-                auto finite_set = rcp_static_cast<const FiniteSet>(solution_set);
-                auto container = finite_set->get_container();
-                
+                auto container = rcp_static_cast<const FiniteSet>(solution_set)->get_container();
                 if (container.empty()) {
-                    return strdup("No solutions found");
+                    return string_to_char_ptr("No solutions found");
                 }
                 
-                // Format solutions as string
                 std::ostringstream oss;
                 bool first = true;
                 for (const auto& sol : container) {
                     if (!first) {
                         oss << ", ";
                     }
-                    oss << *sol;
+                    // --- FIX: Use the simple eval_double() to get a clean number ---
+                    double numeric_solution = eval_double(*sol);
+                    oss << numeric_solution;
                     first = false;
                 }
-                
-                return strdup(oss.str().c_str());
+                return string_to_char_ptr(oss.str());
             } else {
-                // For other types of sets, just convert to string
                 std::ostringstream oss;
                 oss << *solution_set;
-                return strdup(oss.str().c_str());
+                return string_to_char_ptr(oss.str());
             }
         } catch (const std::exception& e) {
-            return strdup("Solve error");
+            return string_to_char_ptr("Solve error");
         }
     }
     

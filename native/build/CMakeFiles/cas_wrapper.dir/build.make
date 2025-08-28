@@ -96,10 +96,10 @@ cas_wrapper_EXTERNAL_OBJECTS =
 libcas_wrapper.dylib: CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o
 libcas_wrapper.dylib: CMakeFiles/cas_wrapper.dir/build.make
 libcas_wrapper.dylib: /usr/local/lib/libsymengine.a
+libcas_wrapper.dylib: /opt/homebrew/lib/libflint.dylib
 libcas_wrapper.dylib: /opt/homebrew/lib/libmpc.a
 libcas_wrapper.dylib: /opt/homebrew/lib/libmpfr.a
 libcas_wrapper.dylib: /opt/homebrew/lib/libgmp.a
-libcas_wrapper.dylib: /opt/homebrew/lib/libflint.dylib
 libcas_wrapper.dylib: CMakeFiles/cas_wrapper.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/christianstrobele/code/CrispCalc/native/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared library libcas_wrapper.dylib"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/cas_wrapper.dir/link.txt --verbose=$(VERBOSE)

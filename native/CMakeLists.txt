@@ -34,11 +34,11 @@ target_include_directories(cas_wrapper PRIVATE ${SYMENGINE_INCLUDE_DIR} ${GMP_IN
 
 # Link all libraries
 target_link_libraries(cas_wrapper PRIVATE
-    ${SYMENGINE_STATIC_LIB}
-    ${MPC_STATIC_LIB}
-    ${MPFR_STATIC_LIB}
-    ${GMP_STATIC_LIB}
-    ${FLINT_DYLIB}  # Link the dynamic flint library
+    ${SYMENGINE_STATIC_LIB}  # Highest-level library first
+    ${FLINT_DYLIB}           # A dependency of SymEngine
+    ${MPC_STATIC_LIB}        # A dependency of SymEngine
+    ${MPFR_STATIC_LIB}       # A dependency of MPC
+    ${GMP_STATIC_LIB}        # A dependency of MPFR
 )
 
 # --- Target Properties ---
