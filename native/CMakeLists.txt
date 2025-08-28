@@ -10,35 +10,35 @@ if(NOT EXISTS ${HOMEBREW_PREFIX})
     set(HOMEBREW_PREFIX "/usr/local")
 endif()
 
-# Find include directories
 find_path(SYMENGINE_INCLUDE_DIR NAMES symengine/cwrapper.h PATHS ${HOMEBREW_PREFIX}/include REQUIRED)
 find_path(GMP_INCLUDE_DIR NAMES gmp.h PATHS ${HOMEBREW_PREFIX}/include REQUIRED)
 
-# --- Find a mix of STATIC and DYNAMIC libraries ---
-# We will link these statically as they are available as .a files
-find_library(SYMENGINE_STATIC_LIB NAMES libsymengine.a PATHS ${HOMEBREW_PREFIX}/lib REQUIRED)
-find_library(GMP_STATIC_LIB NAMES libgmp.a PATHS ${HOMEBREW_PREFIX}/lib REQUIRED)
-find_library(MPFR_STATIC_LIB NAMES libmpfr.a PATHS ${HOMEBREW_PREFIX}/lib REQUIRED)
-find_library(MPC_STATIC_LIB NAMES libmpc.a PATHS ${HOMEBREW_PREFIX}/lib REQUIRED)
+# FIX: Change from finding a static library (.a) to the dynamic library (.dylib)
+# that Homebrew provides. This is the root cause of the linker errors.
+find_library(SYMENGINE_LIB NAMES libsymengine.dylib PATHS ${HOMEBREW_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
 
-# FLINT is only available as a dynamic library, so we find that instead.
-find_library(FLINT_DYLIB NAMES libflint.dylib PATHS ${HOMEBREW_PREFIX}/lib REQUIRED)
+# We still link the other dependencies statically where possible
+find_library(GMP_STATIC_LIB NAMES libgmp.a PATHS ${HOMEBREW_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(MPFR_STATIC_LIB NAMES libmpfr.a PATHS ${HOMEBREW_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(MPC_STATIC_LIB NAMES libmpc.a PATHS ${HOMEBREW_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(FLINT_DYLIB NAMES libflint.dylib PATHS ${HOMEBREW_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
 
-message(STATUS "✅ Using static SymEngine: ${SYMENGINE_STATIC_LIB}")
+message(STATUS "✅ Using SymEngine Library: ${SYMENGINE_LIB}")
 message(STATUS "✅ Using dynamic FLINT: ${FLINT_DYLIB}")
 
 # --- Build the Shared Library ---
 add_library(cas_wrapper SHARED cas_wrapper.cpp)
 
+target_compile_definitions(cas_wrapper PUBLIC HAVE_SYMENGINE_FLINT)
 target_include_directories(cas_wrapper PRIVATE ${SYMENGINE_INCLUDE_DIR} ${GMP_INCLUDE_DIR})
 
-# Link all libraries
+# Link all libraries, now using the correct SymEngine library
 target_link_libraries(cas_wrapper PRIVATE
-    ${SYMENGINE_STATIC_LIB}  # Highest-level library first
-    ${FLINT_DYLIB}           # A dependency of SymEngine
-    ${MPC_STATIC_LIB}        # A dependency of SymEngine
-    ${MPFR_STATIC_LIB}       # A dependency of MPC
-    ${GMP_STATIC_LIB}        # A dependency of MPFR
+    ${SYMENGINE_LIB}         # Use the dynamic library we found
+    ${FLINT_DYLIB}
+    ${MPC_STATIC_LIB}
+    ${MPFR_STATIC_LIB}
+    ${GMP_STATIC_LIB}
 )
 
 # --- Target Properties ---
@@ -47,7 +47,6 @@ if(APPLE)
     set_target_properties(cas_wrapper PROPERTIES INSTALL_NAME_DIR "@rpath")
 endif()
 
-# Post-build check
 add_custom_command(TARGET cas_wrapper POST_BUILD
     COMMAND otool -L $<TARGET_FILE:cas_wrapper>
     COMMENT "✅ Verifying library dependencies..."

@@ -1024,4 +1024,32 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: \
   /opt/homebrew/include/symengine/monomials.h \
   /opt/homebrew/include/symengine/polys/usymenginepoly.h \
   /opt/homebrew/include/symengine/polys/uintpoly.h \
-  /opt/homebrew/include/symengine/polys/uratpoly.h
+  /opt/homebrew/include/symengine/polys/uratpoly.h \
+  /opt/homebrew/include/symengine/visitor.h \
+  /opt/homebrew/include/symengine/polys/msymenginepoly.h \
+  /opt/homebrew/include/symengine/complex_mpc.h \
+  /opt/homebrew/include/symengine/real_mpfr.h \
+  /opt/homebrew/include/mpfr.h /opt/homebrew/include/mpc.h \
+  /opt/homebrew/include/symengine/series_generic.h \
+  /opt/homebrew/include/symengine/series.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/list \
+  /opt/homebrew/include/symengine/series_piranha.h \
+  /opt/homebrew/include/symengine/series_flint.h \
+  /opt/homebrew/include/symengine/fields.h \
+  /opt/homebrew/include/symengine/ntheory_funcs.h \
+  /opt/homebrew/include/symengine/tuple.h \
+  /opt/homebrew/include/symengine/matrix_expressions.h \
+  /opt/homebrew/include/symengine/matrices/matrix_expr.h \
+  /opt/homebrew/include/symengine/matrices/size.h \
+  /opt/homebrew/include/symengine/matrices/identity_matrix.h \
+  /opt/homebrew/include/symengine/matrices/zero_matrix.h \
+  /opt/homebrew/include/symengine/matrices/matrix_symbol.h \
+  /opt/homebrew/include/symengine/matrices/diagonal_matrix.h \
+  /opt/homebrew/include/symengine/matrices/immutable_dense_matrix.h \
+  /opt/homebrew/include/symengine/matrices/matrix_add.h \
+  /opt/homebrew/include/symengine/matrices/hadamard_product.h \
+  /opt/homebrew/include/symengine/matrices/matrix_mul.h \
+  /opt/homebrew/include/symengine/matrices/trace.h \
+  /opt/homebrew/include/symengine/matrices/conjugate_matrix.h \
+  /opt/homebrew/include/symengine/matrices/transpose.h \
+  /opt/homebrew/include/symengine/polys/basic_conversions.h

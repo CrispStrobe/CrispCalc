@@ -28,7 +28,7 @@ CMAKE_BUILD_TYPE:STRING=
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
 //CXX compiler
-CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++
+CMAKE_CXX_COMPILER:STRING=/usr/bin/c++
 
 //Flags used by the CXX compiler during all build types.
 CMAKE_CXX_FLAGS:STRING=
@@ -46,7 +46,7 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
 //C compiler
-CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc
+CMAKE_C_COMPILER:STRING=/usr/bin/cc
 
 //Flags used by the C compiler during all build types.
 CMAKE_C_FLAGS:STRING=
@@ -140,6 +140,9 @@ CMAKE_OSX_DEPLOYMENT_TARGET:STRING=
 CMAKE_OSX_SYSROOT:STRING=
 
 //Value Computed by CMake
+CMAKE_PROJECT_COMPAT_VERSION:STATIC=
+
+//Value Computed by CMake
 CMAKE_PROJECT_DESCRIPTION:STATIC=
 
 //Value Computed by CMake
@@ -147,6 +150,21 @@ CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
 CMAKE_PROJECT_NAME:STATIC=cas_wrapper
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION:STATIC=
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_MAJOR:STATIC=
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_MINOR:STATIC=
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_PATCH:STATIC=
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_TWEAK:STATIC=
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -247,6 +265,9 @@ MPFR_STATIC_LIB:FILEPATH=/opt/homebrew/lib/libmpfr.a
 SYMENGINE_INCLUDE_DIR:PATH=/opt/homebrew/include
 
 //Path to a library.
+SYMENGINE_LIB:FILEPATH=/opt/homebrew/lib/libsymengine.dylib
+
+//Path to a library.
 SYMENGINE_LIBRARY:FILEPATH=/opt/homebrew/lib/libsymengine.dylib
 
 //Path to a library.
@@ -275,7 +296,7 @@ CMAKE_CACHEFILE_DIR:INTERNAL=/Users/christianstrobele/code/CrispCalc/native/buil
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4
 //Minor version of cmake used to create the current loaded cache
-CMAKE_CACHE_MINOR_VERSION:INTERNAL=0
+CMAKE_CACHE_MINOR_VERSION:INTERNAL=1
 //Patch version of cmake used to create the current loaded cache
 CMAKE_CACHE_PATCH_VERSION:INTERNAL=0
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE

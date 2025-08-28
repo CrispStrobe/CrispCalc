@@ -1,32 +1,34 @@
-/// lib/engine/cas_bridge.dart (Refined & Simplified)
+/// lib/engine/cas_bridge.dart
 
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 
-// --- C function signatures ---
-typedef _EvaluateC = Pointer<Utf8> Function(Pointer<Utf8> expression);
+typedef _CallStringOpC = Pointer<Utf8> Function(Pointer<Utf8> expression);
 typedef _SolveC = Pointer<Utf8> Function(Pointer<Utf8> expression, Pointer<Utf8> symbol);
 typedef _FreeStringC = Void Function(Pointer<Utf8> str);
 
-// --- Dart function signatures ---
-typedef _EvaluateDart = Pointer<Utf8> Function(Pointer<Utf8> expression);
+typedef _CallStringOpDart = Pointer<Utf8> Function(Pointer<Utf8> expression);
 typedef _SolveDart = Pointer<Utf8> Function(Pointer<Utf8> expression, Pointer<Utf8> symbol);
 typedef _FreeStringDart = void Function(Pointer<Utf8> str);
 
-/// A bridge class that loads and interacts with the native C++ CAS library.
 class CASBridge {
-  late final _EvaluateDart evaluate;
+  late final _CallStringOpDart evaluate;
   late final _SolveDart solve;
   late final _FreeStringDart free_string;
+  late final _CallStringOpDart factor;
+  late final _CallStringOpDart expand;
 
   CASBridge() {
     final libraryPath = _getLibraryPath();
     final dylib = DynamicLibrary.open(libraryPath);
 
-    evaluate = dylib.lookup<NativeFunction<_EvaluateC>>('evaluate').asFunction<_EvaluateDart>();
+    // FIX: All lookups now point to the correct C++ function names.
+    evaluate = dylib.lookup<NativeFunction<_CallStringOpC>>('evaluate').asFunction<_CallStringOpDart>();
     solve = dylib.lookup<NativeFunction<_SolveC>>('solve').asFunction<_SolveDart>();
     free_string = dylib.lookup<NativeFunction<_FreeStringC>>('free_string').asFunction<_FreeStringDart>();
+    factor = dylib.lookup<NativeFunction<_CallStringOpC>>('cas_factor').asFunction<_CallStringOpDart>();
+    expand = dylib.lookup<NativeFunction<_CallStringOpC>>('cas_expand').asFunction<_CallStringOpDart>();
   }
 
   String _getLibraryPath() {

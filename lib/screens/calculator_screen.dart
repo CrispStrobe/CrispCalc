@@ -1,4 +1,4 @@
-/// lib/screens/calculator_screen.dart:
+/// lib/screens/calculator_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,19 +27,28 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   final FocusNode _inputFocusNode = FocusNode();
   String _resultPreview = '';
   bool _justCalculated = false;
+  
+  // Memory system for storing results
+  final Map<String, String> _memory = {}; // M1, M2, ... M9
+  int _memoryCounter = 1;
 
   @override
   void initState() {
     super.initState();
     _currentState = this;
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _controller.addListener(_onInputChanged);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) requestFocus();
+      if (!_tabController.indexIsChanging && mounted) {
+        requestFocus();
+      }
     });
   }
   
-  void requestFocus() => _inputFocusNode.requestFocus();
+  void requestFocus() {
+    if (!mounted) return;
+    _inputFocusNode.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -55,6 +64,7 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     if (_controller.text.isNotEmpty && _justCalculated) {
       setState(() { _justCalculated = false; });
     }
+    
     setState(() => _updateLivePreview());
   }
   
@@ -64,11 +74,12 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
       _resultPreview = '';
       return;
     }
+    
     try {
       final ySubstituted = _preprocessExpression(currentText);
       final preprocessed = _preprocessNativeExpression(ySubstituted);
       final result = _engine.evaluate(preprocessed);
-      _resultPreview = (result != "Error") ? result : '';
+      _resultPreview = (result != "Error" && result != currentText && double.tryParse(result) != null) ? result : '';
     } catch (e) {
       _resultPreview = '';
     }
@@ -77,115 +88,307 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   bool handleKeyboardInput(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     final key = event.logicalKey;
-    final character = event.character;
 
-    if (key == LogicalKeyboardKey.enter) { _onButtonPressed("EXE"); return true; }
-    if (key == LogicalKeyboardKey.backspace) { _onButtonPressed('⌫'); return true; }
-    if (key == LogicalKeyboardKey.escape) { _onButtonPressed('C'); return true; }
-    if (key == LogicalKeyboardKey.arrowLeft) { _onButtonPressed('◀'); return true; }
-    if (key == LogicalKeyboardKey.arrowRight) { _onButtonPressed('▶'); return true; }
-
-    if (character != null && character.isNotEmpty && character != ' ') {
-      _onButtonPressed(character);
-      return true;
+    // Only handle special keys, let normal typing go through TextField
+    if (key == LogicalKeyboardKey.enter) { 
+      _onButtonPressed("EXE"); 
+      return true; 
     }
+    if (key == LogicalKeyboardKey.escape) { 
+      _onButtonPressed('C'); 
+      return true; 
+    }
+    
+    // Don't intercept normal keys - let TextField handle them
     return false;
   }
 
   void _onButtonPressed(String value) {
-    if (!_controller.selection.isValid) {
-      _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
-    }
-    
     if (_justCalculated && !_isUtilityButton(value)) {
       final lastResult = _appState.history.firstOrNull?.result ?? '';
       final isOperator = ['+', '-', '*', '/', '^', '%', '='].contains(value);
-
+      
       setState(() {
         if (isOperator && lastResult.isNotEmpty && !lastResult.contains('Error')) {
-          _controller.text = lastResult + value;
+          String valueToUse = lastResult;
+          if (lastResult.contains(' = ')) {
+            valueToUse = _extractNumericFromSolveResult(lastResult);
+          }
+          _controller.text = valueToUse + value;
+          _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
         } else {
           _controller.text = value;
+          _controller.selection = TextSelection.collapsed(offset: value.length);
         }
-        _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
         _justCalculated = false;
       });
+      requestFocus();
       return;
     }
 
     if (_justCalculated) setState(() => _justCalculated = false);
     
-    const functionsWithBrackets = ['sin(', 'cos(', 'tan(', 'ln(', 'log(', 'sqrt(', 'abs(', 'Y1(', 'Y2('];
+    // Handle memory operations
+    if (value.startsWith('M') && value.length == 2) {
+      final memKey = value;
+      if (_memory.containsKey(memKey)) {
+        _insertTextAtCursor(_memory[memKey]!);
+        return;
+      }
+    }
+    
+    // Handle memory store
+    if (value == 'STO') {
+      _showMemoryStoreDialog();
+      return;
+    }
+    
+    // Handle advanced calculus operations
+    if (value.startsWith('d/dx') || value.startsWith('∫') || value == 'lim') {
+      _insertAdvancedFunction(value);
+      return;
+    }
+    
+    const functionsWithBrackets = ['sin(', 'cos(', 'tan(', 'ln(', 'log(', 'sqrt(', 'abs('];
     if (functionsWithBrackets.contains(value)) {
       _insertFunctionSyntax(value);
     } else if (value == 'solve') {
-      _showSolveFunctionPicker();
+      _insertFunctionSyntax('solve(');
+    } else if (value == 'f(x)') {
+      _showFunctionPicker();
+    } else if (value == 'factor' || value == 'simplify' || value == 'expand') {
+      _applyCasFunction(value);
     } else {
-      _insertText(value);
+      _handleSpecialInput(value);
     }
+    requestFocus();
   }
   
-  void _insertText(String value) {
-    final currentText = _controller.text;
-    final selection = _controller.selection;
-
-    setState(() {
-      if (value == 'C') {
-        _controller.clear();
-      } else if (value == '⌫') {
-        if (selection.isCollapsed) {
-          if (selection.start > 0) {
-            _controller.text = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
-            _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start - 1));
-          }
-        } else {
-          _controller.text = currentText.substring(0, selection.start) + currentText.substring(selection.end);
-          _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start));
-        }
-      } 
-      else if (value == "EXE") {
-        if (currentText.isNotEmpty) _calculate(currentText);
-      } else if (value == '◀') {
-        if(selection.start > 0) _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start - 1));
-      } else if (value == '▶') {
-        if(selection.start < currentText.length) _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start + 1));
-      } else {
-        final newText = currentText.substring(0, selection.start) + value + currentText.substring(selection.end);
-        _controller.text = newText;
-        _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start + value.length));
+  // Centralized, robust text and selection update
+  void _updateTextAndSelection(String newText, int newOffset) {
+    if (!mounted) return;
+    
+    // Ensure offset is within bounds
+    final safeOffset = newOffset.clamp(0, newText.length);
+    
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: safeOffset),
+    );
+    
+    // Ensure focus without triggering text selection
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _controller.selection = TextSelection.collapsed(offset: safeOffset);
       }
     });
   }
-  
-  void _insertFunctionSyntax(String func) {
-    final currentText = _controller.text;
+
+  // Insert text at current cursor position
+  void _insertTextAtCursor(String text) {
     final selection = _controller.selection;
-    final textToInsert = '$func)';
+    final currentText = _controller.text;
     
-    setState(() {
-      _controller.text = currentText.substring(0, selection.start) + textToInsert + currentText.substring(selection.end);
-      _controller.selection = TextSelection.fromPosition(TextPosition(offset: selection.start + func.length));
-    });
+    final start = selection.start.clamp(0, currentText.length);
+    final end = selection.end.clamp(start, currentText.length);
+    
+    final newText = currentText.substring(0, start) + text + currentText.substring(end);
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + text.length),
+    );
+  }
+
+  void _handleSpecialInput(String value) {
+    switch (value) {
+      case 'C':
+        _controller.clear();
+        break;
+      case '⌫':
+        final selection = _controller.selection;
+        final currentText = _controller.text;
+        if (selection.start > 0) {
+          if (selection.isCollapsed) {
+            // Delete character before cursor
+            final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
+            _controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: selection.start - 1),
+            );
+          } else {
+            // Delete selected text
+            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.end);
+            _controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: selection.start),
+            );
+          }
+        }
+        break;
+      case 'DEL':
+        final selection = _controller.selection;
+        final currentText = _controller.text;
+        if (selection.start < currentText.length) {
+          if (selection.isCollapsed) {
+            // Delete character after cursor
+            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.start + 1);
+            _controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: selection.start),
+            );
+          } else {
+            // Delete selected text
+            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.end);
+            _controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: selection.start),
+            );
+          }
+        }
+        break;
+      case 'EXE':
+        if (_controller.text.isNotEmpty) _calculate(_controller.text);
+        break;
+      case '◀':
+        final selection = _controller.selection;
+        if (selection.start > 0) {
+          _controller.selection = TextSelection.collapsed(offset: selection.start - 1);
+        }
+        break;
+      case '▶':
+        final selection = _controller.selection;
+        if (selection.start < _controller.text.length) {
+          _controller.selection = TextSelection.collapsed(offset: selection.start + 1);
+        }
+        break;
+      default:
+        _insertTextAtCursor(value);
+    }
   }
   
-  bool _isUtilityButton(String value) => ['C', '⌫', "EXE", '◀', '▶'].contains(value);
+  void _insertFunctionSyntax(String func) {
+    final selection = _controller.selection;
+    final currentText = _controller.text;
+    
+    final start = selection.start.clamp(0, currentText.length);
+    final end = selection.end.clamp(start, currentText.length);
+    
+    final textToInsert = '$func)';
+    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
+    
+    // Position cursor inside the parentheses
+    final cursorPosition = start + func.length;
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursorPosition),
+    );
+  }
+  
+  bool _isUtilityButton(String value) => ['C', '⌫', 'DEL', "EXE", '◀', '▶', 'STO'].contains(value) || value.startsWith('M');
+
+  void _showMemoryStoreDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Store to Memory'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Store current result to which memory slot?'),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              children: List.generate(9, (index) {
+                final memKey = 'M${index + 1}';
+                final hasValue = _memory.containsKey(memKey);
+                return ElevatedButton(
+                  onPressed: () {
+                    final lastResult = _appState.history.firstOrNull?.result ?? '';
+                    if (lastResult.isNotEmpty && !lastResult.contains('Error')) {
+                      String valueToStore = lastResult;
+                      if (lastResult.contains(' = ')) {
+                        valueToStore = _extractNumericFromSolveResult(lastResult);
+                      }
+                      _memory[memKey] = valueToStore;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Stored $valueToStore to $memKey')),
+                      );
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: hasValue ? Colors.green.shade700 : null,
+                  ),
+                  child: Text(memKey),
+                );
+              }),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _insertAdvancedFunction(String funcName) {
+    final selection = _controller.selection;
+    final currentText = _controller.text;
+    
+    final start = selection.start.clamp(0, currentText.length);
+    final end = selection.end.clamp(start, currentText.length);
+    
+    String textToInsert;
+    int cursorOffset;
+    
+    switch (funcName) {
+      case 'd/dx':
+        textToInsert = 'diff(, x)';
+        cursorOffset = 5; // Position after "diff("
+        break;
+      case '∫':
+        textToInsert = 'integrate(, x)';
+        cursorOffset = 10; // Position after "integrate("
+        break;
+      case 'lim':
+        textToInsert = 'limit(, x, 0)';
+        cursorOffset = 6; // Position after "limit("
+        break;
+      default:
+        textToInsert = '$funcName()';
+        cursorOffset = funcName.length + 1;
+    }
+    
+    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + cursorOffset),
+    );
+  }
 
   void _calculate(String expression) {
     try {
       String result;
       HistoryEntryType type = HistoryEntryType.calculation;
       final cleanedExpr = expression.trim().toLowerCase();
-
       final ySubstitutedExpr = _preprocessExpression(expression);
 
       if (cleanedExpr.startsWith('solve(')) {
         type = HistoryEntryType.solve;
-        final regExp = RegExp(r'solve\((.+),\s*([a-zA-Z])\s*\)');
-        final match = regExp.firstMatch(ySubstitutedExpr);
+        var regExp = RegExp(r'solve\((.+),\s*([a-zA-Z])\s*\)');
+        var match = regExp.firstMatch(ySubstitutedExpr);
+        if (match == null) {
+          regExp = RegExp(r'solve\((.+)\)');
+          match = regExp.firstMatch(ySubstitutedExpr);
+        }
 
         if (match != null) {
           final equation = match.group(1)!.trim();
-          final variable = match.group(2)!.trim();
+          final variable = match.groupCount > 1 ? match.group(2)!.trim() : 'x';
           String expressionForSolver;
           List<String> parts = equation.split('=');
           if (parts.length == 2) {
@@ -195,6 +398,12 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           }
           final solution = _engine.solve(_preprocessNativeExpression(expressionForSolver), variable);
           result = "$variable = $solution";
+          
+          // Auto-store solve results in memory for easy access
+          if (!solution.contains('Error') && _memoryCounter <= 9) {
+            _memory['M$_memoryCounter'] = _extractNumericFromSolveResult(result);
+            _memoryCounter++;
+          }
         } else {
           result = "Error: Use solve(eq, var)";
         }
@@ -208,13 +417,59 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
         _resultPreview = '';
         _justCalculated = true;
         _controller.clear();
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-        }
+        requestFocus();
       });
     } catch (e) {
-      setState(() => _resultPreview = 'Error: ${e.toString()}');
+      setState(() => _appState.addHistoryEntry(expression, "Error", type: HistoryEntryType.calculation));
     }
+  }
+  
+  // Extract numeric value from solve results like "x = 6" -> "6"
+  String _extractNumericFromSolveResult(String solveResult) {
+    final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+(?:,\s*[+-]?[\d.]+)*)').firstMatch(solveResult);
+    if (match != null) {
+      final values = match.group(1)!;
+      // If single value, return it; if multiple, keep original format
+      if (!values.contains(',')) {
+        return values.trim();
+      }
+    }
+    return solveResult; // Keep original if not simple numeric
+  }
+
+  void _applyCasFunction(String funcName) {
+    final lastResult = _appState.history.firstOrNull?.result ?? '';
+    if (lastResult.isEmpty || lastResult.contains("Error")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No previous result to apply CAS function to')),
+      );
+      return;
+    }
+
+    final exprToProcess = lastResult.startsWith('=') ? lastResult.substring(1).trim() : lastResult;
+    
+    String result;
+    switch (funcName) {
+      case 'factor':
+        result = _engine.factor(exprToProcess);
+        break;
+      case 'expand':
+        result = _engine.expand(exprToProcess);
+        break;
+      case 'simplify':
+        result = _engine.expand(exprToProcess);
+        break;
+      default:
+        result = 'Unknown CAS function';
+    }
+    
+    setState(() {
+      final expr = '$funcName($exprToProcess)';
+      _appState.addHistoryEntry(expr, result);
+      _justCalculated = true;
+      _controller.clear();
+      requestFocus();
+    });
   }
 
   String _preprocessNativeExpression(String expression) {
@@ -222,8 +477,15 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     processed = processed.replaceAllMapped(RegExp(r'(\d|\))(\()'), (m) => '${m[1]}*${m[2]}');
     processed = processed.replaceAllMapped(RegExp(r'(\))(\d|[a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
     processed = processed.replaceAllMapped(RegExp(r'(\d)([a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
-    processed = processed.replaceAllMapped(RegExp(r'(\d+|(\(.*?\)))!'), (match) => 'factorial(${match.group(1)})');
-    processed = processed.replaceAllMapped(RegExp(r'([a-zA-Z0-9\.\(\)]+)\s*%\s*([a-zA-Z0-9\.\(\)]+)'), (m) => 'Mod(${m[1]},${m[2]})');
+    processed = processed.replaceAllMapped(RegExp(r'([a-zA-Z])(\d)'), (m) => '${m[1]}*${m[2]}');
+    
+    // Fix factorial handling - match number or parenthesized expression followed by !
+    processed = processed.replaceAllMapped(RegExp(r'(\d+(?:\.\d+)?|\([^)]*\))!'), (m) {
+      final base = m.group(1)!;
+      return 'factorial($base)';
+    });
+    
+    processed = processed.replaceAllMapped(RegExp(r'([\w\.\(\)]+)\s*%\s*([\w\.\(\)]+)'), (m) => 'Mod(${m[1]},${m[2]})');
     return processed;
   }
 
@@ -237,76 +499,140 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           String funcBody = _appState.graphFunctions[funcIndex];
           if (funcBody.isNotEmpty) return '($funcBody)';
         }
-      } catch (e) { return match.group(0)!; }
+      } catch (e) { 
+        return match.group(0)!; 
+      }
       return match.group(0)!;
     });
     return processed;
   }
   
   void _showPlotSolveDialog(CalculationEntry entry) {
-    final regExp = RegExp(r'solve\((.+),\s*[a-zA-Z]\s*\)');
-    final match = regExp.firstMatch(entry.expression);
+    var regExp = RegExp(r'solve\((.+),\s*[a-zA-Z]\s*\)');
+    var match = regExp.firstMatch(entry.expression);
+    if (match == null) {
+      final regExp2 = RegExp(r'solve\((.+)\)');
+      match = regExp2.firstMatch(entry.expression);
+    }
     if (match == null) return;
     
     final equation = match.group(1)!.trim();
     String functionToPlot = '';
-    
     List<String> parts = equation.split('=');
-    if (parts.length == 2) {
-      functionToPlot = '${parts[0].trim()} - (${parts[1].trim()})';
-    } else {
-      functionToPlot = equation;
-    }
+    functionToPlot = (parts.length == 2) ? '${parts[0].trim()} - (${parts[1].trim()})' : equation;
     
-    showDialog(context: context, builder: (context) => AlertDialog(
-      title: const Text('Add to Function List'),
-      content: Text('Add "$functionToPlot" to the next available Y= slot to graph it?'),
-      actions: [
-        TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(context).pop()),
-        ElevatedButton(child: const Text('Add to Y='), onPressed: () {
-          final emptySlotIndex = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
-          if (emptySlotIndex != -1) {
-            _appState.updateFunction(emptySlotIndex, functionToPlot);
-          }
-          Navigator.of(context).pop();
-        }),
-      ],
-    ));
+    showDialog(
+      context: context, 
+      builder: (context) => AlertDialog(
+        title: const Text('Add to Function List'),
+        content: Text('Add "$functionToPlot" to the next available Y= slot to graph it?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'), 
+            onPressed: () => Navigator.of(context).pop()
+          ),
+          ElevatedButton(
+            child: const Text('Add to Y='), 
+            onPressed: () {
+              final emptySlotIndex = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
+              if (emptySlotIndex != -1) {
+                _appState.updateFunction(emptySlotIndex, functionToPlot);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Added to Y${emptySlotIndex + 1}')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('All function slots are full')),
+                );
+              }
+              Navigator.of(context).pop();
+            }
+          ),
+        ],
+      )
+    );
   }
   
   void _showSolveFunctionPicker() {
-    showModalBottomSheet(context: context, builder: (context) {
-      return ListView(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Type equation manually'),
-            onTap: () {
-              Navigator.of(context).pop();
-              _insertFunctionSyntax('solve(');
-            },
-          ),
-          const Divider(),
-          ..._appState.graphFunctions.asMap().entries.where((entry) => entry.value.isNotEmpty).map((entry) {
-            int index = entry.key;
-            String func = entry.value;
-            return ListTile(
-              title: Text('Y${index + 1} = $func'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _insertText('solve(Y${index+1}=0, x)');
-              },
-            );
-          })
-        ],
-      );
-    });
+    showModalBottomSheet(
+      context: context, 
+      builder: (context) {
+        return ListView(
+          children: [
+            if (_appState.graphFunctions.any((f) => f.isNotEmpty)) ...[
+              const ListTile(
+                title: Text('Select function to solve:', style: TextStyle(fontWeight: FontWeight.bold))
+              ),
+              const Divider(),
+              ..._appState.graphFunctions.asMap().entries
+                  .where((entry) => entry.value.isNotEmpty)
+                  .map((entry) {
+                int index = entry.key;
+                String func = entry.value;
+                return ListTile(
+                  title: Text('Y${index + 1} = $func'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    final currentText = _controller.text;
+                    final selection = _controller.selection;
+                    final start = selection.start.clamp(0, currentText.length);
+                    final end = selection.end.clamp(start, currentText.length);
+                    
+                    final textToInsert = 'solve(Y${index+1}=0, x)';
+                    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
+                    _controller.value = TextEditingValue(
+                      text: newText,
+                      selection: TextSelection.collapsed(offset: start + textToInsert.length),
+                    );
+                  },
+                );
+              }).toList()
+            ] else ...[
+              const ListTile(
+                leading: Icon(Icons.info),
+                title: Text('No functions available'),
+                subtitle: Text('Add functions in the graphing screen first'),
+              ),
+            ]
+          ],
+        );
+      }
+    );
+  }
+
+  void _showFunctionPicker() {
+    showModalBottomSheet(
+      context: context, 
+      builder: (context) {
+        return ListView(
+          children: [
+            const ListTile(
+              title: Text('Select function to evaluate:', style: TextStyle(fontWeight: FontWeight.bold))
+            ),
+            const Divider(),
+            ..._appState.graphFunctions.asMap().entries
+                .where((entry) => entry.value.isNotEmpty)
+                .map((entry) {
+              int index = entry.key;
+              String func = entry.value;
+              return ListTile(
+                title: Text('Y${index + 1} = $func'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _insertFunctionSyntax('Y${index+1}(');
+                },
+              );
+            }).toList()
+          ],
+        );
+      }
+    );
   }
 
   String _toLaTeX(String input) {
     if (input.isEmpty) return '';
     String latex = input;
-    latex = latex.replaceAllMapped(RegExp(r'sqrt\((.*?)\)'), (match) => r'\\sqrt{${match.group(1)}}');
+    latex = latex.replaceAllMapped(RegExp(r'sqrt\((.*?)\)'), (match) => '\\sqrt{${match.group(1)}}');
     latex = latex.replaceAll('*I', 'i');
     latex = latex.replaceAll('*', r' \cdot ');
     return latex;
@@ -333,8 +659,16 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         InkWell(
-                          onTap: () => setState(() => _controller.text = entry.expression),
-                          child: Text(entry.expression, style: TextStyle(fontSize: 20, color: Colors.grey[500]), textAlign: TextAlign.right),
+                          onTap: () => setState(() {
+                            _controller.text = entry.expression;
+                            _controller.selection = TextSelection.collapsed(offset: entry.expression.length);
+                            _justCalculated = false;
+                          }),
+                          child: Text(
+                            entry.expression, 
+                            style: TextStyle(fontSize: 20, color: Colors.grey[500]), 
+                            textAlign: TextAlign.right
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -347,8 +681,32 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                               ),
                             Flexible(
                               child: InkWell(
-                                onTap: () => _onButtonPressed(entry.result),
-                                child: Math.tex(_toLaTeX("= ${entry.result}"), textStyle: TextStyle(fontSize: 28, color: Colors.blue[300], fontWeight: FontWeight.w500)),
+                                onTap: () {
+                                  if (_justCalculated) {
+                                    _controller.text = entry.result;
+                                    _controller.selection = TextSelection.collapsed(offset: entry.result.length);
+                                  } else {
+                                    final currentText = _controller.text;
+                                    final selection = _controller.selection;
+                                    final start = selection.start.clamp(0, currentText.length);
+                                    final end = selection.end.clamp(start, currentText.length);
+                                    
+                                    final newText = currentText.substring(0, start) + entry.result + currentText.substring(end);
+                                    _controller.value = TextEditingValue(
+                                      text: newText,
+                                      selection: TextSelection.collapsed(offset: start + entry.result.length),
+                                    );
+                                  }
+                                  _justCalculated = false;
+                                },
+                                child: Math.tex(
+                                  _toLaTeX("= ${entry.result}"), 
+                                  textStyle: TextStyle(
+                                    fontSize: 28, 
+                                    color: Colors.blue[300], 
+                                    fontWeight: FontWeight.w500
+                                  )
+                                ),
                               ),
                             ),
                           ],
@@ -369,7 +727,7 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                 TextField(
                   controller: _controller,
                   focusNode: _inputFocusNode,
-                  readOnly: true,
+                  readOnly: false, // Allow normal typing
                   showCursor: true,
                   autofocus: true,
                   style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300),
@@ -377,13 +735,19 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: _justCalculated ? (_appState.history.firstOrNull?.result ?? '0') : '0',
-                    hintStyle: TextStyle(fontSize: 48, color: _justCalculated ? Colors.grey[500] : Colors.grey[700]),
+                    hintStyle: TextStyle(
+                      fontSize: 48, 
+                      color: _justCalculated ? Colors.grey[500] : Colors.grey[700]
+                    ),
                   ),
                 ),
                 if (_resultPreview.isNotEmpty)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Text("= $_resultPreview", style: TextStyle(fontSize: 24, color: Colors.grey[600])),
+                    child: Text(
+                      "= $_resultPreview", 
+                      style: TextStyle(fontSize: 24, color: Colors.grey[600])
+                    ),
                   ),
               ],
             ),
@@ -392,14 +756,60 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
             flex: 5,
             child: Column(
               children: [
-                TabBar(controller: _tabController, tabs: const [Tab(text: '123'), Tab(text: 'f(x)'), Tab(text: 'CAS')]),
+                TabBar(
+                  controller: _tabController, 
+                  tabs: const [
+                    Tab(text: 'Num'), 
+                    Tab(text: 'f(x)'), 
+                    Tab(text: 'CAS'),
+                    Tab(text: 'Mem')
+                  ]
+                ),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      KeypadGrid(buttons: const ['C', '⌫', '%', '/', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '^', 'EXE'], onButtonPressed: _onButtonPressed),
-                      KeypadGrid(buttons: const ['sin(', 'cos(', 'tan(', 'x', 'ln(', 'log(', 'sqrt(', '(', 'e', ')', '!', 'pi', 'abs(', 'deg', 'rad', 'EXE'], onButtonPressed: _onButtonPressed),
-                      KeypadGrid(buttons: const ['solve', '(', ')', '^', 'Y1(', 'Y2(', '◀', '▶', 'simplify', 'factor', ',', '=', '{', '}', '[', ']'], onButtonPressed: _onButtonPressed),
+                      // Numbers and basic operations
+                      KeypadGrid(
+                        buttons: const [
+                          'C', '⌫', '%', '/', 
+                          '7', '8', '9', '*', 
+                          '4', '5', '6', '-', 
+                          '1', '2', '3', '+', 
+                          '0', '.', '^', 'EXE'
+                        ], 
+                        onButtonPressed: _onButtonPressed
+                      ),
+                      // Functions and trigonometry
+                      KeypadGrid(
+                        buttons: const [
+                          'sin(', 'cos(', 'tan(', 'x', 
+                          'ln(', 'log(', 'sqrt(', '(', 
+                          'e', 'pi', '!', ')', 
+                          'abs(', 'deg', 'rad', 'EXE'
+                        ], 
+                        onButtonPressed: _onButtonPressed
+                      ),
+                      // CAS and advanced calculus operations
+                      KeypadGrid(
+                        buttons: const [
+                          'solve', 'f(x)', 'd/dx', '∫', 
+                          'factor', 'expand', 'lim', '◀', 
+                          'simplify', '=', ',', '▶', 
+                          '{', '}', '[', ']'
+                        ], 
+                        onButtonPressed: _onButtonPressed
+                      ),
+                      // Memory operations
+                      KeypadGrid(
+                        buttons: const [
+                          'STO', 'M1', 'M2', 'M3',
+                          'DEL', 'M4', 'M5', 'M6', 
+                          '◀', 'M7', 'M8', 'M9',
+                          '▶', '(', ')', 'EXE'
+                        ], 
+                        onButtonPressed: _onButtonPressed
+                      ),
                     ],
                   ),
                 ),
