@@ -16,21 +16,28 @@ class KeypadGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // This LayoutBuilder creates a perfectly responsive grid that fills the available space.
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate appropriate button size based on available space
-        final buttonHeight = (constraints.maxHeight - 60) / 5; // 5 rows with padding
-        final buttonWidth = (constraints.maxWidth - 60) / 4; // 4 columns with padding
-        final buttonSize = buttonHeight.clamp(50.0, 90.0); // Reasonable size limits
+        const double crossAxisSpacing = 10;
+        const double mainAxisSpacing = 10;
+        const double horizontalPadding = 24; // 12 left + 12 right from parent
+        const double verticalPadding = 24;   // 12 top + 12 bottom from parent
+
+        final double cellWidth = (constraints.maxWidth - horizontalPadding - (3 * crossAxisSpacing)) / 4;
+        final double cellHeight = (constraints.maxHeight - verticalPadding - (4 * mainAxisSpacing)) / 5;
         
+        // Prevent division-by-zero or negative aspect ratio if constraints are not ready.
+        final double aspectRatio = (cellHeight > 0 && cellWidth > 0) ? cellWidth / cellHeight : 1.0;
+
         return GridView.builder(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 4,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: buttonWidth / buttonSize,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisSpacing: mainAxisSpacing,
+            childAspectRatio: aspectRatio,
           ),
           itemCount: buttons.length,
           itemBuilder: (context, index) {

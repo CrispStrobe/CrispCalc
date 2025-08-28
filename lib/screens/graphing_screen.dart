@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../engine/calculator_engine.dart';
+import '../engine/app_state.dart';
 
-/// A screen for plotting and interacting with 2D function graphs.
 class GraphingScreen extends StatefulWidget {
   const GraphingScreen({super.key});
 
@@ -13,26 +13,50 @@ class GraphingScreen extends StatefulWidget {
 }
 
 class _GraphingScreenState extends State<GraphingScreen> {
-  final List<String> _functions = ['sin(x)'];
+  final AppState _appState = AppState();
+  final TextEditingController _functionController = TextEditingController();
+
   double _scale = 1.0;
   Offset _offset = Offset.zero;
-  
-  // For smooth panning and zooming
+
   double _startScale = 1.0;
   Offset _startOffset = Offset.zero;
   Offset _focalStart = Offset.zero;
 
-  final TextEditingController _functionController = TextEditingController();
   final CalculatorEngine _engine = CalculatorEngine();
-
+  
+  // FIX: Added clear user feedback via a SnackBar.
   void _addFunction() {
     if (_functionController.text.isNotEmpty) {
+      final textToAdd = _functionController.text.trim();
       setState(() {
-        _functions.add(_functionController.text.trim());
+        final emptySlotIndex = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
+        if (emptySlotIndex != -1) {
+          _appState.graphFunctions[emptySlotIndex] = textToAdd;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Function saved to Y${emptySlotIndex + 1}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All function slots are full.')),
+          );
+        }
         _functionController.clear();
         FocusManager.instance.primaryFocus?.unfocus();
       });
     }
+  }
+
+  void _removeFunction(String functionToRemove) {
+    setState(() {
+      final index = _appState.graphFunctions.indexOf(functionToRemove);
+      if (index != -1) {
+        _appState.graphFunctions[index] = '';
+      }
+    });
   }
 
   void _resetView() {
@@ -41,24 +65,17 @@ class _GraphingScreenState extends State<GraphingScreen> {
       _offset = Offset.zero;
     });
   }
-
-  void _removeFunction(int index) {
-    setState(() {
-      _functions.removeAt(index);
-    });
-  }
-
+  
   @override
   Widget build(BuildContext context) {
+    setState(() {});
+    final allFunctions = _appState.graphFunctions.where((f) => f.isNotEmpty).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Graphing'),
         actions: [
-          IconButton(
-            onPressed: _resetView,
-            icon: const Icon(Icons.center_focus_strong),
-            tooltip: 'Reset View',
-          ),
+          IconButton(onPressed: _resetView, icon: const Icon(Icons.center_focus_strong), tooltip: 'Reset View'),
         ],
       ),
       body: Column(
@@ -77,28 +94,16 @@ class _GraphingScreenState extends State<GraphingScreen> {
                 });
               },
               child: CustomPaint(
-                painter: GraphPainter(
-                  functions: _functions,
-                  scale: _scale,
-                  offset: _offset,
-                  engine: _engine,
-                ),
+                painter: GraphPainter(functions: allFunctions, scale: _scale, offset: _offset, engine: _engine),
                 size: Size.infinite,
               ),
             ),
           ),
-          // Enhanced UI for adding and viewing functions
           Container(
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, -2))],
             ),
             child: Column(
               children: [
@@ -107,45 +112,32 @@ class _GraphingScreenState extends State<GraphingScreen> {
                     Expanded(
                       child: TextField(
                         controller: _functionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Enter a function of x',
-                          border: OutlineInputBorder(),
-                          hintText: 'e.g., x^2, 2*sin(x), x^3-2*x+1',
-                          prefixText: 'y = ',
-                        ),
+                        decoration: const InputDecoration(labelText: 'Enter a function to plot', border: OutlineInputBorder(), prefixText: 'y = '),
                         onSubmitted: (_) => _addFunction(),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add_chart),
-                      label: const Text('Plot'),
-                      onPressed: _addFunction,
-                    ),
+                    ElevatedButton.icon(icon: const Icon(Icons.add_chart), label: const Text('Plot'), onPressed: _addFunction),
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Enhanced function list with better styling
-                if (_functions.isNotEmpty)
+                if (allFunctions.isNotEmpty)
                   SizedBox(
-                    height: 60,
+                    height: 40,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: _functions.length,
+                      itemCount: allFunctions.length,
                       itemBuilder: (context, index) {
+                        final funcText = allFunctions[index];
+                        final yIndex = _appState.graphFunctions.indexOf(funcText);
+                        final label = 'Y${yIndex + 1}';
                         return Container(
                           margin: const EdgeInsets.only(right: 8),
                           child: Chip(
-                            label: Text(
-                              'y = ${_functions[index]}',
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            backgroundColor: _getColorForFunction(index).withOpacity(0.2),
-                            side: BorderSide(
-                              color: _getColorForFunction(index),
-                              width: 1.5,
-                            ),
-                            onDeleted: () => _removeFunction(index),
+                            label: Text('$label = $funcText'),
+                            backgroundColor: _getColorForFunction(yIndex).withOpacity(0.2),
+                            side: BorderSide(color: _getColorForFunction(yIndex), width: 1.5),
+                            onDeleted: () => _removeFunction(funcText),
                             deleteIcon: const Icon(Icons.close, size: 16),
                           ),
                         );
@@ -160,22 +152,17 @@ class _GraphingScreenState extends State<GraphingScreen> {
     );
   }
 
-  Color _getColorForFunction(int index) {
+   Color _getColorForFunction(int index) {
     final colors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.pink,
-      Colors.brown,
+      Colors.blue, Colors.red, Colors.green, Colors.purple,
+      Colors.orange, Colors.teal, Colors.pink, Colors.brown,
     ];
     return colors[index % colors.length];
   }
 }
 
-/// Enhanced custom painter with robust function plotting
+
+/// Enhanced custom painter with robust function plotting (This class remains largely the same)
 class GraphPainter extends CustomPainter {
   final List<String> functions;
   final double scale;
@@ -208,17 +195,13 @@ class GraphPainter extends CustomPainter {
     final centerY = size.height / 2 + offset.dy;
     final double unit = 25 * scale;
 
-    // Draw grid with adaptive spacing
     _drawAdaptiveGrid(canvas, size, centerX, centerY, unit, gridPaint);
     
-    // Draw main axes
     canvas.drawLine(Offset(0, centerY), Offset(size.width, centerY), axisPaint);
     canvas.drawLine(Offset(centerX, 0), Offset(centerX, size.height), axisPaint);
 
-    // Draw axis labels with intelligent spacing
     _drawAxisLabels(canvas, size, centerX, centerY, unit);
 
-    // Plot each function with enhanced error handling
     for (int funcIndex = 0; funcIndex < functions.length; funcIndex++) {
       final func = functions[funcIndex];
       paint.color = _getColorForFunction(funcIndex);
@@ -231,8 +214,10 @@ class GraphPainter extends CustomPainter {
     }
   }
 
+  // --- All helper methods (_drawAdaptiveGrid, _plotFunctionRobust, etc.) remain the same ---
+  // --- They are omitted here for brevity but should be kept in your file. ---
+
   void _drawAdaptiveGrid(Canvas canvas, Size size, double centerX, double centerY, double unit, Paint gridPaint) {
-    // Adaptive grid spacing based on zoom level
     double gridSpacing = unit;
     if (unit < 10) {
       gridSpacing = unit * 5;
@@ -240,7 +225,6 @@ class GraphPainter extends CustomPainter {
       gridSpacing = unit / 2;
     }
 
-    // Vertical grid lines
     double x = centerX;
     while (x < size.width) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
@@ -252,7 +236,6 @@ class GraphPainter extends CustomPainter {
       x -= gridSpacing;
     }
 
-    // Horizontal grid lines
     double y = centerY;
     while (y < size.height) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
@@ -270,7 +253,6 @@ class GraphPainter extends CustomPainter {
     bool hasStarted = false;
     double? lastY;
     
-    // Much finer sampling for smooth curves - especially important for trig functions
     final double stepSize = math.min(0.1, math.max(0.01, 1.0 / unit));
     final double startX = (-size.width / 2 - offset.dx) / unit;
     final double endX = (size.width / 2 - offset.dx) / unit;
@@ -279,25 +261,21 @@ class GraphPainter extends CustomPainter {
       try {
         double mathY = _evaluateFunctionSafely(func, mathX);
         
-        // Skip if result is not finite
         if (!mathY.isFinite) {
           hasStarted = false;
           lastY = null;
           continue;
         }
         
-        // Convert to screen coordinates
         double screenX = centerX + mathX * unit;
         double screenY = centerY - mathY * unit;
         
-        // Skip points far outside screen bounds
         if (screenY < -size.height * 2 || screenY > size.height * 3) {
           hasStarted = false;
           lastY = null;
           continue;
         }
         
-        // Check for discontinuities (large jumps in y value)
         if (lastY != null && (mathY - lastY).abs() > 50 / scale) {
           hasStarted = false;
         }
@@ -312,7 +290,6 @@ class GraphPainter extends CustomPainter {
         lastY = mathY;
         
       } catch (e) {
-        // Skip this point and break the line
         hasStarted = false;
         lastY = null;
       }
@@ -322,14 +299,11 @@ class GraphPainter extends CustomPainter {
   }
 
   double _evaluateFunctionSafely(String func, double x) {
-    // Pre-process function to handle implicit multiplication
     String processedFunc = func;
     
-    // Handle patterns like "2x", "3sin(x)", etc.
     processedFunc = processedFunc.replaceAllMapped(RegExp(r'(\d)([a-zA-Z(])'), (m) => '${m[1]}*${m[2]}');
     processedFunc = processedFunc.replaceAllMapped(RegExp(r'(\))([a-zA-Z\d(])'), (m) => '${m[1]}*${m[2]}');
     
-    // Replace x with the value, using parentheses for safety
     String valueStr = x.toString();
     if (x < 0 || valueStr.contains('e')) {
       valueStr = '($valueStr)';
@@ -337,7 +311,6 @@ class GraphPainter extends CustomPainter {
     
     String expressionWithX = processedFunc.replaceAll('x', valueStr);
     
-    // Use the robust calculator engine
     String result = engine.evaluate(expressionWithX);
     
     if (result == 'Error' || result.isEmpty) {
@@ -355,37 +328,61 @@ class GraphPainter extends CustomPainter {
   void _drawAxisLabels(Canvas canvas, Size size, double centerX, double centerY, double unit) {
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     final textStyle = TextStyle(color: Colors.grey[300], fontSize: 10);
-    
-    // Intelligent label spacing based on zoom
-    int step = math.max(1, (50 / unit).ceil());
-    
-    // X-axis labels
-    for (int i = -100; i <= 100; i += step) {
-      if (i == 0) continue;
+
+    // Helper function to find a visually pleasing step value.
+    double getNiceStep(double idealStep) {
+      if (idealStep <= 0) return 1.0;
+      final double powerOf10 = math.pow(10, (math.log(idealStep) / math.ln10).floor()).toDouble();
+      final double normalized = idealStep / powerOf10;
+
+      if (normalized < 1.5) return 1.0 * powerOf10;
+      if (normalized < 3.5) return 2.0 * powerOf10;
+      if (normalized < 7.5) return 5.0 * powerOf10;
+      return 10.0 * powerOf10;
+    }
+
+    const double pixelsPerLabel = 85.0; // Target spacing between labels
+    final double idealStep = pixelsPerLabel / unit;
+    final double step = getNiceStep(idealStep);
+
+    // Determine the number of digits to show after the decimal point.
+    final int precision = (step < 1) ? (-math.log(step) / math.ln10).ceil() : 0;
+
+    // --- X-axis labels ---
+    final double startX = -centerX / unit;
+    final double endX = (size.width - centerX) / unit;
+
+    for (double i = (startX / step).floor() * step; i <= endX; i += step) {
+      if (i.abs() < step / 100) continue; // Skip label at origin
+
       final x = centerX + i * unit;
-      if (x < 30 || x > size.width - 30) continue;
-      
-      textPainter.text = TextSpan(text: i.toString(), style: textStyle);
+      if (x < 15 || x > size.width - 15) continue;
+
+      textPainter.text = TextSpan(text: i.toStringAsFixed(precision), style: textStyle);
       textPainter.layout();
       
-      double labelY = centerY + 15;
-      if (labelY > size.height - 20) labelY = centerY - 25;
-      
+      double labelY = centerY + 8;
+      if (labelY > size.height - 20) labelY = centerY - 20;
+
       textPainter.paint(canvas, Offset(x - textPainter.width / 2, labelY));
     }
-    
-    // Y-axis labels
-    for (int i = -100; i <= 100; i += step) {
-      if (i == 0) continue;
+
+    // --- Y-axis labels ---
+    final double startY = -(size.height - centerY) / unit;
+    final double endY = centerY / unit;
+
+    for (double i = (startY / step).floor() * step; i <= endY; i += step) {
+      if (i.abs() < step / 100) continue; // Skip label at origin
+
       final y = centerY - i * unit;
-      if (y < 30 || y > size.height - 30) continue;
+      if (y < 15 || y > size.height - 15) continue;
       
-      textPainter.text = TextSpan(text: i.toString(), style: textStyle);
+      textPainter.text = TextSpan(text: i.toStringAsFixed(precision), style: textStyle);
       textPainter.layout();
       
-      double labelX = centerX + 15;
-      if (labelX > size.width - 50) labelX = centerX - textPainter.width - 15;
-      
+      double labelX = centerX + 8;
+      if (labelX > size.width - 30) labelX = centerX - textPainter.width - 8;
+
       textPainter.paint(canvas, Offset(labelX, y - textPainter.height / 2));
     }
   }
@@ -400,14 +397,8 @@ class GraphPainter extends CustomPainter {
 
   Color _getColorForFunction(int index) {
     final colors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.pink,
-      Colors.brown,
+      Colors.blue, Colors.red, Colors.green, Colors.purple,
+      Colors.orange, Colors.teal, Colors.pink, Colors.brown,
     ];
     return colors[index % colors.length];
   }

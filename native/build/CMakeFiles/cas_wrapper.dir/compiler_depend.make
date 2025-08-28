@@ -785,7 +785,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/istream \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/iterator \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/limits \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/list \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/locale \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/locale.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/map \
@@ -981,8 +980,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
   /opt/homebrew/include/flint/fmpz_types.h \
   /opt/homebrew/include/flint/nmod_types.h \
   /opt/homebrew/include/gmp.h \
-  /opt/homebrew/include/mpc.h \
-  /opt/homebrew/include/mpfr.h \
   /opt/homebrew/include/symengine/add.h \
   /opt/homebrew/include/symengine/assumptions.h \
   /opt/homebrew/include/symengine/basic-inl.h \
@@ -990,43 +987,24 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
   /opt/homebrew/include/symengine/basic.h \
   /opt/homebrew/include/symengine/complex.h \
   /opt/homebrew/include/symengine/complex_double.h \
-  /opt/homebrew/include/symengine/complex_mpc.h \
   /opt/homebrew/include/symengine/constants.h \
   /opt/homebrew/include/symengine/dict.h \
-  /opt/homebrew/include/symengine/eval.h \
   /opt/homebrew/include/symengine/eval_double.h \
   /opt/homebrew/include/symengine/expression.h \
-  /opt/homebrew/include/symengine/fields.h \
   /opt/homebrew/include/symengine/flint_wrapper.h \
   /opt/homebrew/include/symengine/functions.h \
   /opt/homebrew/include/symengine/infinity.h \
   /opt/homebrew/include/symengine/integer.h \
   /opt/homebrew/include/symengine/logic.h \
-  /opt/homebrew/include/symengine/matrices/conjugate_matrix.h \
-  /opt/homebrew/include/symengine/matrices/diagonal_matrix.h \
-  /opt/homebrew/include/symengine/matrices/hadamard_product.h \
-  /opt/homebrew/include/symengine/matrices/identity_matrix.h \
-  /opt/homebrew/include/symengine/matrices/immutable_dense_matrix.h \
-  /opt/homebrew/include/symengine/matrices/matrix_add.h \
-  /opt/homebrew/include/symengine/matrices/matrix_expr.h \
-  /opt/homebrew/include/symengine/matrices/matrix_mul.h \
-  /opt/homebrew/include/symengine/matrices/matrix_symbol.h \
-  /opt/homebrew/include/symengine/matrices/size.h \
-  /opt/homebrew/include/symengine/matrices/trace.h \
-  /opt/homebrew/include/symengine/matrices/transpose.h \
-  /opt/homebrew/include/symengine/matrices/zero_matrix.h \
   /opt/homebrew/include/symengine/matrix.h \
-  /opt/homebrew/include/symengine/matrix_expressions.h \
   /opt/homebrew/include/symengine/monomials.h \
   /opt/homebrew/include/symengine/mp_class.h \
   /opt/homebrew/include/symengine/mp_wrapper.h \
   /opt/homebrew/include/symengine/mul.h \
   /opt/homebrew/include/symengine/nan.h \
   /opt/homebrew/include/symengine/ntheory.h \
-  /opt/homebrew/include/symengine/ntheory_funcs.h \
   /opt/homebrew/include/symengine/number.h \
   /opt/homebrew/include/symengine/parser.h \
-  /opt/homebrew/include/symengine/polys/msymenginepoly.h \
   /opt/homebrew/include/symengine/polys/uexprpoly.h \
   /opt/homebrew/include/symengine/polys/uintpoly.h \
   /opt/homebrew/include/symengine/polys/uintpoly_flint.h \
@@ -1036,14 +1014,8 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
   /opt/homebrew/include/symengine/polys/usymenginepoly.h \
   /opt/homebrew/include/symengine/pow.h \
   /opt/homebrew/include/symengine/printers.h \
-  /opt/homebrew/include/symengine/printers/strprinter.h \
   /opt/homebrew/include/symengine/rational.h \
   /opt/homebrew/include/symengine/real_double.h \
-  /opt/homebrew/include/symengine/real_mpfr.h \
-  /opt/homebrew/include/symengine/series.h \
-  /opt/homebrew/include/symengine/series_flint.h \
-  /opt/homebrew/include/symengine/series_generic.h \
-  /opt/homebrew/include/symengine/series_piranha.h \
   /opt/homebrew/include/symengine/sets.h \
   /opt/homebrew/include/symengine/solve.h \
   /opt/homebrew/include/symengine/symbol.h \
@@ -1054,9 +1026,7 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
   /opt/homebrew/include/symengine/symengine_export.h \
   /opt/homebrew/include/symengine/symengine_rcp.h \
   /opt/homebrew/include/symengine/tribool.h \
-  /opt/homebrew/include/symengine/tuple.h \
-  /opt/homebrew/include/symengine/type_codes.inc \
-  /opt/homebrew/include/symengine/visitor.h
+  /opt/homebrew/include/symengine/type_codes.inc
 
 
 /opt/homebrew/include/symengine/tribool.h:
@@ -1073,15 +1043,9 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /opt/homebrew/include/symengine/solve.h:
 
-/opt/homebrew/include/symengine/series_flint.h:
-
-/opt/homebrew/include/symengine/real_mpfr.h:
-
 /opt/homebrew/include/symengine/real_double.h:
 
 /opt/homebrew/include/symengine/rational.h:
-
-/opt/homebrew/include/symengine/printers/strprinter.h:
 
 /opt/homebrew/include/symengine/pow.h:
 
@@ -1095,11 +1059,7 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /opt/homebrew/include/symengine/polys/uexprpoly.h:
 
-/opt/homebrew/include/symengine/polys/msymenginepoly.h:
-
 /opt/homebrew/include/symengine/number.h:
-
-/opt/homebrew/include/symengine/ntheory_funcs.h:
 
 /opt/homebrew/include/symengine/mul.h:
 
@@ -1108,24 +1068,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /opt/homebrew/include/symengine/mp_class.h:
 
 /opt/homebrew/include/symengine/monomials.h:
-
-/opt/homebrew/include/symengine/matrices/zero_matrix.h:
-
-/opt/homebrew/include/symengine/matrices/matrix_symbol.h:
-
-/opt/homebrew/include/symengine/matrices/matrix_mul.h:
-
-/opt/homebrew/include/symengine/matrices/matrix_expr.h:
-
-/opt/homebrew/include/symengine/matrices/immutable_dense_matrix.h:
-
-/opt/homebrew/include/symengine/matrices/identity_matrix.h:
-
-/opt/homebrew/include/symengine/matrices/hadamard_product.h:
-
-/opt/homebrew/include/symengine/matrices/diagonal_matrix.h:
-
-/opt/homebrew/include/symengine/matrices/conjugate_matrix.h:
 
 /opt/homebrew/include/symengine/functions.h:
 
@@ -1144,10 +1086,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /opt/homebrew/include/symengine/basic-inl.h:
 
 /opt/homebrew/include/symengine/assumptions.h:
-
-/opt/homebrew/include/mpfr.h:
-
-/opt/homebrew/include/mpc.h:
 
 /opt/homebrew/include/flint/nmod_types.h:
 
@@ -1194,8 +1132,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/xlocale/___wctype.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/wchar.h:
-
-/opt/homebrew/include/symengine/matrix_expressions.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/time.h:
 
@@ -1300,8 +1236,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_rwlockattr_t.h:
-
-/opt/homebrew/include/symengine/visitor.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_once_t.h:
 
@@ -1839,8 +1773,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/uses_allocator.h:
 
-/opt/homebrew/include/symengine/series.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/ranges_construct_at.h:
@@ -2053,8 +1985,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__functional/pointer_to_unary_function.h:
 
-/opt/homebrew/include/symengine/fields.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__bit_reference:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__functional/not_fn.h:
@@ -2154,8 +2084,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pstl_move.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:
-
-/opt/homebrew/include/symengine/matrices/matrix_add.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/ranges_make_heap.h:
 
@@ -2281,8 +2209,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/as_lvalue.h:
 
-/opt/homebrew/include/symengine/series_generic.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/find_if_not.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__compare/compare_three_way.h:
@@ -2359,8 +2285,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__iterator/ostreambuf_iterator.h:
 
-/opt/homebrew/include/symengine/matrices/transpose.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__bit/byteswap.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/shuffle.h:
@@ -2434,8 +2358,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__type_traits/is_trivially_copyable.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/atomic_base.h:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/list:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__type_traits/common_type.h:
 
@@ -2637,8 +2559,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/ranges_remove.h:
 
-/opt/homebrew/include/symengine/matrices/trace.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/iosfwd:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/ranges_copy_backward.h:
@@ -2748,8 +2668,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/stdexcept:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/ranges_fill_n.h:
-
-/opt/homebrew/include/symengine/tuple.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h:
 
@@ -3003,8 +2921,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/ranges_merge.h:
 
-/opt/homebrew/include/symengine/matrices/size.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/any_of.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pstl_stable_sort.h:
@@ -3057,11 +2973,7 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/in_in_result.h:
 
-/opt/homebrew/include/symengine/series_piranha.h:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/pointer_traits.h:
-
-/opt/homebrew/include/symengine/complex_mpc.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/remove_copy_if.h:
 
@@ -3082,8 +2994,6 @@ CMakeFiles/cas_wrapper.dir/cas_wrapper.cpp.o: /Users/christianstrobele/code/Cris
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/alloca.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iter_swap.h:
-
-/opt/homebrew/include/symengine/eval.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__type_traits/is_trivially_destructible.h:
 

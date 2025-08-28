@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'screens/calculator_screen.dart';
 import 'screens/graphing_screen.dart';
+import 'screens/function_editor_screen.dart';
 
 void main() {
   runApp(const CrispCalcApp());
 }
 
-/// The root widget of the CrispCalc application.
 class CrispCalcApp extends StatelessWidget {
   const CrispCalcApp({super.key});
 
@@ -36,7 +36,6 @@ class CrispCalcApp extends StatelessWidget {
   }
 }
 
-/// The main screen widget with keyboard support and proper desktop sizing.
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -44,18 +43,21 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late final List<Widget> _screens;
   final FocusNode _focusNode = FocusNode();
+  
+  // FIX: The GlobalKey now correctly references the public state class 'CalculatorScreenState'.
+  final GlobalKey<CalculatorScreenState> _calculatorScreenKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _screens = <Widget>[
-      CalculatorScreen(onKeyEvent: _handleKeyEvent),
+      CalculatorScreen(key: _calculatorScreenKey, onKeyEvent: _handleKeyEvent),
       const GraphingScreen(),
-      const PlaceholderScreen(title: 'Functions Library'),
+      const FunctionEditorScreen(),
       const PlaceholderScreen(title: 'Settings'),
     ];
   }
@@ -68,9 +70,7 @@ class _MainScreenState extends State<MainScreen> {
 
   bool _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent && _selectedIndex == 0) {
-      // Forward keyboard events to calculator
-      final calculatorScreen = _screens[0] as CalculatorScreen;
-      return calculatorScreen.handleKeyboardInput(event);
+      return _calculatorScreenKey.currentState?.handleKeyboardInput(event) ?? false;
     }
     return false;
   }
@@ -78,6 +78,10 @@ class _MainScreenState extends State<MainScreen> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      if (index == 0) {
+        // This call is now valid and will correctly request focus.
+        _calculatorScreenKey.currentState?.requestFocus();
+      }
     });
   }
 
@@ -89,14 +93,8 @@ class _MainScreenState extends State<MainScreen> {
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
         child: Container(
-          constraints: const BoxConstraints(
-            minWidth: 400,
-            minHeight: 600,
-          ),
-          child: IndexedStack(
-            index: _selectedIndex,
-            children: _screens,
-          ),
+          constraints: const BoxConstraints(minWidth: 400, minHeight: 600),
+          child: IndexedStack(index: _selectedIndex, children: _screens),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -107,29 +105,16 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.calculate),
-            label: 'Calculator',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(MdiIcons.chartLine),
-            label: 'Graphing',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(MdiIcons.functionVariant),
-            label: 'Functions',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Calculator'),
+          BottomNavigationBarItem(icon: Icon(MdiIcons.chartLine), label: 'Graphing'),
+          BottomNavigationBarItem(icon: Icon(MdiIcons.functionVariant), label: 'Functions'),
+          const BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
   }
 }
 
-/// A generic placeholder screen for features that are not yet implemented.
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen({super.key, required this.title});
@@ -137,22 +122,16 @@ class PlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.construction, size: 80, color: Colors.grey),
             const SizedBox(height: 24),
-            Text(
-              '$title\n(Coming Soon!)',
+            Text('$title\n(Coming Soon!)',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey,
-                fontSize: 24,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey, fontSize: 24),
             ),
           ],
         ),
