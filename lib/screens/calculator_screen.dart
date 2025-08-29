@@ -163,9 +163,14 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     print('Current text: "${_controller.text}"');
     print('Current selection: ${_controller.selection}');
     
+    // This is a good place to ensure focus is regained right away,
+    // especially for non-insertion actions like moving the cursor.
+    if (!_inputFocusNode.hasFocus) {
+      _inputFocusNode.requestFocus();
+    }
+
     switch (value) {
       case 'C':
-        print('CLEAR: Clearing textfield');
         _controller.clear();
         setState(() { _justCalculated = false; });
         break;
@@ -178,19 +183,17 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
         }
         break;
       case '◀':
-        final currentSelection = _controller.selection;
-        if (currentSelection.start > 0) {
-          final newPos = currentSelection.start - 1;
-          _controller.selection = TextSelection.collapsed(offset: newPos);
-          print('CURSOR: Moved cursor left to position $newPos');
+        final selection = _controller.selection;
+        if (selection.baseOffset > 0) {
+          final newPosition = selection.baseOffset - 1;
+          _controller.selection = TextSelection.collapsed(offset: newPosition);
         }
         break;
       case '▶':
-        final currentSelection = _controller.selection;
-        if (currentSelection.end < _controller.text.length) {
-          final newPos = currentSelection.end + 1;
-          _controller.selection = TextSelection.collapsed(offset: newPos);
-          print('CURSOR: Moved cursor right to position $newPos');
+        final selection = _controller.selection;
+        if (selection.baseOffset < _controller.text.length) {
+          final newPosition = selection.baseOffset + 1;
+          _controller.selection = TextSelection.collapsed(offset: newPosition);
         }
         break;
       case 'solve':
@@ -248,11 +251,26 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     print('  New text: "$newText"');
     print('  New cursor position: $newPosition');
 
-    // CRITICAL: Use TextEditingValue for atomic update
-    _controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
-    );
+    // If we already have focus, the update can be done synchronously and simply.
+    if (_inputFocusNode.hasFocus) {
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
+      );
+    } else {
+      // If we DON'T have focus, we request it. This is an asynchronous operation.
+      _inputFocusNode.requestFocus();
+      
+      // We schedule the state update for the very next frame. By the time this
+      // callback runs, the focus event will be complete. Our value assignment
+      // will now correctly override the TextField's default "select all" behavior.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
+        );
+      });
+    }
     
     print('After atomic update:');
     print('  Actual text: "${_controller.text}"');
@@ -269,30 +287,41 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     print('Before backspace:');
     print('  Text: "$currentText"');
     print('  Selection: $selection');
-    
-    if (selection.isCollapsed) {
-      if (selection.start > 0) {
-        final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
-        final newPos = selection.start - 1;
-        
+
+    if (!selection.isValid) return; // Do nothing if selection is invalid
+
+    // If text is selected, deleting it is the same as inserting an empty string.
+    if (!selection.isCollapsed) {
+      _insertTextAndPositionCursor('');
+      return;
+    }
+
+    // Handle single-character deletion at a collapsed cursor.
+    if (selection.start > 0) {
+      final currentText = _controller.text;
+      final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
+      final newPos = selection.start - 1;
+
         print('Single cursor backspace:');
         print('  Removing char at position ${selection.start - 1}');
         print('  New text: "$newText"');
         print('  New cursor: $newPos');
-        
-        // Ensure focus and set value atomically
-        if (!_inputFocusNode.hasFocus) {
-          _inputFocusNode.requestFocus();
-        }
-        
+
+      // Apply the same focus-aware logic as our main insertion function.
+      if (_inputFocusNode.hasFocus) {
         _controller.value = TextEditingValue(
           text: newText,
           selection: TextSelection.collapsed(offset: newPos),
         );
+      } else {
+        _inputFocusNode.requestFocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _controller.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: newPos),
+          );
+        });
       }
-    } else {
-      print('Selection backspace: deleting selected text');
-      _insertTextAndPositionCursor('');
     }
     
     print('After backspace:');
@@ -370,23 +399,8 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                       subtitle: Text('where Y${e.key + 1} = ${e.value}'),
                       onTap: () {
                         Navigator.of(context).pop();
-                        print('MODAL: Inserting solve function: Y${e.key+1}=0, x');
-                        
-                        // Insert at current cursor (inside solve parentheses)
-                        final currentPos = _controller.selection.baseOffset;
-                        final currentText = _controller.text;
-                        final beforeCursor = currentText.substring(0, currentPos);
-                        final afterCursor = currentText.substring(currentPos);
-                        final insertText = 'Y${e.key+1}=0, x';
-                        
-                        if (!_inputFocusNode.hasFocus) {
-                          _inputFocusNode.requestFocus();
-                        }
-                        
-                        _controller.value = TextEditingValue(
-                          text: beforeCursor + insertText + afterCursor,
-                          selection: TextSelection.collapsed(offset: currentPos + insertText.length),
-                        );
+                        // Use our robust helper function for insertion.
+                        _insertTextAndPositionCursor('Y${e.key+1}=0, x');
                       },
                     )).toList(),
               ),
@@ -394,8 +408,9 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           ]
         );
       }
+    // The whenComplete is still good practice to catch cases where the user
+    // dismisses the modal without selecting anything.
     ).whenComplete(() {
-      print('MODAL: Modal closed, ensuring focus');
       if (!_inputFocusNode.hasFocus) {
         _inputFocusNode.requestFocus();
       }
