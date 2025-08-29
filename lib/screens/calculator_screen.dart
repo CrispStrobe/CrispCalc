@@ -185,7 +185,60 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
 
   /// Central handler for all keypad buttons
+  /// Central handler for all keypad buttons
   void _onButtonPressed(String value) {
+    // NOTE: The general purpose requestFocus() at the top has been removed.
+    // Focus is now managed by the specific functions that need it (e.g., insertion).
+    switch (value) {
+      case 'C':
+        _controller.clear();
+        setState(() { _justCalculated = false; });
+        break;
+      case '⌫':
+        _handleBackspace();
+        break;
+      case 'EXE':
+        if (_controller.text.isNotEmpty) {
+          _calculate(_controller.text);
+        }
+        break;
+      case '◀':
+        if (_inputFocusNode.hasFocus) {
+            final selection = _controller.selection;
+            if (selection.baseOffset > 0) {
+                final newPosition = selection.baseOffset - 1;
+                _controller.selection = TextSelection.collapsed(offset: newPosition);
+            }
+        }
+        break;
+      case '▶':
+        if (_inputFocusNode.hasFocus) {
+            final selection = _controller.selection;
+            if (selection.baseOffset < _controller.text.length) {
+                final newPosition = selection.baseOffset + 1;
+                _controller.selection = TextSelection.collapsed(offset: newPosition);
+            }
+        }
+        break;
+      case 'solve':
+        _insertTextAndPositionCursor('solve()', cursorOffset: -1);
+        _showSolveFunctionPicker();
+        break;
+      case 'f(x)':
+        _showFunctionPicker();
+        break;
+      // Function buttons that need cursor inside parentheses
+      case 'sin(': case 'cos(': case 'tan(': case 'ln(': case 'log(': case 'sqrt(': case 'abs(':
+        final funcName = value.substring(0, value.length - 1);
+        _insertTextAndPositionCursor('$funcName()', cursorOffset: -1);
+        break;
+      default:
+        _insertTextAndPositionCursor(value);
+        break;
+    }
+  }
+
+  void _onButtonPressed_old(String value) {
     print('\n=== BUTTON PRESSED: "$value" ===');
     print('Focus before: ${_inputFocusNode.hasFocus}');
     print('Current text: "${_controller.text}"');
@@ -500,19 +553,30 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
 
   String _preprocessNativeExpression(String expression) {
     String p = expression;
-    
-    // FIX: Convert European decimal comma to dot
     p = p.replaceAll(',', '.');
-    
+
+    // Pass 1: Handle implicit multiplication for numbers and parentheses.
+    // This turns (x+1)(x-2) into (x+1)*(x-2) and 2(3) into 2*(3).
     p = p.replaceAllMapped(RegExp(r'(\d|\))(\()'), (m) => '${m[1]}*${m[2]}');
-    p = p.replaceAllMapped(RegExp(r'(\))(\d|[a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
+
+    // Pass 2: Handle implicit multiplication for standalone variables (like x, y, etc.).
+    // A word boundary `\b` ensures we only match single letters, not function names.
+    // This turns x(2) into x*(2) but leaves cos(2) alone.
+    p = p.replaceAllMapped(RegExp(r'(\b[a-zA-Z]\b)(\()'), (m) => '${m[1]}*${m[2]}');
+
+    p = p.replaceAllMapped(RegExp(r'(\))(\d|\b[a-zA-Z]\b)'), (m) => '${m[1]}*${m[2]}');
     p = p.replaceAllMapped(RegExp(r'(\d+)!'), (m) {
-        final n = int.tryParse(m.group(1)!) ?? 0;
-        if (n <= 20) { int f=1; for(int i=1;i<=n;i++){f*=i;} return f.toString(); } 
-        else { return 'gamma(${n + 1})'; }
+      final n = int.tryParse(m.group(1)!) ?? 0;
+      if (n <= 20) {
+        int f = 1;
+        for (int i = 1; i <= n; i++) { f *= i; }
+        return f.toString();
+      } else {
+        return 'gamma(${n + 1})';
+      }
     });
     return p;
-    }
+  }
   
   String _extractNumericFromSolveResult(String solveResult) {
     final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+)\s*$').firstMatch(solveResult);
@@ -523,171 +587,132 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
   
   void _showSolveFunctionPicker() {
-    // Store current cursor position and text state
-    final currentSelection = _controller.selection;
-    final currentText = _controller.text;
-    
-    print('MODAL: Opening solve picker, storing state: text="$currentText", selection=$currentSelection');
-    
-    setState(() { _modalIsOpen = true; });
-    
-    showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) {
-        return Column(
-            mainAxisSize: MainAxisSize.min, 
-            children: [
-            Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text('Select equation to solve:', 
-                style: Theme.of(context).textTheme.titleMedium)
-            ),
-            // Add manual entry option at the top
-            ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Enter manually'),
-                subtitle: Text('Continue typing your equation'),
-                onTap: () {
-                print('MODAL: Manual entry selected - preserving cursor position');
-                Navigator.of(context).pop();
-                },
-            ),
-            const Divider(),
-            Flexible(
-                child: ListView(
-                shrinkWrap: true, 
-                children: _appState.graphFunctions.asMap().entries
-                    .where((e) => e.value.isNotEmpty)
-                    .map((e) => ListTile(
-                        title: Text('Solve Y${e.key + 1} = 0'),
-                        subtitle: Text('where Y${e.key + 1} = ${e.value}'),
-                        onTap: () {
-                        print('MODAL: Selected Y${e.key + 1} = 0');
-                        Navigator.of(context).pop();
-                        // Replace the solve() content with the selected equation
-                        final newText = currentText.replaceRange(
-                            currentText.indexOf('(') + 1,
-                            currentText.lastIndexOf(')'),
-                            'Y${e.key+1}=0'
-                        );
-                        _insertTextAndPositionCursor(newText, cursorOffset: -(newText.length - currentText.length));
-                        },
-                    )).toList(),
-                ),
-            ),
-            ]
-        );
-        }
-    ).whenComplete(() {
-        setState(() { _modalIsOpen = false; });
-        print('MODAL: Solve picker closed, restoring focus and cursor position');
-        // Restore focus and cursor position carefully
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_inputFocusNode.hasFocus) {
-            _inputFocusNode.requestFocus();
-        }
-        
-        // Restore cursor position if text hasn't changed
-        if (_controller.text == currentText && currentSelection.isValid) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-            _controller.selection = currentSelection;
-            print('MODAL: Restored cursor position to: $currentSelection');
-            });
-        }
-        });
-    });
-    }
+    final List<Widget> options = _appState.graphFunctions.asMap().entries
+      .where((e) => e.value.isNotEmpty)
+      .map((e) => ListTile(
+        title: Text('Solve Y${e.key + 1} = 0'),
+        subtitle: Text('where Y${e.key + 1} = ${e.value}'),
+        onTap: () {
+          Navigator.of(context).pop();
+          _insertTextAndPositionCursor('Y${e.key+1}=0, x');
+        },
+      )).toList();
 
-    void _showFunctionPicker() {
-    // Store current cursor position and text state
-    final currentSelection = _controller.selection;
-    final currentText = _controller.text;
-    
-    print('MODAL: Opening function picker, storing state: text="$currentText", selection=$currentSelection');
-    
+    _showPicker(title: 'Select equation or continue typing:', options: options);
+  }
+
+   void _showFunctionPicker() {
+    final List<Widget> options = _appState.graphFunctions.asMap().entries
+      .where((entry) => entry.value.isNotEmpty)
+      .map((entry) {
+        int index = entry.key;
+        String func = entry.value;
+        return ListTile(
+          title: Text('Y${index + 1} = $func'),
+          onTap: () {
+            Navigator.of(context).pop();
+            _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
+          },
+        );
+      }).toList();
+
+    _showPicker(title: 'Select function or continue typing:', options: options);
+  }
+
+  /// A generic, robust modal picker that correctly manages focus.
+  void _showPicker({required String title, required List<Widget> options}) {
+    // Store the exact cursor position before the modal opens.
+    final selectionBeforeModal = _controller.selection;
     setState(() { _modalIsOpen = true; });
-    
+
     showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) {
-        return Column(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('Select function to evaluate:', 
-                style: TextStyle(fontWeight: FontWeight.bold))
-            ),
-            // Add manual entry option
-            ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Enter manually'),
-                subtitle: Text('Continue typing your function'),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+              ),
+              ListTile(
+                leading: Icon(Icons.keyboard_return),
+                title: Text('Continue Typing'),
+                subtitle: Text('Dismiss this panel'),
                 onTap: () {
-                print('MODAL: Manual function entry selected - preserving cursor position');
-                Navigator.of(context).pop();
+                  // This is now the safe way to close and restore state.
+                  Navigator.of(context).pop();
+                  _inputFocusNode.requestFocus();
+                  // A post-frame callback ensures the selection is restored *after*
+                  // the focus has been granted, avoiding the "select all" bug.
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _controller.selection = selectionBeforeModal;
+                  });
                 },
-            ),
-            const Divider(),
-            Flexible(
-                child: ListView(
-                shrinkWrap: true,
-                children: _appState.graphFunctions.asMap().entries
-                    .where((entry) => entry.value.isNotEmpty)
-                    .map((entry) {
-                    int index = entry.key;
-                    String func = entry.value;
-                    return ListTile(
-                    title: Text('Y${index + 1} = $func'),
-                    onTap: () {
-                        print('MODAL: Selected Y${index + 1}');
-                        Navigator.of(context).pop();
-                        _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
-                    },
-                    );
-                }).toList()
-                ),
-            ),
+              ),
+              const Divider(),
+              Flexible(child: ListView(shrinkWrap: true, children: options)),
             ],
+          ),
         );
-        }
-    ).whenComplete(() {
-        setState(() { _modalIsOpen = false; });
-        print('MODAL: Function picker closed, restoring focus and cursor position');
-        // Restore focus and cursor position carefully
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_inputFocusNode.hasFocus) {
-            _inputFocusNode.requestFocus();
-        }
-        
-        // Restore cursor position if text hasn't changed
-        if (_controller.text == currentText && currentSelection.isValid) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-            _controller.selection = currentSelection;
-            print('MODAL: Restored cursor position to: $currentSelection');
-            });
-        }
-        });
+      },
+    ).whenComplete(() => setState(() { _modalIsOpen = false; }));
+
+    // CRITICAL FIX: After showing the picker, schedule a task to return focus
+    // to the text field. This allows the user to ignore the picker and just
+    // continue typing with their physical keyboard.
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_modalIsOpen && !_inputFocusNode.hasFocus) {
+        _inputFocusNode.requestFocus();
+        _controller.selection = selectionBeforeModal;
+      }
     });
-    }
+  }
 
   String _preprocessExpression(String expression) {
     String processed = expression;
-    final funcRegex = RegExp(r'Y(\d+)');
-    processed = processed.replaceAllMapped(funcRegex, (match) {
+
+    // Regex to find user-defined functions with arguments, e.g., Y1(3) or Y2(x+1)
+    final funcCallRegex = RegExp(r'Y(\d+)\((.*?)\)');
+    processed = processed.replaceAllMapped(funcCallRegex, (match) {
       try {
         final funcIndex = int.parse(match.group(1)!) - 1;
+        final argValue = match.group(2)!;
+
         if (funcIndex >= 0 && funcIndex < _appState.graphFunctions.length) {
           String funcBody = _appState.graphFunctions[funcIndex];
-          if (funcBody.isNotEmpty) return '($funcBody)';
+          if (funcBody.isNotEmpty) {
+            // This is now a substitution, not just a simple replacement.
+            final variable = _detectVariable(funcBody);
+            // Replace all instances of the variable with the argument, wrapped in parentheses
+            // for mathematical safety (e.g., handling Y1(2+3)).
+            String substitutedBody = funcBody.replaceAll(variable, '($argValue)');
+            return '($substitutedBody)'; // Return the result of the substitution
+          }
         }
-      } catch (e) { 
-        return match.group(0)!; 
+      } catch (e) {
+        return match.group(0)!;
       }
       return match.group(0)!;
     });
+
+    // Handle simple replacement for Y-variables without arguments (if any)
+    final simpleFuncRegex = RegExp(r'Y(\d+)');
+    processed = processed.replaceAllMapped(simpleFuncRegex, (match) {
+        // This part remains for backward compatibility if Y variables are used without args
+        // but the funcCallRegex above will catch the more important cases.
+        try {
+            final funcIndex = int.parse(match.group(1)!) - 1;
+            if (funcIndex >= 0 && funcIndex < _appState.graphFunctions.length) {
+                String funcBody = _appState.graphFunctions[funcIndex];
+                if (funcBody.isNotEmpty) return '($funcBody)';
+            }
+        } catch (e) { return match.group(0)!; }
+        return match.group(0)!;
+    });
+
     return processed;
   }
 
