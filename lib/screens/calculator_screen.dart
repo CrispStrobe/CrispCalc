@@ -104,12 +104,12 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     // Find start of word before cursor
     int wordStart = cursorPos;
     while (wordStart > 0 && RegExp(r'[a-zA-Z]').hasMatch(text[wordStart - 1])) {
-      wordStart--;
+        wordStart--;
     }
 
     if (wordStart < cursorPos) {
-      final word = text.substring(wordStart, cursorPos);
-      if (word == 'solve') {
+        final word = text.substring(wordStart, cursorPos);
+        if (word == 'solve') {
         print('AUTO: Auto-completing "solve" to "solve()"');
         _controller.removeListener(_onInputChanged);
         final textBefore = text.substring(0, wordStart);
@@ -117,10 +117,12 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
         _controller.text = '$textBefore$word()$textAfter';
         _controller.selection = TextSelection.collapsed(offset: wordStart + word.length + 1);
         _controller.addListener(_onInputChanged);
-        _showSolveFunctionPicker();
-      }
+        
+        // Don't show picker immediately - let user type first
+        print('AUTO: solve() inserted, cursor positioned inside parentheses');
+        }
     }
-  }
+    }
   
   /// Updates live preview of result as user types
   void _updateLivePreview() {
@@ -163,52 +165,54 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     print('Current text: "${_controller.text}"');
     print('Current selection: ${_controller.selection}');
     
-    // This is a good place to ensure focus is regained right away,
-    // especially for non-insertion actions like moving the cursor.
+    // Ensure focus for all button presses
     if (!_inputFocusNode.hasFocus) {
-      _inputFocusNode.requestFocus();
+        _inputFocusNode.requestFocus();
     }
 
     switch (value) {
-      case 'C':
+        case 'C':
         _controller.clear();
         setState(() { _justCalculated = false; });
         break;
-      case '⌫':
+        case '⌫':
         _handleBackspace();
         break;
-      case 'EXE':
+        case 'EXE':
         if (_controller.text.isNotEmpty) {
-          _calculate(_controller.text);
+            _calculate(_controller.text);
         }
         break;
-      case '◀':
+        case '◀':
         final selection = _controller.selection;
         if (selection.baseOffset > 0) {
-          final newPosition = selection.baseOffset - 1;
-          _controller.selection = TextSelection.collapsed(offset: newPosition);
+            final newPosition = selection.baseOffset - 1;
+            _controller.selection = TextSelection.collapsed(offset: newPosition);
         }
         break;
-      case '▶':
+        case '▶':
         final selection = _controller.selection;
         if (selection.baseOffset < _controller.text.length) {
-          final newPosition = selection.baseOffset + 1;
-          _controller.selection = TextSelection.collapsed(offset: newPosition);
+            final newPosition = selection.baseOffset + 1;
+            _controller.selection = TextSelection.collapsed(offset: newPosition);
         }
         break;
-      case 'solve':
+        case 'solve':
         _insertTextAndPositionCursor('solve()', cursorOffset: -1);
-        _showSolveFunctionPicker();
+        // Show picker after a short delay to allow the text to be inserted
+        Future.delayed(const Duration(milliseconds: 50), () {
+            _showSolveFunctionPicker();
+        });
         break;
-      case 'f(x)':
+        case 'f(x)':
         _showFunctionPicker();
         break;
-      // Function buttons that need cursor inside parentheses
-      case 'sin(': case 'cos(': case 'tan(': case 'ln(': case 'log(': case 'sqrt(': case 'abs(':
+        // Function buttons that need cursor inside parentheses
+        case 'sin(': case 'cos(': case 'tan(': case 'ln(': case 'log(': case 'sqrt(': case 'abs(':
         final funcName = value.substring(0, value.length - 1);
         _insertTextAndPositionCursor('$funcName()', cursorOffset: -1);
         break;
-      default:
+        default:
         _insertTextAndPositionCursor(value);
         break;
     }
@@ -217,18 +221,7 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     print('Final text: "${_controller.text}"');
     print('Final selection: ${_controller.selection}');
     print('=== END BUTTON PROCESSING ===\n');
-  }
-  
-  /// Ensures focus without causing auto-selection
-  void _ensureFocus() {
-    if (!_inputFocusNode.hasFocus) {
-      print('FOCUS: Need to request focus');
-      _inputFocusNode.requestFocus();
-      // The focus listener will handle preventing auto-selection
-    } else {
-      print('FOCUS: Already has focus');
     }
-  }
   
   /// THE KEY METHOD - Robust text insertion that prevents auto-selection
   void _insertTextAndPositionCursor(String text, {int cursorOffset = 0}) {
@@ -334,8 +327,19 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   void _calculate(String expression) {
     print('\n=== CALCULATING: "$expression" ===');
     try {
-      final preprocessed = _preprocessNativeExpression(_preprocessExpression(expression));
-      final result = _engine.evaluate(preprocessed);
+      String result;
+      
+      // Handle solve() function calls BEFORE preprocessing
+      if (expression.trim().startsWith('solve(') && expression.trim().endsWith(')')) {
+        print('CALC: Detected solve() function, handling specially');
+        result = _handleSolveFunction(expression.trim());
+      } else {
+        // Normal expression evaluation with preprocessing
+        final preprocessed = _preprocessNativeExpression(_preprocessExpression(expression));
+        print('CALC: Preprocessed expression: "$preprocessed"');
+        result = _engine.evaluate(preprocessed);
+      }
+      
       print('CALC: Result: "$result"');
       
       setState(() {
@@ -355,6 +359,56 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
       setState(() => _appState.addHistoryEntry(expression, "Error: ${e.toString()}"));
     }
     print('=== END CALCULATION ===\n');
+  }
+
+  /// Handles solve() function parsing and execution
+  String _handleSolveFunction(String expression) {
+    print('SOLVE: Processing solve function: "$expression"');
+    
+    try {
+      // Extract content inside solve()
+      final solveContent = expression.substring(6, expression.length - 1).trim();
+      print('SOLVE: Content inside solve(): "$solveContent"');
+      
+      // Parse the content - expecting format like "expr, variable" or "expr=0, variable"
+      final parts = solveContent.split(',');
+      if (parts.length != 2) {
+        print('SOLVE: Error - Expected format: solve(expression, variable)');
+        return 'Error: solve() requires format: solve(expression, variable)';
+      }
+      
+      String equation = parts[0].trim();
+      String variable = parts[1].trim();
+      
+      print('SOLVE: Equation: "$equation", Variable: "$variable"');
+      
+      // If equation contains =, split it and move right side to left
+      if (equation.contains('=')) {
+        final eqParts = equation.split('=');
+        if (eqParts.length == 2) {
+          final leftSide = eqParts[0].trim();
+          final rightSide = eqParts[1].trim();
+          
+          // Convert "left = right" to "left - (right)"
+          if (rightSide == '0' || rightSide.isEmpty) {
+            equation = leftSide;
+          } else {
+            equation = '$leftSide - ($rightSide)';
+          }
+          print('SOLVE: Converted equation to: "$equation"');
+        }
+      }
+      
+      // Now preprocess the equation before solving
+      final preprocessed = _preprocessNativeExpression(_preprocessExpression(equation));
+      print('SOLVE: Preprocessed equation: "$preprocessed"');
+      
+      return _engine.solve(preprocessed, variable);
+      
+    } catch (e) {
+      print('SOLVE: Error parsing solve function: $e');
+      return 'Error: Invalid solve() syntax';
+    }
   }
 
   String _preprocessNativeExpression(String expression) {
@@ -378,78 +432,126 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
   
   void _showSolveFunctionPicker() {
+    // Store current focus state
+    final hadFocus = _inputFocusNode.hasFocus;
+    print('MODAL: Opening solve picker, current focus: $hadFocus');
+    
     showModalBottomSheet(
-      context: context, 
-      builder: (context) {
+        context: context,
+        isScrollControlled: true, // Allow keyboard to show if needed
+        builder: (context) {
         return Column(
-          mainAxisSize: MainAxisSize.min, 
-          children: [
+            mainAxisSize: MainAxisSize.min, 
+            children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text('Select equation to solve, or type manually:', 
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Select equation to solve:', 
                 style: Theme.of(context).textTheme.titleMedium)
             ),
+            // Add manual entry option at the top
+            ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Enter manually'),
+                subtitle: Text('Type your own equation'),
+                onTap: () {
+                print('MODAL: Manual entry selected');
+                Navigator.of(context).pop();
+                // Just close - user can continue typing
+                },
+            ),
+            const Divider(),
             Flexible(
-              child: ListView(
+                child: ListView(
                 shrinkWrap: true, 
                 children: _appState.graphFunctions.asMap().entries
                     .where((e) => e.value.isNotEmpty)
                     .map((e) => ListTile(
-                      title: Text('Solve Y${e.key + 1} = 0'),
-                      subtitle: Text('where Y${e.key + 1} = ${e.value}'),
-                      onTap: () {
+                        title: Text('Solve Y${e.key + 1} = 0'),
+                        subtitle: Text('where Y${e.key + 1} = ${e.value}'),
+                        onTap: () {
+                        print('MODAL: Selected Y${e.key + 1} = 0');
                         Navigator.of(context).pop();
-                        // Use our robust helper function for insertion.
+                        // Insert the solve equation
                         _insertTextAndPositionCursor('Y${e.key+1}=0, x');
-                      },
+                        },
                     )).toList(),
-              ),
+                ),
             ),
-          ]
+            ]
         );
-      }
-    // The whenComplete is still good practice to catch cases where the user
-    // dismisses the modal without selecting anything.
+        }
     ).whenComplete(() {
-      if (!_inputFocusNode.hasFocus) {
-        _inputFocusNode.requestFocus();
-      }
+        print('MODAL: Solve picker closed, restoring focus');
+        // Use a longer delay to ensure modal is fully dismissed
+        Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_inputFocusNode.hasFocus) {
+            print('MODAL: Requesting focus after delay');
+            _inputFocusNode.requestFocus();
+        }
+        });
     });
-  }
+    }
   
   void _showFunctionPicker() {
+    final hadFocus = _inputFocusNode.hasFocus;
+    print('MODAL: Opening function picker, current focus: $hadFocus');
+    
     showModalBottomSheet(
-      context: context, 
-      builder: (context) {
-        return ListView(
-          children: [
-            const ListTile(
-              title: Text('Select function to evaluate:', style: TextStyle(fontWeight: FontWeight.bold))
+        context: context,
+        isScrollControlled: true, // Allow keyboard to show if needed
+        builder: (context) {
+        return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Select function to evaluate:', 
+                style: TextStyle(fontWeight: FontWeight.bold))
+            ),
+            // Add manual entry option
+            ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Enter manually'),
+                subtitle: Text('Type your own function call'),
+                onTap: () {
+                print('MODAL: Manual function entry selected');
+                Navigator.of(context).pop();
+                },
             ),
             const Divider(),
-            ..._appState.graphFunctions.asMap().entries
-                .where((entry) => entry.value.isNotEmpty)
-                .map((entry) {
-              int index = entry.key;
-              String func = entry.value;
-              return ListTile(
-                title: Text('Y${index + 1} = $func'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
-                },
-              );
-            }).toList()
-          ],
+            Flexible(
+                child: ListView(
+                shrinkWrap: true,
+                children: _appState.graphFunctions.asMap().entries
+                    .where((entry) => entry.value.isNotEmpty)
+                    .map((entry) {
+                    int index = entry.key;
+                    String func = entry.value;
+                    return ListTile(
+                    title: Text('Y${index + 1} = $func'),
+                    onTap: () {
+                        print('MODAL: Selected Y${index + 1}');
+                        Navigator.of(context).pop();
+                        _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
+                    },
+                    );
+                }).toList()
+                ),
+            ),
+            ],
         );
-      }
+        }
     ).whenComplete(() {
-      print('MODAL: Function picker closed, ensuring focus');
-      if (!_inputFocusNode.hasFocus) {
-        _inputFocusNode.requestFocus();
-      }
+        print('MODAL: Function picker closed, restoring focus');
+        // Use a longer delay to ensure modal is fully dismissed
+        Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_inputFocusNode.hasFocus) {
+            print('MODAL: Requesting focus after delay');
+            _inputFocusNode.requestFocus();
+        }
+        });
     });
-  }
+    }
 
   String _preprocessExpression(String expression) {
     String processed = expression;

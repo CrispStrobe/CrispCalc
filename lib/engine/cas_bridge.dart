@@ -1,5 +1,4 @@
 /// lib/engine/cas_bridge.dart
-
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
@@ -15,7 +14,7 @@ typedef _FreeStringDart = void Function(Pointer<Utf8> str);
 class CASBridge {
   late final _CallStringOpDart evaluate;
   late final _SolveDart solve;
-  late final _FreeStringDart free_string;
+  late final _FreeStringDart free_string; // Fixed: removed asterisks
   late final _CallStringOpDart factor;
   late final _CallStringOpDart expand;
 
@@ -32,9 +31,9 @@ class CASBridge {
   }
 
   String _getLibraryPath() {
-    if (Platform.isMacOS) return _findMacOSLibrary('libcas_wrapper.dylib');
-    if (Platform.isLinux) return _findLinuxLibrary('libcas_wrapper.so');
-    if (Platform.isWindows) return _findWindowsLibrary('cas_wrapper.dll');
+    if (Platform.isMacOS) return _findMacOSLibrary('libcas_wrapper.dylib'); // Fixed: removed asterisks, added underscore
+    if (Platform.isLinux) return _findLinuxLibrary('libcas_wrapper.so'); // Fixed: removed asterisks, added underscore
+    if (Platform.isWindows) return _findWindowsLibrary('cas_wrapper.dll'); // Fixed: removed asterisks, added underscore
     throw Exception('Unsupported platform');
   }
 
@@ -55,10 +54,9 @@ class CASBridge {
 
     throw Exception('''
 ❌ FATAL: Native library "$libName" not found.
-
 Checked Locations:
-  • Development: ${devPath.absolute.path}
-  • App Bundle: ${bundlePath.path}
+ • Development: ${devPath.absolute.path}
+ • App Bundle: ${bundlePath.path}
 
 Ensure you have run the bundling script:
 👉 ./bundle_symengine.sh
