@@ -64,36 +64,47 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   
   /// Central hub for reacting to text changes from keyboard or grid
   void _onInputChanged() {
-    print('INPUT: _onInputChanged triggered - text: "${_controller.text}", selection: ${_controller.selection}');
-    
+    // A flag to prevent re-triggering this listener while we are modifying text inside it.
+    bool isModifying = false;
+
     // Handle post-calculation state
-    if (_justCalculated && _controller.text.isNotEmpty) {
-      print('CALC: Post-calculation input detected');
+    if (!isModifying && _justCalculated && _controller.text.isNotEmpty) {
       final input = _controller.text;
-      final lastResult = _appState.history.firstOrNull?.result ?? '0';
 
-      // Prevent recursive listener calls
-      _controller.removeListener(_onInputChanged);
+      // CRITICAL FIX: Only run post-calc logic for simple inputs (operators/numbers).
+      // If the input is a function call (contains a parenthesis), do NOT run this,
+      // as it will override the carefully placed cursor.
+      final isSimpleInput = !input.contains('(');
 
-      // If input is an operator, continue from last result
-      if (['+', '-', '*', '/', '^', '%'].contains(input)) {
-        final resultToUse = _extractNumericFromSolveResult(lastResult);
-        _controller.text = resultToUse + input;
-        print('CALC: Continuing from result: "$resultToUse" + "$input" = "${_controller.text}"');
+      if (isSimpleInput) {
+        isModifying = true;
+        final lastResult = _appState.history.firstOrNull?.result ?? '0';
+
+        // Prevent recursive listener calls
+        _controller.removeListener(_onInputChanged);
+
+        if (['+', '-', '*', '/', '^', '%'].contains(input)) {
+          final resultToUse = _extractNumericFromSolveResult(lastResult);
+          _controller.text = resultToUse + input;
+        }
+
+        _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: _controller.text.length));
+        
+        setState(() { _justCalculated = false; });
+        _controller.addListener(_onInputChanged);
+        isModifying = false;
       } else {
-        print('CALC: Starting fresh with: "$input"');
+        // If it's a function call, just reset the flag and do nothing else.
+        setState(() { _justCalculated = false; });
       }
-
-      // Move cursor to end
-      _controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: _controller.text.length));
-      
-      setState(() { _justCalculated = false; });
-      _controller.addListener(_onInputChanged);
     }
     
     _handleFunctionAutocomplete();
-    setState(() => _updateLivePreview());
+    // Use a local variable to prevent rapid firing during modifications.
+    if (!isModifying) {
+        setState(() => _updateLivePreview());
+    }
   }
 
   /// Auto-completes function names like 'solve' into 'solve()'
@@ -136,6 +147,8 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     // - Too short to be meaningful
     if (currentText.isEmpty || 
         currentText.toLowerCase().startsWith('solve') ||
+        
+        currentText.contains('=') ||
         currentText.length < 2 ||
         RegExp(r'^[a-zA-Z]+$').hasMatch(currentText)) {
         setState(() { _resultPreview = ''; });
@@ -185,10 +198,11 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
 
   /// Central handler for all keypad buttons
-  /// Central handler for all keypad buttons
   void _onButtonPressed(String value) {
-    // NOTE: The general purpose requestFocus() at the top has been removed.
-    // Focus is now managed by the specific functions that need it (e.g., insertion).
+    // Note: No top-level focus request here. Focus is handled by the
+    // specific action methods (_insertTextAndPositionCursor, _handleBackspace)
+    // to prevent the "select all" bug.
+
     switch (value) {
       case 'C':
         _controller.clear();
@@ -203,36 +217,54 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
         }
         break;
       case '◀':
+        // Cursor movement should only happen if the field already has focus
         if (_inputFocusNode.hasFocus) {
-            final selection = _controller.selection;
-            if (selection.baseOffset > 0) {
-                final newPosition = selection.baseOffset - 1;
-                _controller.selection = TextSelection.collapsed(offset: newPosition);
-            }
+          final selection = _controller.selection;
+          if (selection.baseOffset > 0) {
+            final newPosition = selection.baseOffset - 1;
+            _controller.selection = TextSelection.collapsed(offset: newPosition);
+          }
         }
         break;
       case '▶':
         if (_inputFocusNode.hasFocus) {
-            final selection = _controller.selection;
-            if (selection.baseOffset < _controller.text.length) {
-                final newPosition = selection.baseOffset + 1;
-                _controller.selection = TextSelection.collapsed(offset: newPosition);
-            }
+          final selection = _controller.selection;
+          if (selection.baseOffset < _controller.text.length) {
+            final newPosition = selection.baseOffset + 1;
+            _controller.selection = TextSelection.collapsed(offset: newPosition);
+          }
         }
         break;
+      
+      // --- WORKFLOW FIXES ARE HERE ---
+
       case 'solve':
+        // 1. First, insert 'solve()' with the cursor correctly positioned inside.
         _insertTextAndPositionCursor('solve()', cursorOffset: -1);
+        // 2. Then, show the picker as a helpful overlay.
         _showSolveFunctionPicker();
         break;
+
       case 'f(x)':
         _showFunctionPicker();
         break;
-      // Function buttons that need cursor inside parentheses
-      case 'sin(': case 'cos(': case 'tan(': case 'ln(': case 'log(': case 'sqrt(': case 'abs(':
+
+      // CURSOR FIX: Group all functions that need the cursor placed inside the parentheses.
+      case 'sin(':
+      case 'cos(':
+      case 'tan(':
+      case 'ln(':
+      case 'log(':
+      case 'sqrt(':
+      case 'abs(':
+        // Extract the function name (e.g., "sin") from the button value (e.g., "sin(").
         final funcName = value.substring(0, value.length - 1);
+        // Insert the text with a cursorOffset of -1 to place the cursor before the last character ')'.
         _insertTextAndPositionCursor('$funcName()', cursorOffset: -1);
         break;
+
       default:
+        // Handle all other buttons (numbers, operators, etc.)
         _insertTextAndPositionCursor(value);
         break;
     }
@@ -587,18 +619,78 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
   
   void _showSolveFunctionPicker() {
-    final List<Widget> options = _appState.graphFunctions.asMap().entries
-      .where((e) => e.value.isNotEmpty)
-      .map((e) => ListTile(
-        title: Text('Solve Y${e.key + 1} = 0'),
-        subtitle: Text('where Y${e.key + 1} = ${e.value}'),
-        onTap: () {
-          Navigator.of(context).pop();
-          _insertTextAndPositionCursor('Y${e.key+1}=0, x');
-        },
-      )).toList();
+    final selectionBeforeModal = _controller.selection;
+    setState(() { _modalIsOpen = true; });
 
-    _showPicker(title: 'Select equation or continue typing:', options: options);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Select equation or continue typing:', style: Theme.of(context).textTheme.titleMedium),
+              ),
+              ListTile(
+                leading: Icon(Icons.keyboard_return),
+                title: Text('Continue Typing'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // Safely restore focus and selection
+                  _inputFocusNode.requestFocus();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _controller.selection = selectionBeforeModal;
+                  });
+                },
+              ),
+              const Divider(),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: _appState.graphFunctions.asMap().entries
+                    .where((e) => e.value.isNotEmpty)
+                    .map((e) => ListTile(
+                      title: Text('Solve Y${e.key + 1} = 0'),
+                      subtitle: Text('where Y${e.key + 1} = ${e.value}'),
+                      onTap: () {
+                        Navigator.of(context).pop();
+
+                        // CRITICAL FIX: Surgically insert the text inside solve()
+                        final currentText = _controller.text;
+                        final openParen = currentText.lastIndexOf('(');
+                        final closeParen = currentText.indexOf(')', openParen);
+
+                        if (openParen != -1 && closeParen != -1) {
+                          final textToInsert = 'Y${e.key+1}=0, x';
+                          final newText = currentText.replaceRange(openParen + 1, closeParen, textToInsert);
+                          final newCursorPos = openParen + 1 + textToInsert.length;
+                          
+                          _inputFocusNode.requestFocus();
+                          _controller.value = TextEditingValue(
+                            text: newText,
+                            selection: TextSelection.collapsed(offset: newCursorPos),
+                          );
+                        }
+                      },
+                    )).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() => setState(() { _modalIsOpen = false; }));
+
+    // Return focus to allow "just typing" after the modal appears
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_modalIsOpen && mounted && !_inputFocusNode.hasFocus) {
+        _inputFocusNode.requestFocus();
+        _controller.selection = selectionBeforeModal;
+      }
+    });
   }
 
    void _showFunctionPicker() {
