@@ -1,4 +1,4 @@
-/// lib/main.dart:
+/// lib/main.dart - REMOVE DUPLICATE KEYBOARD HANDLING
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,44 +43,29 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
+class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _screens;
-  final FocusNode _focusNode = FocusNode();
-  
-  // FIX: The GlobalKey now correctly references the public state class 'CalculatorScreenState'.
   final GlobalKey<CalculatorScreenState> _calculatorScreenKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _screens = <Widget>[
-      CalculatorScreen(key: _calculatorScreenKey, onKeyEvent: _handleKeyEvent),
+      CalculatorScreen(key: _calculatorScreenKey),
       const GraphingScreen(),
       const FunctionEditorScreen(),
       const PlaceholderScreen(title: 'Settings'),
     ];
   }
 
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  bool _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && _selectedIndex == 0) {
-      return _calculatorScreenKey.currentState?.handleKeyboardInput(event) ?? false;
-    }
-    return false;
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
       if (index == 0) {
-        // This call is now valid and will correctly request focus.
-        _calculatorScreenKey.currentState?.requestFocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _calculatorScreenKey.currentState?.requestFocus();
+        });
       }
     });
   }
@@ -88,14 +73,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: KeyboardListener(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: _handleKeyEvent,
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 400, minHeight: 600),
-          child: IndexedStack(index: _selectedIndex, children: _screens),
-        ),
+      body: Container(
+        constraints: const BoxConstraints(minWidth: 400, minHeight: 600),
+        child: IndexedStack(index: _selectedIndex, children: _screens),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,

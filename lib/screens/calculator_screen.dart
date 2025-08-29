@@ -1,5 +1,3 @@
-/// lib/screens/calculator_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -9,75 +7,130 @@ import '../engine/calculator_engine.dart';
 import '../widgets/keypad_grid.dart';
 
 class CalculatorScreen extends StatefulWidget {
-  final bool Function(KeyEvent)? onKeyEvent;
-  const CalculatorScreen({super.key, this.onKeyEvent});
+  const CalculatorScreen({super.key});
 
   @override
   State<CalculatorScreen> createState() => CalculatorScreenState();
 }
 
 class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
-  static CalculatorScreenState? _currentState;
   final AppState _appState = AppState();
   final CalculatorEngine _engine = CalculatorEngine();
 
   late TabController _tabController;
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
+  
   String _resultPreview = '';
   bool _justCalculated = false;
   
-  // Memory system for storing results
-  final Map<String, String> _memory = {}; // M1, M2, ... M9
-  int _memoryCounter = 1;
+  final Map<String, String> _memory = {};
 
   @override
   void initState() {
     super.initState();
-    _currentState = this;
     _tabController = TabController(length: 4, vsync: this);
     _controller.addListener(_onInputChanged);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging && mounted) {
-        requestFocus();
-      }
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _inputFocusNode.requestFocus();
     });
   }
-  
-  void requestFocus() {
-    if (!mounted) return;
-    _inputFocusNode.requestFocus();
+
+  void _onFocusChanged() {
+    // Remove this - we'll handle focus more directly
   }
 
   @override
   void dispose() {
-    _currentState = null;
     _tabController.dispose();
+    _controller.removeListener(_onInputChanged);
     _controller.dispose();
-    _scrollController.dispose();
     _inputFocusNode.dispose();
     super.dispose();
   }
   
-  void _onInputChanged() {
-    if (_controller.text.isNotEmpty && _justCalculated) {
-      setState(() { _justCalculated = false; });
+  /// Public method to request focus - called from main.dart
+  void requestFocus() {
+    print('MAIN: requestFocus() called from main.dart');
+    if (!_inputFocusNode.hasFocus) {
+      print('MAIN: Requesting focus...');
+      _inputFocusNode.requestFocus();
+    } else {
+      print('MAIN: Already has focus');
     }
-    
-    setState(() => _updateLivePreview());
   }
   
+  /// Central hub for reacting to text changes from keyboard or grid
+  void _onInputChanged() {
+    print('INPUT: _onInputChanged triggered - text: "${_controller.text}", selection: ${_controller.selection}');
+    
+    // Handle post-calculation state
+    if (_justCalculated && _controller.text.isNotEmpty) {
+      print('CALC: Post-calculation input detected');
+      final input = _controller.text;
+      final lastResult = _appState.history.firstOrNull?.result ?? '0';
+
+      // Prevent recursive listener calls
+      _controller.removeListener(_onInputChanged);
+
+      // If input is an operator, continue from last result
+      if (['+', '-', '*', '/', '^', '%'].contains(input)) {
+        final resultToUse = _extractNumericFromSolveResult(lastResult);
+        _controller.text = resultToUse + input;
+        print('CALC: Continuing from result: "$resultToUse" + "$input" = "${_controller.text}"');
+      } else {
+        print('CALC: Starting fresh with: "$input"');
+      }
+
+      // Move cursor to end
+      _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: _controller.text.length));
+      
+      setState(() { _justCalculated = false; });
+      _controller.addListener(_onInputChanged);
+    }
+    
+    _handleFunctionAutocomplete();
+    setState(() => _updateLivePreview());
+  }
+
+  /// Auto-completes function names like 'solve' into 'solve()'
+  void _handleFunctionAutocomplete() {
+    final text = _controller.text;
+    final cursorPos = _controller.selection.baseOffset;
+    if (cursorPos < 0) return;
+
+    // Find start of word before cursor
+    int wordStart = cursorPos;
+    while (wordStart > 0 && RegExp(r'[a-zA-Z]').hasMatch(text[wordStart - 1])) {
+      wordStart--;
+    }
+
+    if (wordStart < cursorPos) {
+      final word = text.substring(wordStart, cursorPos);
+      if (word == 'solve') {
+        print('AUTO: Auto-completing "solve" to "solve()"');
+        _controller.removeListener(_onInputChanged);
+        final textBefore = text.substring(0, wordStart);
+        final textAfter = text.substring(cursorPos);
+        _controller.text = '$textBefore$word()$textAfter';
+        _controller.selection = TextSelection.collapsed(offset: wordStart + word.length + 1);
+        _controller.addListener(_onInputChanged);
+        _showSolveFunctionPicker();
+      }
+    }
+  }
+  
+  /// Updates live preview of result as user types
   void _updateLivePreview() {
     String currentText = _controller.text;
     if (currentText.isEmpty || currentText.trim().toLowerCase().startsWith('solve')) {
       _resultPreview = '';
       return;
     }
-    
     try {
-      final ySubstituted = _preprocessExpression(currentText);
-      final preprocessed = _preprocessNativeExpression(ySubstituted);
+      final preprocessed = _preprocessNativeExpression(_preprocessExpression(currentText));
       final result = _engine.evaluate(preprocessed);
       _resultPreview = (result != "Error" && result != currentText && double.tryParse(result) != null) ? result : '';
     } catch (e) {
@@ -85,521 +138,270 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     }
   }
 
+  /// Handles hardware keyboard events
   bool handleKeyboardInput(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
-    final key = event.logicalKey;
-
-    // Only handle special keys, let normal typing go through TextField
-    if (key == LogicalKeyboardKey.enter) { 
+    
+    print('KEYBOARD: Hardware key pressed: ${event.logicalKey}');
+    
+    if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) { 
       _onButtonPressed("EXE"); 
-      return true; 
+      return true;
     }
-    if (key == LogicalKeyboardKey.escape) { 
+    if (event.logicalKey == LogicalKeyboardKey.escape) { 
       _onButtonPressed('C'); 
-      return true; 
+      return true;
     }
     
-    // Don't intercept normal keys - let TextField handle them
     return false;
   }
 
+  /// Central handler for all keypad buttons
   void _onButtonPressed(String value) {
-    if (_justCalculated && !_isUtilityButton(value)) {
-      final lastResult = _appState.history.firstOrNull?.result ?? '';
-      final isOperator = ['+', '-', '*', '/', '^', '%', '='].contains(value);
-      
-      setState(() {
-        if (isOperator && lastResult.isNotEmpty && !lastResult.contains('Error')) {
-          String valueToUse = lastResult;
-          if (lastResult.contains(' = ')) {
-            valueToUse = _extractNumericFromSolveResult(lastResult);
-          }
-          _controller.text = valueToUse + value;
-          _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
-        } else {
-          _controller.text = value;
-          _controller.selection = TextSelection.collapsed(offset: value.length);
-        }
-        _justCalculated = false;
-      });
-      requestFocus();
-      return;
-    }
-
-    if (_justCalculated) setState(() => _justCalculated = false);
+    print('\n=== BUTTON PRESSED: "$value" ===');
+    print('Focus before: ${_inputFocusNode.hasFocus}');
+    print('Current text: "${_controller.text}"');
+    print('Current selection: ${_controller.selection}');
     
-    // Handle memory operations
-    if (value.startsWith('M') && value.length == 2) {
-      final memKey = value;
-      if (_memory.containsKey(memKey)) {
-        _insertTextAtCursor(_memory[memKey]!);
-        return;
-      }
-    }
-    
-    // Handle memory store
-    if (value == 'STO') {
-      _showMemoryStoreDialog();
-      return;
-    }
-    
-    // Handle advanced calculus operations
-    if (value.startsWith('d/dx') || value.startsWith('∫') || value == 'lim') {
-      _insertAdvancedFunction(value);
-      return;
-    }
-    
-    const functionsWithBrackets = ['sin(', 'cos(', 'tan(', 'ln(', 'log(', 'sqrt(', 'abs('];
-    if (functionsWithBrackets.contains(value)) {
-      _insertFunctionSyntax(value);
-    } else if (value == 'solve') {
-      _insertFunctionSyntax('solve(');
-    } else if (value == 'f(x)') {
-      _showFunctionPicker();
-    } else if (value == 'factor' || value == 'simplify' || value == 'expand') {
-      _applyCasFunction(value);
-    } else {
-      _handleSpecialInput(value);
-    }
-    requestFocus();
-  }
-  
-  // Centralized, robust text and selection update
-  void _updateTextAndSelection(String newText, int newOffset) {
-    if (!mounted) return;
-    
-    // Ensure offset is within bounds
-    final safeOffset = newOffset.clamp(0, newText.length);
-    
-    _controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: safeOffset),
-    );
-    
-    // Ensure focus without triggering text selection
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _controller.selection = TextSelection.collapsed(offset: safeOffset);
-      }
-    });
-  }
-
-  // Insert text at current cursor position
-  void _insertTextAtCursor(String text) {
-    final selection = _controller.selection;
-    final currentText = _controller.text;
-    
-    final start = selection.start.clamp(0, currentText.length);
-    final end = selection.end.clamp(start, currentText.length);
-    
-    final newText = currentText.substring(0, start) + text + currentText.substring(end);
-    _controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start + text.length),
-    );
-  }
-
-  void _handleSpecialInput(String value) {
     switch (value) {
       case 'C':
+        print('CLEAR: Clearing textfield');
         _controller.clear();
+        setState(() { _justCalculated = false; });
         break;
       case '⌫':
-        final selection = _controller.selection;
-        final currentText = _controller.text;
-        if (selection.start > 0) {
-          if (selection.isCollapsed) {
-            // Delete character before cursor
-            final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
-            _controller.value = TextEditingValue(
-              text: newText,
-              selection: TextSelection.collapsed(offset: selection.start - 1),
-            );
-          } else {
-            // Delete selected text
-            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.end);
-            _controller.value = TextEditingValue(
-              text: newText,
-              selection: TextSelection.collapsed(offset: selection.start),
-            );
-          }
-        }
-        break;
-      case 'DEL':
-        final selection = _controller.selection;
-        final currentText = _controller.text;
-        if (selection.start < currentText.length) {
-          if (selection.isCollapsed) {
-            // Delete character after cursor
-            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.start + 1);
-            _controller.value = TextEditingValue(
-              text: newText,
-              selection: TextSelection.collapsed(offset: selection.start),
-            );
-          } else {
-            // Delete selected text
-            final newText = currentText.substring(0, selection.start) + currentText.substring(selection.end);
-            _controller.value = TextEditingValue(
-              text: newText,
-              selection: TextSelection.collapsed(offset: selection.start),
-            );
-          }
-        }
+        _handleBackspace();
         break;
       case 'EXE':
-        if (_controller.text.isNotEmpty) _calculate(_controller.text);
+        if (_controller.text.isNotEmpty) {
+          _calculate(_controller.text);
+        }
         break;
       case '◀':
-        final selection = _controller.selection;
-        if (selection.start > 0) {
-          _controller.selection = TextSelection.collapsed(offset: selection.start - 1);
+        final currentSelection = _controller.selection;
+        if (currentSelection.start > 0) {
+          final newPos = currentSelection.start - 1;
+          _controller.selection = TextSelection.collapsed(offset: newPos);
+          print('CURSOR: Moved cursor left to position $newPos');
         }
         break;
       case '▶':
-        final selection = _controller.selection;
-        if (selection.start < _controller.text.length) {
-          _controller.selection = TextSelection.collapsed(offset: selection.start + 1);
+        final currentSelection = _controller.selection;
+        if (currentSelection.end < _controller.text.length) {
+          final newPos = currentSelection.end + 1;
+          _controller.selection = TextSelection.collapsed(offset: newPos);
+          print('CURSOR: Moved cursor right to position $newPos');
         }
         break;
+      case 'solve':
+        _insertTextAndPositionCursor('solve()', cursorOffset: -1);
+        _showSolveFunctionPicker();
+        break;
+      case 'f(x)':
+        _showFunctionPicker();
+        break;
+      // Function buttons that need cursor inside parentheses
+      case 'sin(': case 'cos(': case 'tan(': case 'ln(': case 'log(': case 'sqrt(': case 'abs(':
+        final funcName = value.substring(0, value.length - 1);
+        _insertTextAndPositionCursor('$funcName()', cursorOffset: -1);
+        break;
       default:
-        _insertTextAtCursor(value);
+        _insertTextAndPositionCursor(value);
+        break;
+    }
+    
+    print('Focus after: ${_inputFocusNode.hasFocus}');
+    print('Final text: "${_controller.text}"');
+    print('Final selection: ${_controller.selection}');
+    print('=== END BUTTON PROCESSING ===\n');
+  }
+  
+  /// Ensures focus without causing auto-selection
+  void _ensureFocus() {
+    if (!_inputFocusNode.hasFocus) {
+      print('FOCUS: Need to request focus');
+      _inputFocusNode.requestFocus();
+      // The focus listener will handle preventing auto-selection
+    } else {
+      print('FOCUS: Already has focus');
     }
   }
   
-  void _insertFunctionSyntax(String func) {
+  /// THE KEY METHOD - Robust text insertion that prevents auto-selection
+  void _insertTextAndPositionCursor(String text, {int cursorOffset = 0}) {
+    print('\n=== TEXT INSERTION DEBUG ===');
+    print('Inserting: "$text"');
+    print('Cursor offset: $cursorOffset');
+    print('Before insertion:');
+    print('  Text: "${_controller.text}"');
+    print('  Selection: ${_controller.selection}');
+    
+    // Get current state
     final selection = _controller.selection;
     final currentText = _controller.text;
+
+    // Calculate new text and cursor position using replaceRange
+    final newText = currentText.replaceRange(selection.start, selection.end, text);
+    final newPosition = selection.start + text.length + cursorOffset;
     
-    final start = selection.start.clamp(0, currentText.length);
-    final end = selection.end.clamp(start, currentText.length);
-    
-    final textToInsert = '$func)';
-    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
-    
-    // Position cursor inside the parentheses
-    final cursorPosition = start + func.length;
+    print('Calculated new state:');
+    print('  New text: "$newText"');
+    print('  New cursor position: $newPosition');
+
+    // CRITICAL: Use TextEditingValue for atomic update
     _controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
     );
+    
+    print('After atomic update:');
+    print('  Actual text: "${_controller.text}"');
+    print('  Actual selection: ${_controller.selection}');
+    print('=== END TEXT INSERTION DEBUG ===\n');
   }
   
-  bool _isUtilityButton(String value) => ['C', '⌫', 'DEL', "EXE", '◀', '▶', 'STO'].contains(value) || value.startsWith('M');
-
-  void _showMemoryStoreDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Store to Memory'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Store current result to which memory slot?'),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              children: List.generate(9, (index) {
-                final memKey = 'M${index + 1}';
-                final hasValue = _memory.containsKey(memKey);
-                return ElevatedButton(
-                  onPressed: () {
-                    final lastResult = _appState.history.firstOrNull?.result ?? '';
-                    if (lastResult.isNotEmpty && !lastResult.contains('Error')) {
-                      String valueToStore = lastResult;
-                      if (lastResult.contains(' = ')) {
-                        valueToStore = _extractNumericFromSolveResult(lastResult);
-                      }
-                      _memory[memKey] = valueToStore;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Stored $valueToStore to $memKey')),
-                      );
-                    }
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: hasValue ? Colors.green.shade700 : null,
-                  ),
-                  child: Text(memKey),
-                );
-              }),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _insertAdvancedFunction(String funcName) {
+  /// Handles backspace for both cursor and selection
+  void _handleBackspace() {
+    print('\n=== BACKSPACE DEBUG ===');
     final selection = _controller.selection;
     final currentText = _controller.text;
     
-    final start = selection.start.clamp(0, currentText.length);
-    final end = selection.end.clamp(start, currentText.length);
+    print('Before backspace:');
+    print('  Text: "$currentText"');
+    print('  Selection: $selection');
     
-    String textToInsert;
-    int cursorOffset;
-    
-    switch (funcName) {
-      case 'd/dx':
-        textToInsert = 'diff(, x)';
-        cursorOffset = 5; // Position after "diff("
-        break;
-      case '∫':
-        textToInsert = 'integrate(, x)';
-        cursorOffset = 10; // Position after "integrate("
-        break;
-      case 'lim':
-        textToInsert = 'limit(, x, 0)';
-        cursorOffset = 6; // Position after "limit("
-        break;
-      default:
-        textToInsert = '$funcName()';
-        cursorOffset = funcName.length + 1;
-    }
-    
-    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
-    _controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start + cursorOffset),
-    );
-  }
-
-  void _calculate(String expression) {
-    try {
-      String result;
-      HistoryEntryType type = HistoryEntryType.calculation;
-      final cleanedExpr = expression.trim().toLowerCase();
-      final ySubstitutedExpr = _preprocessExpression(expression);
-
-      if (cleanedExpr.startsWith('solve(')) {
-        type = HistoryEntryType.solve;
-        var regExp = RegExp(r'solve\((.+),\s*([a-zA-Z])\s*\)');
-        var match = regExp.firstMatch(ySubstitutedExpr);
-        if (match == null) {
-          regExp = RegExp(r'solve\((.+)\)');
-          match = regExp.firstMatch(ySubstitutedExpr);
+    if (selection.isCollapsed) {
+      if (selection.start > 0) {
+        final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
+        final newPos = selection.start - 1;
+        
+        print('Single cursor backspace:');
+        print('  Removing char at position ${selection.start - 1}');
+        print('  New text: "$newText"');
+        print('  New cursor: $newPos');
+        
+        // Ensure focus and set value atomically
+        if (!_inputFocusNode.hasFocus) {
+          _inputFocusNode.requestFocus();
         }
-
-        if (match != null) {
-          final equation = match.group(1)!.trim();
-          final variable = match.groupCount > 1 ? match.group(2)!.trim() : 'x';
-          String expressionForSolver;
-          List<String> parts = equation.split('=');
-          if (parts.length == 2) {
-            expressionForSolver = '${parts[0].trim()} - (${parts[1].trim()})';
-          } else {
-            expressionForSolver = equation;
-          }
-          final solution = _engine.solve(_preprocessNativeExpression(expressionForSolver), variable);
-          result = "$variable = $solution";
-          
-          // Auto-store solve results in memory for easy access
-          if (!solution.contains('Error') && _memoryCounter <= 9) {
-            _memory['M$_memoryCounter'] = _extractNumericFromSolveResult(result);
-            _memoryCounter++;
-          }
-        } else {
-          result = "Error: Use solve(eq, var)";
-        }
-      } else {
-        final preprocessed = _preprocessNativeExpression(ySubstitutedExpr);
-        result = _engine.evaluate(preprocessed);
+        
+        _controller.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newPos),
+        );
       }
+    } else {
+      print('Selection backspace: deleting selected text');
+      _insertTextAndPositionCursor('');
+    }
+    
+    print('After backspace:');
+    print('  Text: "${_controller.text}"');
+    print('  Selection: ${_controller.selection}');
+    print('=== END BACKSPACE DEBUG ===\n');
+  }
+
+  /// Evaluates expression and updates history
+  void _calculate(String expression) {
+    print('\n=== CALCULATING: "$expression" ===');
+    try {
+      final preprocessed = _preprocessNativeExpression(_preprocessExpression(expression));
+      final result = _engine.evaluate(preprocessed);
+      print('CALC: Result: "$result"');
       
       setState(() {
-        _appState.addHistoryEntry(expression, result, type: type);
+        _appState.addHistoryEntry(expression, result);
         _resultPreview = '';
         _justCalculated = true;
+        
+        // Clear without triggering listener
+        _controller.removeListener(_onInputChanged);
         _controller.clear();
-        requestFocus();
+        _controller.addListener(_onInputChanged);
       });
+      
+      print('CALC: Added to history, cleared input, set _justCalculated = true');
     } catch (e) {
-      setState(() => _appState.addHistoryEntry(expression, "Error", type: HistoryEntryType.calculation));
+      print('CALC: Calculation error: $e');
+      setState(() => _appState.addHistoryEntry(expression, "Error: ${e.toString()}"));
     }
-  }
-  
-  // Extract numeric value from solve results like "x = 6" -> "6"
-  String _extractNumericFromSolveResult(String solveResult) {
-    final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+(?:,\s*[+-]?[\d.]+)*)').firstMatch(solveResult);
-    if (match != null) {
-      final values = match.group(1)!;
-      // If single value, return it; if multiple, keep original format
-      if (!values.contains(',')) {
-        return values.trim();
-      }
-    }
-    return solveResult; // Keep original if not simple numeric
-  }
-
-  void _applyCasFunction(String funcName) {
-    final lastResult = _appState.history.firstOrNull?.result ?? '';
-    if (lastResult.isEmpty || lastResult.contains("Error")) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No previous result to apply CAS function to')),
-      );
-      return;
-    }
-
-    final exprToProcess = lastResult.startsWith('=') ? lastResult.substring(1).trim() : lastResult;
-    
-    String result;
-    switch (funcName) {
-      case 'factor':
-        result = _engine.factor(exprToProcess);
-        break;
-      case 'expand':
-        result = _engine.expand(exprToProcess);
-        break;
-      case 'simplify':
-        result = _engine.expand(exprToProcess);
-        break;
-      default:
-        result = 'Unknown CAS function';
-    }
-    
-    setState(() {
-      final expr = '$funcName($exprToProcess)';
-      _appState.addHistoryEntry(expr, result);
-      _justCalculated = true;
-      _controller.clear();
-      requestFocus();
-    });
+    print('=== END CALCULATION ===\n');
   }
 
   String _preprocessNativeExpression(String expression) {
-    String processed = expression;
-    processed = processed.replaceAllMapped(RegExp(r'(\d|\))(\()'), (m) => '${m[1]}*${m[2]}');
-    processed = processed.replaceAllMapped(RegExp(r'(\))(\d|[a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
-    processed = processed.replaceAllMapped(RegExp(r'(\d)([a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
-    processed = processed.replaceAllMapped(RegExp(r'([a-zA-Z])(\d)'), (m) => '${m[1]}*${m[2]}');
-    
-    // Fix factorial handling - match number or parenthesized expression followed by !
-    processed = processed.replaceAllMapped(RegExp(r'(\d+(?:\.\d+)?|\([^)]*\))!'), (m) {
-      final base = m.group(1)!;
-      return 'factorial($base)';
+    String p = expression;
+    p = p.replaceAllMapped(RegExp(r'(\d|\))(\()'), (m) => '${m[1]}*${m[2]}');
+    p = p.replaceAllMapped(RegExp(r'(\))(\d|[a-zA-Z])'), (m) => '${m[1]}*${m[2]}');
+    p = p.replaceAllMapped(RegExp(r'(\d+)!'), (m) {
+      final n = int.tryParse(m.group(1)!) ?? 0;
+      if (n <= 20) { int f=1; for(int i=1;i<=n;i++){f*=i;} return f.toString(); } 
+      else { return 'gamma(${n + 1})'; }
     });
-    
-    processed = processed.replaceAllMapped(RegExp(r'([\w\.\(\)]+)\s*%\s*([\w\.\(\)]+)'), (m) => 'Mod(${m[1]},${m[2]})');
-    return processed;
-  }
-
-  String _preprocessExpression(String expression) {
-    String processed = expression;
-    final funcRegex = RegExp(r'Y(\d+)');
-    processed = processed.replaceAllMapped(funcRegex, (match) {
-      try {
-        final funcIndex = int.parse(match.group(1)!) - 1;
-        if (funcIndex >= 0 && funcIndex < _appState.graphFunctions.length) {
-          String funcBody = _appState.graphFunctions[funcIndex];
-          if (funcBody.isNotEmpty) return '($funcBody)';
-        }
-      } catch (e) { 
-        return match.group(0)!; 
-      }
-      return match.group(0)!;
-    });
-    return processed;
+    return p;
   }
   
-  void _showPlotSolveDialog(CalculationEntry entry) {
-    var regExp = RegExp(r'solve\((.+),\s*[a-zA-Z]\s*\)');
-    var match = regExp.firstMatch(entry.expression);
-    if (match == null) {
-      final regExp2 = RegExp(r'solve\((.+)\)');
-      match = regExp2.firstMatch(entry.expression);
+  String _extractNumericFromSolveResult(String solveResult) {
+    final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+)\s*$').firstMatch(solveResult);
+    if (match != null && !match.group(1)!.contains(',')) {
+      return match.group(1)!.trim();
     }
-    if (match == null) return;
-    
-    final equation = match.group(1)!.trim();
-    String functionToPlot = '';
-    List<String> parts = equation.split('=');
-    functionToPlot = (parts.length == 2) ? '${parts[0].trim()} - (${parts[1].trim()})' : equation;
-    
-    showDialog(
-      context: context, 
-      builder: (context) => AlertDialog(
-        title: const Text('Add to Function List'),
-        content: Text('Add "$functionToPlot" to the next available Y= slot to graph it?'),
-        actions: [
-          TextButton(
-            child: const Text('Cancel'), 
-            onPressed: () => Navigator.of(context).pop()
-          ),
-          ElevatedButton(
-            child: const Text('Add to Y='), 
-            onPressed: () {
-              final emptySlotIndex = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
-              if (emptySlotIndex != -1) {
-                _appState.updateFunction(emptySlotIndex, functionToPlot);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Added to Y${emptySlotIndex + 1}')),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('All function slots are full')),
-                );
-              }
-              Navigator.of(context).pop();
-            }
-          ),
-        ],
-      )
-    );
+    return solveResult;
   }
   
   void _showSolveFunctionPicker() {
     showModalBottomSheet(
       context: context, 
       builder: (context) {
-        return ListView(
+        return Column(
+          mainAxisSize: MainAxisSize.min, 
           children: [
-            if (_appState.graphFunctions.any((f) => f.isNotEmpty)) ...[
-              const ListTile(
-                title: Text('Select function to solve:', style: TextStyle(fontWeight: FontWeight.bold))
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Select equation to solve, or type manually:', 
+                style: Theme.of(context).textTheme.titleMedium)
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true, 
+                children: _appState.graphFunctions.asMap().entries
+                    .where((e) => e.value.isNotEmpty)
+                    .map((e) => ListTile(
+                      title: Text('Solve Y${e.key + 1} = 0'),
+                      subtitle: Text('where Y${e.key + 1} = ${e.value}'),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        print('MODAL: Inserting solve function: Y${e.key+1}=0, x');
+                        
+                        // Insert at current cursor (inside solve parentheses)
+                        final currentPos = _controller.selection.baseOffset;
+                        final currentText = _controller.text;
+                        final beforeCursor = currentText.substring(0, currentPos);
+                        final afterCursor = currentText.substring(currentPos);
+                        final insertText = 'Y${e.key+1}=0, x';
+                        
+                        if (!_inputFocusNode.hasFocus) {
+                          _inputFocusNode.requestFocus();
+                        }
+                        
+                        _controller.value = TextEditingValue(
+                          text: beforeCursor + insertText + afterCursor,
+                          selection: TextSelection.collapsed(offset: currentPos + insertText.length),
+                        );
+                      },
+                    )).toList(),
               ),
-              const Divider(),
-              ..._appState.graphFunctions.asMap().entries
-                  .where((entry) => entry.value.isNotEmpty)
-                  .map((entry) {
-                int index = entry.key;
-                String func = entry.value;
-                return ListTile(
-                  title: Text('Y${index + 1} = $func'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    final currentText = _controller.text;
-                    final selection = _controller.selection;
-                    final start = selection.start.clamp(0, currentText.length);
-                    final end = selection.end.clamp(start, currentText.length);
-                    
-                    final textToInsert = 'solve(Y${index+1}=0, x)';
-                    final newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
-                    _controller.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.collapsed(offset: start + textToInsert.length),
-                    );
-                  },
-                );
-              }).toList()
-            ] else ...[
-              const ListTile(
-                leading: Icon(Icons.info),
-                title: Text('No functions available'),
-                subtitle: Text('Add functions in the graphing screen first'),
-              ),
-            ]
-          ],
+            ),
+          ]
         );
       }
-    );
+    ).whenComplete(() {
+      print('MODAL: Modal closed, ensuring focus');
+      if (!_inputFocusNode.hasFocus) {
+        _inputFocusNode.requestFocus();
+      }
+    });
   }
-
+  
   void _showFunctionPicker() {
     showModalBottomSheet(
       context: context, 
@@ -619,204 +421,120 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                 title: Text('Y${index + 1} = $func'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  _insertFunctionSyntax('Y${index+1}(');
+                  _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
                 },
               );
             }).toList()
           ],
         );
       }
-    );
+    ).whenComplete(() {
+      print('MODAL: Function picker closed, ensuring focus');
+      if (!_inputFocusNode.hasFocus) {
+        _inputFocusNode.requestFocus();
+      }
+    });
   }
 
-  String _toLaTeX(String input) {
-    if (input.isEmpty) return '';
-    String latex = input;
-    latex = latex.replaceAllMapped(RegExp(r'sqrt\((.*?)\)'), (match) => '\\sqrt{${match.group(1)}}');
-    latex = latex.replaceAll('*I', 'i');
-    latex = latex.replaceAll('*', r' \cdot ');
-    return latex;
+  String _preprocessExpression(String expression) {
+    String processed = expression;
+    final funcRegex = RegExp(r'Y(\d+)');
+    processed = processed.replaceAllMapped(funcRegex, (match) {
+      try {
+        final funcIndex = int.parse(match.group(1)!) - 1;
+        if (funcIndex >= 0 && funcIndex < _appState.graphFunctions.length) {
+          String funcBody = _appState.graphFunctions[funcIndex];
+          if (funcBody.isNotEmpty) return '($funcBody)';
+        }
+      } catch (e) { 
+        return match.group(0)!; 
+      }
+      return match.group(0)!;
+    });
+    return processed;
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            flex: 3,
-            child: ListenableBuilder(
-              listenable: _appState,
-              builder: (context, child) => ListView.builder(
-                controller: _scrollController,
-                reverse: true,
-                itemCount: _appState.history.length,
-                itemBuilder: (context, index) {
-                  final entry = _appState.history[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        InkWell(
-                          onTap: () => setState(() {
-                            _controller.text = entry.expression;
-                            _controller.selection = TextSelection.collapsed(offset: entry.expression.length);
-                            _justCalculated = false;
-                          }),
-                          child: Text(
-                            entry.expression, 
-                            style: TextStyle(fontSize: 20, color: Colors.grey[500]), 
-                            textAlign: TextAlign.right
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (entry.type == HistoryEntryType.solve && !entry.result.contains("Error"))
-                              IconButton(
-                                icon: Icon(MdiIcons.chartLine, color: Colors.greenAccent),
-                                onPressed: () => _showPlotSolveDialog(entry),
-                              ),
-                            Flexible(
-                              child: InkWell(
-                                onTap: () {
-                                  if (_justCalculated) {
-                                    _controller.text = entry.result;
-                                    _controller.selection = TextSelection.collapsed(offset: entry.result.length);
-                                  } else {
-                                    final currentText = _controller.text;
-                                    final selection = _controller.selection;
-                                    final start = selection.start.clamp(0, currentText.length);
-                                    final end = selection.end.clamp(start, currentText.length);
-                                    
-                                    final newText = currentText.substring(0, start) + entry.result + currentText.substring(end);
-                                    _controller.value = TextEditingValue(
-                                      text: newText,
-                                      selection: TextSelection.collapsed(offset: start + entry.result.length),
-                                    );
-                                  }
-                                  _justCalculated = false;
-                                },
-                                child: Math.tex(
-                                  _toLaTeX("= ${entry.result}"), 
-                                  textStyle: TextStyle(
-                                    fontSize: 28, 
-                                    color: Colors.blue[300], 
-                                    fontWeight: FontWeight.w500
-                                  )
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+    return Focus(
+      onKeyEvent: (node, event) => handleKeyboardInput(event) 
+        ? KeyEventResult.handled 
+        : KeyEventResult.ignored,
+      child: SafeArea(
+        child: GestureDetector(
+          onTap: () {
+            print('BACKGROUND: Background tapped, ensuring focus');
+            if (!_inputFocusNode.hasFocus) {
+              _inputFocusNode.requestFocus();
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(flex: 3, child: ListenableBuilder(listenable: _appState, builder: (context, child) {
+                return ListView.builder(
+                  itemCount: _appState.history.length, reverse: true,
+                  itemBuilder: (context, index) {
+                    final entry = _appState.history[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(entry.expression, style: TextStyle(fontSize: 20, color: Colors.grey[500])),
+                          const SizedBox(height: 4),
+                          Text("= ${entry.result}", style: TextStyle(fontSize: 28, color: Colors.blue[300])),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              })),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  TextField(
+                    controller: _controller,
+                    focusNode: _inputFocusNode,
+                    showCursor: true, 
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300),
+                    textAlign: TextAlign.right,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: _justCalculated ? (_appState.history.firstOrNull?.result ?? '0') : '0',
+                      hintStyle: TextStyle(fontSize: 48, color: _justCalculated ? Colors.grey[500] : Colors.grey[700]),
                     ),
-                  );
-                },
+                  ),
+                  if (_resultPreview.isNotEmpty)
+                    Text("= $_resultPreview", style: TextStyle(fontSize: 24, color: Colors.grey[600])),
+                ]),
               ),
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                TextField(
-                  controller: _controller,
-                  focusNode: _inputFocusNode,
-                  readOnly: false, // Allow normal typing
-                  showCursor: true,
-                  autofocus: true,
-                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300),
-                  textAlign: TextAlign.right,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: _justCalculated ? (_appState.history.firstOrNull?.result ?? '0') : '0',
-                    hintStyle: TextStyle(
-                      fontSize: 48, 
-                      color: _justCalculated ? Colors.grey[500] : Colors.grey[700]
-                    ),
-                  ),
-                ),
-                if (_resultPreview.isNotEmpty)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      "= $_resultPreview", 
-                      style: TextStyle(fontSize: 24, color: Colors.grey[600])
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 5,
-            child: Column(
-              children: [
+              Expanded(flex: 5, child: Column(children: [
                 TabBar(
-                  controller: _tabController, 
+                  controller: _tabController,
+                  onTap: (index) {
+                    print('TAB: Tab $index selected, ensuring focus');
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!_inputFocusNode.hasFocus) {
+                        _inputFocusNode.requestFocus();
+                      }
+                    });
+                  },
                   tabs: const [
-                    Tab(text: 'Num'), 
-                    Tab(text: 'f(x)'), 
-                    Tab(text: 'CAS'),
-                    Tab(text: 'Mem')
+                    Tab(text: 'Num'), Tab(text: 'f(x)'), Tab(text: 'CAS'), Tab(text: 'Mem')
                   ]
                 ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // Numbers and basic operations
-                      KeypadGrid(
-                        buttons: const [
-                          'C', '⌫', '%', '/', 
-                          '7', '8', '9', '*', 
-                          '4', '5', '6', '-', 
-                          '1', '2', '3', '+', 
-                          '0', '.', '^', 'EXE'
-                        ], 
-                        onButtonPressed: _onButtonPressed
-                      ),
-                      // Functions and trigonometry
-                      KeypadGrid(
-                        buttons: const [
-                          'sin(', 'cos(', 'tan(', 'x', 
-                          'ln(', 'log(', 'sqrt(', '(', 
-                          'e', 'pi', '!', ')', 
-                          'abs(', 'deg', 'rad', 'EXE'
-                        ], 
-                        onButtonPressed: _onButtonPressed
-                      ),
-                      // CAS and advanced calculus operations
-                      KeypadGrid(
-                        buttons: const [
-                          'solve', 'f(x)', 'd/dx', '∫', 
-                          'factor', 'expand', 'lim', '◀', 
-                          'simplify', '=', ',', '▶', 
-                          '{', '}', '[', ']'
-                        ], 
-                        onButtonPressed: _onButtonPressed
-                      ),
-                      // Memory operations
-                      KeypadGrid(
-                        buttons: const [
-                          'STO', 'M1', 'M2', 'M3',
-                          'DEL', 'M4', 'M5', 'M6', 
-                          '◀', 'M7', 'M8', 'M9',
-                          '▶', '(', ')', 'EXE'
-                        ], 
-                        onButtonPressed: _onButtonPressed
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                Expanded(child: TabBarView(controller: _tabController, children: [
+                    KeypadGrid(buttons: const ['C','⌫','%','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','^','EXE'], onButtonPressed: _onButtonPressed),
+                    KeypadGrid(buttons: const ['sin(','cos(','tan(','x','ln(','log(','sqrt(','(','e','pi','!',')','abs(','deg','rad','EXE'], onButtonPressed: _onButtonPressed),
+                    KeypadGrid(buttons: const ['solve','f(x)','d/dx','∫','factor','expand','lim','◀','simplify','=','▶',','], onButtonPressed: _onButtonPressed),
+                    KeypadGrid(buttons: const ['STO','M1','M2','M3','DEL','M4','M5','M6','◀','M7','M8','M9','▶'], onButtonPressed: _onButtonPressed),
+                ])),
+              ])),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

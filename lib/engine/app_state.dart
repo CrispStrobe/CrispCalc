@@ -1,4 +1,4 @@
-/// lib/engine/app_state.dart:
+/// lib/engine/app_state.dart
 
 import 'package:flutter/foundation.dart';
 
@@ -16,15 +16,16 @@ class CalculationEntry {
   });
 }
 
-// FIX: AppState now uses ChangeNotifier to instantly sync UI updates across screens.
+// FIX: AppState now uses ChangeNotifier to instantly sync UI updates across all screens.
 class AppState extends ChangeNotifier {
   static final AppState _instance = AppState._internal();
   factory AppState() => _instance;
   
   AppState._internal() {
     graphFunctions = List.generate(10, (_) => '');
+    // Add some default functions for demonstration
     graphFunctions[0] = 'sin(x)';
-    graphFunctions[1] = 'cos(x)';
+    graphFunctions[1] = 'x^2 - 2';
   }
 
   final List<CalculationEntry> history = [];
@@ -32,20 +33,24 @@ class AppState extends ChangeNotifier {
 
   void addHistoryEntry(String expression, String result, {HistoryEntryType type = HistoryEntryType.calculation}) {
     history.insert(0, CalculationEntry(expression: expression, result: result, type: type));
-    notifyListeners();
+    notifyListeners(); // Notify all listening widgets of the change
   }
 
   void updateFunction(int index, String expression) {
     if (index >= 0 && index < graphFunctions.length) {
-      graphFunctions[index] = expression;
-      notifyListeners();
+      if (graphFunctions[index] != expression) {
+        graphFunctions[index] = expression;
+        notifyListeners(); // Notify all listening widgets
+      }
     }
   }
 
   void clearFunction(int index) {
      if (index >= 0 && index < graphFunctions.length) {
-      graphFunctions[index] = '';
-      notifyListeners();
+      if (graphFunctions[index].isNotEmpty) {
+        graphFunctions[index] = '';
+        notifyListeners(); // Notify all listening widgets
+      }
     }
   }
 }
