@@ -1,5 +1,5 @@
 name: crisp_calc
-description: A powerful CAS calculator built with Flutter and SymEngine
+description: CAS calculator with SymEngine
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,11 +11,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
-  # Remove ffi dependency, now handled by the plugin
+  # Add the Cupertino Icons font. For CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.2
+
+  # Removing ffi dependency, now handled by the plugin
   # ffi: ^2.1.0
 
-  # Use your symbolic math bridge
+  # Use our symbolic math bridge
   symbolic_math_bridge:
     path: ../symbolic_math_bridge
 

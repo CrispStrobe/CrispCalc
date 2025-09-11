@@ -1,5 +1,6 @@
-/// lib/screens/calculator_screen.dart - Enhanced with SymbolicMathBridge functions
+// lib/screens/calculator_screen.dart - Fixed and Complete
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -7,7 +8,14 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import '../engine/app_state.dart';
 import '../engine/calculator_engine.dart';
 import '../widgets/keypad_grid.dart';
-import 'dart:io' show Platform; // Import Platform to check OS
+import 'dart:io' show Platform;
+import '../controllers/latex_controller.dart';
+import '../engine/analysis_engine.dart';
+import '../localization/app_localizations.dart';
+import '../screens/matrix_editor_screen.dart';
+import '../widgets/calculator_display.dart';
+import '../widgets/calculator_keypad.dart';
+import '../widgets/latex_input_field.dart';
 
 
 class CalculatorScreen extends StatefulWidget {
@@ -20,152 +28,28 @@ class CalculatorScreen extends StatefulWidget {
 class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
   final AppState _appState = AppState();
   final CalculatorEngine _engine = CalculatorEngine();
+  late final AnalysisEngine _analysisEngine;
 
   late TabController _tabController;
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _inputFocusNode = FocusNode();
+  final LatexController _latexController = LatexController();
   
   String _resultPreview = '';
   bool _justCalculated = false;
-  bool _modalIsOpen = false;
-  
-  final Map<String, String> _memory = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this); // Added one more tab for advanced functions
-    _controller.addListener(_onInputChanged);
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _inputFocusNode.requestFocus();
-    });
+    _analysisEngine = AnalysisEngine(_engine);
+    _tabController = TabController(length: 5, vsync: this);
+    _latexController.addListener(_onInputChanged);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _controller.removeListener(_onInputChanged);
-    _controller.dispose();
-    _inputFocusNode.dispose();
+    _latexController.removeListener(_onInputChanged);
+    _latexController.dispose();
     super.dispose();
-  }
-  
-  void requestFocus() {
-    print('MAIN: requestFocus() called from main.dart');
-    if (!_inputFocusNode.hasFocus) {
-      print('MAIN: Requesting focus...');
-      _inputFocusNode.requestFocus();
-    } else {
-      print('MAIN: Already has focus');
-    }
-  }
-  
-  void _onInputChanged() {
-    bool isModifying = false;
-
-    if (!isModifying && _justCalculated && _controller.text.isNotEmpty) {
-      final input = _controller.text;
-      final isSimpleInput = !input.contains('(');
-
-      if (isSimpleInput) {
-        isModifying = true;
-        final lastResult = _appState.history.firstOrNull?.result ?? '0';
-
-        _controller.removeListener(_onInputChanged);
-
-        if (['+', '-', '*', '/', '^', '%'].contains(input)) {
-          final resultToUse = _extractNumericFromSolveResult(lastResult);
-          _controller.text = resultToUse + input;
-        }
-
-        _controller.selection = TextSelection.fromPosition(
-            TextPosition(offset: _controller.text.length));
-        
-        setState(() { _justCalculated = false; });
-        _controller.addListener(_onInputChanged);
-        isModifying = false;
-      } else {
-        setState(() { _justCalculated = false; });
-      }
-    }
-    
-    _handleFunctionAutocomplete();
-    if (!isModifying) {
-        setState(() => _updateLivePreview());
-    }
-  }
-
-  void _handleFunctionAutocomplete() {
-    final text = _controller.text;
-    final cursorPos = _controller.selection.baseOffset;
-    if (cursorPos < 0) return;
-
-    int wordStart = cursorPos;
-    while (wordStart > 0 && RegExp(r'[a-zA-Z]').hasMatch(text[wordStart - 1])) {
-        wordStart--;
-    }
-
-    if (wordStart < cursorPos) {
-        final word = text.substring(wordStart, cursorPos);
-        if (word == 'solve') {
-        print('AUTO: Auto-completing "solve" to "solve()"');
-        _controller.removeListener(_onInputChanged);
-        final textBefore = text.substring(0, wordStart);
-        final textAfter = text.substring(cursorPos);
-        _controller.text = '$textBefore$word()$textAfter';
-        _controller.selection = TextSelection.collapsed(offset: wordStart + word.length + 1);
-        _controller.addListener(_onInputChanged);
-        
-        print('AUTO: solve() inserted, cursor positioned inside parentheses');
-        }
-    }
-  }
-  
-  void _updateLivePreview() {
-    String currentText = _controller.text.trim();
-    
-    if (currentText.isEmpty || 
-        currentText.toLowerCase().startsWith('solve') ||
-        currentText.contains('=') ||
-        currentText.length < 2 ||
-        RegExp(r'^[a-zA-Z]+$').hasMatch(currentText)) {
-        setState(() { _resultPreview = ''; });
-        return;
-    }
-    
-    if (!RegExp(r'[\d\+\-\*/\^\(\)\.\,]').hasMatch(currentText)) {
-        setState(() { _resultPreview = ''; });
-        return;
-    }
-    
-    try {
-        final preprocessed = _preprocessNativeExpression(_preprocessExpression(currentText));
-        final rawResult = _engine.evaluate(preprocessed);
-        
-        // APPLY COMPLEX NUMBER NORMALIZATION TO PREVIEW
-        final normalizedResult = _normalizeComplexResult(rawResult);
-        
-        if (normalizedResult != "Error" && 
-            normalizedResult != currentText && 
-            normalizedResult != preprocessed) {
-            
-            // Check if it's a simple numeric result
-            final numericResult = double.tryParse(normalizedResult);
-            if (numericResult != null) {
-                setState(() { _resultPreview = normalizedResult; });
-            } else if (!normalizedResult.contains('Error')) {
-                // Show symbolic results too, but cleaned up
-                setState(() { _resultPreview = normalizedResult; });
-            } else {
-                setState(() { _resultPreview = ''; });
-            }
-        } else {
-        setState(() { _resultPreview = ''; });
-        }
-    } catch (e) {
-        setState(() { _resultPreview = ''; });
-    }
   }
 
   void _debugKeyboardInput(KeyEvent event) {
@@ -178,9 +62,129 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
       print('========================');
     }
   }
+  
+  /// Allows parent widgets to request focus for the input field.
+  void requestFocus() {
+    // The LaTeX input field is always "focused" conceptually.
+    print("Requesting focus for CalculatorScreen.");
+  }
+
+  /// Called whenever the input text changes.
+  void _onInputChanged() {
+    if (_justCalculated && _latexController.text.isNotEmpty) {
+      final currentInput = _latexController.text.trim();
+      
+      // Check if user typed just an operator after calculation (including LaTeX operators)
+      if (_isOperator(currentInput) || 
+          (currentInput.length <= 6 && currentInput.startsWith(r'\cdot'))) {
+        
+        final lastResult = _appState.history.isNotEmpty ? _appState.history.first.result : '0';
+        final cleanResult = _extractNumericFromSolveResult(lastResult);
+        
+        print('AUTO_ANS: Detected operator "$currentInput" after calculation, inserting Ans');
+        
+        // Remove listener to avoid recursion
+        _latexController.removeListener(_onInputChanged);
+        _latexController.clear();
+        _latexController.insert('Ans$currentInput');
+        _latexController.addListener(_onInputChanged);
+        
+        setState(() => _justCalculated = false);
+        return;
+      }
+      
+      // For any other input, clear the flag  
+      setState(() => _justCalculated = false);
+    }
+    
+    _updateLivePreview();
+    setState(() {}); // Rebuild to show updated text
+  }
+  
+  void _onInputChanged_old1() {
+    if (_justCalculated && _latexController.text.isNotEmpty) {
+      final currentInput = _latexController.text;
+      
+      // Check if user typed just an operator after calculation (for physical keyboard)
+      if (currentInput.length == 1 && _isOperator(currentInput)) {
+        final lastResult = _appState.history.isNotEmpty ? _appState.history.first.result : '0';
+        final cleanResult = _extractNumericFromSolveResult(lastResult);
+        
+        print('AUTO_ANS: Detected operator "$currentInput" after calculation, inserting Ans');
+        
+        // Remove listener to avoid recursion
+        _latexController.removeListener(_onInputChanged);
+        _latexController.clear();
+        _latexController.insert('Ans$currentInput');
+        _latexController.addListener(_onInputChanged);
+        
+        setState(() => _justCalculated = false);
+        return; // Exit early to avoid double processing
+      }
+      
+      // For any other input, clear the flag
+      setState(() => _justCalculated = false);
+    }
+    
+    _updateLivePreview();
+    setState(() {}); // Rebuild to show updated text
+  }
+
+  void _onInputChanged_old() {
+    if (_justCalculated && _latexController.text.isNotEmpty) {
+      setState(() => _justCalculated = false);
+    }
+    _updateLivePreview();
+    setState(() {}); // Rebuild to show updated text
+  }
+
+  void _updateLivePreview() {
+    String currentText = _latexController.text.trim();
+    
+    if (currentText.isEmpty || 
+        currentText.toLowerCase().startsWith('solve') ||
+        currentText.contains('=') ||
+        currentText.length < 2 ||
+        RegExp(r'^[a-zA-Z]+$').hasMatch(currentText)) {
+        setState(() { _resultPreview = ''; });
+        return;
+    }
+    
+    if (!RegExp(r'[\d\+\-\*/\^\(\)\.\,\\]').hasMatch(currentText)) {
+        setState(() { _resultPreview = ''; });
+        return;
+    }
+    
+    try {
+        final convertedExpression = _fromLatex(currentText);
+        final preprocessed = _preprocessNativeExpression(_preprocessExpression(convertedExpression));
+        final rawResult = _engine.evaluate(preprocessed);
+        
+        final normalizedResult = _normalizeComplexResult(rawResult);
+        
+        if (normalizedResult != "Error" && 
+            normalizedResult != currentText && 
+            normalizedResult != preprocessed) {
+            
+            final numericResult = double.tryParse(normalizedResult);
+            if (numericResult != null) {
+                setState(() { _resultPreview = normalizedResult; });
+            } else if (!normalizedResult.contains('Error')) {
+                setState(() { _resultPreview = normalizedResult; });
+            } else {
+                setState(() { _resultPreview = ''; });
+            }
+        } else {
+        setState(() { _resultPreview = ''; });
+        }
+    } catch (e) {
+        setState(() { _resultPreview = ''; });
+    }
+  }
 
   bool handleKeyboardInput(KeyEvent event) {
     _debugKeyboardInput(event);
+    
     if (event is! KeyDownEvent) return false;
 
     final physicalKey = event.physicalKey;
@@ -189,393 +193,345 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
     final isAltPressed = HardwareKeyboard.instance.isAltPressed;
 
-    // --- PHYSICAL KEY MAPPINGS (Most Reliable) ---
-    // This section maps physical key positions to their intended mathematical symbols
-    // regardless of the OS keyboard layout interpretation
+    // --- GERMAN KEYBOARD PHYSICAL KEY MAPPINGS ---
+    
+    // Key: `+` and `*` (Physical location of `]` on a US keyboard)
+    if (physicalKey == PhysicalKeyboardKey.bracketRight) {
+      _latexController.insert(isShiftPressed ? r'\cdot ' : '+');
+      return true;
+    }
+    
+    // Key: `-` (Physical location of `/` on a US keyboard)
+    if (physicalKey == PhysicalKeyboardKey.slash && !isShiftPressed) {
+      _latexController.insert('-');
+      return true;
+    }
+    
+    // Key: `/` (This is Shift + 7 on a German keyboard)
+    if (physicalKey == PhysicalKeyboardKey.digit7 && isShiftPressed) {
+      _latexController.insert('/');
+      return true;
+    }
 
     // Parentheses: Shift+8 and Shift+9 on German keyboard
     if (physicalKey == PhysicalKeyboardKey.digit8 && isShiftPressed) {
-      _insertTextAndPositionCursor('(');
+      _latexController.insert('(');
       return true;
     }
     if (physicalKey == PhysicalKeyboardKey.digit9 && isShiftPressed) {
-      _insertTextAndPositionCursor(')');
-      return true;
-    }
-
-    // Square brackets: AltGr+8 and AltGr+9 on German keyboard  
-    if (physicalKey == PhysicalKeyboardKey.digit8 && isAltPressed) {
-      _insertTextAndPositionCursor('[');
-      return true;
-    }
-    if (physicalKey == PhysicalKeyboardKey.digit9 && isAltPressed) {
-      _insertTextAndPositionCursor(']');
-      return true;
-    }
-
-    // Curly braces: AltGr+7 and AltGr+0 on German keyboard
-    if (physicalKey == PhysicalKeyboardKey.digit7 && isAltPressed) {
-      _insertTextAndPositionCursor('{');
-      return true;
-    }
-    if (physicalKey == PhysicalKeyboardKey.digit0 && isAltPressed) {
-      _insertTextAndPositionCursor('}');
-      return true;
-    }
-
-    // Basic arithmetic operators on German keyboard
-    // Plus and multiplication (right of P key)
-    if (physicalKey == PhysicalKeyboardKey.bracketRight) {
-      _insertTextAndPositionCursor(isShiftPressed ? '*' : '+');
-      return true;
-    }
-    
-    // Minus (right of zero key, without shift)
-    if (physicalKey == PhysicalKeyboardKey.slash && !isShiftPressed) {
-      _insertTextAndPositionCursor('-');
-      return true;
-    }
-    
-    // Division: Shift+7 on German keyboard
-    if (physicalKey == PhysicalKeyboardKey.digit7 && isShiftPressed) {
-      _insertTextAndPositionCursor('/');
-      return true;
-    }
-
-    // Hash/Number sign: Shift+3 on German keyboard (useful for comments)
-    if (physicalKey == PhysicalKeyboardKey.digit3 && isShiftPressed) {
-      _insertTextAndPositionCursor('#');
+      _latexController.insert(')');
       return true;
     }
 
     // Equal sign: Shift+0 on German keyboard
     if (physicalKey == PhysicalKeyboardKey.digit0 && isShiftPressed) {
-      _insertTextAndPositionCursor('=');
+      _latexController.insert('=');
       return true;
     }
 
-    // Question mark: Shift+ß on German keyboard
-    if (physicalKey == PhysicalKeyboardKey.minus && isShiftPressed) {
-      _insertTextAndPositionCursor('?');
-      return true;
-    }
-
-    // --- LOCALE-SPECIFIC CHARACTER CORRECTIONS ---
-    // Fallback for cases where physical key mapping isn't sufficient
-    if (Platform.isMacOS && character != null && character.isNotEmpty) {
-      // German keyboard layout corrections
-      final corrections = _getGermanKeyboardCorrections();
-      if (corrections.containsKey(character)) {
-        _insertTextAndPositionCursor(corrections[character]!);
-        return true;
-      }
-    }
-
-    // --- GENERAL ACTION KEYS ---
-    final Set<LogicalKeyboardKey> modifierKeys = <LogicalKeyboardKey>{
-      LogicalKeyboardKey.shiftLeft,
-      LogicalKeyboardKey.shiftRight,
-      LogicalKeyboardKey.controlLeft,
-      LogicalKeyboardKey.controlRight,
-      LogicalKeyboardKey.altLeft,
-      LogicalKeyboardKey.altRight,
-      LogicalKeyboardKey.metaLeft,
-      LogicalKeyboardKey.metaRight,
-      LogicalKeyboardKey.capsLock,
-      LogicalKeyboardKey.escape,
-      LogicalKeyboardKey.fn,
-    };
-
-    // Handle special action keys
+    // --- UNIVERSAL ACTION KEYS ---
     if (logicalKey == LogicalKeyboardKey.enter || logicalKey == LogicalKeyboardKey.numpadEnter) {
-      _onButtonPressed("EXE");
-      return true;
+      _onButtonPressed("EXE"); return true;
     }
     if (logicalKey == LogicalKeyboardKey.escape) {
-      _onButtonPressed('C');
-      return true;
+      _onButtonPressed('C'); return true;
     }
     if (logicalKey == LogicalKeyboardKey.backspace) {
-      _onButtonPressed('⌫');
-      return true;
+      _latexController.backspace(); return true;
+    }
+    if (logicalKey == LogicalKeyboardKey.arrowLeft) {
+      _latexController.moveCursor(-1); return true;
+    }
+    if (logicalKey == LogicalKeyboardKey.arrowRight) {
+      _latexController.moveCursor(1); return true;
     }
 
     // --- STANDARD CHARACTER INPUT ---
-    // For characters that are correctly interpreted by the OS
-    if (character != null && character.isNotEmpty && !modifierKeys.contains(logicalKey)) {
-      // Only use OS character if it hasn't been corrected above
-      _insertTextAndPositionCursor(character);
-      return true;
-    }
-
-    // --- NUMPAD FALLBACKS ---
-    // Ensure numpad works regardless of layout issues
-    switch (logicalKey) {
-      case LogicalKeyboardKey.numpadAdd:
-        _insertTextAndPositionCursor('+');
-        return true;
-      case LogicalKeyboardKey.numpadSubtract:
-        _insertTextAndPositionCursor('-');
-        return true;
-      case LogicalKeyboardKey.numpadMultiply:
-        _insertTextAndPositionCursor('*');
-        return true;
-      case LogicalKeyboardKey.numpadDivide:
-        _insertTextAndPositionCursor('/');
-        return true;
-      case LogicalKeyboardKey.numpadDecimal:
-        _insertTextAndPositionCursor('.');
-        return true;
-      case LogicalKeyboardKey.equal:
-        _onButtonPressed("EXE");
-        return true;
-    }
-
-    return false; // Key event not handled
-  }
-
-  // Helper method for German keyboard character corrections
-  Map<String, String> _getGermanKeyboardCorrections() {
-    return {
-      // These are the incorrect characters Flutter might produce -> correct characters
-      ']': '+',     // Plus key misinterpreted
-      '}': '*',     // Multiplication key misinterpreted  
-      '/': '-',     // Minus key misinterpreted
-      '&': '/',     // Division key misinterpreted
-      '*': '(',     // Left parenthesis misinterpreted (your current issue)
-      // Add more as you discover them:
-      // '?': ')',   // Right parenthesis misinterpreted (if this happens)
-    };
-  }
-
-  // Optional: Method to get corrections for other keyboard layouts
-  Map<String, String> _getKeyboardCorrections() {
-    // You could detect the current locale and return appropriate corrections
-    final locale = Platform.localeName;
-    
-    if (locale.startsWith('de')) {
-      return _getGermanKeyboardCorrections();
-    } else if (locale.startsWith('fr')) {
-      return _getFrenchKeyboardCorrections();
-    } else if (locale.startsWith('es')) {
-      return _getSpanishKeyboardCorrections();
-    }
-    
-    return {}; // No corrections needed for this locale
-  }
-
-  // Placeholder methods for other keyboard layouts
-  Map<String, String> _getFrenchKeyboardCorrections() {
-    return {
-      // Add French AZERTY keyboard corrections as needed
-    };
-  }
-
-  Map<String, String> _getSpanishKeyboardCorrections() {
-    return {
-      // Add Spanish keyboard corrections as needed
-    };
-  }
-
-  bool handleKeyboardInput_old(KeyEvent event) {
-    _debugKeyboardInput(event);
-    if (event is! KeyDownEvent) return false;
-
-    final physicalKey = event.physicalKey;
-    final logicalKey = event.logicalKey;
-    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-
-    // --- GERMAN KEYBOARD LAYOUT FIX ---
-    // Handles specific physical keys that are misinterpreted by Flutter on macOS.
-    // This is more reliable than using logical keys or characters for these specific cases.
-
-    // Key: `+` and `*` (Physical location of `]` on a US keyboard)
-    if (physicalKey == PhysicalKeyboardKey.bracketRight) {
-      _insertTextAndPositionCursor(isShiftPressed ? '*' : '+');
-      return true;
-    }
-    // Key: `-` (Physical location of `/` on a US keyboard)
-    if (physicalKey == PhysicalKeyboardKey.slash) {
-      // Shift + `-` on German layout is `_`, which we can ignore for the calculator.
-      if (!isShiftPressed) {
-        _insertTextAndPositionCursor('-');
+    if (character != null && character.isNotEmpty) {
+      final charCode = character.codeUnitAt(0);
+      if (charCode < 0xF700 && charCode >= 32) {
+        switch (character) {
+          case '*':
+            _latexController.insert(r'\cdot ');
+            break;
+          case '^':
+            _latexController.insert('^{}', cursorOffsetFromEnd: -1);
+            break;
+          default:
+            _latexController.insert(character);
+        }
         return true;
       }
     }
-    // Key: `/` (This is Shift + 7 on a German keyboard)
-    if (physicalKey == PhysicalKeyboardKey.digit7 && isShiftPressed) {
-      _insertTextAndPositionCursor('/');
-      return true;
-    }
 
-    // --- GENERAL KEY HANDLING ---
-
-    // A set of keys that should not produce character input.
-    final Set<LogicalKeyboardKey> modifierKeys = <LogicalKeyboardKey>{
-      LogicalKeyboardKey.shiftLeft,
-      LogicalKeyboardKey.shiftRight,
-      LogicalKeyboardKey.controlLeft,
-      LogicalKeyboardKey.controlRight,
-      LogicalKeyboardKey.altLeft,
-      LogicalKeyboardKey.altRight,
-      LogicalKeyboardKey.metaLeft,
-      LogicalKeyboardKey.metaRight,
-      LogicalKeyboardKey.capsLock,
-      LogicalKeyboardKey.escape,
-      LogicalKeyboardKey.fn,
-    };
-
-    // Handle special action keys first
-    if (logicalKey == LogicalKeyboardKey.enter || logicalKey == LogicalKeyboardKey.numpadEnter) {
-      _onButtonPressed("EXE");
-      return true;
-    }
-    if (logicalKey == LogicalKeyboardKey.escape) {
-      _onButtonPressed('C');
-      return true;
-    }
-    if (logicalKey == LogicalKeyboardKey.backspace) {
-      _onButtonPressed('⌫');
-      return true;
-    }
-
-    // For most other keys, trust the `event.character` if it's not from a modifier key.
-    if (event.character != null && event.character!.isNotEmpty && !modifierKeys.contains(logicalKey)) {
-      _insertTextAndPositionCursor(event.character!);
-      return true;
-    }
-
-    // Fallback for Numpad keys that might not produce a character on all platforms
+    // --- NUMPAD FALLBACKS ---
     switch (logicalKey) {
       case LogicalKeyboardKey.numpadAdd:
-        _insertTextAndPositionCursor('+');
-        return true;
+        _latexController.insert('+'); return true;
       case LogicalKeyboardKey.numpadSubtract:
-        _insertTextAndPositionCursor('-');
-        return true;
+        _latexController.insert('-'); return true;
       case LogicalKeyboardKey.numpadMultiply:
-        _insertTextAndPositionCursor('*');
-        return true;
+        _latexController.insert(r'\cdot '); return true;
       case LogicalKeyboardKey.numpadDivide:
-        _insertTextAndPositionCursor('/');
-        return true;
+        _latexController.insert('/'); return true;
       case LogicalKeyboardKey.numpadDecimal:
-      case LogicalKeyboardKey.period:
-        _insertTextAndPositionCursor('.');
-        return true;
+        _latexController.insert('.'); return true;
       case LogicalKeyboardKey.equal:
-        _onButtonPressed("EXE");
-        return true;
+        _onButtonPressed("EXE"); return true;
     }
 
-    return false; // Indicate that the key event was not handled
+    return false;
   }
 
-  void _onButtonPressed(String value) {
+  Map<String, String> _getKeyboardCorrections(String locale) {
+    if (locale.startsWith('de')) {
+      return {
+        ']': '+', '}': r'\cdot ', '/': '-', '&': '/', '*': '(',
+      };
+    } else if (locale.startsWith('fr')) {
+      return {
+        '§': '(', '°': ')', '£': r'\cdot ', 'µ': '+', '¨': '^',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+      };
+    } else if (locale.startsWith('es')) {
+      return {
+        '¿': '/', 'ñ': '+', 'Ñ': r'\cdot ', '¡': '(',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+      };
+    }
+    return {};
+  }
+
+  void _onButtonPressed(String value) async {
+    if (_justCalculated && _isOperator(value) && _appState.history.isNotEmpty) {
+      _latexController.insert('Ans');
+    }
+
     switch (value) {
       case 'C':
-        _controller.clear();
+        _latexController.clear();
         setState(() { _justCalculated = false; });
         break;
+      
       case '⌫':
-        _handleBackspace();
+        _latexController.backspace();
         break;
+      
       case 'EXE':
-        if (_controller.text.isNotEmpty) {
-          _calculate(_controller.text);
-        }
-        break;
-      case '◀':
-        if (_inputFocusNode.hasFocus) {
-          final selection = _controller.selection;
-          if (selection.baseOffset > 0) {
-            final newPosition = selection.baseOffset - 1;
-            _controller.selection = TextSelection.collapsed(offset: newPosition);
-          }
-        }
-        break;
-      case '▶':
-        if (_inputFocusNode.hasFocus) {
-          final selection = _controller.selection;
-          if (selection.baseOffset < _controller.text.length) {
-            final newPosition = selection.baseOffset + 1;
-            _controller.selection = TextSelection.collapsed(offset: newPosition);
-          }
+        if (_latexController.text.isNotEmpty) {
+          await _calculate(_latexController.text);
         }
         break;
       
-      // Enhanced function handling
+      case '◀':
+        _latexController.moveCursor(-1);
+        break;
+      
+      case '▶':
+        _latexController.moveCursor(1);
+        break;
+
+      // --- LaTeX Template Insertions ---
+      case '/': // This is the BUTTON press, should create fractions
+        _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4);
+        break;
+      
+      case 'sqrt':
+        _latexController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'sin':
+        _latexController.insert(r'\sin()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'cos':
+        _latexController.insert(r'\cos()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'tan':
+        _latexController.insert(r'\tan()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'ln':
+        _latexController.insert(r'\ln()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'log':
+        _latexController.insert(r'\log()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'abs':
+        _latexController.insert(r'abs()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'asin':
+        _latexController.insert(r'\arcsin()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'acos':
+        _latexController.insert(r'\arccos()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'atan':
+        _latexController.insert(r'\arctan()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'sinh':
+        _latexController.insert(r'\sinh()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'cosh':
+        _latexController.insert(r'\cosh()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'tanh':
+        _latexController.insert(r'\tanh()', cursorOffsetFromEnd: -1);
+        break;
+
+      case '^':
+        _latexController.insert(r'^{}', cursorOffsetFromEnd: -1);
+        break;
+
+      case '_':
+        _latexController.insert(r'_{}', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'π':
+        _latexController.insert(r'\pi');
+        break;
+      
+      case 'e':
+        _latexController.insert('E');
+        break;
+      
+      case 'γ':
+        _latexController.insert('EulerGamma');
+        break;
+
       case 'solve':
-        _insertTextAndPositionCursor('solve()', cursorOffset: -1);
+        _latexController.insert('solve()', cursorOffsetFromEnd: -1);
         _showSolveFunctionPicker();
+        break;
+
+      case 'factor':
+        _latexController.insert('factor()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'expand':
+        _latexController.insert('expand()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'simplify':
+        _latexController.insert('simplify()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'd/dx':
+        _latexController.insert(r'\frac{d}{dx}()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'gcd':
+        _latexController.insert('gcd(,)', cursorOffsetFromEnd: -2);
+        break;
+
+      case 'lcm':
+        _latexController.insert('lcm(,)', cursorOffsetFromEnd: -2);
+        break;
+
+      case '∫':
+        await _showIntegralDialog();
+        break;
+      
+      case 'ⁿ√x':
+        await _showNthRootDialog();
+        break;
+      
+      case 'lim':
+        await _showLimitDialog();
+        break;
+      
+      case 'matrix':
+        final result = await Navigator.of(context).push<String>(
+          MaterialPageRoute(builder: (context) => const MatrixEditorScreen()),
+        );
+        if (result != null) _latexController.insert(result);
         break;
 
       case 'f(x)':
         _showFunctionPicker();
         break;
 
-      case 'd/dx':
-        _insertTextAndPositionCursor('d/dx()', cursorOffset: -1);
+      case 'Ans':
+        if (_appState.history.isNotEmpty) {
+          _latexController.insert('Ans');
+        }
         break;
 
-      case 'factor':
-        _insertTextAndPositionCursor('factor()', cursorOffset: -1);
+      // === Advanced Mathematical Functions ===
+      
+      case 'gamma':
+        _latexController.insert(r'\Gamma()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case '!':
+        // Factorial - append to current expression
+        _latexController.insert('!');
+        break;
+      
+      case '∞':
+        _latexController.insert(r'\infty');
+        break;
+      
+      case 'fib':
+        _latexController.insert('fib()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'prime':
+        _latexController.insert('isprime()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'mod':
+        _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;
 
-      case 'expand':
-        _insertTextAndPositionCursor('expand()', cursorOffset: -1);
+      // === Matrix Operations ===
+      
+      case 'det':
+        _latexController.insert('det()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'inv':
+        _latexController.insert('inv()', cursorOffsetFromEnd: -1);
+        break;
+      
+      case 'transpose':
+        _latexController.insert('transpose()', cursorOffsetFromEnd: -1);
         break;
 
-      case 'simplify':
-        _insertTextAndPositionCursor('simplify()', cursorOffset: -1);
+      // === Hyperbolic Inverse Functions ===
+      
+      case 'asinh':
+        _latexController.insert(r'asinh()', cursorOffsetFromEnd: -1);
         break;
-
-      case 'gcd':
-        _insertTextAndPositionCursor('gcd(,)', cursorOffset: -2);
+      
+      case 'acosh':
+        _latexController.insert(r'acosh()', cursorOffsetFromEnd: -1);
         break;
-
-      case 'lcm':
-        _insertTextAndPositionCursor('lcm(,)', cursorOffset: -2);
-        break;
-
-      // Constants from SymbolicMathBridge
-      case 'π':
-        _insertTextAndPositionCursor('pi');
-        break;
-
-      case 'e':
-        _insertTextAndPositionCursor('E');
-        break;
-
-      case 'γ':
-        _insertTextAndPositionCursor('EulerGamma');
-        break;
-
-      // Function buttons that need cursor inside parentheses
-      case 'sin(':
-      case 'cos(':
-      case 'tan(':
-      case 'ln(':
-      case 'log(':
-      case 'sqrt(':
-      case 'abs(':
-      case 'asin(':
-      case 'acos(':
-      case 'atan(':
-      case 'sinh(':
-      case 'cosh(':
-      case 'tanh(':
-        final funcName = value.substring(0, value.length - 1);
-        _insertTextAndPositionCursor('$funcName()', cursorOffset: -1);
+      
+      case 'atanh':
+        _latexController.insert(r'atanh()', cursorOffsetFromEnd: -1);
         break;
 
       default:
-        _insertTextAndPositionCursor(value);
+        _latexController.insert(value);
         break;
     }
   }
 
-  // COMPLEX NUMBER FIX: Enhanced result normalization
+  // Helper method to check if a value is an operator
+  bool _isOperator(String value) {
+    return ['+', '-', '*', '/', '^', '%', '=', r'\cdot', r'\times', r'\div'].contains(value);
+  }
+
   String _normalizeComplexResult(String result) {
     if (result.isEmpty) return result;
     
@@ -583,34 +539,18 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     
     print('NORMALIZE: Input: "$normalized"');
     
-    // Handle SymEngine's complex number format: "a + b*I" or "a - b*I"
-    // Pattern matches: number + number*I, number - number*I, number*I, etc.
-    
-    // Remove zero imaginary parts completely
-    // Matches: "+ 0*I", "+ 0.0*I", "- 0*I", "- 0.0*I", etc.
     normalized = normalized.replaceAll(RegExp(r'\s*[+\-]\s*0(\.0*)?(\s*\*\s*I|\s*I)\s*'), '');
-    
-    // Remove imaginary unit artifacts that are just multiplied by zero
     normalized = normalized.replaceAll(RegExp(r'\s*\+\s*0\.0\s*\*\s*I\s*\*\s*\d+'), '');
     normalized = normalized.replaceAll(RegExp(r'\s*\*\s*I\s*\*\s*\d+\s*$'), '');
-    
-    // Clean up standalone zero imaginary parts
     normalized = normalized.replaceAll(RegExp(r'^\s*0(\.0*)?\s*\*\s*I\s*$'), '0');
-    
-    // Handle pure imaginary numbers (like "I" -> "i" or "2*I" -> "2i")
     normalized = normalized.replaceAll(RegExp(r'(\d+)\s*\*\s*I\b'), r'\1i');
     normalized = normalized.replaceAll(RegExp(r'\bI\b'), 'i');
-    
-    // Clean up extra spaces and normalize operators
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
     normalized = normalized.replaceAll(RegExp(r'\s*\+\s*'), ' + ');
     normalized = normalized.replaceAll(RegExp(r'\s*\-\s*'), ' - ');
     normalized = normalized.replaceAll(RegExp(r'\s*\*\s*'), '*');
-    
-    // Remove leading/trailing spaces
     normalized = normalized.trim();
     
-    // If we ended up with just operators, return the original
     if (RegExp(r'^[\+\-\*\s]*$').hasMatch(normalized)) {
       normalized = result;
     }
@@ -619,144 +559,74 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     
     return normalized;
   }
-  
-  void _insertTextAndPositionCursor(String text, {int cursorOffset = 0}) {
-    print('\n=== TEXT INSERTION DEBUG ===');
-    print('Inserting: "$text"');
-    print('Cursor offset: $cursorOffset');
-    print('Before insertion:');
-    print('  Text: "${_controller.text}"');
-    print('  Selection: ${_controller.selection}');
-    
-    final selection = _controller.selection;
-    final currentText = _controller.text;
 
-    final newText = currentText.replaceRange(selection.start, selection.end, text);
-    final newPosition = selection.start + text.length + cursorOffset;
-    
-    print('Calculated new state:');
-    print('  New text: "$newText"');
-    print('  New cursor position: $newPosition');
-
-    if (_inputFocusNode.hasFocus) {
-      _controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
-      );
-    } else {
-      _inputFocusNode.requestFocus();
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: newPosition.clamp(0, newText.length)),
-        );
-      });
-    }
-    
-    print('After atomic update:');
-    print('  Actual text: "${_controller.text}"');
-    print('  Actual selection: ${_controller.selection}');
-    print('=== END TEXT INSERTION DEBUG ===\n');
-  }
-  
-  void _handleBackspace() {
-    print('\n=== BACKSPACE DEBUG ===');
-    final selection = _controller.selection;
-    final currentText = _controller.text;
-    
-    print('Before backspace:');
-    print('  Text: "$currentText"');
-    print('  Selection: $selection');
-
-    if (!selection.isValid) return;
-
-    if (!selection.isCollapsed) {
-      _insertTextAndPositionCursor('');
-      return;
-    }
-
-    if (selection.start > 0) {
-      final currentText = _controller.text;
-      final newText = currentText.substring(0, selection.start - 1) + currentText.substring(selection.start);
-      final newPos = selection.start - 1;
-
-        print('Single cursor backspace:');
-        print('  Removing char at position ${selection.start - 1}');
-        print('  New text: "$newText"');
-        print('  New cursor: $newPos');
-
-      if (_inputFocusNode.hasFocus) {
-        _controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: newPos),
-        );
-      } else {
-        _inputFocusNode.requestFocus();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _controller.value = TextEditingValue(
-            text: newText,
-            selection: TextSelection.collapsed(offset: newPos),
-          );
-        });
-      }
-    }
-    
-    print('After backspace:');
-    print('  Text: "${_controller.text}"');
-    print('  Selection: ${_controller.selection}');
-    print('=== END BACKSPACE DEBUG ===\n');
-  }
-
-  void _calculate(String expression) {
+  Future<void> _calculate(String expression) async {
     print('\n=== CALCULATING: "$expression" ===');
     try {
+      // STEP 1: Check for assignment (variable = value)
+      final assignmentMatch = RegExp(r'^([a-zA-Z][a-zA-Z0-9]*)\s*=\s*(.+)$').firstMatch(expression.trim());
+      if (assignmentMatch != null) {
+        await _handleAssignment(expression, assignmentMatch);
+        return;
+      }
+
+      // STEP 2: Check for function definition (F1 = expression, Y1 = expression)
+      final functionMatch = RegExp(r'^([FY])(\d+)\s*=\s*(.+)$').firstMatch(expression.trim());
+      if (functionMatch != null) {
+        await _handleFunctionDefinition(expression, functionMatch);
+        return;
+      }
+
+      // STEP 3: Convert LaTeX to engine-compatible syntax
+      String convertedExpression = _fromLatex(expression);
+      print('CALC: Converted from LaTeX: "$convertedExpression"');
+      
       String result;
       
       // Handle different function types
-      if (expression.trim().startsWith('solve(') && expression.trim().endsWith(')')) {
+      if (convertedExpression.trim().startsWith('solve(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected solve() function, handling specially');
-        result = _handleSolveFunction(expression.trim());
-      } else if (expression.trim().startsWith('d/dx(') && expression.trim().endsWith(')')) {
+        result = _handleSolveFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('d/dx(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected differentiation function');
-        result = _handleDifferentiateFunction(expression.trim());
-      } else if (expression.trim().startsWith('factor(') && expression.trim().endsWith(')')) {
+        result = _handleDifferentiateFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('factor(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected factor function');
-        result = _handleFactorFunction(expression.trim());
-      } else if (expression.trim().startsWith('expand(') && expression.trim().endsWith(')')) {
+        result = _handleFactorFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('expand(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected expand function');
-        result = _handleExpandFunction(expression.trim());
-      } else if (expression.trim().startsWith('simplify(') && expression.trim().endsWith(')')) {
+        result = _handleExpandFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('simplify(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected simplify function');
-        result = _handleSimplifyFunction(expression.trim());
-      } else if (expression.trim().startsWith('gcd(') && expression.trim().endsWith(')')) {
+        result = _handleSimplifyFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('gcd(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected GCD function');
-        result = _handleGcdFunction(expression.trim());
-      } else if (expression.trim().startsWith('lcm(') && expression.trim().endsWith(')')) {
+        result = _handleGcdFunction(convertedExpression.trim());
+      } else if (convertedExpression.trim().startsWith('lcm(') && convertedExpression.trim().endsWith(')')) {
         print('CALC: Detected LCM function');
-        result = _handleLcmFunction(expression.trim());
+        result = _handleLcmFunction(convertedExpression.trim());
       } else {
+        // STEP 4: Replace variables with their values
+        convertedExpression = _substituteVariables(convertedExpression);
+        
         // Normal expression evaluation with preprocessing
-        final preprocessed = _preprocessNativeExpression(_preprocessExpression(expression));
+        final preprocessed = _preprocessNativeExpression(_preprocessExpression(convertedExpression));
         print('CALC: Preprocessed expression: "$preprocessed"');
         
         final rawResult = _engine.evaluate(preprocessed);
         print('CALC: Raw result from engine: "$rawResult"');
         
-        // APPLY COMPLEX NUMBER NORMALIZATION
         result = _normalizeComplexResult(rawResult);
       }
       
       print('CALC: Final result: "$result"');
       
       setState(() {
-        _appState.addHistoryEntry(expression, result);
+        // _appState.addHistoryEntry(expression, result);
+        _appState.addHistoryEntry(_latexToReadable(expression), result);
         _resultPreview = '';
         _justCalculated = true;
-        
-        _controller.removeListener(_onInputChanged);
-        _controller.clear();
-        _controller.addListener(_onInputChanged);
+        _latexController.clear();
       });
       
       print('CALC: Added to history, cleared input, set _justCalculated = true');
@@ -765,6 +635,410 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
       setState(() => _appState.addHistoryEntry(expression, "Error: ${e.toString()}"));
     }
     print('=== END CALCULATION ===\n');
+  }
+
+  Future<void> _handleAssignment(String originalExpression, RegExpMatch match) async {
+    final name = match.group(1)!;
+    final valueExpression = match.group(2)!;
+    
+    print('ASSIGNMENT: Variable "$name" = "$valueExpression"');
+    
+    try {
+      // Convert the value expression and evaluate it
+      final convertedValue = _fromLatex(valueExpression);
+      final substitutedValue = _substituteVariables(convertedValue);
+      final preprocessed = _preprocessNativeExpression(_preprocessExpression(substitutedValue));
+      final evaluatedValue = _engine.evaluate(preprocessed);
+      final normalizedValue = _normalizeComplexResult(evaluatedValue);
+      
+      if (normalizedValue != "Error" && !normalizedValue.contains("Error")) {
+        _appState.setVariable(name, normalizedValue);
+        setState(() {
+          _appState.addHistoryEntry(originalExpression, "Stored $name = $normalizedValue");
+          _justCalculated = true;
+          _latexController.clear();
+        });
+      } else {
+        setState(() {
+          _appState.addHistoryEntry(originalExpression, "Error: Could not evaluate $valueExpression");
+          _latexController.clear();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _appState.addHistoryEntry(originalExpression, "Error: Invalid assignment");
+        _latexController.clear();
+      });
+    }
+  }
+
+  Future<void> _handleFunctionDefinition(String originalExpression, RegExpMatch match) async {
+    final functionType = match.group(1)!; // 'F' or 'Y'
+    final functionIndex = int.parse(match.group(2)!) - 1; // Convert to 0-based index
+    final functionExpression = match.group(3)!;
+    
+    print('FUNCTION_DEF: $functionType${functionIndex + 1} = "$functionExpression"');
+    
+    try {
+      final convertedExpression = _fromLatex(functionExpression);
+      
+      if (functionType == 'Y') {
+        // Graph function (Y1, Y2, etc.)
+        if (functionIndex >= 0 && functionIndex < _appState.graphFunctions.length) {
+          _appState.updateFunction(functionIndex, convertedExpression);
+          setState(() {
+            _appState.addHistoryEntry(originalExpression, "Stored Y${functionIndex + 1}");
+            _justCalculated = true;
+            _latexController.clear();
+          });
+        } else {
+          setState(() => _appState.addHistoryEntry(originalExpression, "Error: Invalid function index"));
+        }
+      } else if (functionType == 'F') {
+        // User function (F1, F2, etc.)
+        if (functionIndex >= 0 && functionIndex < _appState.userFunctions.length) {
+          _appState.updateUserFunction(functionIndex, convertedExpression);
+          setState(() {
+            _appState.addHistoryEntry(originalExpression, "Stored F${functionIndex + 1}");
+            _justCalculated = true;
+            _latexController.clear();
+          });
+        } else {
+          setState(() => _appState.addHistoryEntry(originalExpression, "Error: Invalid function index"));
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _appState.addHistoryEntry(originalExpression, "Error: Invalid function definition");
+        _latexController.clear();
+      });
+    }
+  }
+
+  /// Substitutes variable names with their stored values in an expression
+  String _substituteVariables(String expression) {
+    String result = expression;
+    
+    // Replace 'Ans' with the last calculation result
+    if (result.contains('Ans')) {
+      final lastResult = _appState.history.isNotEmpty ? _appState.history.first.result : '0';
+      final cleanResult = _extractNumericFromSolveResult(lastResult);
+      result = result.replaceAll('Ans', cleanResult);
+    }
+    
+    // Replace user-defined variables
+    for (final entry in _appState.userVariables.entries) {
+      final variableName = entry.key;
+      final variableValue = entry.value;
+      
+      // Use word boundaries to avoid partial replacements
+      final pattern = RegExp(r'\b' + RegExp.escape(variableName) + r'\b');
+      result = result.replaceAll(pattern, '($variableValue)');
+    }
+    
+    print('SUBSTITUTE: "$expression" -> "$result"');
+    return result;
+  }
+
+  String _extractNumericFromSolveResult(String solveResult) {
+    // Extract numeric value from solve results like "x = 5" -> "5"
+    final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+)\s*$').firstMatch(solveResult);
+    if (match != null && !match.group(1)!.contains(',')) {
+      return match.group(1)!.trim();
+    }
+    return solveResult;
+  }
+
+  Future<void> _showIntegralDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => IntegralDialog(),
+    );
+    if (result != null) {
+      _latexController.insert(result);
+    }
+  }
+
+  Future<void> _showNthRootDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => NthRootDialog(),
+    );
+    if (result != null) {
+      _latexController.insert(result);
+    }
+  }
+
+  Future<void> _showLimitDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => LimitDialog(),
+    );
+    if (result != null) {
+      _latexController.insert(result);
+    }
+  }
+
+  /// Converts the LaTeX string from the input field to SymEngine-compatible syntax.
+  /// Enhanced _fromLatex function that handles all LaTeX syntax from our keypad
+  String _fromLatex(String latex) {
+    String result = latex;
+    
+    print('LATEX_CONVERT: Input: "$latex"');
+    
+    // Remove the cursor character if present
+    result = result.replaceAll('|', '');
+
+    // === STEP 1: Handle complex structures first (order matters!) ===
+    
+    // Handle nth roots: \sqrt[n]{expr} -> (expr)^(1/n)
+    result = result.replaceAllMapped(RegExp(r'\\sqrt\[([^\]]+)\]\{([^}]+)\}'), (m) {
+      final n = m.group(1)!;
+      final expr = m.group(2)!;
+      return '($expr)^(1/$n)';
+    });
+    
+    // Handle square roots: \sqrt{expr} -> sqrt(expr)
+    result = result.replaceAllMapped(RegExp(r'\\sqrt\{([^}]+)\}'), (m) {
+      return 'sqrt(${m.group(1)})';
+    });
+    
+    // Handle fractions: \frac{num}{den} -> (num)/(den)
+    result = result.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
+      return '(${m.group(1)})/(${m.group(2)})';
+    });
+    
+    // Handle differentiation: \frac{d}{dx}(expr) -> d/dx(expr)
+    result = result.replaceAllMapped(RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\(([^)]+)\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
+    
+    // Handle differentiation with braces: \frac{d}{dx}{expr} -> d/dx(expr)
+    result = result.replaceAllMapped(RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\{([^}]+)\}'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
+    
+    // === STEP 2: Handle function notation with braces ===
+    
+    // Trigonometric functions: \sin{expr} -> sin(expr)
+    result = result.replaceAllMapped(RegExp(r'\\(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
+      return '${m.group(1)}(${m.group(2)})';
+    });
+    
+    // Inverse trigonometric functions: \arcsin{expr} -> asin(expr)
+    result = result.replaceAllMapped(RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
+      final func = m.group(1)!;
+      final expr = m.group(2)!;
+      return 'a$func($expr)';
+    });
+    
+    // Hyperbolic functions: \sinh{expr} -> sinh(expr)
+    result = result.replaceAllMapped(RegExp(r'\\(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
+      return '${m.group(1)}(${m.group(2)})';
+    });
+    
+    // Inverse hyperbolic functions: \asinh{expr} -> asinh(expr)
+    result = result.replaceAllMapped(RegExp(r'\\a(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
+      return 'a${m.group(1)}(${m.group(2)})';
+    });
+    
+    // Logarithmic functions: \ln{expr} -> ln(expr), \log{expr} -> log(expr)
+    result = result.replaceAllMapped(RegExp(r'\\(ln|log)\{([^}]+)\}'), (m) {
+      return '${m.group(1)}(${m.group(2)})';
+    });
+    
+    // Logarithm with base: \log_{base}{expr} -> log(expr)/log(base)
+    result = result.replaceAllMapped(RegExp(r'\\log_\{([^}]+)\}\{([^}]+)\}'), (m) {
+      final base = m.group(1)!;
+      final expr = m.group(2)!;
+      return 'log($expr)/log($base)';
+    });
+    
+    // === STEP 3: Handle function notation with parentheses (already correct) ===
+    
+    // These are already in correct format: \sin(expr) -> sin(expr)
+    result = result.replaceAllMapped(RegExp(r'\\(sin|cos|tan|csc|sec|cot|sinh|cosh|tanh|csch|sech|coth|ln|log|sqrt|abs)\('), (m) {
+      return '${m.group(1)}(';
+    });
+    
+    // Inverse trig with parentheses: \arcsin(expr) -> asin(expr)
+    result = result.replaceAllMapped(RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\('), (m) {
+      return 'a${m.group(1)}(';
+    });
+    
+    // === STEP 4: Handle power and subscript notation ===
+    
+    // Powers with braces: x^{expr} -> x^(expr)
+    result = result.replaceAllMapped(RegExp(r'\^\{([^}]+)\}'), (m) {
+      final exp = m.group(1)!;
+      // If it's a single character/number, parentheses aren't needed
+      if (RegExp(r'^[a-zA-Z0-9]$').hasMatch(exp)) {
+        return '^$exp';
+      }
+      return '^($exp)';
+    });
+    
+    // Subscripts with braces: x_{expr} -> x_expr (though SymEngine may not need this)
+    result = result.replaceAllMapped(RegExp(r'_\{([^}]+)\}'), (m) {
+      return '_${m.group(1)}';
+    });
+    
+    // === STEP 5: Handle constants and symbols ===
+    
+    // Greek letters and constants
+    result = result.replaceAll(r'\pi', 'pi');
+    result = result.replaceAll(r'\Pi', 'Pi');
+    result = result.replaceAll(r'\e', 'E');
+    result = result.replaceAll(r'\gamma', 'EulerGamma');
+    result = result.replaceAll(r'\Gamma', 'gamma');
+    result = result.replaceAll(r'\alpha', 'alpha');
+    result = result.replaceAll(r'\beta', 'beta');
+    result = result.replaceAll(r'\delta', 'delta');
+    result = result.replaceAll(r'\Delta', 'Delta');
+    result = result.replaceAll(r'\theta', 'theta');
+    result = result.replaceAll(r'\Theta', 'Theta');
+    result = result.replaceAll(r'\lambda', 'lambda');
+    result = result.replaceAll(r'\Lambda', 'Lambda');
+    result = result.replaceAll(r'\mu', 'mu');
+    result = result.replaceAll(r'\sigma', 'sigma');
+    result = result.replaceAll(r'\Sigma', 'Sigma');
+    result = result.replaceAll(r'\phi', 'phi');
+    result = result.replaceAll(r'\Phi', 'Phi');
+    result = result.replaceAll(r'\omega', 'omega');
+    result = result.replaceAll(r'\Omega', 'Omega');
+    
+    // Special constants
+    result = result.replaceAll(r'\infty', 'oo');
+    result = result.replaceAll(r'\infinity', 'oo');
+    
+    // === STEP 6: Handle operators ===
+    
+    // Multiplication symbols
+    result = result.replaceAll(r'\cdot', '*');
+    result = result.replaceAll(r'\times', '*');
+    result = result.replaceAll(r'\ast', '*');
+    
+    // Division symbols (though we prefer \frac)
+    result = result.replaceAll(r'\div', '/');
+    
+    // Plus/minus
+    result = result.replaceAll(r'\pm', '+-');
+    result = result.replaceAll(r'\mp', '-+');
+    
+    // === STEP 7: Handle absolute values and norms ===
+    
+    // Absolute values: |expr| -> abs(expr)
+    // This is tricky because we need to match paired pipes
+    result = result.replaceAllMapped(RegExp(r'\|([^|]+)\|'), (m) {
+      return 'abs(${m.group(1)})';
+    });
+    
+    // === STEP 8: Handle integrals (basic form) ===
+    
+    // Simple integral: \int expr dx -> integrate(expr, x)
+    result = result.replaceAllMapped(RegExp(r'\\int\s+([^d]+)\s+d([a-zA-Z])'), (m) {
+      final expr = m.group(1)!.trim();
+      final variable = m.group(2)!;
+      return 'integrate($expr, $variable)';
+    });
+    
+    // Definite integral: \int_{a}^{b} expr dx -> integrate(expr, (x, a, b))
+    result = result.replaceAllMapped(RegExp(r'\\int_\{([^}]+)\}\^\{([^}]+)\}\s+([^d]+)\s+d([a-zA-Z])'), (m) {
+      final lower = m.group(1)!;
+      final upper = m.group(2)!;
+      final expr = m.group(3)!.trim();
+      final variable = m.group(4)!;
+      return 'integrate($expr, ($variable, $lower, $upper))';
+    });
+    
+    // === STEP 9: Handle limits ===
+    
+    // Basic limit: \lim_{x \to a} expr -> limit(expr, x, a)
+    result = result.replaceAllMapped(RegExp(r'\\lim_\{([a-zA-Z])\s*\\to\s*([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final approaches = m.group(2)!;
+      final expr = m.group(3)!;
+      return 'limit($expr, $variable, $approaches)';
+    });
+    
+    // === STEP 10: Handle matrices (basic support) ===
+    
+    // Simple matrix notation: \begin{matrix} ... \end{matrix}
+    // This is complex and might need special handling depending on SymEngine's matrix syntax
+    
+    // === STEP 11: Handle summations and products ===
+    
+    // Summation: \sum_{i=1}^{n} expr -> Sum(expr, (i, 1, n))
+    result = result.replaceAllMapped(RegExp(r'\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final start = m.group(2)!;
+      final end = m.group(3)!;
+      final expr = m.group(4)!;
+      return 'Sum($expr, ($variable, $start, $end))';
+    });
+    
+    // Product: \prod_{i=1}^{n} expr -> Product(expr, (i, 1, n))
+    result = result.replaceAllMapped(RegExp(r'\\prod_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final start = m.group(2)!;
+      final end = m.group(3)!;
+      final expr = m.group(4)!;
+      return 'Product($expr, ($variable, $start, $end))';
+    });
+    
+    // === STEP 12: Handle braces (convert to parentheses where needed) ===
+    
+    // Convert remaining \{ and \} to regular braces (for grouping)
+    result = result.replaceAll(r'\{', '{');
+    result = result.replaceAll(r'\}', '}');
+    
+    // === STEP 13: Clean up spacing ===
+    
+    // Remove extra spaces around operators
+    result = result.replaceAll(RegExp(r'\s*\*\s*'), '*');
+    result = result.replaceAll(RegExp(r'\s*\+\s*'), '+');
+    result = result.replaceAll(RegExp(r'\s*-\s*'), '-');
+    result = result.replaceAll(RegExp(r'\s*/\s*'), '/');
+    result = result.replaceAll(RegExp(r'\s*\^\s*'), '^');
+    
+    // Remove multiple spaces
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    print('LATEX_CONVERT: Output: "$result"');
+    
+    return result;
+  }
+
+  String _fromLatexEnhanced(String latex) {
+    String result = _fromLatex(latex); // Call the existing function first
+    
+    // Handle additional advanced LaTeX syntax
+    
+    // Modulo operation: a \bmod b -> a mod b
+    result = result.replaceAllMapped(RegExp(r'(.+?)\s*\\bmod\s*(.+)'), (m) {
+      return '${m.group(1)} mod ${m.group(2)}';
+    });
+    
+    // Gamma function: \Gamma(x) -> gamma(x)
+    result = result.replaceAll(r'\Gamma', 'gamma');
+    
+    // Factorial handling is already in _preprocessNativeExpression
+    
+    // Floor and ceiling functions
+    result = result.replaceAllMapped(RegExp(r'\\lfloor\s*(.+?)\s*\\rfloor'), (m) {
+      return 'floor(${m.group(1)})';
+    });
+    
+    result = result.replaceAllMapped(RegExp(r'\\lceil\s*(.+?)\s*\\rceil'), (m) {
+      return 'ceiling(${m.group(1)})';
+    });
+    
+    // Binomial coefficients: \binom{n}{k} -> binomial(n, k)
+    result = result.replaceAllMapped(RegExp(r'\\binom\{([^}]+)\}\{([^}]+)\}'), (m) {
+      return 'binomial(${m.group(1)}, ${m.group(2)})';
+    });
+    
+    return result;
   }
 
   String _handleSolveFunction(String expression) {
@@ -880,6 +1154,33 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     }
   }
 
+  /// Converts LaTeX back to readable format for history display
+  String _latexToReadable(String latex) {
+    String readable = latex;
+    
+    // Convert LaTeX operators back to readable symbols
+    readable = readable.replaceAll(r'\cdot ', '*');
+    readable = readable.replaceAll(r'\cdot', '*');
+    readable = readable.replaceAll(r'\times ', '*');
+    readable = readable.replaceAll(r'\times', '*');
+    readable = readable.replaceAll(r'\div ', '/');
+    readable = readable.replaceAll(r'\div', '/');
+    
+    // Convert fractions back to parentheses
+    readable = readable.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
+      return '(${m.group(1)})/(${m.group(2)})';
+    });
+    
+    // Remove LaTeX function formatting
+    readable = readable.replaceAll(r'\sin', 'sin');
+    readable = readable.replaceAll(r'\cos', 'cos');
+    readable = readable.replaceAll(r'\tan', 'tan');
+    readable = readable.replaceAll(r'\ln', 'ln');
+    readable = readable.replaceAll(r'\log', 'log');
+    
+    return readable;
+  }
+
   String _handleLcmFunction(String expression) {
     try {
       final content = expression.substring(4, expression.length - 1).trim();
@@ -948,33 +1249,78 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     p = p.replaceAllMapped(RegExp(r'(\b[a-zA-Z]\b)(\()'), (m) => '${m[1]}*${m[2]}');
     p = p.replaceAllMapped(RegExp(r'(\))(\d|\b[a-zA-Z]\b)'), (m) => '${m[1]}*${m[2]}');
     
-    // Handle factorial notation
+    // Handle factorial notation: n! -> factorial(n)
     p = p.replaceAllMapped(RegExp(r'(\d+)!'), (m) {
       final n = int.tryParse(m.group(1)!) ?? 0;
       if (n <= 20) {
+        // Calculate small factorials directly
         int f = 1;
         for (int i = 1; i <= n; i++) { f *= i; }
         return f.toString();
       } else {
+        // Use gamma function for large factorials: n! = gamma(n+1)
         return 'gamma(${n + 1})';
       }
     });
     
+    // Handle variable factorial: var! -> factorial(var)
+    p = p.replaceAllMapped(RegExp(r'([a-zA-Z_][a-zA-Z0-9_]*)!'), (m) {
+      return 'gamma(${m.group(1)} + 1)';
+    });
+    
+    // Handle modulo operations: a mod b -> a % b
+    p = p.replaceAllMapped(RegExp(r'(\S+)\s+mod\s+(\S+)'), (m) {
+      return '(${m.group(1)}) % (${m.group(2)})';
+    });
+    
+    // Handle special function calls that need preprocessing
+    p = _preprocessSpecialFunctions(p);
+    
     return p;
   }
-  
-  String _extractNumericFromSolveResult(String solveResult) {
-    final match = RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+)\s*$').firstMatch(solveResult);
-    if (match != null && !match.group(1)!.contains(',')) {
-      return match.group(1)!.trim();
-    }
-    return solveResult;
-  }
-  
-  void _showSolveFunctionPicker() {
-    final selectionBeforeModal = _controller.selection;
-    setState(() { _modalIsOpen = true; });
 
+  String _preprocessSpecialFunctions(String expression) {
+    String result = expression;
+    
+    // Handle fibonacci function calls
+    result = result.replaceAllMapped(RegExp(r'fib\((\d+)\)'), (m) {
+      final n = int.tryParse(m.group(1)!) ?? 0;
+      if (n <= 0) return '0';
+      if (n == 1 || n == 2) return '1';
+      
+      // For small numbers, calculate directly
+      if (n <= 40) {
+        int a = 0, b = 1;
+        for (int i = 2; i <= n; i++) {
+          int temp = a + b;
+          a = b;
+          b = temp;
+        }
+        return b.toString();
+      } else {
+        // Use SymEngine's fibonacci function for larger numbers
+        return _engine.fibonacci(n);
+      }
+    });
+    
+    // Handle prime checking
+    result = result.replaceAllMapped(RegExp(r'isprime\((\d+)\)'), (m) {
+      final n = int.tryParse(m.group(1)!) ?? 0;
+      if (n < 2) return 'false';
+      if (n == 2) return 'true';
+      if (n % 2 == 0) return 'false';
+      
+      // Simple primality test for small numbers
+      for (int i = 3; i * i <= n; i += 2) {
+        if (n % i == 0) return 'false';
+      }
+      return 'true';
+    });
+    
+    return result;
+  }
+
+  void _showSolveFunctionPicker() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -988,15 +1334,9 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                 child: Text('Select equation or continue typing:', style: Theme.of(context).textTheme.titleMedium),
               ),
               ListTile(
-                leading: Icon(Icons.keyboard_return),
-                title: Text('Continue Typing'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _inputFocusNode.requestFocus();
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) _controller.selection = selectionBeforeModal;
-                  });
-                },
+                leading: const Icon(Icons.keyboard_return),
+                title: const Text('Continue Typing'),
+                onTap: () => Navigator.of(context).pop(),
               ),
               const Divider(),
               Flexible(
@@ -1009,22 +1349,8 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                       subtitle: Text('where Y${e.key + 1} = ${e.value}'),
                       onTap: () {
                         Navigator.of(context).pop();
-
-                        final currentText = _controller.text;
-                        final openParen = currentText.lastIndexOf('(');
-                        final closeParen = currentText.indexOf(')', openParen);
-
-                        if (openParen != -1 && closeParen != -1) {
-                          final textToInsert = 'Y${e.key+1}=0, x';
-                          final newText = currentText.replaceRange(openParen + 1, closeParen, textToInsert);
-                          final newCursorPos = openParen + 1 + textToInsert.length;
-                          
-                          _inputFocusNode.requestFocus();
-                          _controller.value = TextEditingValue(
-                            text: newText,
-                            selection: TextSelection.collapsed(offset: newCursorPos),
-                          );
-                        }
+                        final textToInsert = 'Y${e.key+1}=0, x';
+                        _latexController.insert(textToInsert);
                       },
                     )).toList(),
                 ),
@@ -1033,17 +1359,10 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           ),
         );
       },
-    ).whenComplete(() => setState(() { _modalIsOpen = false; }));
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_modalIsOpen && mounted && !_inputFocusNode.hasFocus) {
-        _inputFocusNode.requestFocus();
-        _controller.selection = selectionBeforeModal;
-      }
-    });
+    );
   }
 
-   void _showFunctionPicker() {
+  void _showFunctionPicker() {
     final List<Widget> options = _appState.graphFunctions.asMap().entries
       .where((entry) => entry.value.isNotEmpty)
       .map((entry) {
@@ -1053,7 +1372,7 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           title: Text('Y${index + 1} = $func'),
           onTap: () {
             Navigator.of(context).pop();
-            _insertTextAndPositionCursor('Y${index+1}()', cursorOffset: -1);
+            _latexController.insert('Y${index+1}()', cursorOffsetFromEnd: -1);
           },
         );
       }).toList();
@@ -1062,9 +1381,6 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
   }
 
   void _showPicker({required String title, required List<Widget> options}) {
-    final selectionBeforeModal = _controller.selection;
-    setState(() { _modalIsOpen = true; });
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1078,16 +1394,10 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
                 child: Text(title, style: Theme.of(context).textTheme.titleMedium),
               ),
               ListTile(
-                leading: Icon(Icons.keyboard_return),
-                title: Text('Continue Typing'),
-                subtitle: Text('Dismiss this panel'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _inputFocusNode.requestFocus();
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _controller.selection = selectionBeforeModal;
-                  });
-                },
+                leading: const Icon(Icons.keyboard_return),
+                title: const Text('Continue Typing'),
+                subtitle: const Text('Dismiss this panel'),
+                onTap: () => Navigator.of(context).pop(),
               ),
               const Divider(),
               Flexible(child: ListView(shrinkWrap: true, children: options)),
@@ -1095,14 +1405,7 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           ),
         );
       },
-    ).whenComplete(() => setState(() { _modalIsOpen = false; }));
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_modalIsOpen && !_inputFocusNode.hasFocus) {
-        _inputFocusNode.requestFocus();
-        _controller.selection = selectionBeforeModal;
-      }
-    });
+    );
   }
 
   String _preprocessExpression(String expression) {
@@ -1145,101 +1448,319 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      onKeyEvent: (node, event) => handleKeyboardInput(event) 
-        ? KeyEventResult.handled 
-        : KeyEventResult.ignored,
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          // Create KeyDownEvent without timeStamp
+          final keyEvent = KeyDownEvent(
+            physicalKey: event.physicalKey,
+            logicalKey: event.logicalKey,
+            character: event.character,
+            timeStamp: Duration.zero, // Use Duration.zero instead of event.timeStamp
+            synthesized: false,
+          );
+          handleKeyboardInput(keyEvent);
+        }
+      },
       child: SafeArea(
-        child: GestureDetector(
-          onTap: () {
-            print('BACKGROUND: Background tapped, ensuring focus');
-            if (!_inputFocusNode.hasFocus) {
-              _inputFocusNode.requestFocus();
-            }
-          },
-          child: Column(
-            children: [
-              Expanded(flex: 3, child: ListenableBuilder(listenable: _appState, builder: (context, child) {
-                return ListView.builder(
-                  itemCount: _appState.history.length, reverse: true,
-                  itemBuilder: (context, index) {
-                    final entry = _appState.history[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(entry.expression, style: TextStyle(fontSize: 20, color: Colors.grey[500])),
-                          const SizedBox(height: 4),
-                          Text("= ${entry.result}", style: TextStyle(fontSize: 28, color: Colors.blue[300])),
-                        ],
+        child: Column(
+          children: [
+            // History display
+            Expanded(
+              flex: 3, 
+              child: ListenableBuilder(
+                listenable: _appState, 
+                builder: (context, child) {
+                  return ListView.builder(
+                    itemCount: _appState.history.length, 
+                    reverse: true,
+                    itemBuilder: (context, index) {
+                      final entry = _appState.history[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(entry.expression, style: TextStyle(fontSize: 20, color: Colors.grey[500])),
+                            const SizedBox(height: 4),
+                            Text("= ${entry.result}", style: TextStyle(fontSize: 28, color: Colors.blue[300])),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+              )
+            ),
+            
+            const Divider(height: 1),
+            
+            // LaTeX input field with stable rendering
+            Container(
+              height: 120,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minHeight: 60, // Ensure minimum height for math rendering
+                        ),
+                        child: SingleChildScrollView(
+                          reverse: true,
+                          scrollDirection: Axis.horizontal,
+                          child: LatexInputField(controller: _latexController),
+                        ),
                       ),
-                    );
-                  },
-                );
-              })),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  TextField(
-                    controller: _controller,
-                    focusNode: _inputFocusNode,
-                    showCursor: true, 
-                    autofocus: true,
-                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300),
-                    textAlign: TextAlign.right,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: _justCalculated ? (_appState.history.firstOrNull?.result ?? '0') : '0',
-                      hintStyle: TextStyle(fontSize: 48, color: _justCalculated ? Colors.grey[500] : Colors.grey[700]),
                     ),
                   ),
                   if (_resultPreview.isNotEmpty)
-                    Text("= $_resultPreview", style: TextStyle(fontSize: 24, color: Colors.grey[600])),
-                ]),
+                    Container(
+                      height: 28,
+                      alignment: Alignment.centerRight,
+                      child: Text("= $_resultPreview", style: TextStyle(fontSize: 20, color: Colors.grey[600])),
+                    ),
+                ],
               ),
-              Expanded(flex: 5, child: Column(children: [
-                TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  onTap: (index) {
-                    print('TAB: Tab $index selected, ensuring focus');
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!_inputFocusNode.hasFocus) {
-                        _inputFocusNode.requestFocus();
-                      }
-                    });
-                  },
-                  tabs: const [
-                    Tab(text: 'Num'), 
-                    Tab(text: 'Trig'), 
-                    Tab(text: 'CAS'), 
-                    Tab(text: 'Advanced'),
-                    Tab(text: 'Mem')
-                  ]
-                ),
-                Expanded(child: TabBarView(controller: _tabController, children: [
-                    // Basic numbers and operations
-                    KeypadGrid(buttons: const ['C','⌫','%','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','^','EXE'], onButtonPressed: _onButtonPressed),
-                    
-                    // Trigonometric and basic functions
-                    KeypadGrid(buttons: const ['sin(','cos(','tan(','x','asin(','acos(','atan(','(','sinh(','cosh(','tanh(',')','ln(','log(','√','EXE'], onButtonPressed: _onButtonPressed),
-                    
-                    // Computer Algebra System functions
-                    KeypadGrid(buttons: const ['solve','factor','expand','d/dx','simplify','f(x)','∫','◀','gcd','lcm','=','▶',',','π','e','γ'], onButtonPressed: _onButtonPressed),
-                    
-                    // Advanced mathematical functions
-                    KeypadGrid(buttons: const ['abs(','gamma','!','∞','matrix','det','inv','◀','asinh(','acosh(','atanh(','▶','fib','prime','mod','EXE'], onButtonPressed: _onButtonPressed),
-                    
-                    // Memory operations
-                    KeypadGrid(buttons: const ['STO','M1','M2','M3','DEL','M4','M5','M6','◀','M7','M8','M9','▶'], onButtonPressed: _onButtonPressed),
-                ])),
-              ])),
-            ],
-          ),
+            ),
+            
+            // Keypad
+            Expanded(
+              flex: 5, 
+              child: Column(
+                children: [
+                  TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    tabs: const [
+                      Tab(text: 'Num'), 
+                      Tab(text: 'Trig'), 
+                      Tab(text: 'CAS'), 
+                      Tab(text: 'Adv'),
+                      Tab(text: 'Var')
+                    ]
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController, 
+                      children: [
+                        // Basic numbers and operations
+                        KeypadGrid(buttons: const [
+                          'C','⌫','%','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','^','EXE'
+                        ], onButtonPressed: _onButtonPressed),
+                        
+                        // Trigonometric and basic functions
+                        KeypadGrid(buttons: const [
+                          'sin','cos','tan','x','asin','acos','atan','(','sinh','cosh','tanh',')','ln','log','sqrt','EXE'
+                        ], onButtonPressed: _onButtonPressed),
+                        
+                        // Computer Algebra System functions
+                        KeypadGrid(buttons: const [
+                          'solve','factor','expand','d/dx','simplify','f(x)','∫','◀','gcd','lcm','=','▶',',','π','e','γ'
+                        ], onButtonPressed: _onButtonPressed),
+                        
+                        // Advanced mathematical functions
+                        KeypadGrid(buttons: const [
+                          'abs','gamma','!','∞','matrix','det','inv','◀','asinh','acosh','atanh','▶','fib','prime','mod','EXE'
+                        ], onButtonPressed: _onButtonPressed),
+                        
+                        // Memory operations - placeholder
+                        KeypadGrid(buttons: const [
+                          'STO','M1','M2','M3','DEL','M4','M5','M6','◀','M7','M8','M9','▶','Ans','','EXE'
+                        ], onButtonPressed: _onButtonPressed),
+                      ]
+                    )
+                  ),
+                ]
+              )
+            ),
+          ],
         ),
       ),
+    );
+  } //build
+
+} // class
+
+class IntegralDialog extends StatefulWidget {
+  @override
+  State<IntegralDialog> createState() => _IntegralDialogState();
+}
+
+class _IntegralDialogState extends State<IntegralDialog> {
+  final _functionController = TextEditingController();
+  final _variableController = TextEditingController(text: 'x');
+  final _lowerController = TextEditingController();
+  final _upperController = TextEditingController();
+  bool _isDefinite = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Integral'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _functionController,
+            decoration: const InputDecoration(labelText: 'Function f(x)'),
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _variableController,
+            decoration: const InputDecoration(labelText: 'Variable'),
+          ),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            title: const Text('Definite Integral'),
+            value: _isDefinite,
+            onChanged: (value) => setState(() => _isDefinite = value!),
+          ),
+          if (_isDefinite) ...[
+            TextField(
+              controller: _lowerController,
+              decoration: const InputDecoration(labelText: 'Lower Bound'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _upperController,
+              decoration: const InputDecoration(labelText: 'Upper Bound'),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final func = _functionController.text;
+            final variable = _variableController.text;
+            
+            String result;
+            if (_isDefinite && _lowerController.text.isNotEmpty && _upperController.text.isNotEmpty) {
+              result = r'\int_{' + _lowerController.text + r'}^{' + _upperController.text + r'} ' + func + r' d' + variable;
+            } else {
+              result = r'\int ' + func + r' d' + variable;
+            }
+            
+            Navigator.of(context).pop(result);
+          },
+          child: const Text('Insert'),
+        ),
+      ],
+    );
+  }
+}
+
+class NthRootDialog extends StatefulWidget {
+  @override
+  State<NthRootDialog> createState() => _NthRootDialogState();
+}
+
+class _NthRootDialogState extends State<NthRootDialog> {
+  final _expressionController = TextEditingController();
+  final _rootController = TextEditingController(text: '3');
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nth Root'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _expressionController,
+            decoration: const InputDecoration(labelText: 'Expression'),
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _rootController,
+            decoration: const InputDecoration(labelText: 'Root (n)'),
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final expr = _expressionController.text;
+            final root = _rootController.text;
+            final result = r'\sqrt[' + root + r']{' + expr + r'}';
+            Navigator.of(context).pop(result);
+          },
+          child: const Text('Insert'),
+        ),
+      ],
+    );
+  }
+}
+
+class LimitDialog extends StatefulWidget {
+  @override
+  State<LimitDialog> createState() => _LimitDialogState();
+}
+
+class _LimitDialogState extends State<LimitDialog> {
+  final _functionController = TextEditingController();
+  final _variableController = TextEditingController(text: 'x');
+  final _approachesController = TextEditingController(text: '0');
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Limit'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _functionController,
+            decoration: const InputDecoration(labelText: 'Function f(x)'),
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _variableController,
+            decoration: const InputDecoration(labelText: 'Variable'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _approachesController,
+            decoration: const InputDecoration(labelText: 'Approaches'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final func = _functionController.text;
+            final variable = _variableController.text;
+            final approaches = _approachesController.text;
+            final result = r'\lim_{' + variable + r' \to ' + approaches + r'} ' + func;
+            Navigator.of(context).pop(result);
+          },
+          child: const Text('Insert'),
+        ),
+      ],
     );
   }
 }

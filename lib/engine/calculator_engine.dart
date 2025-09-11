@@ -1,11 +1,13 @@
 /// lib/engine/calculator_engine.dart
 import 'package:symbolic_math_bridge/symbolic_math_bridge.dart';
+/// The Dart interface that communicates with the underlying native C++ bridge.
+/// This class abstracts away the low-level FFI calls by using your
+/// existing 'symbolic_math_bridge' plugin.
 
-/// A high-level Dart API for the CAS engine using SymbolicMathBridge.
-/// This replaces the old custom FFI implementation with your plugin.
 class CalculatorEngine {
   late final SymbolicMathBridge? _bridge;
   bool _nativeAvailable = false;
+
 
   CalculatorEngine() {
     try {

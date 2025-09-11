@@ -1,12 +1,14 @@
-/// lib/main.dart - REMOVE DUPLICATE KEYBOARD HANDLING
-
+/// lib/main.dart 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'screens/calculator_screen.dart';
 import 'screens/graphing_screen.dart';
 import 'screens/function_editor_screen.dart';
+import 'screens/analysis_hub_screen.dart';
 import 'engine/app_state.dart';
+import 'localization/app_localizations.dart';
 
 void main() {
   runApp(const CrispCalcApp());
@@ -20,6 +22,19 @@ class CrispCalcApp extends StatelessWidget {
     return MaterialApp(
       title: 'CrispCalc - CAS Calculator',
       debugShowCheckedModeBanner: false,
+
+      // --- Setup for i18n ---
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // English
+        Locale('de', ''), // German
+      ],
+
       theme: ThemeData.dark().copyWith(
         primaryColor: Colors.blueAccent,
         scaffoldBackgroundColor: const Color(0xFF1A1A1A),
@@ -56,6 +71,7 @@ class _MainScreenState extends State<MainScreen> {
       CalculatorScreen(key: _calculatorScreenKey),
       const GraphingScreen(),
       const FunctionEditorScreen(),
+      const AnalysisHubScreen(),
       const SettingsScreen(),
     ];
   }
@@ -63,6 +79,8 @@ class _MainScreenState extends State<MainScreen> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+
+      // When switching back to the calculator, ensure its input field is focused.
       if (index == 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _calculatorScreenKey.currentState?.requestFocus();
@@ -89,6 +107,7 @@ class _MainScreenState extends State<MainScreen> {
           const BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Calculator'),
           BottomNavigationBarItem(icon: Icon(MdiIcons.chartLine), label: 'Graphing'),
           BottomNavigationBarItem(icon: Icon(MdiIcons.functionVariant), label: 'Functions'),
+          BottomNavigationBarItem(icon: Icon(MdiIcons.chartDonut), label: 'Analysis'),
           const BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
