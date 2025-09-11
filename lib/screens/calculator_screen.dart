@@ -1,4 +1,4 @@
-// lib/screens/calculator_screen.dart - Fixed and Complete
+// lib/screens/calculator_screen.dart
 
 import 'dart:async';
 import 'package:flutter/material.dart';

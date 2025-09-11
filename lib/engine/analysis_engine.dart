@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'calculator_engine.dart';
+import '../utils/math_display_utils.dart';
 
 class AnalysisResult {
   final String originalFunction;
@@ -64,8 +65,18 @@ class AnalysisEngine {
     return normalized;
     }
 
-  /// Normalizes expressions for DISPLAY ONLY - converts ** to superscripts
+  /// Normalizes expressions for DISPLAY with LaTeX formatting
   String _normalizeForDisplay(String result) {
+    String normalized = _normalizeResult(result);
+    
+    // Apply LaTeX formatting for mathematical expressions
+    normalized = MathDisplayUtils.formatMathResult(normalized);
+    
+    return normalized;
+  }
+
+  /// Normalizes expressions for DISPLAY ONLY - converts ** to superscripts
+  String _normalizeForDisplay_old(String result) {
     String normalized = _normalizeResult(result);
     
     // Fix Python-style exponents for display ONLY
@@ -373,14 +384,32 @@ class AnalysisEngine {
     print('ANALYSIS: Analysis complete. Errors: ${errors.length}');
     
     return AnalysisResult(
-      originalFunction: function,
-      firstDerivative: firstDerivative != 'Error' ? _normalizeForDisplay(firstDerivative) : 'Error',
-      secondDerivative: secondDerivative != 'Error' ? _normalizeForDisplay(secondDerivative) : 'Error',
-      yIntercept: yIntercept != 'Error' ? _normalizeForDisplay(yIntercept) : 'Error',
-      roots: rootsRaw.isEmpty ? ['No real roots found'] : rootsRaw.map((r) => 'x = ${_normalizeForDisplay(r)}').toList(),
-      extrema: extrema,
-      inflectionPoints: inflectionPoints,
-      errors: errors,
-    );
+        originalFunction: function,
+        firstDerivative: firstDerivative != 'Error' ? _normalizeForDisplay(firstDerivative) : 'Error',
+        secondDerivative: secondDerivative != 'Error' ? _normalizeForDisplay(secondDerivative) : 'Error',
+        yIntercept: yIntercept != 'Error' ? _normalizeForDisplay(yIntercept) : 'Error',
+        // Enhanced root formatting with LaTeX
+        roots: rootsRaw.isEmpty ? ['No real roots found'] : rootsRaw.map((r) {
+            final formatted = MathDisplayUtils.formatMathResult(r);
+            return 'x = $formatted';
+        }).toList(),
+        extrema: extrema.map((e) {
+            // Apply LaTeX formatting to coordinate values in extrema
+            return e.replaceAllMapped(RegExp(r'\(([^,]+),\s*([^)]+)\)'), (match) {
+            final x = MathDisplayUtils.formatMathResult(match.group(1)!);
+            final y = MathDisplayUtils.formatMathResult(match.group(2)!);
+            return '($x, $y)';
+            });
+        }).toList(),
+        inflectionPoints: inflectionPoints.map((point) {
+            // Apply LaTeX formatting to coordinate values in inflection points
+            return point.replaceAllMapped(RegExp(r'\(([^,]+),\s*([^)]+)\)'), (match) {
+            final x = MathDisplayUtils.formatMathResult(match.group(1)!);
+            final y = MathDisplayUtils.formatMathResult(match.group(2)!);
+            return '($x, $y)';
+            });
+        }).toList(),
+        errors: errors,
+      );
   }
 }
