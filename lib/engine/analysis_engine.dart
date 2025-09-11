@@ -38,16 +38,16 @@ class AnalysisEngine {
     
     String normalized = result.trim();
     
-    // Remove complex number artifacts
+    // Remove complex number artifacts more aggressively
     normalized = normalized.replaceAll(RegExp(r'\s*[+\-]\s*0(\.0*)?(\s*\*\s*I|\s*I)\s*'), '');
     normalized = normalized.replaceAll(RegExp(r'^\s*0(\.0*)?\s*\*\s*I\s*$'), '0');
     normalized = normalized.replaceAll(RegExp(r'\bI\b'), 'i');
     
-    // Clean up decimal zeros (0.0 -> 0)
-    normalized = normalized.replaceAll(RegExp(r'\.0+(?!\d)'), '');
+    // Handle complex format like "-2.0 + 0.0*I" -> "-2" (fixed backreference)
+    normalized = normalized.replaceAllMapped(RegExp(r'^([+-]?\d+(?:\.\d+)?)\s*[+\-]\s*0\.0\s*\*\s*I$'), (match) => match.group(1)!);
     
-    // Handle pure real numbers that show as "5.0 + 0.0*I"  
-    normalized = normalized.replaceAll(RegExp(r'^([+-]?\d+(?:\.\d+)?)\s*\+\s*0\.0\s*\*\s*I$'), r'\1');
+    // Clean up decimal zeros (0.0 -> 0, -2.0 -> -2)
+    normalized = normalized.replaceAllMapped(RegExp(r'([+-]?\d+)\.0+(?!\d)'), (match) => match.group(1)!);
     
     // Fix Python-style exponents for display
     normalized = normalized.replaceAll('**2', '²');
@@ -62,7 +62,7 @@ class AnalysisEngine {
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
     
     return normalized;
-  }
+    }
 
   /// Normalizes expressions for DISPLAY ONLY - converts ** to superscripts
   String _normalizeForDisplay(String result) {
@@ -112,8 +112,8 @@ class AnalysisEngine {
     }
   }
 
-  /// Safely solves an equation with improved edge case handling
-  String _safeSolve(String expression, String variable) {
+  /// Safely solves an equation and returns RAW result (bypassing display formatting)
+  String _safeSolveRaw(String expression, String variable) {
     try {
       // Handle edge cases first
       final cleanExpr = expression.trim();
@@ -136,10 +136,37 @@ class AnalysisEngine {
         }
       }
       
+      // Call the engine's solve method but extract raw result
       final result = _engine.solve(expression, variable);
-      return result; // Don't normalize solve results as they contain arrays
+      print('SOLVE_RAW: Engine returned: "$result"');
+      
+      // Extract the raw array from formatted results like "x = {a, b}" or "x = [a, b]"
+      final match = RegExp(r'^[a-zA-Z]\s*=\s*(.+)$').firstMatch(result.trim());
+      if (match != null) {
+        final rawPart = match.group(1)!;
+        print('SOLVE_RAW: Extracted raw part: "$rawPart"');
+        
+        // Convert {a, b} to [a, b] if needed
+        if (rawPart.startsWith('{') && rawPart.endsWith('}')) {
+          final converted = '[${rawPart.substring(1, rawPart.length - 1)}]';
+          print('SOLVE_RAW: Converted braces to brackets: "$converted"');
+          return converted;
+        }
+        
+        // If it's already [a, b], return as-is
+        if (rawPart.startsWith('[') && rawPart.endsWith(']')) {
+          return rawPart;
+        }
+        
+        // Single value, wrap in brackets
+        return '[$rawPart]';
+      }
+      
+      // If no formatting detected, assume it's already raw
+      return result;
+      
     } catch (e) {
-      print('SOLVE_ERROR: Failed to solve "$expression": $e');
+      print('SOLVE_RAW_ERROR: Failed to solve "$expression": $e');
       
       // For certain solve errors, we can provide meaningful responses
       if (e.toString().contains('solve operation failed')) {
@@ -157,21 +184,30 @@ class AnalysisEngine {
   List<String> _parseSolutionArray(String solution) {
     if (solution == 'Error' || solution.isEmpty) return [];
     
+    print('PARSE_ARRAY: Input: "$solution"');
+    
     try {
       if (solution.startsWith('[') && solution.endsWith(']')) {
         final content = solution.substring(1, solution.length - 1).trim();
+        print('PARSE_ARRAY: Content after bracket removal: "$content"');
+        
         if (content.isEmpty) return [];
         
-        return content.split(',')
+        final parts = content.split(',')
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty && s != 'Error')
             .map((s) => _normalizeResult(s))
             .toList();
+            
+        print('PARSE_ARRAY: Final parsed parts: $parts');
+        return parts;
       }
       
       // Single solution
       if (!solution.contains('Error')) {
-        return [_normalizeResult(solution)];
+        final normalized = _normalizeResult(solution);
+        print('PARSE_ARRAY: Single solution normalized: "$normalized"');
+        return [normalized];
       }
     } catch (e) {
       print('PARSE_ERROR: Failed to parse solution "$solution": $e');
@@ -249,19 +285,19 @@ class AnalysisEngine {
 
     // Step 3: Find roots (solve f(x) = 0)
     print('ANALYSIS: Finding roots...');
-    final rootsStr = _safeSolve(function, 'x');
-    final roots = _parseSolutionArray(rootsStr);
-    print('ANALYSIS: Found ${roots.length} roots: $roots');
+    final rootsStr = _safeSolveRaw(function, 'x');
+    final rootsRaw = _parseSolutionArray(rootsStr);
+    print('ANALYSIS: Found ${rootsRaw.length} roots: $rootsRaw');
 
     // Step 4: Find critical points and extrema
     print('ANALYSIS: Finding extrema...');
     List<String> extrema = [];
     if (firstDerivative != 'Error') {
-      final criticalPointsStr = _safeSolve(firstDerivative, 'x');
-      final criticalPoints = _parseSolutionArray(criticalPointsStr);
-      print('ANALYSIS: Found ${criticalPoints.length} critical points: $criticalPoints');
+      final criticalPointsStr = _safeSolveRaw(firstDerivative, 'x');
+      final criticalPointsRaw = _parseSolutionArray(criticalPointsStr);
+      print('ANALYSIS: Found ${criticalPointsRaw.length} critical points: $criticalPointsRaw');
       
-      if (criticalPoints.isEmpty) {
+      if (criticalPointsRaw.isEmpty) {
         // Check if first derivative is a constant
         final constCheck = double.tryParse(firstDerivative);
         if (constCheck != null) {
@@ -274,16 +310,20 @@ class AnalysisEngine {
           extrema.add('No critical points found');
         }
       } else {
-        for (final point in criticalPoints) {
-          final functionValue = _safeEvaluate(function, variable: 'x', value: point);
+        for (final pointRaw in criticalPointsRaw) {
+          print('ANALYSIS: Evaluating function at critical point: "$pointRaw"');
+          // Use the raw value for evaluation
+          final functionValue = _safeEvaluate(function, variable: 'x', value: pointRaw);
+          print('ANALYSIS: Function value at x=$pointRaw: "$functionValue"');
+          
           if (functionValue != 'Error') {
             final type = secondDerivative != 'Error' 
-                ? _determineExtremumType(secondDerivative, point)
+                ? _determineExtremumType(secondDerivative, pointRaw)
                 : 'Critical Point';
-            extrema.add('$type: ($point, $functionValue)');
+            extrema.add('$type: ($pointRaw, $functionValue)');
           } else {
-            extrema.add('Critical Point: ($point, Error)');
-            errors.add('Failed to evaluate function at critical point $point');
+            extrema.add('Critical Point: ($pointRaw, Error)');
+            errors.add('Failed to evaluate function at critical point $pointRaw');
           }
         }
       }
@@ -295,11 +335,11 @@ class AnalysisEngine {
     print('ANALYSIS: Finding inflection points...');
     List<String> inflectionPoints = [];
     if (secondDerivative != 'Error') {
-      final inflectionPointsStr = _safeSolve(secondDerivative, 'x');
-      final inflectionPointsList = _parseSolutionArray(inflectionPointsStr);
-      print('ANALYSIS: Found ${inflectionPointsList.length} potential inflection points: $inflectionPointsList');
+      final inflectionPointsStr = _safeSolveRaw(secondDerivative, 'x');
+      final inflectionPointsRaw = _parseSolutionArray(inflectionPointsStr);
+      print('ANALYSIS: Found ${inflectionPointsRaw.length} potential inflection points: $inflectionPointsRaw');
       
-      if (inflectionPointsList.isEmpty) {
+      if (inflectionPointsRaw.isEmpty) {
         // Check if second derivative is a constant
         final constCheck = double.tryParse(secondDerivative);
         if (constCheck != null) {
@@ -312,13 +352,17 @@ class AnalysisEngine {
           inflectionPoints.add('No inflection points found');
         }
       } else {
-        for (final point in inflectionPointsList) {
-          final functionValue = _safeEvaluate(function, variable: 'x', value: point);
+        for (final pointRaw in inflectionPointsRaw) {
+          print('ANALYSIS: Evaluating function at inflection point: "$pointRaw"');
+          // Use the raw value for evaluation
+          final functionValue = _safeEvaluate(function, variable: 'x', value: pointRaw);
+          print('ANALYSIS: Function value at x=$pointRaw: "$functionValue"');
+          
           if (functionValue != 'Error') {
-            inflectionPoints.add('($point, $functionValue)');
+            inflectionPoints.add('($pointRaw, $functionValue)');
           } else {
-            inflectionPoints.add('($point, Error)');
-            errors.add('Failed to evaluate function at inflection point $point');
+            inflectionPoints.add('($pointRaw, Error)');
+            errors.add('Failed to evaluate function at inflection point $pointRaw');
           }
         }
       }
@@ -333,7 +377,7 @@ class AnalysisEngine {
       firstDerivative: firstDerivative != 'Error' ? _normalizeForDisplay(firstDerivative) : 'Error',
       secondDerivative: secondDerivative != 'Error' ? _normalizeForDisplay(secondDerivative) : 'Error',
       yIntercept: yIntercept != 'Error' ? _normalizeForDisplay(yIntercept) : 'Error',
-      roots: roots.isEmpty ? ['No real roots found'] : roots.map((r) => 'x = ${_normalizeForDisplay(r)}').toList(),
+      roots: rootsRaw.isEmpty ? ['No real roots found'] : rootsRaw.map((r) => 'x = ${_normalizeForDisplay(r)}').toList(),
       extrema: extrema,
       inflectionPoints: inflectionPoints,
       errors: errors,
