@@ -2,9 +2,16 @@
 /// Input screen for the curve sketching module (Kurvendiskussion).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../controllers/latex_controller.dart';
 import '../engine/calculator_engine.dart';
 import '../engine/analysis_engine.dart';
 import '../engine/app_state.dart';
+import '../localization/app_localizations.dart';
+import '../utils/keyboard_input_handler.dart';
+import '../utils/latex_conversion_utils.dart';
+import '../widgets/calculator_keypad.dart';
+import '../widgets/latex_input_field.dart';
 import 'curve_analysis_results_screen.dart';
 
 class CurveAnalysisInputScreen extends StatefulWidget {
@@ -16,11 +23,12 @@ class CurveAnalysisInputScreen extends StatefulWidget {
   State<CurveAnalysisInputScreen> createState() => _CurveAnalysisInputScreenState();
 }
 
-class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
-  late final TextEditingController _controller;
+class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> with SingleTickerProviderStateMixin {
+  final LatexController _latexController = LatexController();
   final AppState _appState = AppState();
+  final FocusNode _focusNode = FocusNode();
+  late final TabController _tabController;
   
-  // The input screen needs both engines to perform the analysis.
   final _calculatorEngine = CalculatorEngine();
   late final AnalysisEngine _analysisEngine;
   bool _isLoading = false;
@@ -28,19 +36,57 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialFunction ?? 'x^3 - 3*x');
+    _tabController = TabController(length: 5, vsync: this);
+    final initialText = widget.initialFunction ?? 'x^3 - 3*x';
+    _latexController.insert(initialText);
     _analysisEngine = AnalysisEngine(_calculatorEngine);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _latexController.dispose();
+    _focusNode.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  /// Runs the analysis and navigates to the results screen.
+  bool _handleKeyboardInput(KeyEvent event) {
+    return KeyboardInputHandler.handleKeyboardInput(
+      event,
+      (text) => _onButtonPressed(text),
+      () => _onButtonPressed('⌫'),
+      () => _onButtonPressed('C'),
+      () => _runAnalysis(),
+      (amount) => _onButtonPressed(amount > 0 ? '▶' : '◀'),
+    );
+  }
+
+  void _onButtonPressed(String value) {
+    _focusNode.requestFocus();
+    switch (value) {
+      case 'C': _latexController.clear(); break;
+      case '⌫': _latexController.backspace(); break;
+      case 'EXE': _runAnalysis(); break;
+      case '◀': _latexController.moveCursor(-1); break;
+      case '▶': _latexController.moveCursor(1); break;
+      case '/': _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4); break;
+      case 'sqrt': _latexController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1); break;
+      case '^': _latexController.insert(r'^{}', cursorOffsetFromEnd: -1); break;
+      case 'π': _latexController.insert(r'\pi'); break;
+      default:
+        _latexController.insert(value);
+        break;
+    }
+  }
+
   Future<void> _runAnalysis() async {
-    if (_controller.text.trim().isEmpty) {
+    final latexFunction = _latexController.text.trim();
+    final function = LatexConversionUtils.fromLatex(latexFunction);
+
+    if (function.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a function.')),
       );
@@ -50,8 +96,7 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Call the main Dart-based analysis method.
-      final results = await _analysisEngine.performCurveAnalysis(_controller.text);
+      final results = await _analysisEngine.performCurveAnalysis(function);
       
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
@@ -76,7 +121,8 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
   }
 
   void _saveAsFunction() {
-    final function = _controller.text.trim();
+    final latexFunction = _latexController.text.trim();
+    final function = LatexConversionUtils.fromLatex(latexFunction);
     if (function.isEmpty) return;
 
     // Find first empty function slot
@@ -160,7 +206,8 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
               title: Text('Y${entry.key + 1}(x)'),
               subtitle: Text(entry.value, maxLines: 1, overflow: TextOverflow.ellipsis),
               onTap: () {
-                _controller.text = entry.value;
+                _latexController.clear();
+                _latexController.insert(entry.value);
                 Navigator.of(context).pop();
               },
             )),
@@ -183,53 +230,86 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Enter a function to analyze:',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    autofocus: true,
-                    style: const TextStyle(fontSize: 18),
-                    decoration: const InputDecoration(
-                      labelText: 'Function f(x)',
-                      border: OutlineInputBorder(),
-                      prefixText: 'f(x) = ',
+      body: RawKeyboardListener(
+        focusNode: _focusNode,
+        onKey: (event) {
+          if (event is RawKeyDownEvent) {
+            // FIX: RawKeyDownEvent does not have timeStamp. Use Duration.zero instead.
+            _handleKeyboardInput(KeyDownEvent(
+              physicalKey: event.physicalKey,
+              logicalKey: event.logicalKey,
+              character: event.character,
+              timeStamp: Duration.zero,
+            ));
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Enter a function to analyze:',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _focusNode.requestFocus(),
+                      child: Container(
+                        height: 60,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _focusNode.hasFocus ? Theme.of(context).colorScheme.primary : Colors.grey.shade700,
+                            width: _focusNode.hasFocus ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text("f(x) = ", style: TextStyle(fontSize: 18)),
+                            Expanded(child: LatexInputField(controller: _latexController)),
+                          ],
+                        ),
+                      ),
                     ),
-                    onSubmitted: (_) => _runAnalysis(),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.save),
+                    tooltip: 'Save as function',
+                    onPressed: _saveAsFunction,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator())
+              else
+                ElevatedButton.icon(
+                  onPressed: _runAnalysis,
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: const Text('Analyze'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  tooltip: 'Save as function',
-                  onPressed: _saveAsFunction,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
-              ElevatedButton.icon(
-                onPressed: _runAnalysis,
-                icon: const Icon(Icons.analytics_outlined),
-                label: const Text('Analyze'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              Expanded(
+                child: CalculatorKeypad(
+                  tabController: _tabController,
+                  onButtonPressed: _onButtonPressed,
+                  localizations: AppLocalizations.of(context),
+                  appState: _appState,
+                  onVariableTap: (name) => _latexController.insert(name),
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

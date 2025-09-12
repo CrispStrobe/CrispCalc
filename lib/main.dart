@@ -63,13 +63,17 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _screens;
   final GlobalKey<CalculatorScreenState> _calculatorScreenKey = GlobalKey();
+  // GlobalKey for the GraphingScreen to manage its focus
+  // Using the public class name 'GraphingScreenState' for the key's type.
+  final GlobalKey<GraphingScreenState> _graphingScreenKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _screens = <Widget>[
       CalculatorScreen(key: _calculatorScreenKey),
-      const GraphingScreen(),
+      // Pass the key to the GraphingScreen instance
+      GraphingScreen(key: _graphingScreenKey),
       const FunctionEditorScreen(),
       const AnalysisHubScreen(),
       const SettingsScreen(),
@@ -80,12 +84,15 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _selectedIndex = index;
 
-      // When switching back to the calculator, ensure its input field is focused.
-      if (index == 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+      // When switching tabs, explicitly tell the target screen to grab focus.
+      // This is more reliable than trying to manage focus from within each screen's initState.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (index == 0) {
           _calculatorScreenKey.currentState?.requestFocus();
-        });
-      }
+        } else if (index == 1) {
+          _graphingScreenKey.currentState?.requestFocus();
+        }
+      });
     });
   }
 

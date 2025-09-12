@@ -1,26 +1,35 @@
-/// lib/screens/graphing_screen.dart - Fixed Focus Management
+/// lib/screens/graphing_screen.dart - with LaTeX Input & Keypad
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
+import '../controllers/latex_controller.dart';
 import '../engine/calculator_engine.dart';
 import '../engine/app_state.dart';
+import '../localization/app_localizations.dart';
 import '../utils/keyboard_input_handler.dart';
+import '../utils/latex_conversion_utils.dart';
 import '../screens/curve_analysis_input_screen.dart';
+import '../widgets/calculator_keypad.dart';
+import '../widgets/latex_input_field.dart';
 
 class GraphingScreen extends StatefulWidget {
   const GraphingScreen({super.key});
 
   @override
-  State<GraphingScreen> createState() => _GraphingScreenState();
+  State<GraphingScreen> createState() => GraphingScreenState();
 }
 
-class _GraphingScreenState extends State<GraphingScreen> {
+class GraphingScreenState extends State<GraphingScreen> with SingleTickerProviderStateMixin {
   final AppState _appState = AppState();
-  final TextEditingController _functionController = TextEditingController();
+  final LatexController _latexController = LatexController();
   final FocusNode _screenFocusNode = FocusNode(); // For keyboard listener
-  final FocusNode _textFieldFocusNode = FocusNode(); // Separate for TextField
   final CalculatorEngine _engine = CalculatorEngine();
+  late final TabController _tabController;
+  
+  // FIX: Start with input unfocused. Focus will be given by MainScreen on tab switch.
+  bool _isInputFocused = false;
+  bool _showKeypad = true;
   
   // Graph view controls
   double _scale = 1.0;
@@ -32,46 +41,66 @@ class _GraphingScreenState extends State<GraphingScreen> {
   @override
   void initState() {
     super.initState();
-    // Request focus for keyboard input
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _tabController = TabController(length: 5, vsync: this);
+    print("DEBUG: GraphingScreen initState - Screen initialized.");
+    // FIX: Removed focus logic from here to prevent it from running at app startup.
+  }
+
+  // FIX: Public method for the parent widget (MainScreen) to call.
+  void requestFocus() {
+    print("DEBUG: GraphingScreen - requestFocus() called by parent.");
+    if (mounted) {
+      setState(() => _isInputFocused = true);
       _screenFocusNode.requestFocus();
-    });
+    }
   }
 
   @override
   void dispose() {
-    _functionController.dispose();
+    print("DEBUG: GraphingScreen disposing.");
+    _latexController.dispose();
     _screenFocusNode.dispose();
-    _textFieldFocusNode.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
+  void _onButtonPressed(String value) {
+    if (!_isInputFocused) {
+      print("DEBUG: Input field not focused. Focusing now via button press.");
+      setState(() => _isInputFocused = true);
+      _screenFocusNode.requestFocus();
+    }
+    
+    switch (value) {
+      case 'C': _latexController.clear(); break;
+      case '⌫': _latexController.backspace(); break;
+      case 'EXE': _addFunction(); break;
+      case '◀': _latexController.moveCursor(-1); break;
+      case '▶': _latexController.moveCursor(1); break;
+      case '/': _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4); break;
+      case 'sqrt': _latexController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1); break;
+      case '^': _latexController.insert(r'^{}', cursorOffsetFromEnd: -1); break;
+      case 'π': _latexController.insert(r'\pi'); break;
+      default:
+        _latexController.insert(value);
+        break;
+    }
+  }
+
   bool _handleKeyboardInput(KeyEvent event) {
-    // Only handle if the text field is focused
-    if (!_textFieldFocusNode.hasFocus) {
+    print("DEBUG: GraphingScreen _handleKeyboardInput | isFocused: $_isInputFocused");
+    if (!_isInputFocused) {
+      print("DEBUG: Input not focused, ignoring key event.");
       return false;
     }
     
     return KeyboardInputHandler.handleKeyboardInput(
       event,
-      (text) => _insertAtCursor(text),
-      () => _backspaceAtCursor(),
-      () => _clearFunction(),
+      (text) => _onButtonPressed(text),
+      () => _onButtonPressed('⌫'),
+      () => _onButtonPressed('C'),
       () => _addFunction(),
-      (amount) => _moveCursorInFunction(amount),
-    );
-  }
-
-  void _insertAtCursor(String text) {
-    final selection = _functionController.selection;
-    final newText = _functionController.text.replaceRange(
-      selection.start,
-      selection.end,
-      text,
-    );
-    _functionController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: selection.start + text.length),
+      (amount) => _onButtonPressed(amount > 0 ? '▶' : '◀'),
     );
   }
 
@@ -138,43 +167,11 @@ class _GraphingScreenState extends State<GraphingScreen> {
     }
   }
 
-  void _backspaceAtCursor() {
-    final selection = _functionController.selection;
-    if (selection.isCollapsed && selection.baseOffset > 0) {
-      final newText = _functionController.text.replaceRange(
-        selection.baseOffset - 1,
-        selection.baseOffset,
-        '',
-      );
-      _functionController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.baseOffset - 1),
-      );
-    } else if (!selection.isCollapsed) {
-      final newText = _functionController.text.replaceRange(
-        selection.start,
-        selection.end,
-        '',
-      );
-      _functionController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.start),
-      );
-    }
-  }
-
-  void _clearFunction() {
-    _functionController.clear();
-  }
-
-  void _moveCursorInFunction(int amount) {
-    final selection = _functionController.selection;
-    final newOffset = (selection.baseOffset + amount).clamp(0, _functionController.text.length);
-    _functionController.selection = TextSelection.collapsed(offset: newOffset);
-  }
-
   void _addFunction() {
-    final textToAdd = _functionController.text.trim();
+    final latexInput = _latexController.text.trim();
+    final textToAdd = LatexConversionUtils.fromLatex(latexInput);
+    print("DEBUG: Adding function | LaTeX: '$latexInput' | Engine format: '$textToAdd'");
+
     if (textToAdd.isEmpty) return;
 
     final emptySlotIndex = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
@@ -186,8 +183,10 @@ class _GraphingScreenState extends State<GraphingScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-      _functionController.clear();
-      _textFieldFocusNode.unfocus();
+      _latexController.clear();
+      // Keep focus for next input
+      setState(() => _isInputFocused = true); 
+      _screenFocusNode.requestFocus();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -243,7 +242,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
     );
   }
 
-  Color _getColorForFunction(int index) {
+    Color _getColorForFunction(int index) {
     const colors = [
       Colors.blue, Colors.red, Colors.green, Colors.purple,
       Colors.orange, Colors.teal, Colors.pink, Colors.brown,
@@ -254,7 +253,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
   @override
   Widget build(BuildContext context) {
     return RawKeyboardListener(
-      focusNode: _screenFocusNode, // Separate focus node for screen
+      focusNode: _screenFocusNode,
       autofocus: true,
       onKey: (RawKeyEvent event) {
         if (event is RawKeyDownEvent) {
@@ -282,6 +281,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
           }
 
           return Scaffold(
+            resizeToAvoidBottomInset: true,
             appBar: AppBar(
               title: Text('Graphing (${activeFunctions.length} functions)'),
               actions: [
@@ -296,6 +296,14 @@ class _GraphingScreenState extends State<GraphingScreen> {
                   icon: const Icon(Icons.center_focus_strong),
                   tooltip: 'Reset View',
                 ),
+                IconButton(
+                  onPressed: () {
+                    setState(() => _showKeypad = !_showKeypad);
+                    print("DEBUG: Toggled keypad visibility to $_showKeypad");
+                  },
+                  icon: Icon(_showKeypad ? Icons.keyboard_hide_outlined : Icons.keyboard_outlined),
+                  tooltip: _showKeypad ? 'Hide Keypad' : 'Show Keypad',
+                ),
                 if (activeFunctions.isNotEmpty)
                   IconButton(
                     onPressed: _clearAllFunctions,
@@ -304,163 +312,156 @@ class _GraphingScreenState extends State<GraphingScreen> {
                   ),
               ],
             ),
-            body: Column(
-              children: [
-                // Graph display area
-                Expanded(
-                  child: GestureDetector(
-                    onScaleStart: (details) {
-                      _focalStart = details.localFocalPoint;
-                      _startScale = _scale;
-                      _startOffset = _offset;
-                    },
-                    onScaleUpdate: (details) {
-                      setState(() {
-                        _scale = (_startScale * details.scale).clamp(0.1, 20.0);
-                        _offset = _startOffset + (details.localFocalPoint - _focalStart);
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade800, width: 1),
-                      ),
-                      child: CustomPaint(
-                        painter: GraphPainter(
-                          functions: activeFunctions,
-                          functionIndices: activeFunctionIndices,
-                          scale: _scale,
-                          offset: _offset,
-                          engine: _engine,
-                          getColorForFunction: _getColorForFunction,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // --- Graph display area ---
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        print("DEBUG: Graph area tapped. Unfocusing input field.");
+                        setState(() => _isInputFocused = false);
+                        _screenFocusNode.unfocus();
+                      },
+                      onScaleStart: (details) {
+                        _focalStart = details.localFocalPoint;
+                        _startScale = _scale;
+                        _startOffset = _offset;
+                      },
+                      onScaleUpdate: (details) {
+                        setState(() {
+                          _scale = (_startScale * details.scale).clamp(0.1, 20.0);
+                          _offset = _startOffset + (details.localFocalPoint - _focalStart);
+                        });
+                      },
+                      // FIX: Wrap the CustomPaint with ClipRect to prevent drawing out of bounds.
+                      child: ClipRect(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade800, width: 1),
+                          ),
+                          child: CustomPaint(
+                            painter: GraphPainter(
+                              functions: activeFunctions,
+                              functionIndices: activeFunctionIndices,
+                              scale: _scale,
+                              offset: _offset,
+                              engine: _engine,
+                              getColorForFunction: _getColorForFunction,
+                            ),
+                            size: Size.infinite,
+                          ),
                         ),
-                        size: Size.infinite,
                       ),
                     ),
                   ),
-                ),
-                
-                // Controls area
-                Container(
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Function input with German keyboard support
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _functionController,
-                              focusNode: _textFieldFocusNode, // Separate focus node
-                              decoration: const InputDecoration(
-                                labelText: 'Enter function to plot',
-                                border: OutlineInputBorder(),
-                                prefixText: 'y = ',
-                                hintText: 'e.g., x^2, sin(x), ln(x+1)',
-                              ),
-                              onSubmitted: (_) => _addFunction(),
-                              onTap: () {
-                                // Give focus to text field when tapped
-                                _textFieldFocusNode.requestFocus();
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.add_chart),
-                            label: const Text('Plot'),
-                            onPressed: _addFunction,
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 12),
-                      
-                      // Active functions display
-                      if (activeFunctions.isNotEmpty) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Active Functions:',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 50,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: activeFunctionIndices.length,
-                            itemBuilder: (context, index) {
-                              final funcText = activeFunctions[index];
-                              final originalIndex = activeFunctionIndices[index];
-                              final yLabel = 'Y${originalIndex + 1}';
-                              final color = _getColorForFunction(originalIndex);
-                              
-                              return Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                child: Chip(
-                                  avatar: CircleAvatar(
-                                    backgroundColor: color,
-                                    radius: 8,
-                                  ),
-                                  label: SizedBox(
-                                    width: 120,
-                                    child: Text(
-                                      '$yLabel = $funcText',
-                                      overflow: TextOverflow.ellipsis,
+                  
+                  // --- CONTROLS AREA ---
+                  const Divider(height: 1),
+                  _buildActiveFunctionsList(activeFunctionIndices, activeFunctions),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                  print("DEBUG: Input field tapped. Focusing for keyboard input.");
+                                    setState(() {
+                                      _isInputFocused = true;
+                                      _showKeypad = true; 
+                                    });
+                                    _screenFocusNode.requestFocus();
+                                  },
+                                  child: Container(
+                                    height: 50,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: _isInputFocused ? Theme.of(context).colorScheme.primary : Colors.grey.shade700,
+                                        width: _isInputFocused ? 2 : 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Text("y = ", style: TextStyle(fontSize: 18)),
+                                        Expanded(child: LatexInputField(controller: _latexController)),
+                                      ],
                                     ),
                                   ),
-                                  backgroundColor: color.withOpacity(0.1),
-                                  side: BorderSide(color: color, width: 1),
-                                  onDeleted: () => _removeFunction(funcText),
-                                  deleteIcon: const Icon(Icons.close, size: 16),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.functions,
-                                size: 48,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'No functions plotted',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.grey.shade600,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Enter a function above to start graphing',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey.shade600,
-                                ),
+                              const SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.add_chart),
+                                label: const Text('Plot'),
+                                onPressed: _addFunction,
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ],
                   ),
+                  Visibility(
+                    visible: _showKeypad,
+                    child: Expanded(
+                      flex: 5,
+                      child: CalculatorKeypad(
+                        tabController: _tabController,
+                        onButtonPressed: _onButtonPressed,
+                        localizations: AppLocalizations.of(context),
+                        appState: _appState,
+                        onVariableTap: (name) => _latexController.insert(name),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActiveFunctionsList(List<int> activeFunctionIndices, List<String> activeFunctions) {
+    if (activeFunctions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'Enter a function below to start graphing.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.grey.shade600,
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: activeFunctionIndices.length,
+        itemBuilder: (context, index) {
+          final funcText = activeFunctions[index];
+          final originalIndex = activeFunctionIndices[index];
+          final yLabel = 'Y${originalIndex + 1}';
+          final color = _getColorForFunction(originalIndex);
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Chip(
+              avatar: CircleAvatar(backgroundColor: color, radius: 8),
+              label: SizedBox(
+                width: 120,
+                child: Text(
+                  '$yLabel = $funcText',
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
+              ),
+              backgroundColor: color.withOpacity(0.1),
+              side: BorderSide(color: color, width: 1),
+              onDeleted: () => _removeFunction(funcText),
+              deleteIcon: const Icon(Icons.close, size: 16),
             ),
           );
         },
@@ -469,7 +470,7 @@ class _GraphingScreenState extends State<GraphingScreen> {
   }
 }
 
-// [Rest of GraphPainter class stays the same as before]
+// GraphPainter class remains unchanged
 class GraphPainter extends CustomPainter {
   final List<String> functions;
   final List<int> functionIndices;
