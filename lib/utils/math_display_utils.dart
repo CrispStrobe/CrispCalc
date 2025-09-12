@@ -10,17 +10,17 @@ class MathDisplayUtils {
     if (latex.contains(r'\')) {
       return latex;
     }
+
+    // Convert mathematical constants first
+    latex = latex.replaceAll('EulerGamma', r'\gamma');
+    latex = latex.replaceAll('pi', r'\pi');
+    latex = latex.replaceAll('infinity', r'\infty');
+    latex = latex.replaceAll('oo', r'\infty');
     
     // Convert sqrt functions to LaTeX
     latex = latex.replaceAllMapped(RegExp(r'sqrt\(([^)]+)\)'), (match) {
       return r'\sqrt{' + match.group(1)! + r'}';
     });
-    
-    // Convert common mathematical constants
-    latex = latex.replaceAll('pi', r'\pi');
-    latex = latex.replaceAll('infinity', r'\infty');
-    latex = latex.replaceAll('oo', r'\infty');
-    latex = latex.replaceAll('EulerGamma', r'\gamma');
     
     // Convert fractions (simple case a/b where a,b are simple expressions)
     latex = latex.replaceAllMapped(RegExp(r'\(([^)]+)\)/\(([^)]+)\)'), (match) {

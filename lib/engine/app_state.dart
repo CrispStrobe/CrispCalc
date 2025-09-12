@@ -62,7 +62,6 @@ class AppState extends ChangeNotifier {
   AppState._internal() {
     // Initialize with 10 empty function slots and add some examples.
     graphFunctions = List.generate(10, (_) => '');
-    userFunctions = List.generate(10, (_) => '');
     
     // Add some default functions for demonstration
     graphFunctions[0] = 'sin(x)';
@@ -75,11 +74,8 @@ class AppState extends ChangeNotifier {
   /// A map of user-defined variables (e.g., 'a' = '5', 'myVar' = '3.14').
   final Map<String, String> userVariables = {};
   
-  /// A list of user-definable functions for graphing (Y1, Y2, etc.).
+  /// A list of user-definable functions, also for graphing (Y1, Y2, etc.).
   late final List<String> graphFunctions;
-  
-  /// A list of user-definable functions for general use (F1, F2, etc.).
-  late final List<String> userFunctions;
 
   /// Adds a new entry to the top of the calculation history.
   void addHistoryEntry(String expression, String result, {HistoryEntryType type = HistoryEntryType.calculation}) {
@@ -131,36 +127,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Updates a user function at a specific index (F1, F2, etc.).
-  void updateUserFunction(int index, String expression) {
-    if (index >= 0 && index < userFunctions.length) {
-      if (userFunctions[index] != expression) {
-        userFunctions[index] = expression;
-        print("STATE: Updated F${index + 1} to '$expression'");
-        notifyListeners(); // Notify all listening widgets
-      }
-    }
-  }
-
-  /// Clears a user function at a specific index.
-  void clearUserFunction(int index) {
-     if (index >= 0 && index < userFunctions.length) {
-      if (userFunctions[index].isNotEmpty) {
-        print("STATE: Cleared F${index + 1}");
-        userFunctions[index] = '';
-        notifyListeners(); // Notify all listening widgets
-      }
-    }
-  }
-
-  /// Gets a user function by index.
-  String getUserFunction(int index) {
-    if (index >= 0 && index < userFunctions.length) {
-      return userFunctions[index];
-    }
-    return '';
-  }
-
   /// Gets a graph function by index.
   String getGraphFunction(int index) {
     if (index >= 0 && index < graphFunctions.length) {
@@ -187,9 +153,6 @@ class AppState extends ChangeNotifier {
   void clearAllFunctions() {
     for (int i = 0; i < graphFunctions.length; i++) {
       graphFunctions[i] = '';
-    }
-    for (int i = 0; i < userFunctions.length; i++) {
-      userFunctions[i] = '';
     }
     print("STATE: Cleared all functions");
     notifyListeners();

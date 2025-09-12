@@ -143,9 +143,15 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
     if (_justCalculated && _latexController.text.isNotEmpty) {
       final currentInput = _latexController.text.trim();
       
-      // Check if user typed just an operator after calculation (including LaTeX operators)
-      if (_isOperator(currentInput) || 
-          (currentInput.length <= 6 && currentInput.startsWith(r'\cdot'))) {
+      // Correctly handle LaTeX operators like \cdot
+      // Define which LaTeX commands should be treated as simple operators for Auto-Ans
+      final isLatexOperator = currentInput.startsWith(r'\cdot') ||
+                              currentInput.startsWith(r'\times') ||
+                              currentInput.startsWith(r'\div');
+
+      // Trigger Auto-Ans if the input is a non-LaTeX operator, OR if it's one of the approved LaTeX operators.
+      // This prevents triggering on templates like \frac{}{}
+      if ((!currentInput.startsWith('\\') && _isOperator(currentInput)) || isLatexOperator) {
         
         final lastResult = _appState.history.isNotEmpty ? _appState.history.first.result : '0';
         final cleanResult = ExpressionPreprocessingUtils.extractNumericFromSolveResult(lastResult);
@@ -664,16 +670,8 @@ class CalculatorScreenState extends State<CalculatorScreen> with SingleTickerPro
           setState(() => _appState.addHistoryEntry(originalExpression, "Error: Invalid function index"));
         }
       } else if (functionType == 'F') {
-        if (functionIndex >= 0 && functionIndex < _appState.userFunctions.length) {
-          _appState.updateUserFunction(functionIndex, convertedExpression);
-          setState(() {
-            _appState.addHistoryEntry(originalExpression, "Stored F${functionIndex + 1}");
-            _justCalculated = true;
-            _latexController.clear();
-          });
-        } else {
-          setState(() => _appState.addHistoryEntry(originalExpression, "Error: Invalid function index"));
-        }
+        // F functions are now deprecated, redirect to Y functions
+        setState(() => _appState.addHistoryEntry(originalExpression, "Error: Use Y1-Y10 instead of F functions"));
       }
     } catch (e) {
       setState(() {

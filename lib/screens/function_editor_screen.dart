@@ -1,37 +1,55 @@
 /// lib/screens/function_editor_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
+
+import '../controllers/latex_controller.dart';
+
 import '../engine/app_state.dart';
-import '../widgets/variable_viewer.dart';
+
+import '../localization/app_localizations.dart';
 import '../utils/keyboard_input_handler.dart';
-import 'curve_analysis_input_screen.dart';
+import '../utils/latex_conversion_utils.dart';
+import '../utils/math_display_utils.dart';
+
+import '../widgets/calculator_keypad.dart';
+import '../widgets/latex_input_field.dart';
+
+import '../screens/curve_analysis_input_screen.dart';
+import '../screens/graphing_screen.dart';
 
 class FunctionEditorScreen extends StatefulWidget {
-  const FunctionEditorScreen({super.key});
+  final void Function(int functionIndex)? onSwitchToGraphing;
+  
+  const FunctionEditorScreen({super.key, this.onSwitchToGraphing});
 
   @override
   State<FunctionEditorScreen> createState() => _FunctionEditorScreenState();
 }
 
-class _FunctionEditorScreenState extends State<FunctionEditorScreen> {
+class _FunctionEditorScreenState extends State<FunctionEditorScreen> with SingleTickerProviderStateMixin {
   final AppState _appState = AppState();
-  late final List<TextEditingController> _controllers;
-  int? _focusedControllerIndex;
+  late final LatexController _activeController; // Single active controller
+  final FocusNode _screenFocusNode = FocusNode();
+  int? _activeFunctionIndex; // Which function is currently being edited
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      _appState.graphFunctions.length,
-      (index) => TextEditingController(text: _appState.graphFunctions[index]),
-    );
+    _activeController = LatexController();
+    _tabController = TabController(length: 5, vsync: this);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _screenFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
+    _activeController.dispose();
+    _screenFocusNode.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -46,96 +64,196 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> {
     }
   }
 
-  void _insertVariable(String name) {
-    if (_focusedControllerIndex != null) {
-      final controller = _controllers[_focusedControllerIndex!];
-      final selection = controller.selection;
-      final newText = controller.text.replaceRange(
-        selection.start,
-        selection.end,
-        name,
+  void _graphFunction(int index) {
+    final function = _appState.graphFunctions[index];
+    if (function.isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => GraphingScreen(),
+        ),
       );
-      controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.start + name.length),
-      );
-      _appState.updateFunction(_focusedControllerIndex!, newText.trim());
     }
   }
 
-  void _insertAtFocusedField(String text) {
-    if (_focusedControllerIndex != null) {
-      final controller = _controllers[_focusedControllerIndex!];
-      final selection = controller.selection;
-      final newText = controller.text.replaceRange(
-        selection.start,
-        selection.end,
-        text,
-      );
-      controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.start + text.length),
-      );
-      _appState.updateFunction(_focusedControllerIndex!, newText.trim());
+  void _activateFunction(int index) {
+    if (_activeFunctionIndex == index) return; // Already active
+    
+    // Save current function if there was one active
+    if (_activeFunctionIndex != null) {
+      _saveFunctionFromController();
     }
-  }
-
-  void _backspaceAtFocusedField() {
-    if (_focusedControllerIndex != null) {
-      final controller = _controllers[_focusedControllerIndex!];
-      final selection = controller.selection;
-      if (selection.isCollapsed && selection.baseOffset > 0) {
-        final newText = controller.text.replaceRange(
-          selection.baseOffset - 1,
-          selection.baseOffset,
-          '',
-        );
-        controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: selection.baseOffset - 1),
-        );
-        _appState.updateFunction(_focusedControllerIndex!, newText.trim());
+    
+    // Load new function into controller
+    setState(() {
+      _activeFunctionIndex = index;
+      _activeController.clear();
+      final functionText = _appState.graphFunctions[index];
+      if (functionText.isNotEmpty) {
+        _activeController.insert(functionText);
       }
+    });
+
+    // Request focus for the keyboard listener
+    _screenFocusNode.requestFocus();
+  }
+
+  void _deactivateFunction() {
+    if (_activeFunctionIndex != null) {
+      _saveFunctionFromController();
+      setState(() {
+        _activeFunctionIndex = null;
+        _activeController.clear();
+      });
+      // Ensure the screen can still receive focus after deactivating
+      _screenFocusNode.requestFocus();
     }
   }
 
-  void _clearFocusedField() {
-    if (_focusedControllerIndex != null) {
-      _controllers[_focusedControllerIndex!].clear();
-      _appState.updateFunction(_focusedControllerIndex!, '');
+  void _saveFunctionFromController() {
+    if (_activeFunctionIndex != null) {
+      final text = _activeController.text.trim();
+      final plainText = LatexConversionUtils.fromLatex(text);
+      _appState.updateFunction(_activeFunctionIndex!, plainText);
     }
   }
 
-  void _executeFocusedField() {
-    if (_focusedControllerIndex != null) {
-      _analyzeFunction(_focusedControllerIndex!);
+  void _insertVariable(String name) {
+    if (_activeFunctionIndex != null) {
+      _activeController.insert(name);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a function field to edit.')),
+      );
     }
   }
+  
+  void _onButtonPressed(String value) {
+    if (_activeFunctionIndex == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a function field to edit.')),
+      );
+      return;
+    }
 
-  void _moveCursorInFocusedField(int amount) {
-    if (_focusedControllerIndex != null) {
-      final controller = _controllers[_focusedControllerIndex!];
-      final selection = controller.selection;
-      final newOffset = (selection.baseOffset + amount).clamp(0, controller.text.length);
-      controller.selection = TextSelection.collapsed(offset: newOffset);
+    // Handle button presses and insert into the active controller
+    switch (value) {
+      case 'C':
+        _activeController.clear();
+        break;
+      case '⌫':
+        _activeController.backspace();
+        break;
+      case 'EXE':
+        _deactivateFunction(); // Acts as a "Done" button
+        break;
+      case '◀':
+        _activeController.moveCursor(-1);
+        break;
+      case '▶':
+        _activeController.moveCursor(1);
+        break;
+      // --- LaTeX Template Insertions ---
+      case '/':
+        _activeController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4);
+        break;
+      case 'sqrt':
+        _activeController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1);
+        break;
+      case 'sin': _activeController.insert(r'\sin()', cursorOffsetFromEnd: -1); break;
+      case 'cos': _activeController.insert(r'\cos()', cursorOffsetFromEnd: -1); break;
+      case 'tan': _activeController.insert(r'\tan()', cursorOffsetFromEnd: -1); break;
+      case 'ln': _activeController.insert(r'\ln()', cursorOffsetFromEnd: -1); break;
+      case 'log': _activeController.insert(r'\log()', cursorOffsetFromEnd: -1); break;
+      case 'abs': _activeController.insert(r'abs()', cursorOffsetFromEnd: -1); break;
+      case 'asin': _activeController.insert(r'\arcsin()', cursorOffsetFromEnd: -1); break;
+      case 'acos': _activeController.insert(r'\arccos()', cursorOffsetFromEnd: -1); break;
+      case 'atan': _activeController.insert(r'\arctan()', cursorOffsetFromEnd: -1); break;
+      case 'sinh': _activeController.insert(r'\sinh()', cursorOffsetFromEnd: -1); break;
+      case 'cosh': _activeController.insert(r'\cosh()', cursorOffsetFromEnd: -1); break;
+      case 'tanh': _activeController.insert(r'\tanh()', cursorOffsetFromEnd: -1); break;
+      case '^': _activeController.insert(r'^{}', cursorOffsetFromEnd: -1); break;
+      case '_': _activeController.insert(r'_{}', cursorOffsetFromEnd: -1); break;
+      case 'π': _activeController.insert(r'\pi'); break;
+      case 'e': _activeController.insert('E'); break;
+      case 'γ': _activeController.insert('EulerGamma'); break;
+      case '!': _activeController.insert('!'); break;
+      case '∞': _activeController.insert(r'\infty'); break;
+      default:
+        _activeController.insert(value);
+        break;
     }
   }
 
   bool _handleKeyboardInput(KeyEvent event) {
     return KeyboardInputHandler.handleKeyboardInput(
       event,
-      _insertAtFocusedField,
-      _backspaceAtFocusedField,
-      _clearFocusedField,
-      _executeFocusedField,
-      _moveCursorInFocusedField,
+      (text) => _onButtonPressed(text), // Reuse button handler logic
+      () => _onButtonPressed('⌫'),
+      () => _onButtonPressed('C'),
+      () => _onButtonPressed('EXE'),
+      (amount) => _onButtonPressed(amount > 0 ? '▶' : '◀'),
     );
+  }
+
+  /// Convert function text to LaTeX for passive display
+  String _toLatex(String text) {
+    return MathDisplayUtils.toHistoryDisplayLatex(text);
+  }
+
+  Widget _buildFunctionDisplay(int index) {
+    final function = _appState.graphFunctions[index];
+    final isActive = _activeFunctionIndex == index;
+    
+    if (isActive) {
+      // Active function with LaTeX input field
+      return Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: LatexInputField(controller: _activeController),
+        ),
+      );
+    } else if (function.isNotEmpty) {
+      // Passive function with LaTeX display
+      return Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        alignment: Alignment.centerLeft,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Math.tex(
+            _toLatex(function),
+            textStyle: const TextStyle(fontSize: 18),
+            onErrorFallback: (err) => Text(
+              function,
+              style: const TextStyle(fontSize: 18),
+            ),
+          ),
+        ),
+      );
+    } else {
+      // Empty function placeholder
+      return Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Y${index + 1}(x)',
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return RawKeyboardListener(
-      focusNode: FocusNode(),
+      focusNode: _screenFocusNode,
       autofocus: true,
       onKey: (RawKeyEvent event) {
         if (event is RawKeyDownEvent) {
@@ -152,106 +270,37 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> {
       child: ListenableBuilder(
         listenable: _appState,
         builder: (context, child) {
-          // Ensure controllers are in sync with the model if changed elsewhere
-          for (int i = 0; i < _controllers.length; i++) {
-            if (_controllers[i].text != _appState.graphFunctions[i]) {
-              _controllers[i].text = _appState.graphFunctions[i];
-            }
-          }
-
           return Scaffold(
             appBar: AppBar(
               title: const Text('Function Editor (Y=)'),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.analytics),
-                  tooltip: 'Analyze Functions',
-                  onPressed: () {
-                    _showAnalysisOptions();
-                  },
-                ),
+                if (_activeFunctionIndex != null)
+                  TextButton(
+                    onPressed: _deactivateFunction,
+                    child: const Text('Done'),
+                  ),
               ],
             ),
-            body: LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 800;
-                
-                if (isNarrow) {
-                  return Column(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildFunctionList(),
-                      ),
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          border: Border(top: BorderSide(color: Colors.grey.shade300)),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              color: Colors.grey.shade100,
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.storage, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Variables & Functions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: VariableViewer(
-                                appState: _appState,
-                                onVariableTap: _insertVariable,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                } else {
-                  return Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildFunctionList(),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border(left: BorderSide(color: Colors.grey.shade300)),
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                color: Colors.grey.shade100,
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.storage, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('Variables & Functions', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: VariableViewer(
-                                  appState: _appState,
-                                  onVariableTap: _insertVariable,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-              },
+            body: Column(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _buildFunctionList(),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  flex: 5,
+                  child: CalculatorKeypad(
+                    tabController: _tabController,
+                    onButtonPressed: _onButtonPressed,
+                    localizations: AppLocalizations.of(context),
+                    appState: _appState,
+                    onVariableTap: _insertVariable,
+                    memory: null,
+                    onMemoryAction: null,
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -262,62 +311,82 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> {
   Widget _buildFunctionList() {
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
-      itemCount: _controllers.length,
+      itemCount: _appState.graphFunctions.length,
       itemBuilder: (context, index) {
+        final isActive = _activeFunctionIndex == index;
+        
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: Row(
             children: [
               Expanded(
-                child: Focus(
-                  onFocusChange: (hasFocus) {
-                    setState(() {
-                      _focusedControllerIndex = hasFocus ? index : null;
-                    });
-                  },
-                  child: TextField(
-                    controller: _controllers[index],
-                    decoration: InputDecoration(
-                      prefixIcon: Container(
-                        width: 60,
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Y${index + 1}',
-                          style: TextStyle(
-                            color: _getColorForFunction(index),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                child: GestureDetector(
+                  onTap: () => isActive ? _deactivateFunction() : _activateFunction(index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isActive 
+                          ? Theme.of(context).colorScheme.primary 
+                          : Colors.grey,
+                        width: isActive ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      color: isActive 
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.05)
+                        : null,
+                    ),
+                    child: Row(
+                      children: [
+                        // Function label
+                        Container(
+                          width: 60,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _getColorForFunction(index).withOpacity(0.1),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              bottomLeft: Radius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Y${index + 1}',
+                            style: TextStyle(
+                              color: _getColorForFunction(index),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                      ),
-                      labelText: 'Y${index + 1}(x)',
-                      hintText: 'Enter a function of x',
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: _focusedControllerIndex == index 
-                            ? Theme.of(context).colorScheme.primary 
-                            : Colors.grey,
-                          width: _focusedControllerIndex == index ? 2 : 1,
+                        
+                        // Function display (active input or passive display)
+                        Expanded(
+                          child: _buildFunctionDisplay(index),
                         ),
-                      ),
-                      suffixIcon: _controllers[index].text.isNotEmpty 
-                        ? Row(
+                        
+                        // Action buttons
+                        if (_appState.graphFunctions[index].isNotEmpty && !isActive) 
+                          Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.analytics, size: 20),
+                                icon: const Icon(Icons.analytics, size: 18),
                                 tooltip: 'Analyze this function',
                                 onPressed: () => _analyzeFunction(index),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.clear, size: 20),
+                                icon: const Icon(Icons.show_chart, size: 18),
+                                tooltip: 'Graph this function',
+                                onPressed: () => _graphFunction(index),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
                                 onPressed: () => _appState.clearFunction(index),
                               ),
                             ],
-                          )
-                        : null,
+                          ),
+                      ],
                     ),
-                    onChanged: (value) => _appState.updateFunction(index, value.trim()),
                   ),
                 ),
               ),
@@ -325,55 +394,6 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> {
           ),
         );
       },
-    );
-  }
-
-  void _showAnalysisOptions() {
-    final nonEmptyFunctions = _appState.graphFunctions.asMap().entries
-        .where((entry) => entry.value.isNotEmpty)
-        .toList();
-
-    if (nonEmptyFunctions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No functions defined to analyze')),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Select Function to Analyze',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...nonEmptyFunctions.map((entry) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getColorForFunction(entry.key).withOpacity(0.2),
-                child: Text(
-                  'Y${entry.key + 1}',
-                  style: TextStyle(
-                    color: _getColorForFunction(entry.key),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              title: Text('Y${entry.key + 1}(x)'),
-              subtitle: Text(entry.value, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () {
-                Navigator.of(context).pop();
-                _analyzeFunction(entry.key);
-              },
-            )),
-          ],
-        ),
-      ),
     );
   }
 

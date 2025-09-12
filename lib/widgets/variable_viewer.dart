@@ -29,16 +29,10 @@ class VariableViewer extends StatelessWidget {
         final graphFunctionEntries = appState.graphFunctions.asMap().entries
             .where((entry) => entry.value.isNotEmpty)
             .toList();
-            
-        // Get non-empty user functions (F1, F2, etc.)
-        final userFunctionEntries = appState.userFunctions.asMap().entries
-            .where((entry) => entry.value.isNotEmpty)
-            .toList();
 
         final hasMemory = memory != null && onMemoryAction != null;
         final hasAnyContent = variableKeys.isNotEmpty || 
                              graphFunctionEntries.isNotEmpty || 
-                             userFunctionEntries.isNotEmpty ||
                              (hasMemory && memory!.isNotEmpty);
 
         return Column(
@@ -85,30 +79,6 @@ class VariableViewer extends StatelessWidget {
                         color: _getColorForGraphFunction(entry.key),
                         onTap: () => onVariableTap(entry.value),
                         onDelete: () => appState.clearFunction(entry.key),
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // --- User Functions Section (F1, F2, etc.) ---
-                  if (userFunctionEntries.isNotEmpty) ...[
-                    _SectionHeader(
-                      title: 'User Functions',
-                      icon: Icons.functions,
-                      onClear: () => _showClearDialog(context, 'user functions', () {
-                        for (int i = 0; i < appState.userFunctions.length; i++) {
-                          appState.clearUserFunction(i);
-                        }
-                      }),
-                    ),
-                    ...userFunctionEntries.map((entry) {
-                      final funcName = 'F${entry.key + 1}';
-                      return _FunctionTile(
-                        name: funcName,
-                        expression: entry.value,
-                        color: _getColorForUserFunction(entry.key),
-                        onTap: () => onVariableTap(entry.value),
-                        onDelete: () => appState.clearUserFunction(entry.key),
                       );
                     }),
                     const SizedBox(height: 16),

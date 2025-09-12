@@ -14,7 +14,7 @@ class KeyboardInputHandler {
     VoidCallback onClear,
     VoidCallback onExecute,
     Function(int) onMoveCursor,
-  ) {
+    ) {
     if (event is! KeyDownEvent) return false;
 
     final physicalKey = event.physicalKey;
@@ -25,113 +25,126 @@ class KeyboardInputHandler {
 
     // --- GERMAN KEYBOARD PHYSICAL KEY MAPPINGS (Real-time correction) ---
     
+    // German Y/Z swap: Physical Y key produces Z on German layout
+    if (physicalKey == PhysicalKeyboardKey.keyY) {
+        onInsert('z');
+        return true;
+    }
+    if (physicalKey == PhysicalKeyboardKey.keyZ) {
+        onInsert('y');
+        return true;
+    }
+    
     // Key: `+` and `*` (Physical location of `]` on a US keyboard)
     if (physicalKey == PhysicalKeyboardKey.bracketRight) {
-      onInsert(isShiftPressed ? r'\cdot ' : '+');
-      return true;
+        onInsert(isShiftPressed ? r'\cdot ' : '+');
+        return true;
     }
     
     // Key: `-` (Physical location of `/` on a US keyboard)  
     if (physicalKey == PhysicalKeyboardKey.slash && !isShiftPressed) {
-      onInsert('-');
-      return true;
+        onInsert('-');
+        return true;
     }
     
     // Key: `/` (This is Shift + 7 on a German keyboard)
     if (physicalKey == PhysicalKeyboardKey.digit7 && isShiftPressed) {
-      onInsert('/');
-      return true;
+        onInsert('/');
+        return true;
     }
 
     // Parentheses: Shift+8 and Shift+9 on German keyboard
     if (physicalKey == PhysicalKeyboardKey.digit8 && isShiftPressed) {
-      onInsert('(');
-      return true;
+        onInsert('(');
+        return true;
     }
     if (physicalKey == PhysicalKeyboardKey.digit9 && isShiftPressed) {
-      onInsert(')');
-      return true;
+        onInsert(')');
+        return true;
     }
 
     // Equal sign: Shift+0 on German keyboard
     if (physicalKey == PhysicalKeyboardKey.digit0 && isShiftPressed) {
-      onInsert('=');
-      return true;
+        onInsert('=');
+        return true;
     }
 
     // --- UNIVERSAL ACTION KEYS ---
     if (logicalKey == LogicalKeyboardKey.enter || logicalKey == LogicalKeyboardKey.numpadEnter) {
-      onExecute();
-      return true;
+        onExecute();
+        return true;
     }
     if (logicalKey == LogicalKeyboardKey.escape) {
-      onClear();
-      return true;
+        onClear();
+        return true;
     }
     if (logicalKey == LogicalKeyboardKey.backspace) {
-      onBackspace();
-      return true;
+        onBackspace();
+        return true;
     }
     if (logicalKey == LogicalKeyboardKey.arrowLeft) {
-      onMoveCursor(-1);
-      return true;
+        onMoveCursor(-1);
+        return true;
     }
     if (logicalKey == LogicalKeyboardKey.arrowRight) {
-      onMoveCursor(1);
-      return true;
+        onMoveCursor(1);
+        return true;
     }
 
     // --- CHARACTER INPUT WITH IMMEDIATE CORRECTION ---
     if (character != null && character.isNotEmpty) {
-      final charCode = character.codeUnitAt(0);
-      if (charCode < 0xF700 && charCode >= 32) {
+        final charCode = character.codeUnitAt(0);
+        if (charCode < 0xF700 && charCode >= 32) {
         // Apply real-time corrections for German keyboard characters
         switch (character) {
-          case ']': // German keyboard produces ] instead of +
+            case ']': // German keyboard produces ] instead of +
             onInsert('+');
             break;
-          case '}': // German keyboard produces } instead of * (becomes LaTeX \cdot)
+            case '}': // German keyboard produces } instead of * (becomes LaTeX \cdot)
             onInsert(r'\cdot ');
             break;
-          case '*': // Standard * key should become LaTeX \cdot
+            case '*': // Standard * key should become LaTeX \cdot
             onInsert(r'\cdot ');
             break;
-          case '^': // Handle power operator
+            case '%': // Convert percentage to decimal division by 100
+            onInsert('/100');
+            break;
+            case '^': // Handle power operator
             onInsert('^{}');
             onMoveCursor(-1);
             break;
-          default:
+            default:
             // For other characters, insert as-is
             onInsert(character);
         }
         return true;
-      }
+        }
     }
 
     // --- NUMPAD FALLBACKS ---
     switch (logicalKey) {
-      case LogicalKeyboardKey.numpadAdd:
+        case LogicalKeyboardKey.numpadAdd:
         onInsert('+');
         return true;
-      case LogicalKeyboardKey.numpadSubtract:
+        case LogicalKeyboardKey.numpadSubtract:
         onInsert('-');
         return true;
-      case LogicalKeyboardKey.numpadMultiply:
+        case LogicalKeyboardKey.numpadMultiply:
         onInsert(r'\cdot ');
         return true;
-      case LogicalKeyboardKey.numpadDivide:
+        case LogicalKeyboardKey.numpadDivide:
         onInsert('/');
         return true;
-      case LogicalKeyboardKey.numpadDecimal:
+        case LogicalKeyboardKey.numpadDecimal:
         onInsert('.');
         return true;
-      case LogicalKeyboardKey.equal:
+        case LogicalKeyboardKey.equal:
         onExecute();
         return true;
     }
 
     return false;
-  }
+    }
 
   /// Gets keyboard corrections for different locales (legacy support)
   static Map<String, String> getKeyboardCorrections(String locale) {

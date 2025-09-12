@@ -208,24 +208,33 @@ class ExpressionPreprocessingUtils {
     
     print('NORMALIZE: Input: "$normalized"');
     
-    normalized = normalized.replaceAll(RegExp(r'\s*[+\-]\s*0(\.0*)?(\s*\*\s*I|\s*I)\s*'), '');
+    // Handle negative zero imaginary parts: "number + -0.0*I" -> "number"
+    normalized = normalized.replaceAll(RegExp(r'\s*\+\s*-0(\.0*)?\s*\*?\s*I\b'), '');
+    // Handle positive zero imaginary parts: "number + 0.0*I" -> "number"
+    normalized = normalized.replaceAll(RegExp(r'\s*\+\s*0(\.0*)?\s*\*?\s*I\b'), '');
+    // Handle negative zero with multiplication: "number + 0.0*I*digits" -> "number"
     normalized = normalized.replaceAll(RegExp(r'\s*\+\s*0\.0\s*\*\s*I\s*\*\s*\d+'), '');
-    normalized = normalized.replaceAll(RegExp(r'\s*\*\s*I\s*\*\s*\d+\s*$'), '');
+    // Handle standalone imaginary zero: "0*I" -> "0"
     normalized = normalized.replaceAll(RegExp(r'^\s*0(\.0*)?\s*\*\s*I\s*$'), '0');
+    
+    // Convert remaining I to lowercase i
     normalized = normalized.replaceAll(RegExp(r'(\d+)\s*\*\s*I\b'), r'\1i');
     normalized = normalized.replaceAll(RegExp(r'\bI\b'), 'i');
+    
+    // Clean up spacing
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
     normalized = normalized.replaceAll(RegExp(r'\s*\+\s*'), ' + ');
     normalized = normalized.replaceAll(RegExp(r'\s*\-\s*'), ' - ');
     normalized = normalized.replaceAll(RegExp(r'\s*\*\s*'), '*');
     normalized = normalized.trim();
     
-    if (RegExp(r'^[\+\-\*\s]*$').hasMatch(normalized)) {
-      normalized = result;
-    }
-    
     // Handle pure real numbers that show as "5.0 + 0.0*I"  
     normalized = normalized.replaceAll(RegExp(r'^([+-]?\d+(?:\.\d+)?)\s*\+\s*0\.0\s*\*\s*I$'), r'\1');
+    
+    // Fix dangling operators (incomplete normalization)
+    if (normalized.endsWith(' +') || normalized.endsWith(' -')) {
+        normalized = normalized.substring(0, normalized.length - 2).trim();
+    }
     
     // Fix Python-style exponents (**) to readable format
     normalized = normalized.replaceAll('**2', '²');
@@ -235,11 +244,12 @@ class ExpressionPreprocessingUtils {
     // Clean up multiplication formatting for display
     normalized = normalized.replaceAllMapped(RegExp(r'(\d+)\s*\*\s*([a-zA-Z])(?!\*)'), (m) => '${m.group(1)}${m.group(2)}');
     
+    // Final check for malformed results
     if (RegExp(r'^[\+\-\*\s]*$').hasMatch(normalized)) {
-      normalized = result;
+        normalized = result;
     }
     
     print('NORMALIZE: Output: "$normalized"');
     return normalized;
-  }
+    }
 }

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import '../engine/calculator_engine.dart';
 import '../engine/app_state.dart';
 import '../utils/keyboard_input_handler.dart';
+import '../screens/curve_analysis_input_screen.dart';
 
 class GraphingScreen extends StatefulWidget {
   const GraphingScreen({super.key});
@@ -72,6 +73,69 @@ class _GraphingScreenState extends State<GraphingScreen> {
       text: newText,
       selection: TextSelection.collapsed(offset: selection.start + text.length),
     );
+  }
+
+  void _showAnalysisOptions() {
+    final activeFunctions = <String>[];
+    final activeFunctionIndices = <int>[];
+    
+    for (int i = 0; i < _appState.graphFunctions.length; i++) {
+      if (_appState.graphFunctions[i].isNotEmpty) {
+        activeFunctions.add(_appState.graphFunctions[i]);
+        activeFunctionIndices.add(i);
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Select Function to Analyze',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ...activeFunctionIndices.map((index) => ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getColorForFunction(index).withOpacity(0.2),
+                child: Text(
+                  'Y${index + 1}',
+                  style: TextStyle(
+                    color: _getColorForFunction(index),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              title: Text('Y${index + 1}(x)'),
+              subtitle: Text(
+                _appState.graphFunctions[index], 
+                maxLines: 1, 
+                overflow: TextOverflow.ellipsis
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _analyzeFunction(index);
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _analyzeFunction(int index) {
+    final function = _appState.graphFunctions[index];
+    if (function.isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CurveAnalysisInputScreen(initialFunction: function),
+        ),
+      );
+    }
   }
 
   void _backspaceAtCursor() {
@@ -221,6 +285,12 @@ class _GraphingScreenState extends State<GraphingScreen> {
             appBar: AppBar(
               title: Text('Graphing (${activeFunctions.length} functions)'),
               actions: [
+                if (activeFunctions.isNotEmpty)
+                  IconButton(
+                    onPressed: _showAnalysisOptions,
+                    icon: const Icon(Icons.analytics),
+                    tooltip: 'Analyze Functions',
+                  ),
                 IconButton(
                   onPressed: _resetView,
                   icon: const Icon(Icons.center_focus_strong),
