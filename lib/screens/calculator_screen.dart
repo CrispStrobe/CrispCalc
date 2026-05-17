@@ -505,6 +505,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('transpose()', cursorOffsetFromEnd: -1);
         break;
 
+      case 'rref':
+        _latexController.insert('rref()', cursorOffsetFromEnd: -1);
+        break;
+
       // === Hyperbolic Inverse Functions ===
 
       case 'asinh':

@@ -14,9 +14,15 @@ void main() {
     test('returns a result for every spec', () {
       final engine = CalculatorEngine();
       final results = MatrixDiagnostics.run(engine);
-      expect(results.length, equals(6));
-      expect(results.map((r) => r.name),
-          containsAll(<String>['2x2 determinant', 'Transpose 2x2']));
+      expect(results.length, equals(7));
+      expect(
+        results.map((r) => r.name),
+        containsAll(<String>[
+          '2x2 determinant',
+          'Transpose 2x2',
+          'RREF of a 2x3 system',
+        ]),
+      );
     });
 
     test('result entries carry expression + expected strings', () {

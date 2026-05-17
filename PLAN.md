@@ -56,7 +56,10 @@ and the light/dark/system theme picker.
 
 ## P3 — Long tail
 
-- [ ] Symbolic Gauss / RREF on matrices.
+- [x] ~~Symbolic Gauss / RREF on matrices.~~ Done 2026-05-17 — see
+  HISTORY round 19. `rref(...)` is wired into the matrix evaluator,
+  the keypad, and the self-test battery; the canonical 2×3 textbook
+  example reduces correctly in release.
 - [x] ~~CI: GitHub Actions to run `flutter analyze` + `flutter test` on PR.~~
   In place since round 8 (`.github/workflows/ci.yml`). Round 18 also
   switched the macOS build workflow to `--release` and added a

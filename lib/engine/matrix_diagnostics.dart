@@ -45,6 +45,10 @@ class MatrixDiagnostics {
           'Matrix([[2, 2], [3, 5]])'),
       _Spec('Matrix multiplication', '[1,0; 0,1] * [3,4; 5,6]',
           'Matrix([[3, 4], [5, 6]])'),
+      // 2x3 system whose RREF is [[1, 0, -1], [0, 1, 2]] — the canonical
+      // textbook example. Catches sign and pivot-scaling bugs in one shot.
+      _Spec('RREF of a 2x3 system', 'rref([2,1,0; -1,1,3])',
+          'Matrix([[1, 0, -1], [0, 1, 2]])'),
     ];
 
     final out = <MatrixDiagnosticResult>[];

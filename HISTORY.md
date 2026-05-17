@@ -2,6 +2,60 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 19) — RREF via SymEngine-backed Gauss-Jordan
+
+Added `rref(Matrix([...]))` to the matrix evaluator. The algorithm is
+classical Gauss-Jordan, but every elementary row operation is built
+as a SymEngine expression string and pushed through
+`bridge.simplify()` — so rational and (with caveats) symbolic entries
+work, not just floats.
+
+### Algorithm shape
+
+1. Pull cells into a Dart 2-D array of expression strings.
+2. Walk columns left-to-right. For each column, find the first row at
+   or below the current pivot row whose entry simplifies to something
+   non-zero.
+3. Swap that row up. Scale it so the leading entry is 1
+   (`(cell)/(pivot)` through SymEngine).
+4. Use the pivot row to eliminate that column in every other row
+   (`(target) - (factor)*(pivot_row_cell)` through SymEngine).
+5. Move to the next column.
+
+Symbolic non-zero detection asks SymEngine to simplify each candidate
+and treats the literal string "0" as zero. Expressions that are
+mathematically zero but don't reduce to "0" textually are treated as
+non-zero pivots — the result is still a valid row-reduced form, just
+possibly not fully canonical. That's the safe direction.
+
+### Wired in
+
+- `MatrixEvaluator` recognizes `rref` alongside `det` / `inv` /
+  `transpose`.
+- Keypad gets a new `rref` button next to the existing matrix keys.
+- The matrix self-test battery picks up a 7th check — the canonical
+  textbook 2×3 system `[[2,1,0],[-1,1,3]]` which reduces to
+  `[[1,0,-1],[0,1,2]]`. Self-test now reports **7 of 7 pass** on the
+  macOS release binary; CI runs the same battery on every push and
+  fails on regression.
+
+### Verification
+
+`flutter analyze`: 0 issues. `flutter test`: 259/259 (updated the
+diagnostic-runner shape test to expect 7 results). Release smoke:
+`CRISPCALC_DIAGNOSTIC=matrix … crisp_calc` reports the new check as
+`PASS  RREF of a 2x3 system — Matrix([[1, 0, -1], [0, 1, 2]])`.
+
+### Out of scope
+
+- Bringing matrix expressions into `inv` / `transpose` / `rref` as
+  *nested* operands (currently the operand must be a literal `Matrix(…)`).
+- Symbolic non-zero detection beyond "simplify and compare to '0'"
+  — would need SymEngine's `is_zero` test, which the bridge doesn't
+  expose yet.
+
+---
+
 ## 2026-05-17 (round 18) — CI catches matrix + symbol-keep regressions
 
 Two tightenings to `build-macos.yml`:

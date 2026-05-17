@@ -135,6 +135,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'det',
     'inv',
     'transpose',
+    'rref',
     'dot',
     'cross',
     'norm',

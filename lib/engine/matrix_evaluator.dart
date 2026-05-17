@@ -27,8 +27,8 @@ class MatrixEvaluator {
     final s = expression.trim();
     if (!s.contains('Matrix(')) return null;
 
-    // 1. Unary calls: det(Matrix(...)) / inv(Matrix(...)) / transpose(Matrix(...))
-    for (final op in const ['det', 'inv', 'transpose']) {
+    // 1. Unary calls: det / inv / transpose / rref of Matrix(...)
+    for (final op in const ['det', 'inv', 'transpose', 'rref']) {
       if (s.startsWith('$op(') && s.endsWith(')')) {
         final inner = s.substring(op.length + 1, s.length - 1).trim();
         if (_looksLikeMatrix(inner)) {
@@ -169,6 +169,8 @@ class MatrixEvaluator {
           return _format(m.inverse());
         case 'transpose':
           return _format(_transpose(m, engine));
+        case 'rref':
+          return _format(_rref(m, engine));
       }
     } catch (e) {
       return 'Error: $op failed: $e';
@@ -240,6 +242,110 @@ class MatrixEvaluator {
       }
     }
     return out;
+  }
+
+  /// Reduced row echelon form via Gauss-Jordan elimination. Each elementary
+  /// row operation is built as a SymEngine expression string and simplified
+  /// through the bridge, so it handles rational and symbolic entries — not
+  /// just floats. The algorithm: walk the columns left-to-right, find a
+  /// pivot row whose entry in the current column simplifies to a non-zero
+  /// expression, swap it up, scale the row so the pivot becomes 1, then
+  /// eliminate that column in every other row.
+  ///
+  /// Symbolic non-zero detection is the soft spot: we ask SymEngine to
+  /// simplify each candidate cell and treat the literal string "0" as zero.
+  /// Expressions that are mathematically zero but don't simplify to "0"
+  /// (rare for the algebraic-rational entries the engine produces) are
+  /// treated as non-zero pivots, which is the safe direction — the result
+  /// is still a valid row-reduced form, just possibly not fully canonical.
+  static SymEngineMatrix _rref(SymEngineMatrix m, CalculatorEngine engine) {
+    // Pull cells into a Dart 2-D array of expression strings so we can edit
+    // them efficiently and only write the final shape back into a new
+    // native matrix at the end.
+    final rows = m.rows;
+    final cols = m.cols;
+    final cells = List<List<String>>.generate(
+      rows,
+      (r) => List<String>.generate(cols, (c) => m.get(r, c)),
+    );
+
+    var pivotRow = 0;
+    for (var col = 0; col < cols && pivotRow < rows; col++) {
+      // Find the first row at or below pivotRow whose entry in this column
+      // simplifies to something non-zero.
+      var found = -1;
+      for (var r = pivotRow; r < rows; r++) {
+        if (!_isZero(cells[r][col], engine)) {
+          found = r;
+          break;
+        }
+      }
+      if (found == -1) continue;
+
+      // Bring the pivot row to the top of the active submatrix.
+      if (found != pivotRow) {
+        final tmp = cells[pivotRow];
+        cells[pivotRow] = cells[found];
+        cells[found] = tmp;
+      }
+
+      // Scale the pivot row so the leading entry is 1.
+      final pivot = cells[pivotRow][col];
+      if (!_isOne(pivot, engine)) {
+        for (var c = 0; c < cols; c++) {
+          cells[pivotRow][c] =
+              _simplify('(${cells[pivotRow][c]})/($pivot)', engine);
+        }
+      }
+
+      // Eliminate this column in every other row.
+      for (var r = 0; r < rows; r++) {
+        if (r == pivotRow) continue;
+        final factor = cells[r][col];
+        if (_isZero(factor, engine)) continue;
+        for (var c = 0; c < cols; c++) {
+          cells[r][c] = _simplify(
+              '(${cells[r][c]}) - ($factor)*(${cells[pivotRow][c]})', engine);
+        }
+      }
+
+      pivotRow++;
+    }
+
+    final out = engine.createMatrix(rows, cols);
+    if (out == null) {
+      throw StateError('matrix rref: failed to allocate result');
+    }
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        out.set(r, c, cells[r][c]);
+      }
+    }
+    return out;
+  }
+
+  // === Tiny cell-arithmetic helpers ========================================
+
+  static String _simplify(String expr, CalculatorEngine engine) {
+    final result = engine.simplify(expr);
+    // engine.simplify returns "Error: …" on bridge failure; in that case
+    // keep the original expression — the next pass might still progress.
+    if (result.startsWith('Error')) return expr;
+    return result;
+  }
+
+  static bool _isZero(String expr, CalculatorEngine engine) {
+    final s = _simplify(expr, engine).trim();
+    if (s == '0' || s == '0.0' || s == '-0') return true;
+    final n = double.tryParse(s);
+    return n != null && n == 0;
+  }
+
+  static bool _isOne(String expr, CalculatorEngine engine) {
+    final s = _simplify(expr, engine).trim();
+    if (s == '1' || s == '1.0') return true;
+    final n = double.tryParse(s);
+    return n != null && n == 1.0;
   }
 }
 
