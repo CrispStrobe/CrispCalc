@@ -23,7 +23,9 @@ import 'screens/analysis_hub_screen.dart';
 import 'screens/calculator_screen.dart';
 import 'screens/function_editor_screen.dart';
 import 'screens/graphing_screen.dart';
+import 'screens/help_screen.dart';
 import 'services/native_licenses.dart';
+import 'widgets/export_data_dialog.dart';
 import 'widgets/unit_converter_dialog.dart';
 
 void main() async {
@@ -426,6 +428,33 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const UnitConverterDialog(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.help_outline),
+                  title: Text(t.settingsHelp),
+                  subtitle: Text(t.settingsHelpSubtitle),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const HelpScreen(),
+                    ));
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.ios_share),
+                  title: Text(t.settingsExportData),
+                  subtitle: Text(t.settingsExportDataSubtitle),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const ExportDataDialog(),
                   ),
                 ),
               ),

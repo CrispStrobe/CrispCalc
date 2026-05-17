@@ -97,11 +97,17 @@ single feature. Roughly in priority order — top items unblock the next.
   (Sentry self-hosted, or just a "send a crash log" button that emails
   the report rather than uploading silently). Opt-in only — keeps the
   "no telemetry" promise from the About screen honest.
-- [ ] **Storage hardening**. History persists via `shared_preferences`
+- [~] **Storage hardening**. History persists via `shared_preferences`
   which has no size guarantees and is the wrong tool for a growing log.
-  At minimum: LRU cap on history entries. Better: move to `sembast` or
-  `sqflite`. Also: export-to-file (JSON / LaTeX / PDF) so the user can
-  back up before reinstall.
+  - LRU cap (200 entries) shipped since round 1.
+  - **Export-to-clipboard** done 2026-05-17 — Settings → "Export
+    data" produces pretty-printed JSON of every persisted piece
+    (history, variables, graph functions, parameters, locale,
+    number format, theme). User pastes into a notes/cloud doc as
+    backup. No new dependency needed.
+  - Pending: file-system export, import-from-JSON, move to
+    `sembast` or `sqflite` (only matters when storage size becomes
+    a real problem).
 - [ ] **Distribution pipeline**. macOS and iOS builds are unsigned, so
   the App Store / TestFlight / hardened-runtime paths aren't open. Apple
   Developer enrollment + notarization workflow + automatic version
@@ -119,14 +125,23 @@ single feature. Roughly in priority order — top items unblock the next.
   open substitute dialog, run analysis — has zero test coverage. A
   button rename can break a flow without CI flagging it. Add coverage
   for the 10 most-used flows.
-- [ ] **Integration tests via `integration_test` package**. The
+- [~] **Integration tests via `integration_test` package**. The
   matrix-diagnostic env-var hack is a stand-in for what should be a
   real integration suite that drives the actual UI in CI. Once the
   package is in place, port the matrix battery and add flows that the
   widget tests can't easily exercise.
-- [ ] **Golden tests for plot painter + LaTeX rendering**. Subtle
-  regressions in those two surfaces are invisible until a user
-  complains. Pixel-comparison goldens in CI catch them deterministically.
+  - Package wired up 2026-05-17. `integration_test/app_smoke_test.dart`
+    has two boot-and-find tests; running locally with
+    `flutter test integration_test/app_smoke_test.dart`. CI
+    integration (real devices / simulators) and richer flows pending.
+- [~] **Golden tests for plot painter + LaTeX rendering**.
+  - Structural anchor test for HelpScreen shipped
+    (`test/golden/about_card_golden_test.dart`) — scrolls the
+    function reference and asserts every section heading and group
+    title is present. Catches dropped sections / empty cards.
+  - Pixel-comparison goldens for plot painter + LaTeX rendering
+    still pending — renderer-version drift would make CI fragile,
+    so we'd need a fixed Flutter-version pin first.
 - [ ] **Accessibility audit**. Add `Semantics` widgets to keypad
   buttons, label every IconButton, verify keyboard navigation for the
   full settings flow, audit color contrast in both themes, test with
@@ -149,14 +164,20 @@ single feature. Roughly in priority order — top items unblock the next.
 - [ ] **Onboarding tour**. First launch shows a 4-card tour: keypad
   tabs, history scroll, function picker, analysis hub. Skippable.
   Discoverable features stop being a problem.
-- [ ] **User documentation**. The README is a developer README. Add a
-  user-facing docs site (or in-app help screen) listing every supported
-  function with one-line examples, the LaTeX↔engine mapping table, and
-  the matrix syntax cheatsheet. The function index alone is a
-  high-traffic page elsewhere.
-- [ ] **Share / export**. Copy a result as LaTeX. Share a calculation
-  via the platform share sheet. Export the history (or a selection) as
-  PDF for homework hand-in.
+- [x] ~~**User documentation**.~~ Done 2026-05-17 — in-app Help
+  screen reachable from Settings → "Help & function reference".
+  Lists every supported op grouped by category (Arithmetic, CAS,
+  Calculus, Trig, Vector/Tensor, Matrix, Probability) plus the
+  matrix syntax cheatsheet and step-by-step trigger summary.
+  Static content, no engine reflection.
+- [~] **Share / export**.
+  - Copy result + Copy as LaTeX shipped 2026-05-17 — long-press a
+    history entry → bottom sheet with Copy result, Copy as LaTeX,
+    Reuse expression.
+  - Export-all-data shipped — Settings → "Export data" pretty-
+    prints AppState as JSON for clipboard backup.
+  - Pending: platform share sheet (needs `share_plus`), PDF export
+    of the history (needs `pdf` package).
 
 ### Polish
 

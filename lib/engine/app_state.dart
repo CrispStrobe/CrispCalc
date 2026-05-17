@@ -375,6 +375,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Serialize every piece of user-mutable state into a single JSON
+  /// document. Used by Settings → Export data so a user can copy it
+  /// out (clipboard, a Notes app, a backup file) before reinstalling.
+  /// The schema is intentionally simple — each top-level key is the
+  /// same name we use for the matching shared_preferences entry, so a
+  /// future import-from-JSON path can just round-trip these.
+  Map<String, dynamic> exportToJson() {
+    return {
+      'version': 1,
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'locale': _locale.languageCode,
+      'numberFormat': _numberFormat.name,
+      'themeMode': _themeMode.name,
+      'history': history.map((e) => e.toJson()).toList(),
+      'variables': Map<String, String>.from(userVariables),
+      'functions': List<String>.from(graphFunctions),
+      'parameters': functionParameters
+          .map((slot, params) => MapEntry(slot.toString(), params)),
+    };
+  }
+
   void clearAllVariables() {
     userVariables.clear();
     _persistVariables();

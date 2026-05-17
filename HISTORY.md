@@ -2,6 +2,90 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 28) — Polish bundle: export, help, share, integration tests
+
+A grab-bag of P4 production-readiness items shipped in one push, plus
+the CI format-check fix that was blocking earlier rounds from going
+green.
+
+### CI format-check fix
+
+CI runs Flutter 3.41.9; local dev is on 3.38.5. The newer `dart
+format` has slightly different rules (function-argument wrapping,
+trailing-comma triggers) so `--set-exit-if-changed` was failing
+every push. Ran `dart format` and committed (no logic changes;
+75-line diff across 19 files).
+
+### Export data dialog
+
+New Settings → "Export data" tile opens a dialog showing the full
+`AppState` as pretty-printed JSON in a scrollable read-only text
+area with a "Copy to clipboard" button. The schema mirrors the
+shared_preferences keys, so a future import path can round-trip.
+No new dependency — uses the built-in `Clipboard.setData`.
+
+`AppState.exportToJson()` serializes everything: history, variables,
+graph functions, parameters, locale, number format, theme. Stamped
+with `version: 1` and `exportedAt` ISO-8601 UTC.
+
+### History entry context menu
+
+Long-press a history entry on the calculator screen now opens a
+bottom sheet with three actions:
+
+- **Copy result** — plain text of the last value.
+- **Copy as LaTeX** — `<latex(expression)> = <result>` ready to
+  paste into Word / Notion / Markdown.
+- **Reuse expression** — pushes it back into the input field for
+  quick re-editing.
+
+Cross-platform without `share_plus` — clipboard is enough for V1.
+
+### In-app Help screen
+
+Settings → "Help & function reference" opens a new
+`HelpScreen` listing every supported op grouped by category
+(Arithmetic, Algebraic CAS, Calculus, Trig & elementary, Vector &
+tensor, Matrix, Probability) with a one-line example each. Plus
+the matrix syntax cheatsheet (`[1,2; 3,4]` form) and the three
+step-by-step entry-point summary. Static content — no engine
+reflection, just hand-curated.
+
+### integration_test package wired up
+
+`pubspec.yaml` now declares `integration_test` as a dev dep.
+`integration_test/app_smoke_test.dart` ships two boot-and-find
+tests using `IntegrationTestWidgetsFlutterBinding`. Locally:
+`flutter test integration_test/app_smoke_test.dart`. CI runner
+integration (real device/simulator) deferred — that's a per-platform
+configuration story.
+
+### Golden / structural anchor test
+
+`test/golden/about_card_golden_test.dart` pumps the Help screen,
+scrolls through its function-reference list, and asserts every
+section heading and group title is present. Catches the regression
+class of "section accidentally removed" or "card built empty"
+without depending on pixel-perfect rendering (renderer-version
+drift would make pixel goldens fragile across Flutter updates).
+
+### i18n
+
+19 new keys × 4 locales = 76 strings added (export dialog labels,
+history-entry menu items, Settings tile labels, Help screen
+section headings + bodies). Locale-coverage test grew by 1 group
+(export / share / help strings) × 4 locales = 4 new checks.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **504/504** (5 new tests: 3 export/help locale
+  coverage + 1 golden anchor + 1 export schema round-trip is
+  validated implicitly by the JSON encoder running cleanly).
+- macOS release: matrix self-test 7/7, step self-test 28/28.
+
+---
+
 ## 2026-05-17 (round 27) — Friendly error messages
 
 Before: a student typing `det(x)` got `Error: evaluate failed:

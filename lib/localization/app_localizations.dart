@@ -164,6 +164,31 @@ abstract class AppLocalizations {
   String get errorInternalMatrixDisposed;
   String errorInvalidSyntax(String op);
 
+  // -- Export + share --
+  String get exportDataTitle;
+  String get exportDataSubtitle;
+  String get exportDataCopy;
+  String get exportDataCopied;
+  String get historyEntryCopyResult;
+  String get historyEntryCopyLatex;
+  String get historyEntryCopyLatexSubtitle;
+  String get historyEntryReuse;
+  String get historyEntryCopied;
+
+  // -- Settings tile labels for the new entries --
+  String get settingsExportData;
+  String get settingsExportDataSubtitle;
+  String get settingsHelp;
+  String get settingsHelpSubtitle;
+
+  // -- Help screen --
+  String get helpTitle;
+  String get helpFunctionsHeading;
+  String get helpMatrixHeading;
+  String get helpStepsHeading;
+  String get helpMatrixBody;
+  String get helpStepsBody;
+
   // -- Keypad tab labels --
   String get tabNum;
   String get tabTrig;
@@ -474,6 +499,53 @@ class EnLocalizations implements AppLocalizations {
   @override
   String errorInvalidSyntax(String op) =>
       'The arguments to $op() weren\'t in the expected shape. Check the example in the help / About screen.';
+
+  @override
+  String get exportDataTitle => 'Export data';
+  @override
+  String get exportDataSubtitle =>
+      'JSON below contains everything CrispCalc has stored on this device — history, variables, graph functions, parameters, settings. Copy it to a notes app or cloud doc before reinstalling.';
+  @override
+  String get exportDataCopy => 'Copy to clipboard';
+  @override
+  String get exportDataCopied => 'Copied to clipboard';
+  @override
+  String get historyEntryCopyResult => 'Copy result';
+  @override
+  String get historyEntryCopyLatex => 'Copy as LaTeX';
+  @override
+  String get historyEntryCopyLatexSubtitle =>
+      'Paste into a Word/Notion/Markdown editor for typeset math';
+  @override
+  String get historyEntryReuse => 'Reuse expression';
+  @override
+  String get historyEntryCopied => 'Copied';
+
+  @override
+  String get settingsExportData => 'Export data';
+  @override
+  String get settingsExportDataSubtitle =>
+      'Copy everything stored on this device (history, variables, settings).';
+  @override
+  String get settingsHelp => 'Help & function reference';
+  @override
+  String get settingsHelpSubtitle =>
+      'Supported functions, matrix syntax, and step-by-step triggers.';
+
+  @override
+  String get helpTitle => 'Help';
+  @override
+  String get helpFunctionsHeading => 'Supported functions';
+  @override
+  String get helpMatrixHeading => 'Matrix syntax';
+  @override
+  String get helpStepsHeading => 'Step-by-step solutions';
+  @override
+  String get helpMatrixBody =>
+      'Type matrices with rows separated by `;` and cells by `,`:\n\n    [1, 2; 3, 4]\n\nThe calculator converts this to `Matrix([[1, 2], [3, 4]])` internally. Operations: det, inv, transpose, rref, +, -, *.';
+  @override
+  String get helpStepsBody =>
+      'Three keypad buttons in the CAS tab open step-by-step traces:\n\n  • d/dx⌄ for differentiation steps\n  • solve⌄ for equation solving\n  • ∫⌄ for indefinite integration\n\nEach shows the rule applied at every step plus a final answer.';
 
   @override
   String get tabNum => 'Num';
@@ -796,6 +868,53 @@ class DeLocalizations implements AppLocalizations {
   @override
   String errorInvalidSyntax(String op) =>
       'Die Argumente an $op() hatten nicht die erwartete Form. Bitte das Beispiel in Hilfe / Über prüfen.';
+
+  @override
+  String get exportDataTitle => 'Daten exportieren';
+  @override
+  String get exportDataSubtitle =>
+      'Das JSON unten enthält alles, was CrispCalc auf diesem Gerät gespeichert hat — Verlauf, Variablen, Funktionen, Parameter, Einstellungen. Vor einer Neuinstallation in eine Notiz oder Cloud-Datei kopieren.';
+  @override
+  String get exportDataCopy => 'In Zwischenablage kopieren';
+  @override
+  String get exportDataCopied => 'In Zwischenablage kopiert';
+  @override
+  String get historyEntryCopyResult => 'Ergebnis kopieren';
+  @override
+  String get historyEntryCopyLatex => 'Als LaTeX kopieren';
+  @override
+  String get historyEntryCopyLatexSubtitle =>
+      'In Word/Notion/Markdown einfügen für gesetzte Mathematik';
+  @override
+  String get historyEntryReuse => 'Ausdruck wiederverwenden';
+  @override
+  String get historyEntryCopied => 'Kopiert';
+
+  @override
+  String get settingsExportData => 'Daten exportieren';
+  @override
+  String get settingsExportDataSubtitle =>
+      'Alles auf diesem Gerät Gespeicherte kopieren (Verlauf, Variablen, Einstellungen).';
+  @override
+  String get settingsHelp => 'Hilfe & Funktionsreferenz';
+  @override
+  String get settingsHelpSubtitle =>
+      'Unterstützte Funktionen, Matrix-Syntax und Schritt-für-Schritt-Auslöser.';
+
+  @override
+  String get helpTitle => 'Hilfe';
+  @override
+  String get helpFunctionsHeading => 'Unterstützte Funktionen';
+  @override
+  String get helpMatrixHeading => 'Matrix-Syntax';
+  @override
+  String get helpStepsHeading => 'Schritt-für-Schritt-Lösungen';
+  @override
+  String get helpMatrixBody =>
+      'Matrizen mit `;` als Zeilen- und `,` als Spaltentrenner eingeben:\n\n    [1, 2; 3, 4]\n\nIntern wird das in `Matrix([[1, 2], [3, 4]])` umgewandelt. Operationen: det, inv, transpose, rref, +, -, *.';
+  @override
+  String get helpStepsBody =>
+      'Drei Tasten im CAS-Reiter öffnen Schritt-für-Schritt-Spuren:\n\n  • d/dx⌄ für Ableitungsschritte\n  • solve⌄ für Gleichungen lösen\n  • ∫⌄ für unbestimmte Integration\n\nJede zeigt die angewandte Regel pro Schritt plus das Endergebnis.';
 
   @override
   String get tabNum => 'Num';
@@ -1122,6 +1241,53 @@ class FrLocalizations implements AppLocalizations {
       'Les arguments passés à $op() n\'avaient pas la forme attendue. Consultez l\'exemple dans l\'aide / À propos.';
 
   @override
+  String get exportDataTitle => 'Exporter les données';
+  @override
+  String get exportDataSubtitle =>
+      'Le JSON ci-dessous contient tout ce que CrispCalc a stocké sur cet appareil — historique, variables, fonctions, paramètres, réglages. Copiez-le dans une note ou un document cloud avant de réinstaller.';
+  @override
+  String get exportDataCopy => 'Copier dans le presse-papiers';
+  @override
+  String get exportDataCopied => 'Copié dans le presse-papiers';
+  @override
+  String get historyEntryCopyResult => 'Copier le résultat';
+  @override
+  String get historyEntryCopyLatex => 'Copier en LaTeX';
+  @override
+  String get historyEntryCopyLatexSubtitle =>
+      'Coller dans Word/Notion/Markdown pour des maths composées';
+  @override
+  String get historyEntryReuse => 'Réutiliser l\'expression';
+  @override
+  String get historyEntryCopied => 'Copié';
+
+  @override
+  String get settingsExportData => 'Exporter les données';
+  @override
+  String get settingsExportDataSubtitle =>
+      'Copier tout ce qui est stocké sur cet appareil (historique, variables, réglages).';
+  @override
+  String get settingsHelp => 'Aide & référence des fonctions';
+  @override
+  String get settingsHelpSubtitle =>
+      'Fonctions prises en charge, syntaxe matricielle et déclencheurs pas-à-pas.';
+
+  @override
+  String get helpTitle => 'Aide';
+  @override
+  String get helpFunctionsHeading => 'Fonctions prises en charge';
+  @override
+  String get helpMatrixHeading => 'Syntaxe matricielle';
+  @override
+  String get helpStepsHeading => 'Solutions pas-à-pas';
+  @override
+  String get helpMatrixBody =>
+      'Saisissez des matrices avec `;` pour les lignes et `,` pour les cellules :\n\n    [1, 2; 3, 4]\n\nLa calculatrice convertit en `Matrix([[1, 2], [3, 4]])` en interne. Opérations : det, inv, transpose, rref, +, -, *.';
+  @override
+  String get helpStepsBody =>
+      'Trois boutons du pavé CAS ouvrent des traces pas-à-pas :\n\n  • d/dx⌄ pour les étapes de dérivation\n  • solve⌄ pour la résolution d\'équations\n  • ∫⌄ pour l\'intégration indéfinie\n\nChaque vue montre la règle appliquée à chaque étape plus la réponse finale.';
+
+  @override
   String get tabNum => 'Num';
   @override
   String get tabTrig => 'Trig';
@@ -1441,6 +1607,53 @@ class EsLocalizations implements AppLocalizations {
   @override
   String errorInvalidSyntax(String op) =>
       'Los argumentos pasados a $op() no tenían el formato esperado. Consulta el ejemplo en la ayuda / Acerca de.';
+
+  @override
+  String get exportDataTitle => 'Exportar datos';
+  @override
+  String get exportDataSubtitle =>
+      'El JSON de abajo contiene todo lo que CrispCalc ha guardado en este dispositivo: historial, variables, funciones, parámetros, ajustes. Cópialo a una nota o documento en la nube antes de reinstalar.';
+  @override
+  String get exportDataCopy => 'Copiar al portapapeles';
+  @override
+  String get exportDataCopied => 'Copiado al portapapeles';
+  @override
+  String get historyEntryCopyResult => 'Copiar resultado';
+  @override
+  String get historyEntryCopyLatex => 'Copiar como LaTeX';
+  @override
+  String get historyEntryCopyLatexSubtitle =>
+      'Pegar en Word/Notion/Markdown para matemáticas con formato';
+  @override
+  String get historyEntryReuse => 'Reutilizar expresión';
+  @override
+  String get historyEntryCopied => 'Copiado';
+
+  @override
+  String get settingsExportData => 'Exportar datos';
+  @override
+  String get settingsExportDataSubtitle =>
+      'Copia todo lo guardado en este dispositivo (historial, variables, ajustes).';
+  @override
+  String get settingsHelp => 'Ayuda y referencia de funciones';
+  @override
+  String get settingsHelpSubtitle =>
+      'Funciones soportadas, sintaxis de matrices y disparadores paso a paso.';
+
+  @override
+  String get helpTitle => 'Ayuda';
+  @override
+  String get helpFunctionsHeading => 'Funciones soportadas';
+  @override
+  String get helpMatrixHeading => 'Sintaxis de matrices';
+  @override
+  String get helpStepsHeading => 'Soluciones paso a paso';
+  @override
+  String get helpMatrixBody =>
+      'Escribe matrices con `;` para filas y `,` para celdas:\n\n    [1, 2; 3, 4]\n\nLa calculadora lo convierte internamente a `Matrix([[1, 2], [3, 4]])`. Operaciones: det, inv, transpose, rref, +, -, *.';
+  @override
+  String get helpStepsBody =>
+      'Tres botones del teclado CAS abren trazas paso a paso:\n\n  • d/dx⌄ para pasos de derivación\n  • solve⌄ para resolución de ecuaciones\n  • ∫⌄ para integración indefinida\n\nCada vista muestra la regla aplicada en cada paso más la respuesta final.';
 
   @override
   String get tabNum => 'Núm';

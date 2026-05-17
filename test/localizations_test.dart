@@ -127,6 +127,32 @@ void main() {
         }
       });
 
+      test('export / share / help strings are present', () {
+        for (final s in [
+          t.exportDataTitle,
+          t.exportDataSubtitle,
+          t.exportDataCopy,
+          t.exportDataCopied,
+          t.historyEntryCopyResult,
+          t.historyEntryCopyLatex,
+          t.historyEntryCopyLatexSubtitle,
+          t.historyEntryReuse,
+          t.historyEntryCopied,
+          t.settingsExportData,
+          t.settingsExportDataSubtitle,
+          t.settingsHelp,
+          t.settingsHelpSubtitle,
+          t.helpTitle,
+          t.helpFunctionsHeading,
+          t.helpMatrixHeading,
+          t.helpStepsHeading,
+          t.helpMatrixBody,
+          t.helpStepsBody,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
+
       test('picker / step dialog titles are present', () {
         for (final s in [
           t.integralTitle,

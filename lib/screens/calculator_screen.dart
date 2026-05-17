@@ -1264,6 +1264,67 @@ class CalculatorScreenState extends State<CalculatorScreen>
     );
   }
 
+  /// Long-press on a history entry opens a bottom sheet with copy
+  /// / share actions. No share_plus dependency — the clipboard is
+  /// universal and works on every Flutter platform, including web,
+  /// without a plugin.
+  Future<void> _showHistoryEntryMenu(
+      BuildContext context, CalculationEntry entry) async {
+    final t = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: Text(t.historyEntryCopyResult),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Clipboard.setData(ClipboardData(text: entry.result));
+                if (!context.mounted) return;
+                _toast(context, t.historyEntryCopied);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.functions),
+              title: Text(t.historyEntryCopyLatex),
+              subtitle: Text(t.historyEntryCopyLatexSubtitle,
+                  style: Theme.of(ctx).textTheme.bodySmall),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                final latex =
+                    '${MathDisplayUtils.toHistoryDisplayLatex(entry.expression)} = ${entry.result}';
+                await Clipboard.setData(ClipboardData(text: latex));
+                if (!context.mounted) return;
+                _toast(context, t.historyEntryCopied);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh),
+              title: Text(t.historyEntryReuse),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _latexController.clear();
+                _latexController.insert(entry.expression);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _toast(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _confirmClearHistory() {
     final t = AppLocalizations.of(context);
     showDialog<void>(
@@ -1453,31 +1514,34 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                       entry.result, tt);
                                   final isError = EngineErrorFormatter.isError(
                                       entry.result);
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      // Expression display (with LaTeX toggle)
-                                      _buildExpressionDisplay(entry.expression),
-                                      const SizedBox(height: 4),
-                                      // Result display — friendly plain-
-                                      // language text for errors, normal
-                                      // result text otherwise.
-                                      Text(
-                                        isError ? display : '= $display',
-                                        style: TextStyle(
-                                          fontSize: isError ? 16 : 28,
-                                          color: isError
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                              : Colors.blue[300],
-                                          fontStyle: isError
-                                              ? FontStyle.italic
-                                              : FontStyle.normal,
+                                  return GestureDetector(
+                                    onLongPress: () =>
+                                        _showHistoryEntryMenu(context, entry),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        _buildExpressionDisplay(
+                                            entry.expression),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          isError ? display : '= $display',
+                                          style: TextStyle(
+                                            fontSize: isError ? 16 : 28,
+                                            color: isError
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .error
+                                                : Colors.blue[300],
+                                            fontStyle: isError
+                                                ? FontStyle.italic
+                                                : FontStyle.normal,
+                                          ),
+                                          textAlign: TextAlign.right,
                                         ),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   );
                                 }),
                               );
