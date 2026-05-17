@@ -30,7 +30,8 @@ jobs:
       - name: Build macOS (release, unsigned)
         run: |
           unset GEM_HOME GEM_PATH GEM_ROOT RUBY_ROOT RUBYOPT RUBY_ENGINE RUBY_VERSION
-          flutter build macos --release
+          flutter build macos --release \
+            --dart-define=APP_VERSION=${{ github.ref_name }}
       - name: Verify SymEngine symbols
         run: |
           set -eu
@@ -67,7 +68,8 @@ jobs:
       - name: Build iOS (release, unsigned)
         run: |
           unset GEM_HOME GEM_PATH GEM_ROOT RUBY_ROOT RUBYOPT RUBY_ENGINE RUBY_VERSION
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign \
+            --dart-define=APP_VERSION=${{ github.ref_name }}
       - run: |
           cd build/ios/iphoneos
           zip -ryq ../../../crisp_calc-${{ github.ref_name }}-ios-unsigned.zip Runner.app
@@ -91,7 +93,7 @@ jobs:
           cache: true
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
-      - run: flutter build linux --release
+      - run: flutter build linux --release --dart-define=APP_VERSION=${{ github.ref_name }}
       - run: |
           cd build/linux/x64/release/
           tar czf ../../../../crisp_calc-${{ github.ref_name }}-linux-x64.tar.gz bundle
@@ -112,7 +114,7 @@ jobs:
           cache: true
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get
-      - run: flutter build windows --release
+      - run: flutter build windows --release --dart-define=APP_VERSION=${{ github.ref_name }}
       - name: Zip the bundle
         run: |
           cd build\windows\x64\runner\Release
@@ -137,7 +139,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --dart-define=APP_VERSION=${{ github.ref_name }}
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk crisp_calc-${{ github.ref_name }}-android.apk
       - uses: actions/upload-artifact@v4

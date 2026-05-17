@@ -20,6 +20,13 @@ class AboutScreen extends StatelessWidget {
   static const _providerJoin =
       'Christian Ströbele\nNikolausstr. 5\n70190 Stuttgart\nDeutschland / Germany';
 
+  /// Build-time override passed via `--dart-define=APP_VERSION=v0.2.1`.
+  /// CI Release workflow injects `github.ref_name` here so the About
+  /// screen matches the GitHub Release tag exactly. Local debug builds
+  /// see an empty string and fall back to `package_info_plus` (which
+  /// reads `pubspec.yaml`).
+  static const _buildVersion = String.fromEnvironment('APP_VERSION');
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -88,10 +95,13 @@ class AboutScreen extends StatelessWidget {
             onPressed: () async {
               final info = await PackageInfo.fromPlatform();
               if (!context.mounted) return;
+              final version = _buildVersion.isNotEmpty
+                  ? _buildVersion
+                  : '${info.version}+${info.buildNumber}';
               showLicensePage(
                 context: context,
                 applicationName: _appName,
-                applicationVersion: '${info.version}+${info.buildNumber}',
+                applicationVersion: version,
                 applicationLegalese:
                     '© ${DateTime.now().year} Christian Ströbele — AGPL-3.0',
               );
@@ -120,9 +130,15 @@ class _AppHeader extends StatelessWidget {
     return FutureBuilder<PackageInfo>(
       future: PackageInfo.fromPlatform(),
       builder: (context, snap) {
-        final v = snap.hasData
-            ? '${snap.data!.version} (${snap.data!.buildNumber})'
-            : '…';
+        // Prefer the build-time-injected APP_VERSION (set by the CI
+        // Release workflow to `github.ref_name`, e.g. `v0.2.1`). When
+        // it's empty (local debug builds), fall back to pubspec via
+        // package_info.
+        final v = AboutScreen._buildVersion.isNotEmpty
+            ? AboutScreen._buildVersion
+            : snap.hasData
+                ? '${snap.data!.version} (${snap.data!.buildNumber})'
+                : '…';
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),

@@ -96,6 +96,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'x',
     '^',
     'sqrt',
+    'frac',
     'π',
   ];
   static const List<String> _trigKeys = [

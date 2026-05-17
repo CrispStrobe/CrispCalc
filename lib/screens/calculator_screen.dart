@@ -63,6 +63,11 @@ class CalculatorScreenState extends State<CalculatorScreen>
   bool _historySearchOpen = false;
   final TextEditingController _historySearchController =
       TextEditingController();
+  // Dedicated focus node for the history search field. Without this the
+  // calculator's top-level KeyboardListener (focusNode: _calculatorFocusNode)
+  // wins the focus race and consumes keystrokes before the TextField can
+  // see them, so typing into "Verlauf filtern" silently does nothing.
+  final FocusNode _historySearchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -83,6 +88,7 @@ class CalculatorScreenState extends State<CalculatorScreen>
     _latexController.dispose();
     _calculatorFocusNode.dispose();
     _historySearchController.dispose();
+    _historySearchFocusNode.dispose();
     super.dispose();
   }
 
@@ -224,37 +230,48 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
   /// Recover from a stuck HardwareKeyboard state. Hot reload, a brief
   /// volume disconnect (the project lives on an external SSD), or just
-  /// abruptly killing the app while a key was held can leave Flutter's
-  /// HardwareKeyboard with stale `_pressedKeys` entries. In debug mode
-  /// those stale entries trip an `assert(...)` inside `handleKeyEvent`
-  /// that fires BEFORE the event is dispatched to our handler — so the
-  /// keyboard becomes completely unresponsive in the calculator until
-  /// the map is cleared.
+  /// abruptly killing the app while a key was held leaves Flutter's
+  /// HardwareKeyboard with stale `_pressedKeys` entries — those then
+  /// trip an `assert(...)` inside `handleKeyEvent` that fires BEFORE
+  /// dispatch in debug mode, so the keyboard becomes unresponsive.
   ///
-  /// Three steps:
-  /// 1. `HardwareKeyboard.clearState()` (visible-for-testing in Flutter,
-  ///    but the right hammer here) wipes both `_pressedKeys` and the
-  ///    framework's registered handlers.
-  /// 2. `FocusManager.registerGlobalHandlers()` re-adds the framework's
-  ///    global handler that step 1 removed, so future events dispatch.
-  /// 3. Unfocus and re-request focus on the calculator's KeyboardListener
-  ///    node so it sits in the active focus chain.
+  /// Strategy: enumerate every key the framework thinks is held via the
+  /// public `physicalKeysPressed` / `logicalKeysPressed` views, then
+  /// hand-craft a synthetic `KeyUpEvent` for each and feed it back
+  /// through `handleKeyEvent`. The framework removes the entry from its
+  /// internal map without firing the assertion (KeyUp on a held key is
+  /// expected, KeyDown on a held key is the bug). Crucially this does
+  /// NOT clear the framework's registered handlers — TextFields and the
+  /// FocusManager's global handler keep working.
   Future<void> _resetFocus() async {
-    // Best-effort query the engine for the real pressed-key set so the
-    // framework state lines up with reality.
-    try {
-      await HardwareKeyboard.instance.syncKeyboardState();
-    } catch (_) {
-      // Channel may not be ready — fall through; clearState() below is
-      // the more aggressive fix anyway.
+    final hw = HardwareKeyboard.instance;
+
+    // Pair physical → logical from the public sets; for unmatched
+    // physicals, fall back to LogicalKeyboardKey.unidentified — what
+    // matters for clearing is the physicalKey, since that's the map's
+    // key.
+    final stalePhysical = hw.physicalKeysPressed.toList();
+    final logicals = hw.logicalKeysPressed.toList();
+    for (var i = 0; i < stalePhysical.length; i++) {
+      final phys = stalePhysical[i];
+      final log = i < logicals.length ? logicals[i] : LogicalKeyboardKey.unidentified;
+      try {
+        hw.handleKeyEvent(KeyUpEvent(
+          physicalKey: phys,
+          logicalKey: log,
+          timeStamp: Duration.zero,
+        ));
+      } catch (_) {
+        // ignore — keep clearing the rest
+      }
     }
+
+    // Belt-and-suspenders: ask the engine for actually-pressed keys.
+    try {
+      await hw.syncKeyboardState();
+    } catch (_) {}
+
     if (!mounted) return;
-    // The framework-test-only state reset that flushes _pressedKeys and
-    // _handlers. Followed by re-registering global handlers, this gets
-    // the keyboard back to a clean known state.
-    // ignore: invalid_use_of_visible_for_testing_member
-    HardwareKeyboard.instance.clearState();
-    FocusManager.instance.registerGlobalHandlers();
     FocusManager.instance.primaryFocus?.unfocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _calculatorFocusNode.requestFocus();
@@ -263,6 +280,16 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
   bool _handleKeyboardInput(KeyEvent event) {
     KeyboardInputHandler.debugKeyboardInput(event);
+
+    // If another widget (e.g. the history-search TextField) has primary
+    // focus, the user is typing INTO that widget — let the event pass
+    // through. The top-level KeyboardListener still fires here because
+    // it sits on the focus ancestor chain, but we mustn't divert the
+    // event into the LaTeX input.
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary != null && primary != _calculatorFocusNode) {
+      return false;
+    }
 
     // Handle Enter key specifically to prevent tab switching
     if (event.logicalKey == LogicalKeyboardKey.enter ||
@@ -365,7 +392,16 @@ class CalculatorScreenState extends State<CalculatorScreen>
         break;
 
       // --- LaTeX Template Insertions ---
-      case '/': // This is the BUTTON press, should create fractions
+      // `/` keypad button is now plain division to match keyboard
+      // behavior. Earlier it inserted a `\frac{}{}` template which
+      // produced confusing two-step "fill the numerator, then move
+      // cursor to denominator" UX — users would type `2 / 4` and get
+      // `2\frac{4}{}` (empty denominator → parse error). Fractions are
+      // still available via the explicit `frac` keypad button below.
+      case '/':
+        _latexController.insert('/');
+        break;
+      case 'frac':
         _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -3);
         break;
 
@@ -1550,6 +1586,23 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                   _historySearchController.clear();
                                 }
                               });
+                              // Hand focus to the search field when opening.
+                              // Without this the calculator's KeyboardListener
+                              // (focusNode: _calculatorFocusNode) keeps the
+                              // primary focus and the TextField never gets to
+                              // see keystrokes.
+                              if (_historySearchOpen) {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    _historySearchFocusNode.requestFocus();
+                                  }
+                                });
+                              } else {
+                                // Closed: hand focus back to the calculator.
+                                _calculatorFocusNode.requestFocus();
+                              }
                             },
                           ),
                           IconButton(
@@ -1566,7 +1619,7 @@ class CalculatorScreenState extends State<CalculatorScreen>
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: TextField(
                         controller: _historySearchController,
-                        autofocus: true,
+                        focusNode: _historySearchFocusNode,
                         decoration: InputDecoration(
                           isDense: true,
                           prefixIcon: const Icon(Icons.search, size: 18),
