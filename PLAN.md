@@ -167,65 +167,85 @@ single feature. Roughly in priority order — top items unblock the next.
 
 ---
 
-## P5 — Differentiation (where competing calculator apps win today)
+## P5 — Feature surface: gaps to close
 
-Where the category bar is set higher than our current feature set.
+Things we don't do today that have become standard in the calculator-
+app category. Some are pedagogy features, some are graphing features,
+some are knowledge-domain expansions. Each costs roughly 1–2 weeks of
+focused work; doing all four of the "recommended next" cluster would
+roughly double the perceived value of the app.
 
-### Learning / "how do I do this" features
+### Recommended next (top 4, in priority order)
 
-- [ ] **Step-by-step solutions**. The dominant feature of solver-style
-  apps: show *why* a derivative or integral is what it is, not just the
-  answer. Realistic path: instrument `differentiate` / `integrate` /
-  `solve` in the bridge to also return the rule sequence (chain rule,
-  product rule, u-substitution, etc.) and render it in the UI as an
-  expandable steps list.
+- [ ] **Step-by-step solutions** for `diff`, `integrate`, and `solve`.
+  Show *why* an answer is what it is — the rule applied at each step
+  (chain rule, product rule, u-substitution, partial fractions, …) —
+  not just the final symbolic result. This is the single biggest
+  perceived-value gap. Realistic path: instrument the bridge to also
+  emit the rule sequence alongside the result, render in the UI as an
+  expandable steps list. The user-facing engineering is mostly Dart;
+  the trace generation is C++ on top of SymEngine's existing
+  intermediate-form support.
+- [ ] **Interactive parameter sliders** on the graphing screen.
+  Replace constants in a graphed function with named parameters
+  (`y = a*sin(b*x + c)`), attach a slider widget per parameter, drag
+  to animate the curve. Algorithmically small (re-evaluate on
+  parameter change, repaint), perceptually huge — single biggest
+  "wow" we can ship.
+- [ ] **Statistics + probability module**. Descriptive stats on a list
+  of numbers, linear / polynomial / exponential regression, normal /
+  binomial / t / chi-square distributions and quantiles, basic
+  hypothesis tests. A whole school-curriculum use case we don't
+  address at all today.
+- [ ] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
+  full SI prefix handling, dimension checking on results. Opens the
+  engineering / physics / chemistry audience. Doable as a Dart
+  preprocessor layer on top of the existing engine.
+
+### Other meaningful gaps
+
+#### Learning / pedagogy
+
 - [ ] **Worked-example library**. Curated catalogue of problem types
   (related rates, optimization, vector projection, eigenvalue) with
   click-to-try examples. Discoverability + learning.
 - [ ] **Plain-language step explanations**. After a step is shown
-  symbolically, render a one-sentence English/DE/FR/ES description of
-  the rule applied. Accessibility win and pedagogical win.
+  symbolically, render a one-sentence EN/DE/FR/ES description of the
+  rule applied. Builds directly on the step-by-step infrastructure.
 
-### Input
+#### Input
 
-- [ ] **Photo OCR of handwritten or printed equations**. Camera input
-  is table-stakes for the consumer-grade math-help category. Possible
-  on-device with TFLite or Apple's `VisionKit` (iOS only); cloud OCR
-  is faster to ship but conflicts with our on-device promise.
+- [ ] **Photo OCR of handwritten or printed equations**. Camera-to-
+  equation has become table stakes in the consumer math-help category.
+  Possible on-device with TFLite or Apple's `VisionKit` (iOS); cloud
+  OCR is faster to ship but conflicts with the on-device promise.
 - [ ] **Pen / handwriting input**. Apple Pencil + macOS trackpad
   handwriting recognition (`PKCanvasView` + `MLHandwritingRecognizer`)
   for math expressions. Niche but high-end feature.
 
-### Math surface area
+#### Math surface area
 
-- [ ] **Statistics + probability module**. Descriptive stats on a list
-  of numbers, linear / polynomial / exponential regression, normal
-  /binomial /t /chi-square distributions and quantiles, basic
-  hypothesis tests. Standard on graphing calculators, currently absent.
-- [ ] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
-  full SI prefix handling. Killer feature for engineering / physics
-  users.
-- [ ] **3D graphing**. Surface plots, parametric 3D curves, intersection
-  with planes (we already have plane analysis). Touch-rotate / pinch-
-  zoom on the 3D canvas.
-- [ ] **User-defined function namespace**. Today's graph slots Y1..Y10
-  are a partial story. Allow named functions (`f(x) = x^2 + 1`),
-  composition (`g(f(x))`), and a tab to browse / edit / rename them.
+- [ ] **3D graphing**. Surface plots, parametric 3D curves,
+  intersection with planes (we already have the plane math). Touch-
+  rotate / pinch-zoom on the 3D canvas.
+- [ ] **User-defined function namespace**. Today's graph slots
+  Y1..Y10 are a partial story. Allow named functions
+  (`f(x) = x^2 + 1`), composition (`g(f(x))`), and a tab to browse /
+  edit / rename them.
+- [ ] **Built-in constants library**. Physical (c, G, h, kB),
+  mathematical (φ, Catalan, ζ(2), …), chemical (Avogadro), with one-
+  tap insert into the calculator.
 
-### Engagement / sharing
+#### Engagement / sharing
 
-- [ ] **Interactive parameter sliders**. Replace constants in a graphed
-  function with named parameters, attach a slider widget per parameter,
-  drag to animate the curve. Single biggest "wow" feature in modern
-  graphing calculators.
-- [ ] **Shareable links / state encoding**. URL-encode the full
-  calculator state (graphed functions, viewport, stored variables) so
-  a teacher can drop a link in a class chat and the student lands on
-  the same view.
-- [ ] **Web build**. Flutter Web + a WASM build of SymEngine widens
-  reach 10x (instant-try from any browser, embeddable in textbooks /
-  docs sites). Significant porting work but plausible — the bridge
-  plugin would need a WASM backend.
+- [ ] **Shareable state links**. URL-encode the full calculator state
+  (graphed functions, viewport, stored variables) so a link drops a
+  recipient onto the same view. Pairs naturally with the web build.
+- [ ] **Web build**. Flutter Web + a WASM backend for the bridge
+  plugin would widen reach roughly 10× (instant-try in any browser,
+  embeddable in textbooks / docs sites). Significant porting work
+  but plausible — the bridge would need a `web/` platform target
+  that compiles SymEngine to WASM.
 
 ---
 
