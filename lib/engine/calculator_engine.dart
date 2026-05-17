@@ -10,6 +10,7 @@ import 'package:symbolic_math_bridge/symbolic_math_bridge.dart';
 
 import 'matrix_evaluator.dart';
 import 'numerical.dart';
+import 'unit_expression.dart';
 
 class CalculatorEngine {
   CalculatorEngine() {
@@ -64,6 +65,17 @@ class CalculatorEngine {
       if (matrixResult != null) return matrixResult;
     }
     return _bridgeCall('evaluate', (b) => b.evaluate(expression));
+  }
+
+  /// Calculator-screen entry point. Tries the inline-unit evaluator on
+  /// the raw user input first (so `5 km + 3 m` and `100 km in mph`
+  /// work before the implicit-multiplication preprocessor mangles
+  /// them), then falls through to the normal preprocessed pipeline.
+  /// Returns the rendered result string ready for history.
+  String evaluateRaw(String rawExpression, String Function(String) preprocess) {
+    final unitResult = UnitExpressionEvaluator.tryEvaluate(rawExpression);
+    if (unitResult != null) return unitResult;
+    return evaluate(preprocess(rawExpression));
   }
 
   String evaluateForGraphing(String expression) {

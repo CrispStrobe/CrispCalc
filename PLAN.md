@@ -274,9 +274,17 @@ roughly double the perceived value of the app.
     six dimensions (length, time, mass, temperature, velocity, angle)
     with proper offset handling for °C / °F. Conversion math fully
     unit-tested (50 examples).
-  - **V2 pending**: inline syntax (`5 km + 3 m` in the calculator
-    input), composite-dimension arithmetic (force = mass × acceleration),
-    SI prefix parser.
+  - **V2 partial** (HISTORY round 31): inline syntax shipped.
+    `5 km + 3 m`, `1 mile + 5 ft`, `100 km/h in mph` etc. parse
+    directly in the calculator — a separate `UnitExpressionEvaluator`
+    tokenizes the input (longest-match against catalog symbols +
+    natural-spelling aliases like `mile`/`feet`/`hour`) and intercepts
+    before SymEngine would mis-parse the symbols as variables. Same-
+    dimension `+`/`-` and `in <unit>` conversion suffix. Refuses
+    temperature arithmetic explicitly (offset units are ambiguous;
+    conversion still works).
+  - Pending: composite-dimension arithmetic (`m/s² * 2 s`),
+    scalar-times-quantity, SI prefix parser.
 
 ### Other meaningful gaps
 

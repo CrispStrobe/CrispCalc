@@ -17,6 +17,7 @@ import '../widgets/memory_dialogs.dart';
 import '../widgets/function_picker_dialogs.dart';
 import '../widgets/steps_dialog.dart';
 import '../engine/step_engine.dart';
+import '../engine/unit_expression.dart';
 
 // Utils imports
 import '../utils/keyboard_input_handler.dart';
@@ -606,6 +607,19 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
       final convertedExpression = LatexConversionUtils.fromLatex(expression);
       final converted = convertedExpression.trim();
+
+      // Inline unit arithmetic: `5 km + 3 m`, `100 km in mph`, etc.
+      // Runs before the normal dispatcher so SymEngine never sees raw
+      // unit symbols (which it would mis-parse as variables).
+      final unitResult = UnitExpressionEvaluator.tryEvaluate(converted);
+      if (unitResult != null) {
+        setState(() {
+          _appState.addHistoryEntry(expression, unitResult);
+          _justCalculated = true;
+        });
+        _latexController.clear();
+        return;
+      }
 
       String result;
       if (_isFunctionCall(converted, 'solve')) {

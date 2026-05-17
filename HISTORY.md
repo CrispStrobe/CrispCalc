@@ -2,6 +2,72 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 31) — Inline unit syntax in the calculator
+
+V2 of the unit converter (round 24). Users can now type
+`5 km + 3 m`, `1 mile - 200 yd`, or `100 km/h in mph` directly in
+the calculator's expression field and get back a quantity with a
+unit. The unit converter dialog from round 24 stays — it's still the
+right tool for a single conversion — but inline arithmetic was the
+real V2 ask.
+
+### Architecture
+
+`lib/engine/unit_expression.dart` is a tiny tokenizer + evaluator
+plus a one-line hook in the calculator screen's `_calculate`:
+
+- Tokenizer walks the raw user input and emits `_NumberToken`,
+  `_UnitToken`, `_BinaryOp`, or `_InKeyword`. Returns null on any
+  unrecognized character — that's the signal to fall through to
+  the scalar evaluator.
+- Unit symbols are matched longest-first so multi-char tokens like
+  `m/s`, `km/h`, `mph` win over substrings.
+- Natural-spelling aliases (`mile` → `mi`, `feet` → `ft`,
+  `meters` → `m`, `hours` → `h`, etc., ~30 entries) translate
+  conversational input to catalog symbols.
+- The screen hook lives just after the `solve(...)` / `factor(...)`
+  function-name dispatch, before the regex-based preprocessor that
+  would otherwise insert implicit multiplication and break the
+  `5 km` shape.
+
+### Supported shapes
+
+- `<number> <unit>` (single quantity, returned as-is)
+- `<number> <unit> {+|-} <number> <unit> …` — same-dimension
+  arithmetic. Result displays in the first term's unit by default.
+- Any of the above with a trailing `in <target_unit>` — converts
+  to that unit. Dimension mismatch returns a friendly error.
+- Temperature: arithmetic refused (offset units make `5 °C + 10 °C`
+  ambiguous); single-quantity `in` conversion still works.
+
+### Examples
+
+- `5 km + 3 m` → `5.003 km`
+- `1 mile + 5 ft` → `1.0009466 mi`
+- `1 m + 50 cm + 100 mm` → `1.6 m`
+- `100 km/h in mph` → `62.137 mph`
+- `180 ° in rad` → `3.14159 rad`
+- `100 °C in °F` → `212 °F`
+
+### What didn't quite work first time
+
+- Dropped `mile` and `feet` from a first commit assuming users would
+  type `mi` and `ft`. Tests immediately caught this — added the
+  alias map.
+- Initial test tolerance of `1e-6` was tighter than the formatter's
+  rounded display; loosened to `1e-3` relative tolerance (3 sig
+  digits) which is what matters anyway for a calculator UI.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **579/579** (26 new tests: 7 fall-through
+  invariants, 3 single-quantity, 3 addition, 2 subtraction,
+  2 dimension-mismatch errors, 4 conversion, 3 temperature, 2 angle).
+- macOS release: matrix self-test 7/7, step self-test 28/28.
+
+---
+
 ## 2026-05-17 (round 30) — UI flows + stats V2: polynomial / t / chi-square
 
 Two threads in one round: PLAN's "UI flow tests" gap and the V2 of the
