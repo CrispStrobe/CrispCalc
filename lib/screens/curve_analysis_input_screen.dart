@@ -1,5 +1,5 @@
-/// lib/screens/curve_analysis_input_screen.dart
-/// Input screen for the curve sketching module (Kurvendiskussion).
+// lib/screens/curve_analysis_input_screen.dart
+// Input screen for the curve sketching module (Kurvendiskussion).
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,19 +16,21 @@ import 'curve_analysis_results_screen.dart';
 
 class CurveAnalysisInputScreen extends StatefulWidget {
   final String? initialFunction;
-  
+
   const CurveAnalysisInputScreen({super.key, this.initialFunction});
 
   @override
-  State<CurveAnalysisInputScreen> createState() => _CurveAnalysisInputScreenState();
+  State<CurveAnalysisInputScreen> createState() =>
+      _CurveAnalysisInputScreenState();
 }
 
-class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> with SingleTickerProviderStateMixin {
+class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen>
+    with SingleTickerProviderStateMixin {
   final LatexController _latexController = LatexController();
   final AppState _appState = AppState();
   final FocusNode _focusNode = FocusNode();
   late final TabController _tabController;
-  
+
   final _calculatorEngine = CalculatorEngine();
   late final AnalysisEngine _analysisEngine;
   bool _isLoading = false;
@@ -67,15 +69,33 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
   void _onButtonPressed(String value) {
     _focusNode.requestFocus();
     switch (value) {
-      case 'C': _latexController.clear(); break;
-      case '⌫': _latexController.backspace(); break;
-      case 'EXE': _runAnalysis(); break;
-      case '◀': _latexController.moveCursor(-1); break;
-      case '▶': _latexController.moveCursor(1); break;
-      case '/': _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4); break;
-      case 'sqrt': _latexController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1); break;
-      case '^': _latexController.insert(r'^{}', cursorOffsetFromEnd: -1); break;
-      case 'π': _latexController.insert(r'\pi'); break;
+      case 'C':
+        _latexController.clear();
+        break;
+      case '⌫':
+        _latexController.backspace();
+        break;
+      case 'EXE':
+        _runAnalysis();
+        break;
+      case '◀':
+        _latexController.moveCursor(-1);
+        break;
+      case '▶':
+        _latexController.moveCursor(1);
+        break;
+      case '/':
+        _latexController.insert(r'\frac{}{}', cursorOffsetFromEnd: -3);
+        break;
+      case 'sqrt':
+        _latexController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1);
+        break;
+      case '^':
+        _latexController.insert(r'^{}', cursorOffsetFromEnd: -1);
+        break;
+      case 'π':
+        _latexController.insert(r'\pi');
+        break;
       default:
         _latexController.insert(value);
         break;
@@ -97,7 +117,7 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
 
     try {
       final results = await _analysisEngine.performCurveAnalysis(function);
-      
+
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => CurveAnalysisResultsScreen(
@@ -135,7 +155,7 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
         return;
       }
     }
-    
+
     // If no empty slots, ask user to confirm overwrite
     _showOverwriteFunctionDialog(function);
   }
@@ -158,23 +178,28 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          ...List.generate(_appState.graphFunctions.length, (i) => TextButton(
-            onPressed: () {
-              _appState.updateFunction(i, function);
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Replaced Y${i + 1}')),
-              );
-            },
-            child: Text('Y${i + 1}${_appState.graphFunctions[i].isNotEmpty ? ' (${_appState.graphFunctions[i]})' : ''}'),
-          )),
+          ...List.generate(
+              _appState.graphFunctions.length,
+              (i) => TextButton(
+                    onPressed: () {
+                      _appState.updateFunction(i, function);
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Replaced Y${i + 1}')),
+                      );
+                    },
+                    child: Text(
+                        'Y${i + 1}${_appState.graphFunctions[i].isNotEmpty ? ' (${_appState.graphFunctions[i]})' : ''}'),
+                  )),
         ],
       ),
     );
   }
 
   void _selectFromFunctions() {
-    final nonEmptyFunctions = _appState.graphFunctions.asMap().entries
+    final nonEmptyFunctions = _appState.graphFunctions
+        .asMap()
+        .entries
         .where((entry) => entry.value.isNotEmpty)
         .toList();
 
@@ -199,18 +224,19 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
             ),
             const SizedBox(height: 16),
             ...nonEmptyFunctions.map((entry) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.blue.withOpacity(0.2),
-                child: Text('Y${entry.key + 1}'),
-              ),
-              title: Text('Y${entry.key + 1}(x)'),
-              subtitle: Text(entry.value, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () {
-                _latexController.clear();
-                _latexController.insert(entry.value);
-                Navigator.of(context).pop();
-              },
-            )),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                    child: Text('Y${entry.key + 1}'),
+                  ),
+                  title: Text('Y${entry.key + 1}(x)'),
+                  subtitle: Text(entry.value,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () {
+                    _latexController.clear();
+                    _latexController.insert(entry.value);
+                    Navigator.of(context).pop();
+                  },
+                )),
           ],
         ),
       ),
@@ -230,19 +256,9 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
           ),
         ],
       ),
-      body: RawKeyboardListener(
+      body: KeyboardListener(
         focusNode: _focusNode,
-        onKey: (event) {
-          if (event is RawKeyDownEvent) {
-            // FIX: RawKeyDownEvent does not have timeStamp. Use Duration.zero instead.
-            _handleKeyboardInput(KeyDownEvent(
-              physicalKey: event.physicalKey,
-              logicalKey: event.logicalKey,
-              character: event.character,
-              timeStamp: Duration.zero,
-            ));
-          }
-        },
+        onKeyEvent: _handleKeyboardInput,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -263,15 +279,20 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
                         padding: const EdgeInsets.symmetric(horizontal: 12.0),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: _focusNode.hasFocus ? Theme.of(context).colorScheme.primary : Colors.grey.shade700,
+                            color: _focusNode.hasFocus
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey.shade700,
                             width: _focusNode.hasFocus ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: Row(
                           children: [
-                            const Text("f(x) = ", style: TextStyle(fontSize: 18)),
-                            Expanded(child: LatexInputField(controller: _latexController)),
+                            const Text("f(x) = ",
+                                style: TextStyle(fontSize: 18)),
+                            Expanded(
+                                child: LatexInputField(
+                                    controller: _latexController)),
                           ],
                         ),
                       ),
@@ -295,7 +316,8 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen> wit
                   label: const Text('Analyze'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               const SizedBox(height: 16),

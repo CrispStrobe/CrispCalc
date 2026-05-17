@@ -1,22 +1,41 @@
 PODS:
   - FlutterMacOS (1.0.0)
-  - symbolic_math_bridge (0.0.1):
+  - package_info_plus (0.0.1):
+    - FlutterMacOS
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - symbolic_math_bridge (1.0.14):
+    - FlutterMacOS
+  - url_launcher_macos (0.0.1):
     - FlutterMacOS
 
 DEPENDENCIES:
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
+  - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
   - symbolic_math_bridge (from `Flutter/ephemeral/.symlinks/plugins/symbolic_math_bridge/macos`)
+  - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
 
 EXTERNAL SOURCES:
   FlutterMacOS:
     :path: Flutter/ephemeral
+  package_info_plus:
+    :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
+  shared_preferences_foundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
   symbolic_math_bridge:
     :path: Flutter/ephemeral/.symlinks/plugins/symbolic_math_bridge/macos
+  url_launcher_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
 
 SPEC CHECKSUMS:
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  symbolic_math_bridge: 086079769acc6bd92329799b8d7e0fd7b08400e1
+  package_info_plus: f0052d280d17aa382b932f399edf32507174e870
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  symbolic_math_bridge: 67e1fef595fb948e531989bd6a7a332baf090b64
+  url_launcher_macos: f87a979182d112f911de6820aefddaf56ee9fbfd
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: 890790c98a4b9f75bc0df73ddd0ea62dc92aa1ad
 
 COCOAPODS: 1.16.2

@@ -1,4 +1,4 @@
-/// lib/widgets/calculator_button.dart:
+// lib/widgets/calculator_button.dart:
 
 import 'package:flutter/material.dart';
 
@@ -20,7 +20,8 @@ class CalculatorButton extends StatelessWidget {
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           backgroundColor: _getButtonColor(text),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.all(12),
@@ -40,7 +41,15 @@ class CalculatorButton extends StatelessWidget {
   /// Determines the button color based on its function.
   Color _getButtonColor(String text) {
     const operators = ['/', '*', '-', '+', '=', '^'];
-    const casFunctions = ['∫ dx', 'd/dx', 'lim', 'solve', 'simplify', 'factor', 'expand'];
+    const casFunctions = [
+      '∫ dx',
+      'd/dx',
+      'lim',
+      'solve',
+      'simplify',
+      'factor',
+      'expand'
+    ];
 
     if (operators.contains(text) || text == '⌫') {
       return Colors.orange[800]!;
@@ -49,7 +58,7 @@ class CalculatorButton extends StatelessWidget {
       return Colors.blueGrey[700]!;
     }
     if (text == 'C') {
-        return Colors.red[700]!;
+      return Colors.red[700]!;
     }
     // Default color for numbers and general functions.
     return Colors.grey[850]!;

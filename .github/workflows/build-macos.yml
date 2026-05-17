@@ -1,0 +1,60 @@
+# macOS smoke build — runs on PRs and pushes to main. Confirms the native
+# SymEngine bridge links correctly. Produces an unsigned `.app` as a build
+# artifact so reviewers can grab and run it locally without a checkout.
+
+name: Build macOS
+
+on:
+  push:
+    branches: [main, latex-input-field]
+  pull_request:
+    branches: [main, latex-input-field]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build macOS (debug, unsigned)
+        env:
+          # CocoaPods runs as part of the macOS build. Some hosts ship Ruby
+          # gem env vars that conflict with the bundled CocoaPods Ruby.
+          # Unset them so `pod` uses its own gems.
+          GEM_HOME: ''
+          GEM_PATH: ''
+        run: flutter build macos --debug
+
+      - name: Verify SymEngine symbols are linked
+        run: |
+          set -eu
+          DYLIB="build/macos/Build/Products/Debug/crisp_calc.app/Contents/MacOS/crisp_calc.debug.dylib"
+          COUNT=$(nm "$DYLIB" | grep -c flutter_symengine || true)
+          echo "SymEngine symbols in binary: $COUNT"
+          if [ "$COUNT" -lt 30 ]; then
+            echo "::error::Expected >= 30 SymEngine symbols, found $COUNT"
+            exit 1
+          fi
+
+      - name: Zip the .app for download
+        run: |
+          cd build/macos/Build/Products/Debug
+          zip -ryq ../../../../../crisp_calc-macos-debug.zip crisp_calc.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crisp_calc-macos-debug
+          path: crisp_calc-macos-debug.zip
+          retention-days: 14

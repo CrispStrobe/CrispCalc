@@ -1,0 +1,47 @@
+# iOS smoke build (unsigned). Verifies the bridge plugin builds and links
+# for iOS too. The output is *not* installable on a device — that requires
+# Apple Developer signing, which lives outside CI. The point is to catch
+# Swift/Obj-C / podspec / xcframework regressions before they hit users.
+
+name: Build iOS
+
+on:
+  push:
+    branches: [main, latex-input-field]
+  pull_request:
+    branches: [main, latex-input-field]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build iOS (release, unsigned)
+        env:
+          GEM_HOME: ''
+          GEM_PATH: ''
+        run: flutter build ios --release --no-codesign
+
+      - name: Zip the Runner.app
+        run: |
+          cd build/ios/iphoneos
+          zip -ryq ../../../crisp_calc-ios-unsigned.zip Runner.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crisp_calc-ios-unsigned
+          path: crisp_calc-ios-unsigned.zip
+          retention-days: 14

@@ -1,5 +1,5 @@
-/// lib/widgets/function_picker_dialogs.dart
-/// Dialogs for selecting and managing functions - Complete Fixed Version
+// lib/widgets/function_picker_dialogs.dart
+// Dialogs for selecting and managing functions - Complete Fixed Version
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +27,7 @@ class FunctionPickerDialogs {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  'Select equation or continue typing:', 
+                  'Select equation or continue typing:',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -40,17 +40,20 @@ class FunctionPickerDialogs {
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
-                  children: appState.graphFunctions.asMap().entries
-                    .where((e) => e.value.isNotEmpty)
-                    .map((e) => ListTile(
-                      title: Text('Solve Y${e.key + 1} = 0'),
-                      subtitle: Text('where Y${e.key + 1} = ${e.value}'),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        final textToInsert = 'Y${e.key+1}=0, x';
-                        onInsert(textToInsert);
-                      },
-                    )).toList(),
+                  children: appState.graphFunctions
+                      .asMap()
+                      .entries
+                      .where((e) => e.value.isNotEmpty)
+                      .map((e) => ListTile(
+                            title: Text('Solve Y${e.key + 1} = 0'),
+                            subtitle: Text('where Y${e.key + 1} = ${e.value}'),
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              final textToInsert = 'Y${e.key + 1}=0, x';
+                              onInsert(textToInsert);
+                            },
+                          ))
+                      .toList(),
                 ),
               ),
             ],
@@ -65,19 +68,21 @@ class FunctionPickerDialogs {
     AppState appState,
     Function(String) onInsert,
   ) {
-    final List<Widget> options = appState.graphFunctions.asMap().entries
-      .where((entry) => entry.value.isNotEmpty)
-      .map((entry) {
-        int index = entry.key;
-        String func = entry.value;
-        return ListTile(
-          title: Text('Y${index + 1} = $func'),
-          onTap: () {
-            Navigator.of(context).pop();
-            onInsert('Y${index+1}()');
-          },
-        );
-      }).toList();
+    final List<Widget> options = appState.graphFunctions
+        .asMap()
+        .entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) {
+      int index = entry.key;
+      String func = entry.value;
+      return ListTile(
+        title: Text('Y${index + 1} = $func'),
+        onTap: () {
+          Navigator.of(context).pop();
+          onInsert('Y${index + 1}()');
+        },
+      );
+    }).toList();
 
     _showPicker(
       context: context,
@@ -101,7 +106,8 @@ class FunctionPickerDialogs {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                child:
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
               ),
               ListTile(
                 leading: const Icon(Icons.keyboard_return),
@@ -160,7 +166,8 @@ class DialogLatexField extends StatefulWidget {
   State<DialogLatexField> createState() => _DialogLatexFieldState();
 }
 
-class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerProviderStateMixin {
+class _DialogLatexFieldState extends State<DialogLatexField>
+    with SingleTickerProviderStateMixin {
   Timer? _cursorTimer;
   bool _showCursor = true;
 
@@ -175,7 +182,7 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
   @override
   void didUpdateWidget(DialogLatexField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Start/stop cursor timer based on focus
     if (widget.isFocused != oldWidget.isFocused) {
       if (widget.isFocused) {
@@ -213,26 +220,6 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
     return MathDisplayUtils.toHistoryDisplayLatex(text);
   }
 
-  // legacy version for debug testing
-  String _toLatex_old(String text) {
-    String latex = text;
-    
-    // Replace standard operators with LaTeX equivalents
-    latex = latex.replaceAll('*', r'\cdot ');
-    
-    // Convert fractions
-    latex = latex.replaceAllMapped(RegExp(r'\(([^/]+)\)/\(([^/]+)\)'), (m) {
-      return r'\frac{' + '${m.group(1)}' + r'}{' + '${m.group(2)}' + r'}';
-    });
-    
-    // Ensure standard functions are rendered upright
-    latex = latex.replaceAllMapped(RegExp(r'(\b(sin|cos|tan|ln|log|det|lim|sqrt)\b)(?![a-zA-Z])'), (m) {
-      return '\\${m.group(1)}';
-    });
-    
-    return latex;
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -241,7 +228,9 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: widget.isFocused ? Theme.of(context).colorScheme.primary : Colors.grey,
+            color: widget.isFocused
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey,
             width: widget.isFocused ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(4),
@@ -253,7 +242,9 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
               widget.label,
               style: TextStyle(
                 fontSize: 12,
-                color: widget.isFocused ? Theme.of(context).colorScheme.primary : Colors.grey[600],
+                color: widget.isFocused
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey[600],
               ),
             ),
             const SizedBox(height: 4),
@@ -274,24 +265,27 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
                       builder: (context, child) {
                         final text = widget.controller.text;
                         final selection = widget.controller.selection;
-                        final cursorPosition = selection.baseOffset.clamp(0, text.length);
-                        
+                        final cursorPosition =
+                            selection.baseOffset.clamp(0, text.length);
+
                         if (text.isEmpty) {
                           // Show a cursor for empty field if focused
                           return widget.isFocused && _showCursor
-                            ? Container(
-                                width: 2,
-                                height: 30,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              )
-                            : const SizedBox(height: 30);
+                              ? Container(
+                                  width: 2,
+                                  height: 30,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                )
+                              : const SizedBox(height: 30);
                         }
-                        
+
                         // Split text at cursor position if focused
                         if (widget.isFocused) {
-                          final beforeCursor = text.substring(0, cursorPosition);
+                          final beforeCursor =
+                              text.substring(0, cursorPosition);
                           final afterCursor = text.substring(cursorPosition);
-                          
+
                           return Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -302,33 +296,40 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
                                   _toLatex(beforeCursor),
                                   textStyle: TextStyle(
                                     fontSize: 20,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                   onErrorFallback: (err) => Text(
                                     beforeCursor,
-                                    style: TextStyle(fontSize: 20, color: Colors.red.shade300),
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.red.shade300),
                                   ),
                                 ),
-                              
+
                               // Cursor (only if focused and timer shows it)
                               if (_showCursor)
                                 Container(
                                   width: 2,
                                   height: 30,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
-                              
+
                               // Text after cursor
                               if (afterCursor.isNotEmpty)
                                 Math.tex(
                                   _toLatex(afterCursor),
                                   textStyle: TextStyle(
                                     fontSize: 20,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                   onErrorFallback: (err) => Text(
                                     afterCursor,
-                                    style: TextStyle(fontSize: 20, color: Colors.red.shade300),
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.red.shade300),
                                   ),
                                 ),
                             ],
@@ -343,7 +344,8 @@ class _DialogLatexFieldState extends State<DialogLatexField> with SingleTickerPr
                             ),
                             onErrorFallback: (err) => Text(
                               text,
-                              style: TextStyle(fontSize: 20, color: Colors.red.shade300),
+                              style: TextStyle(
+                                  fontSize: 20, color: Colors.red.shade300),
                             ),
                           );
                         }
@@ -370,8 +372,10 @@ class _IntegralDialogState extends State<IntegralDialog> {
   final _variableController = LatexController();
   final _lowerController = LatexController();
   final _upperController = LatexController();
+  // Long-lived focus node so we don't leak/reallocate every rebuild.
+  final FocusNode _keyboardFocus = FocusNode();
   bool _isDefinite = false;
-  
+
   // Track which field is currently focused for keyboard input
   int _focusedField = 0; // 0=function, 1=variable, 2=lower, 3=upper
 
@@ -387,6 +391,7 @@ class _IntegralDialogState extends State<IntegralDialog> {
     _variableController.dispose();
     _lowerController.dispose();
     _upperController.dispose();
+    _keyboardFocus.dispose();
     super.dispose();
   }
 
@@ -427,49 +432,52 @@ class _IntegralDialogState extends State<IntegralDialog> {
 
   LatexController? _getActiveController() {
     switch (_focusedField) {
-      case 0: return _functionController;
-      case 1: return _variableController;
-      case 2: return _lowerController;
-      case 3: return _upperController;
-      default: return _functionController;
+      case 0:
+        return _functionController;
+      case 1:
+        return _variableController;
+      case 2:
+        return _lowerController;
+      case 3:
+        return _upperController;
+      default:
+        return _functionController;
     }
   }
 
   void _onSubmit() {
     final func = _functionController.text.trim();
     final variable = _variableController.text.trim();
-    
+
     if (func.isEmpty) return;
-    
+
     String result;
-    if (_isDefinite && _lowerController.text.isNotEmpty && _upperController.text.isNotEmpty) {
+    if (_isDefinite &&
+        _lowerController.text.isNotEmpty &&
+        _upperController.text.isNotEmpty) {
       final lower = _lowerController.text.trim();
       final upper = _upperController.text.trim();
-      result = r'\int_{' + lower + r'}^{' + upper + r'} ' + func + r' \, d' + variable;
+      result = r'\int_{' +
+          lower +
+          r'}^{' +
+          upper +
+          r'} ' +
+          func +
+          r' \, d' +
+          variable;
     } else {
       result = r'\int ' + func + r' \, d' + variable;
     }
-    
+
     Navigator.of(context).pop(result);
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
-      focusNode: FocusNode(),
+    return KeyboardListener(
+      focusNode: _keyboardFocus,
       autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
-          final keyEvent = KeyDownEvent(
-            physicalKey: event.physicalKey,
-            logicalKey: event.logicalKey,
-            character: event.character,
-            timeStamp: Duration.zero,
-            synthesized: false,
-          );
-          _handleKeyboardInput(keyEvent);
-        }
-      },
+      onKeyEvent: _handleKeyboardInput,
       child: AlertDialog(
         title: const Text('Integral'),
         content: Column(
@@ -535,7 +543,8 @@ class NthRootDialog extends StatefulWidget {
 class _NthRootDialogState extends State<NthRootDialog> {
   final _expressionController = LatexController();
   final _rootController = LatexController();
-  
+  final FocusNode _keyboardFocus = FocusNode();
+
   int _focusedField = 0; // 0=expression, 1=root
 
   @override
@@ -548,6 +557,7 @@ class _NthRootDialogState extends State<NthRootDialog> {
   void dispose() {
     _expressionController.dispose();
     _rootController.dispose();
+    _keyboardFocus.dispose();
     super.dispose();
   }
 
@@ -588,39 +598,31 @@ class _NthRootDialogState extends State<NthRootDialog> {
 
   LatexController? _getActiveController() {
     switch (_focusedField) {
-      case 0: return _expressionController;
-      case 1: return _rootController;
-      default: return _expressionController;
+      case 0:
+        return _expressionController;
+      case 1:
+        return _rootController;
+      default:
+        return _expressionController;
     }
   }
 
   void _onSubmit() {
     final expr = _expressionController.text.trim();
     final root = _rootController.text.trim();
-    
+
     if (expr.isEmpty || root.isEmpty) return;
-    
+
     final result = r'\sqrt[' + root + r']{' + expr + r'}';
     Navigator.of(context).pop(result);
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
-      focusNode: FocusNode(),
+    return KeyboardListener(
+      focusNode: _keyboardFocus,
       autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
-          final keyEvent = KeyDownEvent(
-            physicalKey: event.physicalKey,
-            logicalKey: event.logicalKey,
-            character: event.character,
-            timeStamp: Duration.zero,
-            synthesized: false,
-          );
-          _handleKeyboardInput(keyEvent);
-        }
-      },
+      onKeyEvent: _handleKeyboardInput,
       child: AlertDialog(
         title: const Text('Nth Root'),
         content: Column(
@@ -665,7 +667,8 @@ class _LimitDialogState extends State<LimitDialog> {
   final _functionController = LatexController();
   final _variableController = LatexController();
   final _approachesController = LatexController();
-  
+  final FocusNode _keyboardFocus = FocusNode();
+
   int _focusedField = 0; // 0=function, 1=variable, 2=approaches
 
   @override
@@ -680,6 +683,7 @@ class _LimitDialogState extends State<LimitDialog> {
     _functionController.dispose();
     _variableController.dispose();
     _approachesController.dispose();
+    _keyboardFocus.dispose();
     super.dispose();
   }
 
@@ -720,10 +724,14 @@ class _LimitDialogState extends State<LimitDialog> {
 
   LatexController? _getActiveController() {
     switch (_focusedField) {
-      case 0: return _functionController;
-      case 1: return _variableController;
-      case 2: return _approachesController;
-      default: return _functionController;
+      case 0:
+        return _functionController;
+      case 1:
+        return _variableController;
+      case 2:
+        return _approachesController;
+      default:
+        return _functionController;
     }
   }
 
@@ -731,30 +739,19 @@ class _LimitDialogState extends State<LimitDialog> {
     final func = _functionController.text.trim();
     final variable = _variableController.text.trim();
     final approaches = _approachesController.text.trim();
-    
+
     if (func.isEmpty) return;
-    
+
     final result = r'\lim_{' + variable + r' \to ' + approaches + r'} ' + func;
     Navigator.of(context).pop(result);
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
-      focusNode: FocusNode(),
+    return KeyboardListener(
+      focusNode: _keyboardFocus,
       autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
-          final keyEvent = KeyDownEvent(
-            physicalKey: event.physicalKey,
-            logicalKey: event.logicalKey,
-            character: event.character,
-            timeStamp: Duration.zero,
-            synthesized: false,
-          );
-          _handleKeyboardInput(keyEvent);
-        }
-      },
+      onKeyEvent: _handleKeyboardInput,
       child: AlertDialog(
         title: const Text('Limit'),
         content: Column(

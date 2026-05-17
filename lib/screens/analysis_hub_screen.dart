@@ -1,27 +1,31 @@
-/// lib/screens/analysis_hub_screen.dart
-/// A menu for selecting different advanced analysis modules.
+// lib/screens/analysis_hub_screen.dart
+// A menu for selecting different advanced analysis modules.
 
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+
+import '../localization/app_localizations.dart';
+import 'conic_section_screen.dart';
 import 'curve_analysis_input_screen.dart';
+import 'plane_analysis_screen.dart';
 
 class AnalysisHubScreen extends StatelessWidget {
   const AnalysisHubScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analysis Modules'),
+        title: Text(t.analysisModulesTitle),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.only(top: 8),
         children: [
           _ModuleCard(
-            icon: MdiIcons.chartLineVariant,
-            title: 'Kurvendiskussion',
-            subtitle: 'Full analysis of a function f(x)',
+            icon: Icons.show_chart,
+            title: t.moduleCurveSketching,
+            subtitle: t.moduleCurveSketchingSubtitle,
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => const CurveAnalysisInputScreen(),
@@ -29,25 +33,23 @@ class AnalysisHubScreen extends StatelessWidget {
             },
           ),
           _ModuleCard(
-            icon: MdiIcons.cubeOutline,
-            title: 'Ebenen (Planes)',
-            subtitle: '3D analytical geometry for planes',
+            icon: Icons.view_in_ar,
+            title: t.modulePlanes,
+            subtitle: t.modulePlanesSubtitle,
             onTap: () {
-              // In a future step, this would navigate to a plane geometry screen.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Plane geometry module coming soon!')),
-              );
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const PlaneAnalysisScreen(),
+              ));
             },
           ),
           _ModuleCard(
-            icon: MdiIcons.ellipseOutline,
-            title: 'Kegelschnitte (Conic Sections)',
-            subtitle: 'Analyze circles, ellipses, parabolas, etc.',
+            icon: Icons.circle_outlined,
+            title: t.moduleConics,
+            subtitle: t.moduleConicsSubtitle,
             onTap: () {
-              // In a future step, this would navigate to a conic sections screen.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Conic sections module coming soon!')),
-              );
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const ConicSectionScreen(),
+              ));
             },
           ),
         ],
@@ -56,7 +58,6 @@ class AnalysisHubScreen extends StatelessWidget {
   }
 }
 
-/// A reusable card widget for displaying a module in the hub.
 class _ModuleCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -75,7 +76,8 @@ class _ModuleCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         leading: Icon(icon, size: 40, color: Colors.blueAccent),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle),

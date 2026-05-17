@@ -1,5 +1,5 @@
-/// lib/screens/curve_analysis_results_screen.dart
-/// Displays the formatted results of a curve analysis in a clear, readable report.
+// lib/screens/curve_analysis_results_screen.dart
+// Displays the formatted results of a curve analysis in a clear, readable report.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -11,7 +11,7 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
   final void Function(String name, String value)? onSaveResultAsVariable;
 
   const CurveAnalysisResultsScreen({
-    super.key, 
+    super.key,
     required this.results,
     this.onSaveAsFunction,
     this.onSaveResultAsVariable,
@@ -20,7 +20,8 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Safely access the function string, providing a fallback.
-    final functionString = results.originalFunction.isNotEmpty ? results.originalFunction : 'f(x)';
+    final functionString =
+        results.originalFunction.isNotEmpty ? results.originalFunction : 'f(x)';
 
     return Scaffold(
       appBar: AppBar(
@@ -32,13 +33,15 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
           // Show errors if any
           if (results.errors.isNotEmpty)
             _ResultCard(
-              title: 'Warnings', 
-              children: results.errors.map((error) => 
-                ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.orange),
-                  title: Text(error, style: const TextStyle(color: Colors.orange)),
-                )
-              ).toList(),
+              title: 'Warnings',
+              children: results.errors
+                  .map((error) => ListTile(
+                        leading:
+                            const Icon(Icons.warning, color: Colors.orange),
+                        title: Text(error,
+                            style: const TextStyle(color: Colors.orange)),
+                      ))
+                  .toList(),
             ),
 
           _ResultCard(title: 'Derivatives', children: [
@@ -47,7 +50,8 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
           ]),
 
           _ResultCard(title: 'Key Points', children: [
-            _ResultTile(label: 'Roots (Nullstellen)', value: results.roots.join(', ')),
+            _ResultTile(
+                label: 'Roots (Nullstellen)', value: results.roots.join(', ')),
             _ResultTile(label: 'Y-Intercept', value: results.yIntercept),
           ]),
 
@@ -56,12 +60,10 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
             if (results.extrema.isEmpty)
               const Text('No extrema found.')
             else
-              ...results.extrema.map((extremum) => 
-                ListTile(
-                  visualDensity: VisualDensity.compact,
-                  title: Text(extremum, style: const TextStyle(fontSize: 16)),
-                )
-              ),
+              ...results.extrema.map((extremum) => ListTile(
+                    visualDensity: VisualDensity.compact,
+                    title: Text(extremum, style: const TextStyle(fontSize: 16)),
+                  )),
           ]),
 
           _ResultCard(title: 'Inflection Points (Wendepunkte)', children: [
@@ -69,12 +71,11 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
             if (results.inflectionPoints.isEmpty)
               const Text('No inflection points found.')
             else
-              ...results.inflectionPoints.map((point) => 
-                ListTile(
-                  visualDensity: VisualDensity.compact,
-                  title: Text('Point: $point', style: const TextStyle(fontSize: 16)),
-                )
-              ),
+              ...results.inflectionPoints.map((point) => ListTile(
+                    visualDensity: VisualDensity.compact,
+                    title: Text('Point: $point',
+                        style: const TextStyle(fontSize: 16)),
+                  )),
           ]),
         ],
       ),
@@ -113,9 +114,8 @@ class _ResultCard extends StatelessWidget {
 class _ResultTile extends StatelessWidget {
   final String label;
   final String? value;
-  final VoidCallback? onSave;
 
-  const _ResultTile({required this.label, this.value, this.onSave});
+  const _ResultTile({required this.label, this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -140,11 +140,6 @@ class _ResultTile extends StatelessWidget {
           ),
         ),
       ),
-      trailing: onSave != null ? IconButton(
-        icon: const Icon(Icons.save, size: 18),
-        onPressed: onSave,
-        tooltip: 'Save as variable',
-      ) : null,
     );
   }
 }

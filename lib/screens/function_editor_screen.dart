@@ -1,4 +1,4 @@
-/// lib/screens/function_editor_screen.dart
+// lib/screens/function_editor_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -20,14 +20,15 @@ import '../screens/graphing_screen.dart';
 
 class FunctionEditorScreen extends StatefulWidget {
   final void Function(int functionIndex)? onSwitchToGraphing;
-  
+
   const FunctionEditorScreen({super.key, this.onSwitchToGraphing});
 
   @override
   State<FunctionEditorScreen> createState() => _FunctionEditorScreenState();
 }
 
-class _FunctionEditorScreenState extends State<FunctionEditorScreen> with SingleTickerProviderStateMixin {
+class _FunctionEditorScreenState extends State<FunctionEditorScreen>
+    with SingleTickerProviderStateMixin {
   final AppState _appState = AppState();
   late final LatexController _activeController; // Single active controller
   final FocusNode _screenFocusNode = FocusNode();
@@ -39,7 +40,7 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
     super.initState();
     _activeController = LatexController();
     _tabController = TabController(length: 5, vsync: this);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _screenFocusNode.requestFocus();
     });
@@ -58,7 +59,8 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
     if (function.isNotEmpty) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => CurveAnalysisInputScreen(initialFunction: function),
+          builder: (context) =>
+              CurveAnalysisInputScreen(initialFunction: function),
         ),
       );
     }
@@ -77,12 +79,12 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
 
   void _activateFunction(int index) {
     if (_activeFunctionIndex == index) return; // Already active
-    
+
     // Save current function if there was one active
     if (_activeFunctionIndex != null) {
       _saveFunctionFromController();
     }
-    
+
     // Load new function into controller
     setState(() {
       _activeFunctionIndex = index;
@@ -122,15 +124,17 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
       _activeController.insert(name);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a function field to edit.')),
+        const SnackBar(
+            content: Text('Please select a function field to edit.')),
       );
     }
   }
-  
+
   void _onButtonPressed(String value) {
     if (_activeFunctionIndex == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a function field to edit.')),
+        const SnackBar(
+            content: Text('Please select a function field to edit.')),
       );
       return;
     }
@@ -154,30 +158,68 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
         break;
       // --- LaTeX Template Insertions ---
       case '/':
-        _activeController.insert(r'\frac{}{}', cursorOffsetFromEnd: -4);
+        _activeController.insert(r'\frac{}{}', cursorOffsetFromEnd: -3);
         break;
       case 'sqrt':
         _activeController.insert(r'\sqrt{}', cursorOffsetFromEnd: -1);
         break;
-      case 'sin': _activeController.insert(r'\sin()', cursorOffsetFromEnd: -1); break;
-      case 'cos': _activeController.insert(r'\cos()', cursorOffsetFromEnd: -1); break;
-      case 'tan': _activeController.insert(r'\tan()', cursorOffsetFromEnd: -1); break;
-      case 'ln': _activeController.insert(r'\ln()', cursorOffsetFromEnd: -1); break;
-      case 'log': _activeController.insert(r'\log()', cursorOffsetFromEnd: -1); break;
-      case 'abs': _activeController.insert(r'abs()', cursorOffsetFromEnd: -1); break;
-      case 'asin': _activeController.insert(r'\arcsin()', cursorOffsetFromEnd: -1); break;
-      case 'acos': _activeController.insert(r'\arccos()', cursorOffsetFromEnd: -1); break;
-      case 'atan': _activeController.insert(r'\arctan()', cursorOffsetFromEnd: -1); break;
-      case 'sinh': _activeController.insert(r'\sinh()', cursorOffsetFromEnd: -1); break;
-      case 'cosh': _activeController.insert(r'\cosh()', cursorOffsetFromEnd: -1); break;
-      case 'tanh': _activeController.insert(r'\tanh()', cursorOffsetFromEnd: -1); break;
-      case '^': _activeController.insert(r'^{}', cursorOffsetFromEnd: -1); break;
-      case '_': _activeController.insert(r'_{}', cursorOffsetFromEnd: -1); break;
-      case 'π': _activeController.insert(r'\pi'); break;
-      case 'e': _activeController.insert('E'); break;
-      case 'γ': _activeController.insert('EulerGamma'); break;
-      case '!': _activeController.insert('!'); break;
-      case '∞': _activeController.insert(r'\infty'); break;
+      case 'sin':
+        _activeController.insert(r'\sin()', cursorOffsetFromEnd: -1);
+        break;
+      case 'cos':
+        _activeController.insert(r'\cos()', cursorOffsetFromEnd: -1);
+        break;
+      case 'tan':
+        _activeController.insert(r'\tan()', cursorOffsetFromEnd: -1);
+        break;
+      case 'ln':
+        _activeController.insert(r'\ln()', cursorOffsetFromEnd: -1);
+        break;
+      case 'log':
+        _activeController.insert(r'\log()', cursorOffsetFromEnd: -1);
+        break;
+      case 'abs':
+        _activeController.insert(r'abs()', cursorOffsetFromEnd: -1);
+        break;
+      case 'asin':
+        _activeController.insert(r'\arcsin()', cursorOffsetFromEnd: -1);
+        break;
+      case 'acos':
+        _activeController.insert(r'\arccos()', cursorOffsetFromEnd: -1);
+        break;
+      case 'atan':
+        _activeController.insert(r'\arctan()', cursorOffsetFromEnd: -1);
+        break;
+      case 'sinh':
+        _activeController.insert(r'\sinh()', cursorOffsetFromEnd: -1);
+        break;
+      case 'cosh':
+        _activeController.insert(r'\cosh()', cursorOffsetFromEnd: -1);
+        break;
+      case 'tanh':
+        _activeController.insert(r'\tanh()', cursorOffsetFromEnd: -1);
+        break;
+      case '^':
+        _activeController.insert(r'^{}', cursorOffsetFromEnd: -1);
+        break;
+      case '_':
+        _activeController.insert(r'_{}', cursorOffsetFromEnd: -1);
+        break;
+      case 'π':
+        _activeController.insert(r'\pi');
+        break;
+      case 'e':
+        _activeController.insert('E');
+        break;
+      case 'γ':
+        _activeController.insert('EulerGamma');
+        break;
+      case '!':
+        _activeController.insert('!');
+        break;
+      case '∞':
+        _activeController.insert(r'\infty');
+        break;
       default:
         _activeController.insert(value);
         break;
@@ -203,7 +245,7 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
   Widget _buildFunctionDisplay(int index) {
     final function = _appState.graphFunctions[index];
     final isActive = _activeFunctionIndex == index;
-    
+
     if (isActive) {
       // Active function with LaTeX input field
       return Container(
@@ -252,21 +294,10 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: _screenFocusNode,
-      autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
-          final keyEvent = KeyDownEvent(
-            physicalKey: event.physicalKey,
-            logicalKey: event.logicalKey,
-            character: event.character,
-            timeStamp: Duration.zero,
-            synthesized: false,
-          );
-          _handleKeyboardInput(keyEvent);
-        }
-      },
+      // No autofocus — see calculator_screen.dart for the reasoning.
+      onKeyEvent: _handleKeyboardInput,
       child: ListenableBuilder(
         listenable: _appState,
         builder: (context, child) {
@@ -314,26 +345,31 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
       itemCount: _appState.graphFunctions.length,
       itemBuilder: (context, index) {
         final isActive = _activeFunctionIndex == index;
-        
+
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: Row(
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => isActive ? _deactivateFunction() : _activateFunction(index),
+                  onTap: () => isActive
+                      ? _deactivateFunction()
+                      : _activateFunction(index),
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isActive 
-                          ? Theme.of(context).colorScheme.primary 
-                          : Colors.grey,
+                        color: isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey,
                         width: isActive ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(8),
-                      color: isActive 
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.05)
-                        : null,
+                      color: isActive
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.05)
+                          : null,
                     ),
                     child: Row(
                       children: [
@@ -343,7 +379,8 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
                           height: 56,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: _getColorForFunction(index).withOpacity(0.1),
+                            color: _getColorForFunction(index)
+                                .withValues(alpha: 0.1),
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(8),
                               bottomLeft: Radius.circular(8),
@@ -358,14 +395,15 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
                             ),
                           ),
                         ),
-                        
+
                         // Function display (active input or passive display)
                         Expanded(
                           child: _buildFunctionDisplay(index),
                         ),
-                        
+
                         // Action buttons
-                        if (_appState.graphFunctions[index].isNotEmpty && !isActive) 
+                        if (_appState.graphFunctions[index].isNotEmpty &&
+                            !isActive)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -399,8 +437,14 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen> with Single
 
   Color _getColorForFunction(int index) {
     const colors = [
-      Colors.blue, Colors.red, Colors.green, Colors.purple,
-      Colors.orange, Colors.teal, Colors.pink, Colors.brown,
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.teal,
+      Colors.pink,
+      Colors.brown,
     ];
     return colors[index % colors.length];
   }

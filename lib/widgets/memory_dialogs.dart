@@ -1,5 +1,5 @@
-/// lib/widgets/memory_dialogs.dart
-/// Memory management dialogs for storing and retrieving calculator results
+// lib/widgets/memory_dialogs.dart
+// Memory management dialogs for storing and retrieving calculator results
 
 import 'package:flutter/material.dart';
 import '../engine/app_state.dart';
@@ -130,17 +130,19 @@ class MemoryDialogs {
               Expanded(
                 child: ListView(
                   shrinkWrap: true,
-                  children: List.generate(9, (i) => ListTile(
-                    title: Text('M${i + 1}'),
-                    subtitle: Text(memory['M$i'] ?? 'Empty'),
-                    onTap: () {
-                      memory['M$i'] = value;
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Saved to M${i + 1}')),
-                      );
-                    },
-                  )),
+                  children: List.generate(
+                      9,
+                      (i) => ListTile(
+                            title: Text('M${i + 1}'),
+                            subtitle: Text(memory['M$i'] ?? 'Empty'),
+                            onTap: () {
+                              memory['M$i'] = value;
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Saved to M${i + 1}')),
+                              );
+                            },
+                          )),
                 ),
               ),
             ],
@@ -171,19 +173,23 @@ class MemoryDialogs {
             height: 400,
             child: ListView(
               shrinkWrap: true,
-              children: List.generate(9, (i) => ListTile(
-                title: Text('M${i + 1}'),
-                subtitle: Text(memory['M$i'] ?? 'Empty'),
-                trailing: memory['M$i'] != null ? IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    setState(() {
-                      memory.remove('M$i');
-                    });
-                    onUpdate();
-                  },
-                ) : null,
-              )),
+              children: List.generate(
+                  9,
+                  (i) => ListTile(
+                        title: Text('M${i + 1}'),
+                        subtitle: Text(memory['M$i'] ?? 'Empty'),
+                        trailing: memory['M$i'] != null
+                            ? IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () {
+                                  setState(() {
+                                    memory.remove('M$i');
+                                  });
+                                  onUpdate();
+                                },
+                              )
+                            : null,
+                      )),
             ),
           ),
           actions: [

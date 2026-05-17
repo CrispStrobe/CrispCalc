@@ -1,0 +1,96 @@
+CrispCalc bundles a native math stack built from several upstream libraries.
+Each one is the work of its own authors and ships under its own license,
+reproduced (or summarized + linked) below.
+
+────────────────────────────────────────────────────────────────────────────
+SymEngine — symbolic algebra core
+────────────────────────────────────────────────────────────────────────────
+https://github.com/symengine/symengine
+
+Copyright (c) 2013, SymPy Development Team and SymEngine developers.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+────────────────────────────────────────────────────────────────────────────
+GMP — GNU Multiple Precision Arithmetic Library
+────────────────────────────────────────────────────────────────────────────
+https://gmplib.org/
+
+Copyright © 1991, 1996, 1999, 2000, 2007 Free Software Foundation, Inc.
+
+GMP is free software; you can redistribute it and/or modify it under the
+terms of either:
+
+  * the GNU Lesser General Public License as published by the Free Software
+    Foundation; either version 3 of the License, or (at your option) any
+    later version. (https://www.gnu.org/licenses/lgpl-3.0.html)
+
+  * the GNU General Public License as published by the Free Software
+    Foundation; either version 2 of the License, or (at your option) any
+    later version. (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+CrispCalc invokes GMP through SymEngine via dart:ffi. The full LGPL/GPL
+texts are obtainable at the URLs above and from the FSF.
+
+────────────────────────────────────────────────────────────────────────────
+MPFR — Multiple-Precision Floating-point with correct Rounding
+────────────────────────────────────────────────────────────────────────────
+https://www.mpfr.org/
+
+Copyright © 2000-2024 the MPFR developers (INRIA, LORIA, …).
+
+MPFR is distributed under the GNU Lesser General Public License, version 3
+or later. Full text:
+https://www.gnu.org/licenses/lgpl-3.0.html
+
+────────────────────────────────────────────────────────────────────────────
+MPC — Multiple-Precision Complex
+────────────────────────────────────────────────────────────────────────────
+https://multiprecision.org/mpc/
+
+Copyright © 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011, 2012,
+2014-2024 the MPC developers (Andreas Enge, Mickaël Gastineau, Philippe
+Théveny, Paul Zimmermann).
+
+MPC is free software; redistributable under the terms of the GNU Lesser
+General Public License version 3 or any later version.
+https://www.gnu.org/licenses/lgpl-3.0.html
+
+────────────────────────────────────────────────────────────────────────────
+FLINT — Fast Library for Number Theory
+────────────────────────────────────────────────────────────────────────────
+https://flintlib.org/
+
+Copyright © the FLINT authors (William Hart, Fredrik Johansson, et al.).
+
+FLINT is dual-licensed under the GNU Lesser General Public License v2.1
+or any later version, and the GNU General Public License.
+https://www.gnu.org/licenses/lgpl-2.1.html
+
+────────────────────────────────────────────────────────────────────────────
+CrispCalc itself
+────────────────────────────────────────────────────────────────────────────
+Copyright © 2025 Christian Ströbele.
+
+CrispCalc is licensed under the GNU Affero General Public License,
+version 3 or later — chosen specifically because the native math stack
+contains LGPL components that, when statically linked, propagate strong
+copyleft requirements onto the combined work.
+
+Full text: https://www.gnu.org/licenses/agpl-3.0.html

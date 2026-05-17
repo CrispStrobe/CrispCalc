@@ -39,4 +39,32 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
   end
+
+  # The bridge's static archive (libsymengine_flutter_wrapper.a, packaged
+  # inside SymEngineFlutterWrapper.xcframework) carries all the SymEngine
+  # entry points. They're only reached via dart:ffi DynamicLibrary.process()
+  # at runtime, so the linker would happily drop them. We:
+  #   1. add `-all_load` to the Runner xcconfig (covers debug + simulator)
+  #   2. add `-force_load <path>` so the symbols make it into release
+  #      builds even when the static_framework didn't pre-link them.
+  # Force-load every object file from the SymEngine static archive into the
+  # Runner binary. The symbols are only reached via dart:ffi
+  # DynamicLibrary.process() at runtime; without `-all_load` the linker
+  # would happily drop them. Confirmed working in debug builds (~45 symbols
+  # land in the binary). Release builds currently still drop them; see
+  # PLAN.md for the open follow-up.
+  installer.aggregate_targets.each do |agg|
+    agg.user_build_configurations.each_key do |config|
+      xcconfig_path = agg.xcconfig_path(config)
+      next unless File.exist?(xcconfig_path)
+      contents = File.read(xcconfig_path)
+      unless contents.include?('-all_load')
+        new_contents = contents.gsub(
+          /^(OTHER_LDFLAGS\s*=.*)$/,
+          '\\1 -all_load',
+        )
+        File.write(xcconfig_path, new_contents)
+      end
+    end
+  end
 end

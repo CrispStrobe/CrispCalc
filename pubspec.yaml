@@ -20,15 +20,26 @@ dependencies:
   # Removing ffi dependency, now handled by the plugin
   # ffi: ^2.1.0
 
-  # Use our symbolic math bridge
+  # Use our symbolic math bridge. Pinned to a git ref so CI builds (which
+  # don't have a sibling directory) can fetch the same source as local dev.
+  # Bump the `ref:` when the bridge gets new entry points the app needs.
   symbolic_math_bridge:
-    path: ../symbolic_math_bridge
+    git:
+      url: https://github.com/CrispStrobe/symbolic_math_bridge.git
+      ref: 6c9f232
 
   # Math rendering
   flutter_math_fork: ^0.7.2
 
   # Material Design Icons
   material_design_icons_flutter: ^7.0.7296
+
+  # Persistent app settings (locale, number format, etc.)
+  shared_preferences: ^2.2.0
+
+  # About screen: app version + tappable contact links.
+  package_info_plus: ^8.0.0
+  url_launcher: ^6.2.0
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +48,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/licenses/

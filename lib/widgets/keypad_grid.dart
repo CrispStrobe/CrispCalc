@@ -1,4 +1,4 @@
-/// lib/widgets/keypad_grid.dart:
+// lib/widgets/keypad_grid.dart:
 
 import 'package:flutter/material.dart';
 import 'calculator_button.dart';
@@ -22,13 +22,19 @@ class KeypadGrid extends StatelessWidget {
         const double crossAxisSpacing = 10;
         const double mainAxisSpacing = 10;
         const double horizontalPadding = 24; // 12 left + 12 right from parent
-        const double verticalPadding = 24;   // 12 top + 12 bottom from parent
+        const double verticalPadding = 24; // 12 top + 12 bottom from parent
 
-        final double cellWidth = (constraints.maxWidth - horizontalPadding - (3 * crossAxisSpacing)) / 4;
-        final double cellHeight = (constraints.maxHeight - verticalPadding - (4 * mainAxisSpacing)) / 5;
-        
+        final double cellWidth = (constraints.maxWidth -
+                horizontalPadding -
+                (3 * crossAxisSpacing)) /
+            4;
+        final double cellHeight =
+            (constraints.maxHeight - verticalPadding - (4 * mainAxisSpacing)) /
+                5;
+
         // Prevent division-by-zero or negative aspect ratio if constraints are not ready.
-        final double aspectRatio = (cellHeight > 0 && cellWidth > 0) ? cellWidth / cellHeight : 1.0;
+        final double aspectRatio =
+            (cellHeight > 0 && cellWidth > 0) ? cellWidth / cellHeight : 1.0;
 
         return GridView.builder(
           padding: const EdgeInsets.all(12),

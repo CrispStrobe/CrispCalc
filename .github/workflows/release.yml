@@ -1,0 +1,103 @@
+# Release: triggered by pushing a semver tag like v1.0.0. Builds release
+# artifacts for macOS and iOS (both unsigned for now) and attaches them to
+# a GitHub Release.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+
+      - name: Build macOS (release, unsigned)
+        env:
+          GEM_HOME: ''
+          GEM_PATH: ''
+        run: flutter build macos --release
+
+      - name: Verify SymEngine symbols
+        run: |
+          set -eu
+          APP="build/macos/Build/Products/Release/crisp_calc.app/Contents/MacOS/crisp_calc"
+          COUNT=$(nm -arch arm64 "$APP" | grep -c flutter_symengine || true)
+          echo "Symbols (arm64): $COUNT"
+          # Release linkage is known-flaky (see PLAN.md). Warn but don't fail.
+          if [ "$COUNT" -lt 30 ]; then
+            echo "::warning::Only $COUNT SymEngine symbols in release binary (expected >= 30)."
+          fi
+
+      - run: |
+          cd build/macos/Build/Products/Release
+          zip -ryq ../../../../../crisp_calc-${{ github.ref_name }}-macos.zip crisp_calc.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: crisp_calc-${{ github.ref_name }}-macos.zip
+
+  ios:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+
+      - name: Build iOS (release, unsigned)
+        env:
+          GEM_HOME: ''
+          GEM_PATH: ''
+        run: flutter build ios --release --no-codesign
+
+      - run: |
+          cd build/ios/iphoneos
+          zip -ryq ../../../crisp_calc-${{ github.ref_name }}-ios-unsigned.zip Runner.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: crisp_calc-${{ github.ref_name }}-ios-unsigned.zip
+
+  publish:
+    needs: [macos, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/macos-release/*.zip
+            artifacts/ios-release/*.zip
+          body: |
+            CrispCalc ${{ github.ref_name }}
+
+            Unsigned macOS and iOS builds. To run the macOS app, you may need
+            to right-click → Open the first time (Gatekeeper won't recognize
+            the unsigned binary). The iOS build is for development inspection
+            only — install on a device requires a paid Apple Developer cert.

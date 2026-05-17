@@ -1,113 +1,175 @@
-/// lib/utils/latex_conversion_utils.dart
-/// Utilities for converting between LaTeX and calculator engine syntax
+// lib/utils/latex_conversion_utils.dart
+//
+// LaTeX <-> engine-syntax conversion. The keypad inserts LaTeX commands;
+// SymEngine wants plain operator syntax. Pure-Dart, no IO.
 
 class LatexConversionUtils {
   /// Converts the LaTeX string from the input field to SymEngine-compatible syntax.
-  /// Enhanced _fromLatex function that handles all LaTeX syntax from our keypad
   static String fromLatex(String latex) {
     String result = latex;
-    
-    print('LATEX_CONVERT: Input: "$latex"');
-    
-    // Remove the cursor character if present
-    result = result.replaceAll('|', '');
 
     // === STEP 1: Handle complex structures first (order matters!) ===
-    
+
     // Handle nth roots: \sqrt[n]{expr} -> (expr)^(1/n)
-    result = result.replaceAllMapped(RegExp(r'\\sqrt\[([^\]]+)\]\{([^}]+)\}'), (m) {
-        final n = m.group(1)!;
-        final expr = m.group(2)!;
-        return '($expr)^(1/$n)';
+    result =
+        result.replaceAllMapped(RegExp(r'\\sqrt\[([^\]]+)\]\{([^}]+)\}'), (m) {
+      final n = m.group(1)!;
+      final expr = m.group(2)!;
+      return '($expr)^(1/$n)';
     });
-    
+
     // Handle square roots: \sqrt{expr} -> sqrt(expr)
     result = result.replaceAllMapped(RegExp(r'\\sqrt\{([^}]+)\}'), (m) {
-        return 'sqrt(${m.group(1)})';
+      return 'sqrt(${m.group(1)})';
     });
-    
+
     // Handle fractions: \frac{num}{den} -> (num)/(den)
-    result = result.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
-        return '(${m.group(1)})/(${m.group(2)})';
+    result =
+        result.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
+      return '(${m.group(1)})/(${m.group(2)})';
     });
-    
+
     // Handle differentiation: \frac{d}{dx}(expr) -> d/dx(expr)
-    result = result.replaceAllMapped(RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\(([^)]+)\)'), (m) {
-        return 'd/d${m.group(1)}(${m.group(2)})';
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\(([^)]+)\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
     });
-    
+
     // Handle differentiation with braces: \frac{d}{dx}{expr} -> d/dx(expr)
-    result = result.replaceAllMapped(RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\{([^}]+)\}'), (m) {
-        return 'd/d${m.group(1)}(${m.group(2)})';
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\{([^}]+)\}'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
     });
-    
+
     // === STEP 2: Handle function notation with braces ===
-    
+
     // Trigonometric functions: \sin{expr} -> sin(expr)
-    result = result.replaceAllMapped(RegExp(r'\\(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
-        return '${m.group(1)}(${m.group(2)})';
+    result = result.replaceAllMapped(
+        RegExp(r'\\(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
+      return '${m.group(1)}(${m.group(2)})';
     });
-    
+
     // Inverse trigonometric functions: \arcsin{expr} -> asin(expr)
-    result = result.replaceAllMapped(RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
-        final func = m.group(1)!;
-        final expr = m.group(2)!;
-        return 'a$func($expr)';
+    result = result.replaceAllMapped(
+        RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\{([^}]+)\}'), (m) {
+      final func = m.group(1)!;
+      final expr = m.group(2)!;
+      return 'a$func($expr)';
     });
-    
+
     // Hyperbolic functions: \sinh{expr} -> sinh(expr)
-    result = result.replaceAllMapped(RegExp(r'\\(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
-        return '${m.group(1)}(${m.group(2)})';
+    result = result.replaceAllMapped(
+        RegExp(r'\\(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
+      return '${m.group(1)}(${m.group(2)})';
     });
-    
+
     // Inverse hyperbolic functions: \asinh{expr} -> asinh(expr)
-    result = result.replaceAllMapped(RegExp(r'\\a(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
-        return 'a${m.group(1)}(${m.group(2)})';
+    result = result.replaceAllMapped(
+        RegExp(r'\\a(sinh|cosh|tanh|csch|sech|coth)\{([^}]+)\}'), (m) {
+      return 'a${m.group(1)}(${m.group(2)})';
     });
-    
+
     // Logarithmic functions: \ln{expr} -> ln(expr), \log{expr} -> log(expr)
     result = result.replaceAllMapped(RegExp(r'\\(ln|log)\{([^}]+)\}'), (m) {
-        return '${m.group(1)}(${m.group(2)})';
+      return '${m.group(1)}(${m.group(2)})';
     });
-    
+
     // Logarithm with base: \log_{base}{expr} -> log(expr)/log(base)
-    result = result.replaceAllMapped(RegExp(r'\\log_\{([^}]+)\}\{([^}]+)\}'), (m) {
-        final base = m.group(1)!;
-        final expr = m.group(2)!;
-        return 'log($expr)/log($base)';
+    result =
+        result.replaceAllMapped(RegExp(r'\\log_\{([^}]+)\}\{([^}]+)\}'), (m) {
+      final base = m.group(1)!;
+      final expr = m.group(2)!;
+      return 'log($expr)/log($base)';
     });
-    
+
     // === STEP 3: Handle function notation with parentheses (already correct) ===
-    
+
     // These are already in correct format: \sin(expr) -> sin(expr)
-    result = result.replaceAllMapped(RegExp(r'\\(sin|cos|tan|csc|sec|cot|sinh|cosh|tanh|csch|sech|coth|ln|log|sqrt|abs)\('), (m) {
-        return '${m.group(1)}(';
+    result = result.replaceAllMapped(
+        RegExp(
+            r'\\(sin|cos|tan|csc|sec|cot|sinh|cosh|tanh|csch|sech|coth|ln|log|sqrt|abs)\('),
+        (m) {
+      return '${m.group(1)}(';
     });
-    
+
     // Inverse trig with parentheses: \arcsin(expr) -> asin(expr)
-    result = result.replaceAllMapped(RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\('), (m) {
-        return 'a${m.group(1)}(';
+    result = result
+        .replaceAllMapped(RegExp(r'\\arc(sin|cos|tan|csc|sec|cot)\('), (m) {
+      return 'a${m.group(1)}(';
     });
-    
-    // === STEP 4: Handle power and subscript notation ===
-    
+
+    // === STEP 4: Handle integrals, limits, sums/products BEFORE power/subscript
+    //              rewriting. They depend on literal ^{...} and _{...} groups
+    //              that the power/subscript rules would consume.
+
+    // Definite integral: \int_{a}^{b} expr dx -> integrate(expr, (x, a, b))
+    result = result.replaceAllMapped(
+        RegExp(
+            r'\\int_\{([^}]+)\}\^\{([^}]+)\}\s*([^d]+)\s*\\?,?\s*d([a-zA-Z])'),
+        (m) {
+      final lower = m.group(1)!;
+      final upper = m.group(2)!;
+      final expr = m.group(3)!.trim();
+      final variable = m.group(4)!;
+      return 'integrate($expr, ($variable, $lower, $upper))';
+    });
+
+    // Indefinite integral: \int expr dx -> integrate(expr, x)
+    result = result.replaceAllMapped(
+        RegExp(r'\\int\s+([^d]+)\s*\\?,?\s*d([a-zA-Z])'), (m) {
+      final expr = m.group(1)!.trim();
+      final variable = m.group(2)!;
+      return 'integrate($expr, $variable)';
+    });
+
+    // Basic limit: \lim_{x \to a} expr -> limit(expr, x, a)
+    result = result.replaceAllMapped(
+        RegExp(r'\\lim_\{([a-zA-Z])\s*\\to\s*([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final approaches = m.group(2)!;
+      final expr = m.group(3)!;
+      return 'limit($expr, $variable, $approaches)';
+    });
+
+    // Summation: \sum_{i=1}^{n} expr -> Sum(expr, (i, 1, n))
+    result = result.replaceAllMapped(
+        RegExp(r'\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final start = m.group(2)!;
+      final end = m.group(3)!;
+      final expr = m.group(4)!;
+      return 'Sum($expr, ($variable, $start, $end))';
+    });
+
+    // Product: \prod_{i=1}^{n} expr -> Product(expr, (i, 1, n))
+    result = result.replaceAllMapped(
+        RegExp(r'\\prod_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
+      final variable = m.group(1)!;
+      final start = m.group(2)!;
+      final end = m.group(3)!;
+      final expr = m.group(4)!;
+      return 'Product($expr, ($variable, $start, $end))';
+    });
+
+    // === STEP 5: Handle power and subscript notation ===
+
     // Powers with braces: x^{expr} -> x^(expr)
     result = result.replaceAllMapped(RegExp(r'\^\{([^}]+)\}'), (m) {
-        final exp = m.group(1)!;
-        // If it's a single character/number, parentheses aren't needed
-        if (RegExp(r'^[a-zA-Z0-9]$').hasMatch(exp)) {
+      final exp = m.group(1)!;
+      // If it's a single character/number, parentheses aren't needed
+      if (RegExp(r'^[a-zA-Z0-9]$').hasMatch(exp)) {
         return '^$exp';
-        }
-        return '^($exp)';
+      }
+      return '^($exp)';
     });
-    
+
     // Subscripts with braces: x_{expr} -> x_expr (though SymEngine may not need this)
     result = result.replaceAllMapped(RegExp(r'_\{([^}]+)\}'), (m) {
-        return '_${m.group(1)}';
+      return '_${m.group(1)}';
     });
-    
+
     // === STEP 5: Handle constants and symbols ===
-    
+
     // Greek letters and constants
     result = result.replaceAll(r'\pi', 'pi');
     result = result.replaceAll(r'\Pi', 'Pi');
@@ -129,112 +191,62 @@ class LatexConversionUtils {
     result = result.replaceAll(r'\Phi', 'Phi');
     result = result.replaceAll(r'\omega', 'omega');
     result = result.replaceAll(r'\Omega', 'Omega');
-    
+
     // Special constants
     result = result.replaceAll(r'\infty', 'oo');
     result = result.replaceAll(r'\infinity', 'oo');
-    
+
     // === STEP 6: Handle operators ===
-    
+
     // Multiplication symbols
     result = result.replaceAll(r'\cdot', '*');
     result = result.replaceAll(r'\times', '*');
     result = result.replaceAll(r'\ast', '*');
-    
+
     // Division symbols (though we prefer \frac)
     result = result.replaceAll(r'\div', '/');
-    
+
     // Plus/minus
     result = result.replaceAll(r'\pm', '+-');
     result = result.replaceAll(r'\mp', '-+');
-    
+
     // Modulo operations: \bmod -> mod (FIXED)
     result = result.replaceAll(r'\bmod', ' mod ');
     result = result.replaceAll(r'\\bmod', ' mod ');
-    
+
     // === STEP 7: Handle absolute values and norms ===
-    
+
     // Absolute values: |expr| -> abs(expr)
     // This is tricky because we need to match paired pipes
     result = result.replaceAllMapped(RegExp(r'\|([^|]+)\|'), (m) {
-        return 'abs(${m.group(1)})';
+      return 'abs(${m.group(1)})';
     });
-    
-    // === STEP 8: Handle integrals ===
-    
-    // Simple integral: \int expr dx -> integrate(expr, x)
-    result = result.replaceAllMapped(RegExp(r'\\int\s+([^d]+)\s*\\?,?\s*d([a-zA-Z])'), (m) {
-        final expr = m.group(1)!.trim();
-        final variable = m.group(2)!;
-        return 'integrate($expr, $variable)';
-    });
-    
-    // Definite integral: \int_{a}^{b} expr dx -> integrate(expr, (x, a, b))
-    result = result.replaceAllMapped(RegExp(r'\\int_\{([^}]+)\}\^\{([^}]+)\}\s*([^d]+)\s*\\?,?\s*d([a-zA-Z])'), (m) {
-        final lower = m.group(1)!;
-        final upper = m.group(2)!;
-        final expr = m.group(3)!.trim();
-        final variable = m.group(4)!;
-        return 'integrate($expr, ($variable, $lower, $upper))';
-    });
-    
-    // === STEP 9: Handle limits ===
-    
-    // Basic limit: \lim_{x \to a} expr -> limit(expr, x, a)
-    result = result.replaceAllMapped(RegExp(r'\\lim_\{([a-zA-Z])\s*\\to\s*([^}]+)\}\s*(.+)'), (m) {
-        final variable = m.group(1)!;
-        final approaches = m.group(2)!;
-        final expr = m.group(3)!;
-        return 'limit($expr, $variable, $approaches)';
-    });
-    
-    // === STEP 10: Handle summations and products ===
-    
-    // Summation: \sum_{i=1}^{n} expr -> Sum(expr, (i, 1, n))
-    result = result.replaceAllMapped(RegExp(r'\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
-        final variable = m.group(1)!;
-        final start = m.group(2)!;
-        final end = m.group(3)!;
-        final expr = m.group(4)!;
-        return 'Sum($expr, ($variable, $start, $end))';
-    });
-    
-    // Product: \prod_{i=1}^{n} expr -> Product(expr, (i, 1, n))
-    result = result.replaceAllMapped(RegExp(r'\\prod_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}\s*(.+)'), (m) {
-        final variable = m.group(1)!;
-        final start = m.group(2)!;
-        final end = m.group(3)!;
-        final expr = m.group(4)!;
-        return 'Product($expr, ($variable, $start, $end))';
-    });
-    
+
     // === STEP 11: Handle braces (convert to parentheses where needed) ===
-    
+
     // Convert remaining \{ and \} to regular braces (for grouping)
     result = result.replaceAll(r'\{', '{');
     result = result.replaceAll(r'\}', '}');
-    
+
     // === STEP 12: Clean up spacing ===
-    
+
     // Remove extra spaces around operators
     result = result.replaceAll(RegExp(r'\s*\*\s*'), '*');
     result = result.replaceAll(RegExp(r'\s*\+\s*'), '+');
     result = result.replaceAll(RegExp(r'\s*-\s*'), '-');
     result = result.replaceAll(RegExp(r'\s*/\s*'), '/');
     result = result.replaceAll(RegExp(r'\s*\^\s*'), '^');
-    
+
     // Remove multiple spaces
     result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
-    print('LATEX_CONVERT: Output: "$result"');
-    
+
     return result;
-    }
+  }
 
   /// Converts LaTeX back to readable format for history display
   static String latexToReadable(String latex) {
     String readable = latex;
-    
+
     // Convert LaTeX operators back to readable symbols
     readable = readable.replaceAll(r'\cdot ', '*');
     readable = readable.replaceAll(r'\cdot', '*');
@@ -242,19 +254,20 @@ class LatexConversionUtils {
     readable = readable.replaceAll(r'\times', '*');
     readable = readable.replaceAll(r'\div ', '/');
     readable = readable.replaceAll(r'\div', '/');
-    
+
     // Convert fractions back to parentheses
-    readable = readable.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
+    readable =
+        readable.replaceAllMapped(RegExp(r'\\frac\{([^}]+)\}\{([^}]+)\}'), (m) {
       return '(${m.group(1)})/(${m.group(2)})';
     });
-    
+
     // Remove LaTeX function formatting
     readable = readable.replaceAll(r'\sin', 'sin');
     readable = readable.replaceAll(r'\cos', 'cos');
     readable = readable.replaceAll(r'\tan', 'tan');
     readable = readable.replaceAll(r'\ln', 'ln');
     readable = readable.replaceAll(r'\log', 'log');
-    
+
     return readable;
   }
 }

@@ -1,0 +1,40 @@
+# Lint + unit tests on every push and PR. Runs on Linux because none of the
+# tests need the native bridge (CalculatorEngine has a graceful fallback for
+# the test host) and Linux runners are 10× cheaper than macOS ones.
+
+name: CI
+
+on:
+  push:
+    branches: [main, latex-input-field]
+  pull_request:
+    branches: [main, latex-input-field]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib/ test/
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Unit tests
+        run: flutter test --reporter expanded

@@ -1,5 +1,5 @@
-/// lib/widgets/variable_viewer.dart
-/// Displays a scrollable list of all user-defined variables, functions, and memory slots.
+// lib/widgets/variable_viewer.dart
+// Displays a scrollable list of all user-defined variables, functions, and memory slots.
 
 import 'package:flutter/material.dart';
 import '../engine/app_state.dart';
@@ -24,100 +24,111 @@ class VariableViewer extends StatelessWidget {
       listenable: appState,
       builder: (context, child) {
         final variableKeys = appState.userVariables.keys.toList();
-        
+
         // Get non-empty graph functions (Y1, Y2, etc.)
-        final graphFunctionEntries = appState.graphFunctions.asMap().entries
+        final graphFunctionEntries = appState.graphFunctions
+            .asMap()
+            .entries
             .where((entry) => entry.value.isNotEmpty)
             .toList();
 
         final hasMemory = memory != null && onMemoryAction != null;
-        final hasAnyContent = variableKeys.isNotEmpty || 
-                             graphFunctionEntries.isNotEmpty || 
-                             (hasMemory && memory!.isNotEmpty);
+        final hasAnyContent = variableKeys.isNotEmpty ||
+            graphFunctionEntries.isNotEmpty ||
+            (hasMemory && memory!.isNotEmpty);
 
-        return Column(
-          children: [
-            // Main content area
-            Expanded(
-              child: hasAnyContent ? ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  // --- Variables Section ---
-                  if (variableKeys.isNotEmpty) ...[
-                    _SectionHeader(
-                      title: 'Variables',
-                      icon: Icons.abc,
-                      onClear: () => _showClearDialog(context, 'variables', () => appState.clearAllVariables()),
-                    ),
-                    ...variableKeys.map((key) {
-                      return _VariableTile(
-                        name: key,
-                        value: appState.userVariables[key]!,
-                        onTap: () => onVariableTap(key),
-                        onDelete: () => appState.removeVariable(key),
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // --- Graph Functions Section (Y1, Y2, etc.) ---
-                  if (graphFunctionEntries.isNotEmpty) ...[
-                    _SectionHeader(
-                      title: 'Graph Functions',
-                      icon: Icons.show_chart,
-                      onClear: () => _showClearDialog(context, 'graph functions', () {
-                        for (int i = 0; i < appState.graphFunctions.length; i++) {
-                          appState.clearFunction(i);
-                        }
-                      }),
-                    ),
-                    ...graphFunctionEntries.map((entry) {
-                      final funcName = 'Y${entry.key + 1}';
-                      return _FunctionTile(
-                        name: funcName,
-                        expression: entry.value,
-                        color: _getColorForGraphFunction(entry.key),
-                        onTap: () => onVariableTap(entry.value),
-                        onDelete: () => appState.clearFunction(entry.key),
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // --- Memory Section ---
-                  if (hasMemory && memory!.isNotEmpty) ...[
-                    _SectionHeader(
-                      title: 'Memory Slots',
-                      icon: Icons.memory,
-                      onClear: () => _showClearDialog(context, 'memory slots', () => onMemoryAction!('CLEAR_ALL')),
-                    ),
-                    ...List.generate(9, (i) {
-                      final memKey = 'M$i';
-                      final memName = 'M${i + 1}';
-                      final memValue = memory![memKey];
-                      
-                      if (memValue != null) {
-                        return _MemoryTile(
-                          name: memName,
-                          value: memValue,
-                          onTap: () => onMemoryAction!(memName),
-                          onDelete: () => onMemoryAction!('DELETE_$memName'),
+        // Single scroll container so the memory controls don't overflow on
+        // short viewports — previously they were pinned to the bottom and
+        // would clip when the side panel got compressed.
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!hasAnyContent)
+                _buildEmptyState()
+              else
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // --- Variables Section ---
+                    if (variableKeys.isNotEmpty) ...[
+                      _SectionHeader(
+                        title: 'Variables',
+                        icon: Icons.abc,
+                        onClear: () => _showClearDialog(context, 'variables',
+                            () => appState.clearAllVariables()),
+                      ),
+                      ...variableKeys.map((key) {
+                        return _VariableTile(
+                          name: key,
+                          value: appState.userVariables[key]!,
+                          onTap: () => onVariableTap(key),
+                          onDelete: () => appState.removeVariable(key),
                         );
-                      }
-                      return const SizedBox.shrink();
-                    }).where((widget) => widget is! SizedBox),
-                    const SizedBox(height: 16),
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // --- Graph Functions Section (Y1, Y2, etc.) ---
+                    if (graphFunctionEntries.isNotEmpty) ...[
+                      _SectionHeader(
+                        title: 'Graph Functions',
+                        icon: Icons.show_chart,
+                        onClear: () =>
+                            _showClearDialog(context, 'graph functions', () {
+                          for (int i = 0;
+                              i < appState.graphFunctions.length;
+                              i++) {
+                            appState.clearFunction(i);
+                          }
+                        }),
+                      ),
+                      ...graphFunctionEntries.map((entry) {
+                        final funcName = 'Y${entry.key + 1}';
+                        return _FunctionTile(
+                          name: funcName,
+                          expression: entry.value,
+                          color: _getColorForGraphFunction(entry.key),
+                          onTap: () => onVariableTap(entry.value),
+                          onDelete: () => appState.clearFunction(entry.key),
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // --- Memory Section ---
+                    if (hasMemory && memory!.isNotEmpty) ...[
+                      _SectionHeader(
+                        title: 'Memory Slots',
+                        icon: Icons.memory,
+                        onClear: () => _showClearDialog(context, 'memory slots',
+                            () => onMemoryAction!('CLEAR_ALL')),
+                      ),
+                      ...List.generate(9, (i) {
+                        final memKey = 'M$i';
+                        final memName = 'M${i + 1}';
+                        final memValue = memory![memKey];
+
+                        if (memValue != null) {
+                          return _MemoryTile(
+                            name: memName,
+                            value: memValue,
+                            onTap: () => onMemoryAction!(memName),
+                            onDelete: () => onMemoryAction!('DELETE_$memName'),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }).where((widget) => widget is! SizedBox),
+                      const SizedBox(height: 16),
+                    ],
+
+                    const SizedBox(height: 8),
                   ],
-
-                  // Add bottom padding for last item
-                  const SizedBox(height: 80),
-                ],
-              ) : _buildEmptyState(),
-            ),
-
-            // --- Memory Controls Section (Always at bottom when memory is enabled) ---
-            if (hasMemory) _buildMemoryControls(context),
-          ],
+                ),
+              if (hasMemory) _buildMemoryControls(context),
+            ],
+          ),
         );
       },
     );
@@ -135,7 +146,10 @@ class VariableViewer extends StatelessWidget {
             Text(
               'No variables or functions defined.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
@@ -186,41 +200,43 @@ class VariableViewer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          
-          // Memory slots grid
-          Container(
-            constraints: const BoxConstraints(maxHeight: 120),
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 2.2,
-              children: List.generate(9, (i) {
-                final memKey = 'M$i';
-                final memName = 'M${i + 1}';
-                final hasValue = memory!.containsKey(memKey);
-                
-                return _MemorySlotButton(
+
+          // Memory slots — fixed-size tiles in a wrap so they never stretch
+          // to cover the parent's full width on wide screens (the old
+          // GridView blew the maxHeight when crossAxisCount didn't divide
+          // the width neatly).
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: List.generate(9, (i) {
+              final memKey = 'M$i';
+              final memName = 'M${i + 1}';
+              final hasValue = memory!.containsKey(memKey);
+              return SizedBox(
+                width: 64,
+                height: 36,
+                child: _MemorySlotButton(
                   name: memName,
                   hasValue: hasValue,
                   value: hasValue ? memory![memKey] : null,
                   onPressed: () => onMemoryAction!(memName),
-                );
-              }),
-            ),
+                ),
+              );
+            }),
           ),
         ],
       ),
     );
   }
 
-  void _showClearDialog(BuildContext context, String itemType, VoidCallback onConfirm) {
+  void _showClearDialog(
+      BuildContext context, String itemType, VoidCallback onConfirm) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Clear All ${itemType.split(' ').map((e) => e[0].toUpperCase() + e.substring(1)).join(' ')}'),
+        title: Text(
+            'Clear All ${itemType.split(' ').map((e) => e[0].toUpperCase() + e.substring(1)).join(' ')}'),
         content: Text('Are you sure you want to clear all $itemType?'),
         actions: [
           TextButton(
@@ -241,18 +257,16 @@ class VariableViewer extends StatelessWidget {
 
   Color _getColorForGraphFunction(int index) {
     const colors = [
-      Colors.blue, Colors.red, Colors.green, Colors.purple,
-      Colors.orange, Colors.teal, Colors.pink, Colors.brown,
-      Colors.cyan, Colors.indigo,
-    ];
-    return colors[index % colors.length];
-  }
-
-  Color _getColorForUserFunction(int index) {
-    const colors = [
-      Colors.deepPurple, Colors.deepOrange, Colors.lightGreen, Colors.amber,
-      Colors.blueGrey, Colors.lime, Colors.indigo, Colors.redAccent,
-      Colors.tealAccent, Colors.purpleAccent,
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.teal,
+      Colors.pink,
+      Colors.brown,
+      Colors.cyan,
+      Colors.indigo,
     ];
     return colors[index % colors.length];
   }
@@ -280,9 +294,9 @@ class _SectionHeader extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
           ),
           const Spacer(),
           IconButton(
@@ -314,7 +328,7 @@ class _VariableTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: Colors.blueAccent.withOpacity(0.2),
+        backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
         radius: 16,
         child: Text(
           name[0].toUpperCase(),
@@ -371,7 +385,7 @@ class _FunctionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.2),
+        backgroundColor: color.withValues(alpha: 0.2),
         radius: 16,
         child: Text(
           name,
@@ -430,7 +444,7 @@ class _MemoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: Colors.orange.withOpacity(0.2),
+        backgroundColor: Colors.orange.withValues(alpha: 0.2),
         radius: 16,
         child: Text(
           name,
@@ -493,12 +507,12 @@ class _MemoryActionButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           foregroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: color.withOpacity(0.3)),
+            side: BorderSide(color: color.withValues(alpha: 0.3)),
           ),
         ),
         child: Row(
@@ -533,7 +547,9 @@ class _MemorySlotButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: hasValue ? Colors.orange.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+      color: hasValue
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.grey.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onPressed,
@@ -543,7 +559,9 @@ class _MemorySlotButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: hasValue ? Colors.orange.withOpacity(0.4) : Colors.grey.withOpacity(0.3),
+              color: hasValue
+                  ? Colors.orange.withValues(alpha: 0.4)
+                  : Colors.grey.withValues(alpha: 0.3),
               width: 1,
             ),
           ),

@@ -1,6 +1,6 @@
-/// lib/screens/matrix_editor_screen.dart
-/// A dedicated screen for creating, editing, and performing simple
-/// operations on matrices before using them in the main calculator.
+// lib/screens/matrix_editor_screen.dart
+// A dedicated screen for creating, editing, and performing simple
+// operations on matrices before using them in the main calculator.
 
 import 'package:flutter/material.dart';
 
@@ -55,12 +55,15 @@ class _MatrixEditorScreenState extends State<MatrixEditorScreen> {
       _generateControllers();
     });
   }
-  
+
   /// Converts the current values in the grid to the defined matrix string format.
   String _matrixToString() {
     final rowsStr = _controllers.map((row) {
       // For each row, join the cell values with a comma.
-      return row.map((controller) => controller.text.trim().isEmpty ? '0' : controller.text.trim()).join(', ');
+      return row
+          .map((controller) =>
+              controller.text.trim().isEmpty ? '0' : controller.text.trim())
+          .join(', ');
     }).join('; '); // Join the rows with a semicolon.
     return '[$rowsStr]';
   }
@@ -91,13 +94,15 @@ class _MatrixEditorScreenState extends State<MatrixEditorScreen> {
             const Divider(height: 40),
 
             // Section for the matrix grid
-            Text('Matrix Values', style: Theme.of(context).textTheme.titleMedium),
+            Text('Matrix Values',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             _buildMatrixGrid(),
             const SizedBox(height: 24),
 
             // Section for operations
-            Text('Quick Operations', style: Theme.of(context).textTheme.titleMedium),
+            Text('Quick Operations',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             _buildOperationButtons(),
           ],
@@ -111,20 +116,34 @@ class _MatrixEditorScreenState extends State<MatrixEditorScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         const Text('Rows:', style: TextStyle(fontSize: 16)),
-        Text('$_rows', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text('$_rows',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         Column(
           children: [
-            IconButton.filledTonal(icon: const Icon(Icons.add), iconSize: 18, onPressed: () => _updateDimensions(_rows + 1, _cols)),
-            IconButton.filledTonal(icon: const Icon(Icons.remove), iconSize: 18, onPressed: () => _updateDimensions(_rows - 1, _cols)),
+            IconButton.filledTonal(
+                icon: const Icon(Icons.add),
+                iconSize: 18,
+                onPressed: () => _updateDimensions(_rows + 1, _cols)),
+            IconButton.filledTonal(
+                icon: const Icon(Icons.remove),
+                iconSize: 18,
+                onPressed: () => _updateDimensions(_rows - 1, _cols)),
           ],
         ),
         const SizedBox(width: 24),
         const Text('Columns:', style: TextStyle(fontSize: 16)),
-        Text('$_cols', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text('$_cols',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         Column(
           children: [
-            IconButton.filledTonal(icon: const Icon(Icons.add), iconSize: 18, onPressed: () => _updateDimensions(_rows, _cols + 1)),
-            IconButton.filledTonal(icon: const Icon(Icons.remove), iconSize: 18, onPressed: () => _updateDimensions(_rows, _cols - 1)),
+            IconButton.filledTonal(
+                icon: const Icon(Icons.add),
+                iconSize: 18,
+                onPressed: () => _updateDimensions(_rows, _cols + 1)),
+            IconButton.filledTonal(
+                icon: const Icon(Icons.remove),
+                iconSize: 18,
+                onPressed: () => _updateDimensions(_rows, _cols - 1)),
           ],
         ),
       ],
@@ -151,7 +170,8 @@ class _MatrixEditorScreenState extends State<MatrixEditorScreen> {
             final col = index % _cols;
             return TextField(
               controller: _controllers[row][col],
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true, signed: true),
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
@@ -171,15 +191,21 @@ class _MatrixEditorScreenState extends State<MatrixEditorScreen> {
       final result = '$funcName($matrixStr)';
       Navigator.of(context).pop(result);
     }
-    
+
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
       alignment: WrapAlignment.center,
       children: [
-        ElevatedButton(onPressed: () => performOperationAndReturn('det'), child: const Text('det(A)')),
-        ElevatedButton(onPressed: () => performOperationAndReturn('inv'), child: const Text('inv(A)')),
-        ElevatedButton(onPressed: () => performOperationAndReturn('transpose'), child: const Text('transpose(A)')),
+        ElevatedButton(
+            onPressed: () => performOperationAndReturn('det'),
+            child: const Text('det(A)')),
+        ElevatedButton(
+            onPressed: () => performOperationAndReturn('inv'),
+            child: const Text('inv(A)')),
+        ElevatedButton(
+            onPressed: () => performOperationAndReturn('transpose'),
+            child: const Text('transpose(A)')),
       ],
     );
   }
