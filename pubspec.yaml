@@ -26,7 +26,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: c3fd26a
+      ref: "6652199"
 
   # Math rendering
   flutter_math_fork: ^0.7.2

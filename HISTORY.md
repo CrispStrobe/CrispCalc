@@ -2,6 +2,79 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 13) — P1#2 finally closed (macOS release link)
+
+The macOS release build kept dropping every `flutter_symengine_*`
+wrapper symbol despite five rounds of -ldflags / podspec / xcframework
+gymnastics. Root cause turned out to live in the bridge plugin, not in
+the host Runner: iOS already had a `SymEngineBridge.m` with a `+load`
+method that took the address of every wrapper function, plus a
+`@_silgen_name("force_all_math_symbols_linking")` declaration in Swift
+to pull the .m's translation unit into the link. macOS had neither.
+
+### Iteration 1 — port iOS verbatim
+
+Created `macos/Classes/SymEngineBridge.m` mirroring iOS, added the
+`@_silgen_name` + `force_all_math_symbols_linking()` call to the macOS
+Swift plugin. Build succeeded but `nm` showed zero `flutter_symengine_*`
+symbols in the release binary. `otool -tV` on `+[SymEngineBridge load]`
+revealed why: the entire `static void* refs[] = { … }` array plus the
+`if (refs[0] == NULL) { … }` check had been constant-folded out by LTO
+(the compiler proved `refs[0]` is a function address ⇒ never NULL ⇒
+the if-branch is unreachable ⇒ the array reads are dead ⇒ the array
+itself is dead). What remained was a single `NSLog` and a `ret`.
+
+### Iteration 2 — volatile sink
+
+Replaced the if-check with a loop writing each pointer into a `static
+volatile void* sink`. Build still dropped every symbol. Disassembly
+showed only the *last* store survived: writes to the same volatile
+location are still subject to dead-store elimination when the optimizer
+proves only the final value is observed.
+
+### Iteration 3 — asm-clobber DoNotOptimize
+
+Switched to the standard `DoNotOptimize` pattern:
+
+```c
+for (size_t i = 0; i < n; i++) {
+    __asm__ __volatile__("" : : "r"(refs[i]) : "memory");
+}
+```
+
+The empty `asm volatile` with an `r` input constraint forces the
+compiler to materialize each pointer in a register as if external code
+consumes it — undeletable side effect. Release binary jumped from
+53.7MB → 69.2MB, and 39 wrapper symbols landed.
+
+### Iteration 4 — audit the missing six
+
+Dart FFI bindings turned out to reference 45 distinct
+`flutter_symengine_*` entry points; the iOS-ported refs[] only listed
+39. Added the missing six: `simplify`, `integrate`, `version`,
+`test_basic_operations`, `test_symbolic` (`free_string` was already
+there). All 45 now in the release binary.
+
+### Result
+
+- `nm crisp_calc | grep -c flutter_symengine_` → **45**
+- Runtime launch logs: `[SYMBOLIC_MATH] Linked 93 math symbols` followed
+  by a clean Flutter startup — no `dlsym` failures.
+- Bridge commits: `36c29bf` (port iOS), `26f1faa` (volatile attempt),
+  `e9a8526` (asm-clobber), `6652199` (missing 6).
+- CrispCalc pinned to bridge ref `6652199`.
+
+### Lesson
+
+When forcing the linker to keep symbols that are otherwise only reached
+via `dlsym`, neither a constant if-check nor a single volatile sink
+survives LTO. The bulletproof pattern is one asm-clobber per reference.
+This is the same trick Google Benchmark uses for `DoNotOptimize`, and
+it's the only thing that worked under Xcode 26.2 + Flutter 3.38.5 on
+macOS Release.
+
+---
+
 ## 2026-05-17 (round 12) — v0.1.0 cut
 
 - Fast-forwarded main from `latex-input-field` (18 commits, ~9k
