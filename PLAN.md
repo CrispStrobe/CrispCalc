@@ -288,8 +288,13 @@ roughly double the perceived value of the app.
     4th chip in the Tests tab next to one-sample t, paired t, and
     χ² goodness-of-fit. Welch-Satterthwaite df, two- and one-sided
     p-values, verdict block at α.
-  - **V6 pending**: ANOVA, χ² independence, F-distribution, paired
-    sign test.
+  - **V6 partial** (HISTORY round 38): one-way ANOVA + Snedecor's
+    F-distribution. ANOVA appears as a 5th chip on the Tests tab.
+    F-distribution gains a `sf()` survival-function method using the
+    reciprocal-F relation (P(X > x) = F(d2,d1).cdf(1/x)) so deep
+    upper-tail p-values for huge F statistics stay accurate.
+  - **V7 pending**: χ² independence (contingency tables), paired
+    sign test, Wilcoxon rank-sum.
 - [~] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
   full SI prefix handling, dimension checking on results. Opens the
   engineering / physics / chemistry audience.

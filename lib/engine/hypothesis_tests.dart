@@ -12,7 +12,8 @@
 // level. The UI renders the verdict in plain language.
 //
 // V2 adds Welch's two-sample t-test for independent samples with
-// unequal variances. ANOVA and chi-square independence remain V3.
+// unequal variances. V3 adds one-way ANOVA. Chi-square independence
+// remains V4.
 
 import 'dart:math' as math;
 
@@ -88,6 +89,57 @@ class TwoSampleTResult {
 
   bool rejectsAt(double alpha, {bool twoSided = true}) =>
       (twoSided ? pValueTwoSided : pValueOneSidedUpper) < alpha;
+}
+
+/// Result of a one-way ANOVA.
+class AnovaResult {
+  final double fStatistic;
+
+  /// Between-groups df = K − 1.
+  final int dfBetween;
+
+  /// Within-groups df = N − K.
+  final int dfWithin;
+
+  /// Sum of squares between groups.
+  final double ssBetween;
+
+  /// Sum of squares within groups (residual).
+  final double ssWithin;
+
+  /// Mean square between groups = SS_between / df_between.
+  final double msBetween;
+
+  /// Mean square within groups = SS_within / df_within.
+  final double msWithin;
+
+  /// Group means in the same order as the input.
+  final List<double> groupMeans;
+
+  /// Group sizes in the same order as the input.
+  final List<int> groupSizes;
+
+  /// Grand mean across all groups.
+  final double grandMean;
+
+  /// Upper-tail p-value: P(F ≥ fStatistic) under F(dfBetween, dfWithin).
+  final double pValue;
+
+  const AnovaResult({
+    required this.fStatistic,
+    required this.dfBetween,
+    required this.dfWithin,
+    required this.ssBetween,
+    required this.ssWithin,
+    required this.msBetween,
+    required this.msWithin,
+    required this.groupMeans,
+    required this.groupSizes,
+    required this.grandMean,
+    required this.pValue,
+  });
+
+  bool rejectsAt(double alpha) => pValue < alpha;
 }
 
 /// Result of a chi-square goodness-of-fit test.
@@ -233,6 +285,94 @@ class HypothesisTests {
       pValueTwoSided: twoSided,
       pValueOneSidedUpper: upper,
       pValueOneSidedLower: lower,
+    );
+  }
+
+  /// One-way ANOVA across K independent groups. Tests
+  /// H₀: μ₁ = μ₂ = … = μ_K. Computes
+  ///
+  ///   SS_between = Σᵢ nᵢ (x̄ᵢ − x̄)²,            df = K − 1
+  ///   SS_within  = Σᵢ Σⱼ (xᵢⱼ − x̄ᵢ)²,           df = N − K
+  ///   F          = (SS_between / df_b) / (SS_within / df_w)
+  ///
+  /// p-value is the upper-tail probability under F(K − 1, N − K).
+  ///
+  /// Throws if fewer than 2 groups are provided, any group has fewer
+  /// than 1 observation, or every group has the same (within-zero)
+  /// variance with identical means (degenerate, F undefined).
+  static AnovaResult anovaOneWay(List<List<double>> groups) {
+    if (groups.length < 2) {
+      throw ArgumentError('anovaOneWay() needs at least 2 groups.');
+    }
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].isEmpty) {
+        throw ArgumentError(
+            'anovaOneWay() group $i has no observations.');
+      }
+    }
+
+    final k = groups.length;
+    final groupMeans = <double>[];
+    final groupSizes = <int>[];
+    var totalN = 0;
+    var totalSum = 0.0;
+    for (final g in groups) {
+      final n = g.length;
+      final mean = g.reduce((a, b) => a + b) / n;
+      groupMeans.add(mean);
+      groupSizes.add(n);
+      totalN += n;
+      totalSum += mean * n;
+    }
+    if (totalN <= k) {
+      throw ArgumentError(
+          'anovaOneWay() needs more total observations than groups (got '
+          'N=$totalN, K=$k).');
+    }
+    final grandMean = totalSum / totalN;
+
+    var ssBetween = 0.0;
+    for (var i = 0; i < k; i++) {
+      final d = groupMeans[i] - grandMean;
+      ssBetween += groupSizes[i] * d * d;
+    }
+    var ssWithin = 0.0;
+    for (var i = 0; i < k; i++) {
+      for (final x in groups[i]) {
+        final d = x - groupMeans[i];
+        ssWithin += d * d;
+      }
+    }
+
+    final dfBetween = k - 1;
+    final dfWithin = totalN - k;
+    final msBetween = ssBetween / dfBetween;
+    final msWithin = ssWithin / dfWithin;
+
+    if (msWithin == 0) {
+      throw ArgumentError(
+          'anovaOneWay() within-group variance is 0 (F statistic '
+          'undefined). Check that the groups have variation.');
+    }
+
+    final f = msBetween / msWithin;
+    final fDist = FDistribution(d1: dfBetween, d2: dfWithin);
+    // Use sf() rather than 1 - cdf() to keep precision deep in the
+    // upper tail where ANOVA F statistics often live.
+    final p = fDist.sf(f).clamp(0.0, 1.0);
+
+    return AnovaResult(
+      fStatistic: f,
+      dfBetween: dfBetween,
+      dfWithin: dfWithin,
+      ssBetween: ssBetween,
+      ssWithin: ssWithin,
+      msBetween: msBetween,
+      msWithin: msWithin,
+      groupMeans: List.unmodifiable(groupMeans),
+      groupSizes: List.unmodifiable(groupSizes),
+      grandMean: grandMean,
+      pValue: p.toDouble(),
     );
   }
 

@@ -278,4 +278,98 @@ void main() {
       );
     });
   });
+
+  group('anovaOneWay', () {
+    test('three groups with identical means → F ≈ 0', () {
+      final r = HypothesisTests.anovaOneWay(const [
+        [5, 6, 7, 5, 6, 7],
+        [5, 6, 7, 5, 6, 7],
+        [5, 6, 7, 5, 6, 7],
+      ]);
+      expect(r.fStatistic, closeTo(0.0, 1e-9));
+      expect(r.dfBetween, equals(2));
+      expect(r.dfWithin, equals(15));
+      expect(r.pValue, closeTo(1.0, 0.05));
+    });
+
+    test('classic textbook example — Hogg & Tanis chapter 9', () {
+      // Three groups with means 7, 8, 10; small spread each.
+      // Hand-computed F ≈ 12. Expect rejection at α=0.05.
+      final r = HypothesisTests.anovaOneWay(const [
+        [6, 7, 8, 7, 7],
+        [7, 8, 9, 8, 8],
+        [9, 10, 11, 10, 10],
+      ]);
+      expect(r.groupMeans, equals([7.0, 8.0, 10.0]));
+      expect(r.groupSizes, equals([5, 5, 5]));
+      expect(r.dfBetween, equals(2));
+      expect(r.dfWithin, equals(12));
+      // SSB = 5·1² + 5·0² + 5·3² ... wait grand mean is (7+8+10)/3 = 8.333
+      //   = 5·(7-8.333)² + 5·(8-8.333)² + 5·(10-8.333)²
+      //   = 5·1.778 + 5·0.111 + 5·2.778 ≈ 23.333
+      // SSW = each group has SS = (6-7)²+(7-7)²+(8-7)²+(7-7)²+(7-7)² = 2.
+      //   Total SSW = 6.
+      // MSB = 23.333/2 = 11.667; MSW = 6/12 = 0.5; F = 23.33.
+      expect(r.ssBetween, closeTo(23.333, 0.1));
+      expect(r.ssWithin, closeTo(6.0, 0.01));
+      expect(r.fStatistic, closeTo(23.33, 0.5));
+      expect(r.rejectsAt(0.05), isTrue);
+    });
+
+    test('strongly different means → rejected at α = 0.001', () {
+      final r = HypothesisTests.anovaOneWay(const [
+        [10, 11, 12, 10, 11, 12, 10, 11],
+        [50, 51, 52, 50, 51, 52, 50, 51],
+        [100, 101, 102, 100, 101, 102, 100, 101],
+      ]);
+      expect(r.rejectsAt(0.001), isTrue);
+      expect(r.pValue, lessThan(1e-9));
+    });
+
+    test('two groups behaves like a two-sample t-test (F = t²)', () {
+      const groups = <List<double>>[
+        [1.0, 2.0, 3.0, 4.0, 5.0],
+        [3.0, 4.0, 5.0, 6.0, 7.0],
+      ];
+      final r = HypothesisTests.anovaOneWay(groups);
+      final t = HypothesisTests.welchT(
+        sample1: groups[0],
+        sample2: groups[1],
+      );
+      // For equal sample sizes & variances, F = t² (pooled-vs-Welch
+      // df difference is small here). Just check the order of magnitude.
+      expect(r.fStatistic, closeTo(t.statistic * t.statistic, 0.5));
+    });
+
+    test('fewer than 2 groups throws', () {
+      expect(
+        () => HypothesisTests.anovaOneWay(const [
+          [1.0, 2, 3],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('empty group throws', () {
+      expect(
+        () => HypothesisTests.anovaOneWay(const [
+          [1.0, 2, 3],
+          <double>[],
+          [4.0, 5, 6],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('zero within-group variance throws (F undefined)', () {
+      expect(
+        () => HypothesisTests.anovaOneWay(const [
+          [5.0, 5, 5],
+          [6.0, 6, 6],
+          [7.0, 7, 7],
+        ]),
+        throwsArgumentError,
+      );
+    });
+  });
 }

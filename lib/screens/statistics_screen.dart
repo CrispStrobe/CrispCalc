@@ -545,7 +545,7 @@ class _DistributionsTabState extends State<_DistributionsTab> {
 
 // === Hypothesis tests tab ================================================
 
-enum _TestKind { oneSampleT, twoSampleT, pairedT, chiSquareGof }
+enum _TestKind { oneSampleT, twoSampleT, pairedT, anovaOneWay, chiSquareGof }
 
 class _TestsTab extends StatefulWidget {
   const _TestsTab();
@@ -563,6 +563,12 @@ class _TestsTabState extends State<_TestsTab> {
   // Two-sample t-test inputs.
   final _twoSampleA = TextEditingController(text: '8, 9, 10, 10, 11, 12');
   final _twoSampleB = TextEditingController(text: '10, 11, 12, 12, 13, 14');
+
+  // ANOVA inputs — one line per group, semicolon-separated groups
+  // OR a single newline-separated multi-line input. We use newlines
+  // (each line is a group's space/comma-separated samples).
+  final _anovaGroups = TextEditingController(
+      text: '6, 7, 8, 7, 7\n7, 8, 9, 8, 8\n9, 10, 11, 10, 10');
 
   // Paired t-test inputs.
   final _pairedBefore =
@@ -584,6 +590,7 @@ class _TestsTabState extends State<_TestsTab> {
       _oneSampleMu,
       _twoSampleA,
       _twoSampleB,
+      _anovaGroups,
       _pairedBefore,
       _pairedAfter,
       _gofObserved,
@@ -811,6 +818,58 @@ class _TestsTabState extends State<_TestsTab> {
     );
   }
 
+  Widget _buildAnova(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final lines = _anovaGroups.text
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+    final groups = lines.map(_parse).toList();
+    String? err;
+    AnovaResult? r;
+    if (groups.length >= 2 && groups.every((g) => g.isNotEmpty)) {
+      try {
+        r = HypothesisTests.anovaOneWay(groups);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _anovaGroups,
+          maxLines: 6,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Groups (one per line)',
+            helperText: 'Each line is one group, comma- or space-separated.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          for (var i = 0; i < r.groupMeans.length; i++)
+            _resultRow('Group ${i + 1} (n=${r.groupSizes[i]})',
+                'mean ${_fmt(r.groupMeans[i])}'),
+          _resultRow('Grand mean', _fmt(r.grandMean)),
+          _resultRow('SS between', _fmt(r.ssBetween)),
+          _resultRow('SS within', _fmt(r.ssWithin)),
+          _resultRow(
+              'df (between, within)', '${r.dfBetween}, ${r.dfWithin}'),
+          _resultRow('MS between', _fmt(r.msBetween)),
+          _resultRow('MS within', _fmt(r.msWithin)),
+          _resultRow('F-statistic', _fmt(r.fStatistic)),
+          _resultRow('p-value (upper tail)', _fmt(r.pValue)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
   Widget _buildGof(BuildContext context) {
     final alpha = double.tryParse(_alpha.text) ?? 0.05;
     final observed = _parse(_gofObserved.text);
@@ -888,6 +947,12 @@ class _TestsTabState extends State<_TestsTab> {
                 onSelected: (_) => setState(() => _kind = _TestKind.pairedT),
               ),
               ChoiceChip(
+                label: const Text('ANOVA (one-way)'),
+                selected: _kind == _TestKind.anovaOneWay,
+                onSelected: (_) =>
+                    setState(() => _kind = _TestKind.anovaOneWay),
+              ),
+              ChoiceChip(
                 label: const Text('χ² goodness-of-fit'),
                 selected: _kind == _TestKind.chiSquareGof,
                 onSelected: (_) =>
@@ -923,6 +988,8 @@ class _TestsTabState extends State<_TestsTab> {
                     return _buildTwoSample(context);
                   case _TestKind.pairedT:
                     return _buildPaired(context);
+                  case _TestKind.anovaOneWay:
+                    return _buildAnova(context);
                   case _TestKind.chiSquareGof:
                     return _buildGof(context);
                 }

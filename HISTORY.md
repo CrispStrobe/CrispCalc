@@ -2,6 +2,69 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 38) — Statistics V6: ANOVA + F-distribution
+
+Adds the standard one-way analysis of variance to the Tests tab,
+plus the underlying Snedecor's F-distribution to the distributions
+module. Round 36 covered all the regression V4 + V5 ground (Welch's
+t-test); this round closes out the most common K-group hypothesis
+test.
+
+### F-distribution (lib/engine/distributions.dart)
+
+`FDistribution(d1, d2)` with `pdf`, `cdf`, `sf` (survival function),
+`quantile`, and `mean` (defined when d2 > 2).
+
+Two tricky cases:
+- For `d1 = 1`, the PDF has an integrable 1/√x pole at x = 0 that
+  Simpson can't handle. Use the t-distribution shortcut:
+  `F(1, d2).cdf(x) = 2·t(d2).cdf(√x) − 1`.
+- For deep upper-tail probabilities (where `1 − cdf(x)` would lose
+  all its significant digits), use the reciprocal-F relation:
+  `sf(x) = F(d2, d1).cdf(1/x)`. This is the right thing for ANOVA
+  p-values when F is large — without it the test that should reject
+  at α = 1e-9 returned `rejectsAt(0.001) = false` because `cdf(F)`
+  capped at exactly 1.0.
+
+### One-way ANOVA (lib/engine/hypothesis_tests.dart)
+
+`HypothesisTests.anovaOneWay(List<List<double>> groups)` computes:
+
+```
+SS_between = Σᵢ nᵢ (x̄ᵢ − x̄)²,            df_b = K − 1
+SS_within  = Σᵢ Σⱼ (xᵢⱼ − x̄ᵢ)²,            df_w = N − K
+F          = (SS_between / df_b) / (SS_within / df_w)
+p          = FDistribution(df_b, df_w).sf(F)
+```
+
+Returns `AnovaResult` with `fStatistic, dfBetween, dfWithin,
+ssBetween, ssWithin, msBetween, msWithin, groupMeans, groupSizes,
+grandMean, pValue, rejectsAt(α)`.
+
+Validation: throws on <2 groups, any empty group, fewer total obs
+than groups, or zero within-group variance (F undefined).
+
+### UI (lib/screens/statistics_screen.dart)
+
+Tests tab now has five chips. The ANOVA input is a multi-line
+TextField — one line per group, comma- or space-separated within a
+line. Result card shows per-group means and sizes, the full ANOVA
+table (SS, df, MS, F), the p-value, and the verdict block.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **656/656** (+14 new tests: 6 F-distribution
+  textbook-quantile checks; 8 ANOVA tests including the F ≈ t²
+  identity for K = 2 groups).
+- Hogg & Tanis chapter 9 worked example reproduces hand-calculated
+  SSB ≈ 23.33, SSW = 6, F ≈ 23.33.
+
+### V7 deferred
+
+χ² independence (contingency tables), paired sign test, Wilcoxon
+rank-sum.
+
 ## 2026-05-17 (round 37) — Statistics V5: Welch's two-sample t-test
 
 Extends `HypothesisTests` and the Statistics screen's Tests tab with

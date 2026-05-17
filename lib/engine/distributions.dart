@@ -197,6 +197,94 @@ class ChiSquare {
   double get stddev => math.sqrt(variance);
 }
 
+/// Snedecor's F-distribution with degrees of freedom (d1, d2). Used for
+/// ANOVA, F-tests of nested models, and ratios of variances. CDF is
+/// computed by Simpson on the PDF over [0, x]; the F tail is heavy at
+/// low df but the integration is well-behaved past x ≈ 1.
+class FDistribution {
+  final int d1;
+  final int d2;
+  const FDistribution({required this.d1, required this.d2})
+      : assert(d1 > 0, 'd1 must be positive'),
+        assert(d2 > 0, 'd2 must be positive');
+
+  /// f(x) = (Γ((d1+d2)/2) / (Γ(d1/2) Γ(d2/2))) ·
+  ///        (d1/d2)^(d1/2) · x^(d1/2 - 1) / (1 + d1·x/d2)^((d1+d2)/2).
+  /// Computed in log-domain to keep ratios stable.
+  double pdf(double x) {
+    if (x <= 0) return 0.0;
+    final n1 = d1.toDouble();
+    final n2 = d2.toDouble();
+    final logVal = _logGamma((n1 + n2) / 2) -
+        _logGamma(n1 / 2) -
+        _logGamma(n2 / 2) +
+        (n1 / 2) * math.log(n1 / n2) +
+        (n1 / 2 - 1) * math.log(x) -
+        ((n1 + n2) / 2) * math.log(1 + n1 * x / n2);
+    return math.exp(logVal);
+  }
+
+  /// CDF via Simpson on the PDF, [0, x]. 1000 subintervals keep ~6
+  /// digits for moderate df. Special-cases d1 = 1 via the t-distribution
+  /// shortcut F(1, d2).cdf(x) = 2·t(d2).cdf(√x) − 1, because for d1 = 1
+  /// the PDF has an integrable 1/√x pole at 0 that Simpson can't handle
+  /// directly.
+  double cdf(double x) {
+    if (x <= 0) return 0.0;
+    if (d1 == 1) {
+      final t = TDistribution(df: d2);
+      return (2 * t.cdf(math.sqrt(x)) - 1).clamp(0.0, 1.0).toDouble();
+    }
+    // For very large x, the upper tail is the relevant quantity and
+    // 1 − cdf(x) suffers from cancellation. Route through sf() in that
+    // regime: P(X ≤ x) = 1 − sf(x).
+    if (x > (mean ?? 1.0) * 3) {
+      return (1.0 - sf(x)).clamp(0.0, 1.0).toDouble();
+    }
+    return _simpson(pdf, 0, x, 1000).clamp(0.0, 1.0).toDouble();
+  }
+
+  /// Survival function (upper-tail probability) P(X > x). Uses the
+  /// reciprocal-F relation: if X ~ F(d1, d2) then 1/X ~ F(d2, d1), so
+  /// P(X > x) = P(1/X < 1/x) = F(d2, d1).cdf(1/x). This is far more
+  /// accurate than 1 − cdf(x) deep in the upper tail, where Simpson on
+  /// the original integral approaches a value indistinguishable from 1.
+  double sf(double x) {
+    if (x <= 0) return 1.0;
+    final flipped = FDistribution(d1: d2, d2: d1);
+    return flipped.cdf(1.0 / x).clamp(0.0, 1.0).toDouble();
+  }
+
+  /// Inverse CDF via bisection on the monotone CDF. Bracket adapts to
+  /// the F distribution's mean (d2/(d2-2)) and tail behavior.
+  double quantile(double p) {
+    if (p <= 0) return 0.0;
+    if (p >= 1) return double.infinity;
+    var lo = 0.0;
+    // F's mean is d2/(d2-2) for d2 > 2; bracket out to ~100× mean to
+    // cover deep upper-tail probabilities at low df.
+    final meanGuess = d2 > 2 ? d2 / (d2 - 2.0) : (d1 + d2).toDouble();
+    var hi = meanGuess * 100.0;
+    // Extend if cdf(hi) still < p (very heavy tail).
+    while (cdf(hi) < p && hi < 1e9) {
+      hi *= 10.0;
+    }
+    for (var i = 0; i < 100; i++) {
+      final mid = 0.5 * (lo + hi);
+      final c = cdf(mid);
+      if ((hi - lo).abs() < 1e-10) return mid;
+      if (c < p) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    return 0.5 * (lo + hi);
+  }
+
+  double? get mean => d2 > 2 ? d2 / (d2 - 2.0) : null;
+}
+
 // === Internal helpers ====================================================
 
 /// Abramowitz & Stegun 7.1.26 — max abs error 1.5e-7 for x ≥ 0.

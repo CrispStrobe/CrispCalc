@@ -254,4 +254,48 @@ void main() {
       }
     });
   });
+
+  group('F-distribution — CDF / quantile', () {
+    test('PDF is positive on x > 0 and zero at x = 0', () {
+      const f = FDistribution(d1: 3, d2: 5);
+      expect(f.pdf(0), equals(0.0));
+      expect(f.pdf(0.5), greaterThan(0));
+      expect(f.pdf(2.0), greaterThan(0));
+    });
+
+    test('CDF is monotone non-decreasing', () {
+      const f = FDistribution(d1: 5, d2: 10);
+      var prev = 0.0;
+      for (final x in const [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]) {
+        final c = f.cdf(x);
+        expect(c, greaterThanOrEqualTo(prev), reason: 'x=$x');
+        prev = c;
+      }
+    });
+
+    test('quantile(0.95) for F(1, 10) ≈ 4.965 (textbook value)', () {
+      const f = FDistribution(d1: 1, d2: 10);
+      expect(f.quantile(0.95), closeTo(4.965, 0.1));
+    });
+
+    test('quantile(0.95) for F(3, 12) ≈ 3.490', () {
+      const f = FDistribution(d1: 3, d2: 12);
+      expect(f.quantile(0.95), closeTo(3.490, 0.1));
+    });
+
+    test('quantile(0.99) for F(5, 20) ≈ 4.103', () {
+      const f = FDistribution(d1: 5, d2: 20);
+      expect(f.quantile(0.99), closeTo(4.103, 0.15));
+    });
+
+    test('mean = d2/(d2-2) for d2 > 2', () {
+      expect(const FDistribution(d1: 3, d2: 10).mean, closeTo(10 / 8, 1e-9));
+      expect(const FDistribution(d1: 5, d2: 2).mean, isNull);
+    });
+
+    test('CDF tails approach 1', () {
+      const f = FDistribution(d1: 3, d2: 10);
+      expect(f.cdf(100.0), closeTo(1.0, 0.01));
+    });
+  });
 }
