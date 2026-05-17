@@ -2,6 +2,60 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 40) — Unit V4: scalar × quantity arithmetic
+
+Round 35 (SI prefixes) handled exotic unit symbols; this round handles
+the most common arithmetic-on-quantities pattern the inline parser
+was still missing — multiplying or dividing a unit value by a pure
+number.
+
+### Now working
+
+- `2 * 5 km` → `10 km` (leading scalar prefix)
+- `5 km * 2` → `10 km` (trailing scalar)
+- `5 km / 2` → `2.5 km`
+- `5 km * 2 / 4` → `2.5 km` (chained)
+- `5 km * 2 + 3 m` → `10.003 km` (scalar mul before sum)
+- `3 km / 2 in m` → `1500 m` (combine with conversion suffix)
+- `1 mile / 2 in km` → `0.804672 km`
+
+### Deliberately refused
+
+- `5 km + 3 m * 2` falls through (returns null → CAS path). Without a
+  Shunting-yard parser, applying `*` to "just the last term" vs "the
+  whole accumulator" would surprise users half the time; rather than
+  guess, V4 only allows scalar mul/div when no `+`/`-` has appeared
+  yet. We document this in the file header.
+- `5 km * 2 s` (RHS has a unit) falls through — that's quantity-×-
+  quantity, which is V5 territory (needs DimensionVector arithmetic
+  and derived-unit recognition).
+- `5 km / 0` returns `Error: division by zero in unit expression`.
+
+### Implementation (lib/engine/unit_expression.dart)
+
+The parser already split off `in <unit>` suffixes and walked
+`(+|-) <quantity>` pairs. Two small additions:
+
+1. **Leading scalar prefix.** If `[number, *, ...]` at the head of
+   the working tokens, peel the prefix off and stash it; multiply
+   `basePos` by it at the end.
+2. **Trailing scalar mul/div in the operator loop.** When we see
+   `*` or `/`, require an `_NumberToken` RHS that is *not* followed
+   by a `_UnitToken`, and refuse if a `+`/`-` has happened earlier
+   (precedence guard).
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **676/676** (+11 new V4 tests covering prefix /
+  suffix scalar, chaining, precedence-rejection, division-by-zero,
+  and quantity-×-quantity fall-through).
+
+### V5 deferred
+
+Composite-dimension arithmetic, derived-unit catalog entries (N, J,
+W, Pa, Hz), parens, variables.
+
 ## 2026-05-17 (round 39) — Statistics V7: χ² independence
 
 The seventh and likely last "core" hypothesis test the V1 inferential

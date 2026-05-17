@@ -323,8 +323,15 @@ roughly double the perceived value of the app.
     Longest-prefix-first lookup so `da` (deca, 1e1) wins over `d`
     (deci, 1e-1). Curated catalog symbols (`mg`, `min`, `t`) still
     take precedence over a prefix interpretation.
-  - Pending: composite-dimension arithmetic (`m/s² * 2 s`),
-    scalar-times-quantity, derived-unit catalog entries (N, J, W, Pa).
+  - **V4 partial** (HISTORY round 40): scalar arithmetic on a
+    quantity — `2 * 5 km`, `5 km * 2`, `1 mile / 2`, chained
+    `5 km * 2 / 4`. Scalar mul/div is rejected once a `+`/`-` has
+    appeared, because mixing without a Shunting-yard parser would
+    give wrong precedence (`5 km + 3 m * 2` is ambiguous). Quantity-
+    × -quantity still falls through to V5.
+  - **V5 pending**: composite-dimension arithmetic
+    (`100 m / 10 s = 10 m/s`, `m/s² * 2 s = m/s`),
+    derived-unit catalog entries (N, J, W, Pa, Hz), parens, variables.
 
 ### Other meaningful gaps
 

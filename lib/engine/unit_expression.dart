@@ -16,8 +16,13 @@
 // on top of UnitCatalog.bySymbolWithPrefixes(), which derives the
 // scale automatically from prefix × base.
 //
-// V4 territory (still deferred): derived units (`m/s² * 2 s`), composite
-// dimensions for division, scalar * quantity, parens, variables.
+// V4 adds scalar arithmetic on a quantity — `2 * 5 km`, `5 km * 2`,
+// `1 mile / 2`. Scalar mul/div is rejected after a `+`/`-` has
+// appeared, because we don't run a real precedence parser and silent
+// mixing would surprise users (`5 km + 2 m * 3` is ambiguous).
+//
+// V5 territory (still deferred): derived units (`m/s² * 2 s`), composite
+// dimensions for division (`100 m / 10 s = 10 m/s`), parens, variables.
 
 import 'unit_catalog.dart';
 import 'unit_converter.dart';
@@ -31,6 +36,12 @@ class UnitExpressionEvaluator {
   /// Supported shapes:
   ///   - `<number> <unit>` (single quantity, returned as-is)
   ///   - `<number> <unit> {+|-} <number> <unit> …` (same dimension)
+  ///   - V4: optional leading scalar (`<scalar> * <quantity-expression>`)
+  ///     and trailing scalar `*`/`/` on the leading quantity (e.g.
+  ///     `5 km * 2`, `5 km / 2`). Scalar arithmetic is rejected once a
+  ///     `+`/`-` has appeared, because mixing them silently would give
+  ///     wrong precedence (`5 km + 2 m * 3` is ambiguous without a
+  ///     proper Shunting-yard pass).
   ///   - any of the above followed by ` in <unit>` to convert
   static String? tryEvaluate(String expression) {
     final tokens = _tokenize(expression);
@@ -49,6 +60,18 @@ class UnitExpressionEvaluator {
 
     if (workingTokens.isEmpty) return null;
 
+    // V4: leading scalar prefix like `2 * 5 km`. Peel off the prefix and
+    // stash its value to apply at the end. Only applies when the head is
+    // [number, *, ...].
+    var scalarPrefix = 1.0;
+    if (workingTokens.length >= 3 &&
+        workingTokens[0] is _NumberToken &&
+        workingTokens[1] is _BinaryOp &&
+        (workingTokens[1] as _BinaryOp).symbol == '*') {
+      scalarPrefix = (workingTokens[0] as _NumberToken).value;
+      workingTokens = workingTokens.sublist(2);
+    }
+
     // Must start with a quantity (number + unit).
     final first = _consumeQuantity(workingTokens, 0);
     if (first == null) return null;
@@ -56,14 +79,43 @@ class UnitExpressionEvaluator {
     // Initialize the running quantity in the dimension's base unit.
     var basePos = first.value.unit.toBase(first.value.value);
     final dim = first.value.unit.dimension;
+    var hadSumOp = false;
 
-    // Walk the rest: (+ | -) <number> <unit> repeated.
+    // Walk the rest: a mix of (+/-) <quantity> and (*/÷) <scalar>.
     var i = first.nextIndex;
     while (i < workingTokens.length) {
       final op = workingTokens[i];
-      if (op is! _BinaryOp || (op.symbol != '+' && op.symbol != '-')) {
-        return null;
+      if (op is! _BinaryOp) return null;
+
+      if (op.symbol == '*' || op.symbol == '/') {
+        // V4: scalar multiply/divide on the running accumulator. Refuse
+        // when a `+`/`-` has already happened, since precedence becomes
+        // ambiguous (the user probably wanted (term * scalar) + other).
+        if (hadSumOp) return null;
+        if (i + 1 >= workingTokens.length) return null;
+        final rhs = workingTokens[i + 1];
+        if (rhs is! _NumberToken) return null;
+        // If the scalar is followed by a unit, this would be a true
+        // quantity × quantity multiplication (composite dimensions),
+        // which is V5 territory — bail.
+        if (i + 2 < workingTokens.length &&
+            workingTokens[i + 2] is _UnitToken) {
+          return null;
+        }
+        if (op.symbol == '*') {
+          basePos *= rhs.value;
+        } else {
+          if (rhs.value == 0) {
+            return 'Error: division by zero in unit expression';
+          }
+          basePos /= rhs.value;
+        }
+        i += 2;
+        continue;
       }
+
+      if (op.symbol != '+' && op.symbol != '-') return null;
+      hadSumOp = true;
       final next = _consumeQuantity(workingTokens, i + 1);
       if (next == null) return null;
       if (next.value.unit.dimension != dim) {
@@ -82,6 +134,9 @@ class UnitExpressionEvaluator {
       basePos += op.symbol == '+' ? delta : -delta;
       i = next.nextIndex;
     }
+
+    // Apply the leading scalar prefix (V4).
+    basePos *= scalarPrefix;
 
     // Decide output unit.
     if (targetUnit != null) {

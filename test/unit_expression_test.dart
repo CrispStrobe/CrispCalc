@@ -250,4 +250,59 @@ void main() {
           reason: 'got $r');
     });
   });
+
+  group('scalar arithmetic on quantities (V4)', () {
+    test('quantity * scalar — `5 km * 2 = 10 km`', () {
+      expect(_numericResultMatches(_eval('5 km * 2'), 10.0, unit: 'km'),
+          isTrue);
+    });
+    test('scalar * quantity — `2 * 5 km = 10 km`', () {
+      expect(_numericResultMatches(_eval('2 * 5 km'), 10.0, unit: 'km'),
+          isTrue);
+    });
+    test('quantity / scalar — `5 km / 2 = 2.5 km`', () {
+      expect(_numericResultMatches(_eval('5 km / 2'), 2.5, unit: 'km'),
+          isTrue);
+    });
+    test('mixed-unit-then-conversion — `3 km / 2 in m = 1500 m`', () {
+      expect(_numericResultMatches(_eval('3 km / 2 in m'), 1500.0, unit: 'm'),
+          isTrue);
+    });
+    test('chained scalar ops — `5 km * 2 / 4 = 2.5 km`', () {
+      expect(_numericResultMatches(_eval('5 km * 2 / 4'), 2.5, unit: 'km'),
+          isTrue);
+    });
+    test('scalar mul on leading term, then sum — `5 km * 2 + 3 m`', () {
+      // 5·2 = 10 km, + 3 m = 10.003 km.
+      expect(_numericResultMatches(_eval('5 km * 2 + 3 m'), 10.003, unit: 'km'),
+          isTrue);
+    });
+    test('scalar mul AFTER a sum-op falls through (precedence rejection)', () {
+      // `5 km + 3 m * 2` is ambiguous without precedence — we refuse it
+      // rather than silently apply the wrong meaning. tryEvaluate returns
+      // null → caller falls through to the scalar/CAS evaluator.
+      expect(UnitExpressionEvaluator.tryEvaluate('5 km + 3 m * 2'), isNull);
+    });
+    test('scalar × scalar (no unit on RHS) — `5 km * 2 * 3 = 30 km`', () {
+      expect(_numericResultMatches(_eval('5 km * 2 * 3'), 30.0, unit: 'km'),
+          isTrue);
+    });
+    test('division by zero gives a friendly error', () {
+      final r = _eval('5 km / 0');
+      expect(r, isNotNull);
+      expect(r, startsWith('Error'));
+      expect(r, contains('zero'));
+    });
+    test('quantity × quantity (RHS has unit) → null — V5 territory', () {
+      // `5 km * 2 s` would be a composite-dimension multiplication.
+      // We bail until V5 implements that properly.
+      expect(UnitExpressionEvaluator.tryEvaluate('5 km * 2 s'), isNull);
+    });
+    test('1 mile / 2 in km — combine scalar div with conversion', () {
+      // 1 mile / 2 = 0.5 mile = 0.804672 km.
+      expect(_numericResultMatches(_eval('1 mile / 2 in km'), 0.804672,
+              unit: 'km'),
+          isTrue);
+    });
+  });
 }
