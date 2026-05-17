@@ -253,16 +253,15 @@ void main() {
 
   group('scalar arithmetic on quantities (V4)', () {
     test('quantity * scalar — `5 km * 2 = 10 km`', () {
-      expect(_numericResultMatches(_eval('5 km * 2'), 10.0, unit: 'km'),
-          isTrue);
+      expect(
+          _numericResultMatches(_eval('5 km * 2'), 10.0, unit: 'km'), isTrue);
     });
     test('scalar * quantity — `2 * 5 km = 10 km`', () {
-      expect(_numericResultMatches(_eval('2 * 5 km'), 10.0, unit: 'km'),
-          isTrue);
+      expect(
+          _numericResultMatches(_eval('2 * 5 km'), 10.0, unit: 'km'), isTrue);
     });
     test('quantity / scalar — `5 km / 2 = 2.5 km`', () {
-      expect(_numericResultMatches(_eval('5 km / 2'), 2.5, unit: 'km'),
-          isTrue);
+      expect(_numericResultMatches(_eval('5 km / 2'), 2.5, unit: 'km'), isTrue);
     });
     test('mixed-unit-then-conversion — `3 km / 2 in m = 1500 m`', () {
       expect(_numericResultMatches(_eval('3 km / 2 in m'), 1500.0, unit: 'm'),
@@ -300,7 +299,8 @@ void main() {
     });
     test('1 mile / 2 in km — combine scalar div with conversion', () {
       // 1 mile / 2 = 0.5 mile = 0.804672 km.
-      expect(_numericResultMatches(_eval('1 mile / 2 in km'), 0.804672,
+      expect(
+          _numericResultMatches(_eval('1 mile / 2 in km'), 0.804672,
               unit: 'km'),
           isTrue);
     });

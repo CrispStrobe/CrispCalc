@@ -477,8 +477,7 @@ class StepEngine {
         final result = '($baseStripped)^($newExp)/(($slope)·($newExp))';
         steps.add(MathStep(
           rule: 'Linear u-substitution (power rule)',
-          formula:
-              r"\int (ax+b)^n \, dx = \frac{(ax+b)^{n+1}}{a(n+1)}",
+          formula: r"\int (ax+b)^n \, dx = \frac{(ax+b)^{n+1}}{a(n+1)}",
           before: '∫ $s d$variable',
           after: result,
           note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
@@ -550,8 +549,7 @@ class StepEngine {
         final result = '($F)/($slope)';
         steps.add(MathStep(
           rule: 'Linear u-substitution (${rule.ruleName.toLowerCase()})',
-          formula:
-              r"\int f(ax+b) \, dx = \frac{F(ax+b)}{a}",
+          formula: r"\int f(ax+b) \, dx = \frac{F(ax+b)}{a}",
           before: '∫ $s d$variable',
           after: result,
           note: 'Let u = ${fc.arg}; then du = ($slope)·d$variable. The '

@@ -52,8 +52,10 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
           ]),
 
           _ResultCard(title: t.curveResultKeyPoints, children: [
-            _ResultTile(label: t.curveResultRoots, value: results.roots.join(', ')),
-            _ResultTile(label: t.curveResultYIntercept, value: results.yIntercept),
+            _ResultTile(
+                label: t.curveResultRoots, value: results.roots.join(', ')),
+            _ResultTile(
+                label: t.curveResultYIntercept, value: results.yIntercept),
           ]),
 
           _ResultCard(title: t.curveResultExtrema, children: [
@@ -75,7 +77,8 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
             else
               ...results.inflectionPoints.map((point) => ListTile(
                     visualDensity: VisualDensity.compact,
-                    title: Text(t.curveResultPointPrefix(
+                    title: Text(
+                        t.curveResultPointPrefix(
                             t.translateClassification(point)),
                         style: const TextStyle(fontSize: 16)),
                   )),

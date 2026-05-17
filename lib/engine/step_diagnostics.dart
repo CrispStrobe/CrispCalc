@@ -154,24 +154,45 @@ class StepDiagnostics {
     _Spec('∫ 3*x^2 dx', '3*x^2', 'x', 'x^3'),
     _Spec('∫ x^2 + x dx', 'x^2 + x', 'x', 'x^3/3'),
     // V2 — linear u-substitution
-    _Spec('∫ sin(2*x) dx', 'sin(2*x)', 'x', '-cos(2*x)/2|-1/2*cos(2*x)|'
-        '-(1/2)*cos(2*x)'),
+    _Spec(
+        '∫ sin(2*x) dx',
+        'sin(2*x)',
+        'x',
+        '-cos(2*x)/2|-1/2*cos(2*x)|'
+            '-(1/2)*cos(2*x)'),
     _Spec('∫ cos(3*x) dx', 'cos(3*x)', 'x', 'sin(3*x)/3|(1/3)*sin(3*x)'),
-    _Spec('∫ exp(3*x) dx', 'exp(3*x)', 'x', 'exp(3*x)/3|(1/3)*exp(3*x)|'
-        '(1/3)*e^(3*x)|e^(3*x)/3'),
-    _Spec('∫ (2*x + 1)^3 dx', '(2*x + 1)^3', 'x',
-        '(2*x + 1)^4|(2x+1)^4'),
-    _Spec('∫ 1/(x + 1) dx', '1/(x + 1)', 'x', 'log(x + 1)|ln(x + 1)|'
-        'log(x+1)|ln(x+1)'),
-    _Spec('∫ 1/(2*x + 1) dx', '1/(2*x + 1)', 'x',
+    _Spec(
+        '∫ exp(3*x) dx',
+        'exp(3*x)',
+        'x',
+        'exp(3*x)/3|(1/3)*exp(3*x)|'
+            '(1/3)*e^(3*x)|e^(3*x)/3'),
+    _Spec('∫ (2*x + 1)^3 dx', '(2*x + 1)^3', 'x', '(2*x + 1)^4|(2x+1)^4'),
+    _Spec(
+        '∫ 1/(x + 1) dx',
+        '1/(x + 1)',
+        'x',
+        'log(x + 1)|ln(x + 1)|'
+            'log(x+1)|ln(x+1)'),
+    _Spec(
+        '∫ 1/(2*x + 1) dx',
+        '1/(2*x + 1)',
+        'x',
         'log(2*x + 1)/2|log(2x+1)/2|(1/2)*log(2*x + 1)|'
-        'ln(2*x + 1)/2|(1/2)*ln(2*x + 1)'),
+            'ln(2*x + 1)/2|(1/2)*ln(2*x + 1)'),
     // V2 — integration by parts
-    _Spec('∫ ln(x) dx', 'ln(x)', 'x', 'x*log(x) - x|x*ln(x) - x|'
-        'x*log(x)-x|x*ln(x)-x'),
-    _Spec('∫ x*sin(x) dx', 'x*sin(x)', 'x',
+    _Spec(
+        '∫ ln(x) dx',
+        'ln(x)',
+        'x',
+        'x*log(x) - x|x*ln(x) - x|'
+            'x*log(x)-x|x*ln(x)-x'),
+    _Spec(
+        '∫ x*sin(x) dx',
+        'x*sin(x)',
+        'x',
         '-x*cos(x) + sin(x)|sin(x) - x*cos(x)|-cos(x)*x + sin(x)|'
-        'x*-cos(x) - -sin(x)|x*-cos(x)--sin(x)'),
+            'x*-cos(x) - -sin(x)|x*-cos(x)--sin(x)'),
     _Spec('∫ x*exp(x) dx', 'x*exp(x)', 'x',
         'x*exp(x) - exp(x)|(x - 1)*exp(x)|x*e^x - e^x'),
   ];

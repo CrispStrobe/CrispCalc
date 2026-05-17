@@ -377,8 +377,7 @@ class HypothesisTests {
     }
     for (var i = 0; i < groups.length; i++) {
       if (groups[i].isEmpty) {
-        throw ArgumentError(
-            'anovaOneWay() group $i has no observations.');
+        throw ArgumentError('anovaOneWay() group $i has no observations.');
       }
     }
 
@@ -461,13 +460,11 @@ class HypothesisTests {
     List<List<double>> observed,
   ) {
     if (observed.length < 2) {
-      throw ArgumentError(
-          'chiSquareIndependence() needs at least 2 rows.');
+      throw ArgumentError('chiSquareIndependence() needs at least 2 rows.');
     }
     final cols = observed.first.length;
     if (cols < 2) {
-      throw ArgumentError(
-          'chiSquareIndependence() needs at least 2 columns.');
+      throw ArgumentError('chiSquareIndependence() needs at least 2 columns.');
     }
     for (var i = 0; i < observed.length; i++) {
       if (observed[i].length != cols) {
@@ -477,8 +474,7 @@ class HypothesisTests {
       }
       for (final v in observed[i]) {
         if (v < 0) {
-          throw ArgumentError(
-              'chiSquareIndependence() observed counts must be '
+          throw ArgumentError('chiSquareIndependence() observed counts must be '
               'non-negative.');
         }
       }
@@ -496,8 +492,7 @@ class HypothesisTests {
       }
     }
     if (grandTotal == 0) {
-      throw ArgumentError(
-          'chiSquareIndependence() grand total is zero.');
+      throw ArgumentError('chiSquareIndependence() grand total is zero.');
     }
     for (var i = 0; i < rows; i++) {
       if (rowTotals[i] == 0) {
@@ -585,9 +580,7 @@ class HypothesisTests {
     // stay stable for moderately large totals.
     double pHyper(int k) {
       if (k < 0 || k > r1 || k > c1 || (c1 - k) > r2) return 0.0;
-      final lp = logChoose(r1, k) +
-          logChoose(r2, c1 - k) -
-          logChoose(n, c1);
+      final lp = logChoose(r1, k) + logChoose(r2, c1 - k) - logChoose(n, c1);
       return math.exp(lp);
     }
 

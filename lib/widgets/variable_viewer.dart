@@ -115,7 +115,8 @@ class VariableViewer extends StatelessWidget {
                           onDelete: () => appState.clearFunction(entry.key),
                           onShowOnGraph: onGoToGraphing,
                           onAnalyze: onGoToAnalysis,
-                          onInsertExpression: onInsertExpression ?? onVariableTap,
+                          onInsertExpression:
+                              onInsertExpression ?? onVariableTap,
                         );
                       }),
                       const SizedBox(height: 16),
@@ -126,7 +127,8 @@ class VariableViewer extends StatelessWidget {
                       _SectionHeader(
                         title: t.sectionMemorySlots,
                         icon: Icons.memory,
-                        onClear: () => _showClearDialog(context,
+                        onClear: () => _showClearDialog(
+                            context,
                             t.sectionMemorySlots,
                             () => onMemoryAction!('CLEAR_ALL')),
                       ),

@@ -58,7 +58,8 @@ class _Graphing3DScreenState extends State<Graphing3DScreen> {
     final raw = _functionController.text.trim();
     if (raw.isEmpty) return;
 
-    final zs = List.generate(_grid + 1, (_) => List<double>.filled(_grid + 1, 0));
+    final zs =
+        List.generate(_grid + 1, (_) => List<double>.filled(_grid + 1, 0));
     var anyFinite = false;
     for (var i = 0; i <= _grid; i++) {
       final x = -_range + (2 * _range) * i / _grid;
@@ -144,8 +145,7 @@ class _Graphing3DScreenState extends State<Graphing3DScreen> {
                     ? Center(
                         child: Text(
                           t.module3DTapPlot,
-                          style:
-                              TextStyle(color: Colors.grey.shade400),
+                          style: TextStyle(color: Colors.grey.shade400),
                         ),
                       )
                     : CustomPaint(

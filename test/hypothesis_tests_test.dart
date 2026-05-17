@@ -160,8 +160,7 @@ void main() {
         sample1: const [10, 12, 11, 14, 13],
         sample2: const [10, 11, 9, 13, 12],
       );
-      expect(r.pValueOneSidedUpper + r.pValueOneSidedLower,
-          closeTo(1.0, 1e-6));
+      expect(r.pValueOneSidedUpper + r.pValueOneSidedLower, closeTo(1.0, 1e-6));
     });
 
     test('Welch handles unequal variances', () {

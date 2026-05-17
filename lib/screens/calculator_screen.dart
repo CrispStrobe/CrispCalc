@@ -254,7 +254,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
     final logicals = hw.logicalKeysPressed.toList();
     for (var i = 0; i < stalePhysical.length; i++) {
       final phys = stalePhysical[i];
-      final log = i < logicals.length ? logicals[i] : LogicalKeyboardKey.unidentified;
+      final log =
+          i < logicals.length ? logicals[i] : LogicalKeyboardKey.unidentified;
       try {
         hw.handleKeyEvent(KeyUpEvent(
           physicalKey: phys,

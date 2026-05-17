@@ -223,13 +223,12 @@ void main() {
       expect(stepNamed('2^x', 'Exponential rule').note, isNotEmpty);
     });
     test('integrate — Power rule', () {
-      expect(stepNamed('x^2', 'Power rule', integrate: true).note,
-          isNotEmpty);
+      expect(stepNamed('x^2', 'Power rule', integrate: true).note, isNotEmpty);
     });
     test('integrate — Sum/difference (linearity)', () {
-      expect(stepNamed('x + 1', 'Sum/difference rule (linearity)',
-              integrate: true)
-          .note,
+      expect(
+          stepNamed('x + 1', 'Sum/difference rule (linearity)', integrate: true)
+              .note,
           isNotEmpty);
     });
     test('integrate — Constant multiple', () {
@@ -237,8 +236,8 @@ void main() {
           isNotEmpty);
     });
     test('integrate — Logarithm rule', () {
-      expect(stepNamed('1/x', 'Logarithm rule', integrate: true).note,
-          isNotEmpty);
+      expect(
+          stepNamed('1/x', 'Logarithm rule', integrate: true).note, isNotEmpty);
     });
   });
 

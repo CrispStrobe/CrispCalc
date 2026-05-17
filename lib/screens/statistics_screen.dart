@@ -148,7 +148,8 @@ class _StatsTable extends StatelessWidget {
       _Row(t.statsDescSum, _fmt(s.sum)),
       _Row(t.statsDescMean, _fmt(s.mean)),
       _Row(t.statsDescMedian, _fmt(s.median)),
-      _Row(t.statsDescMode, s.modes.isEmpty ? '—' : s.modes.map(_fmt).join(', ')),
+      _Row(t.statsDescMode,
+          s.modes.isEmpty ? '—' : s.modes.map(_fmt).join(', ')),
       _Row(t.statsDescMin, _fmt(s.min)),
       _Row(t.statsDescMax, _fmt(s.max)),
       _Row(t.statsDescRange, _fmt(s.range)),
@@ -593,8 +594,7 @@ class _TestsTabState extends State<_TestsTab> {
 
   // Chi-square independence inputs. One row per line, columns
   // separated by commas/spaces.
-  final _indepTable =
-      TextEditingController(text: '10, 20\n20, 10\n15, 15');
+  final _indepTable = TextEditingController(text: '10, 20\n20, 10\n15, 15');
 
   // Fisher's exact inputs — a single line "a, b, c, d" where the 2×2
   // table is [[a, b], [c, d]].
@@ -880,8 +880,7 @@ class _TestsTabState extends State<_TestsTab> {
           _resultRow('Grand mean', _fmt(r.grandMean)),
           _resultRow('SS between', _fmt(r.ssBetween)),
           _resultRow('SS within', _fmt(r.ssWithin)),
-          _resultRow(
-              'df (between, within)', '${r.dfBetween}, ${r.dfWithin}'),
+          _resultRow('df (between, within)', '${r.dfBetween}, ${r.dfWithin}'),
           _resultRow('MS between', _fmt(r.msBetween)),
           _resultRow('MS within', _fmt(r.msWithin)),
           _resultRow('F-statistic', _fmt(r.fStatistic)),
@@ -894,10 +893,8 @@ class _TestsTabState extends State<_TestsTab> {
 
   Widget _buildIndependence(BuildContext context) {
     final alpha = double.tryParse(_alpha.text) ?? 0.05;
-    final lines = _indepTable.text
-        .split('\n')
-        .where((l) => l.trim().isNotEmpty)
-        .toList();
+    final lines =
+        _indepTable.text.split('\n').where((l) => l.trim().isNotEmpty).toList();
     final table = lines.map(_parse).toList();
     String? err;
     ChiSquareIndependenceResult? r;
@@ -1054,8 +1051,7 @@ class _TestsTabState extends State<_TestsTab> {
               ChoiceChip(
                 label: const Text('Two-sample t (Welch)'),
                 selected: _kind == _TestKind.twoSampleT,
-                onSelected: (_) =>
-                    setState(() => _kind = _TestKind.twoSampleT),
+                onSelected: (_) => setState(() => _kind = _TestKind.twoSampleT),
               ),
               ChoiceChip(
                 label: const Text('Paired t'),

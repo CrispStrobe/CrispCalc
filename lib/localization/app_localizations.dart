@@ -144,7 +144,6 @@ abstract class AppLocalizations {
   String get helpGroupProbability;
   String get helpFnRrefDescription;
 
-
   // -- Settings --
   String get settingsTitle;
   String get settingsNumberFormat;
@@ -431,8 +430,7 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get funcEditorDone => 'Done';
   @override
-  String get funcEditorSelectFirst =>
-      'Please select a function field to edit.';
+  String get funcEditorSelectFirst => 'Please select a function field to edit.';
   @override
   String get funcEditorAnalyzeTooltip => 'Analyze this function';
   @override
