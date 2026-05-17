@@ -2,6 +2,71 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 21) — Step-by-step equation solving (P5 #1, V2)
+
+Second slice of the step-by-step workstream from round 20: equation
+solving. Same `StepEngine` + `StepsDialog` infrastructure reused.
+
+### Degree detection
+
+`StepEngine.solve(input, variable, engine)` first splits on top-level
+`=` (or treats the input as `expr = 0`), then asks SymEngine to
+differentiate the simplified equation. If `d/dvar[body]` is a non-zero
+expression that no longer contains `variable`, the equation is linear.
+If `d²/dvar²[body]` is a non-zero variable-free expression, it's
+quadratic. Anything else falls through to `engine.solve()` with a
+single "Symbolic solve" step explaining the handoff.
+
+### Linear trace
+
+For `2x + 3 = 7`:
+
+1. Original equation — `2x + 3 = 7`
+2. Move all terms to one side — `2*x - 4 = 0`
+3. Identify coefficients — `a = 2, b = -4`
+4. Subtract the constant — `2*x = 4`
+5. Divide by the coefficient — `x = 2`
+6. Result — `x = 2`
+
+### Quadratic trace
+
+For `x^2 - 5x + 6 = 0` (or `x^2 - 5x + 6` treated as `… = 0`):
+
+1. Treat as equation = 0 / Move all terms to one side
+2. Identify coefficients — `a, b, c` derived from `d²`, `d|_{x=0}`,
+   `body|_{x=0}`
+3. Compute the discriminant — `Δ = b² - 4ac`
+4. Apply the quadratic formula — `x = (-b ± √Δ) / (2a)`
+5. Result — both roots, cross-checked against SymEngine's `solve()`
+
+### MathStep rename
+
+Renamed the `DerivativeStep` data class to `MathStep` since it now
+carries solve steps as well. Pure renaming — same fields (`rule`,
+`formula`, `before`, `after`, `note`).
+
+### Dialog flexibility
+
+`StepsDialog` gained optional `subtitle` and `headlineLatex` overrides
+so it can render either "Differentiating with respect to x" + the
+`d/dx[…]` headline or "Solving for x" + the equation itself. Old
+behavior preserved as the default.
+
+### UI entry
+
+New `solve⌄` keypad button in the CAS tab, between `solve` and
+`factor`. Opens a small prompt (defaults to `2x + 3 = 7`), runs the
+trace, opens the steps dialog. Existing `solve` button is untouched —
+users who just want the answer keep getting it as before.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: 277/277 (5 new solve tests).
+- macOS release boots clean. Matrix self-test still 7/7.
+
+---
+
 ## 2026-05-17 (round 20) — Step-by-step differentiation (P5 #1, V1)
 
 First slice of PLAN P5's top recommendation: when the user

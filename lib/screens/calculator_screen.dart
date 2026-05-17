@@ -398,6 +398,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
             context, _appState, (text) => _latexController.insert(text));
         break;
 
+      case 'solve⌄':
+        await _showSolveSteps();
+        break;
+
       case 'factor':
         _latexController.insert('factor()', cursorOffsetFromEnd: -1);
         break;
@@ -1086,6 +1090,91 @@ class CalculatorScreenState extends State<CalculatorScreen>
         expression: preprocessed,
         variable: varText,
         steps: steps,
+      ),
+    );
+  }
+
+  /// Counterpart to _showDifferentiationSteps: prompts for an equation
+  /// (or expression to set to 0) and a variable, then runs StepEngine.solve
+  /// and renders the trace.
+  Future<void> _showSolveSteps() async {
+    final raw = _latexController.text.trim();
+    final defaultExpr =
+        raw.isEmpty ? '2x + 3 = 7' : LatexConversionUtils.fromLatex(raw);
+    final defaultVar =
+        ExpressionPreprocessingUtils.detectVariable(defaultExpr);
+
+    final exprCtl = TextEditingController(text: defaultExpr);
+    final varCtl = TextEditingController(text: defaultVar);
+
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Solve steps'),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: exprCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Equation or expression',
+                  hintText: 'e.g. 2x + 3 = 7  or  x^2 - 5x + 6',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: varCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Solve for',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Show steps'),
+          ),
+        ],
+      ),
+    );
+
+    final exprText = exprCtl.text.trim();
+    final varText = varCtl.text.trim();
+    exprCtl.dispose();
+    varCtl.dispose();
+
+    if (go != true || exprText.isEmpty || varText.isEmpty) return;
+
+    // Run the input through the same preprocessor as a normal evaluate
+    // call so `2x` becomes `2*x`, German commas become dots, etc.
+    final preprocessed =
+        ExpressionPreprocessingUtils.preprocessNativeExpression(
+      ExpressionPreprocessingUtils.preprocessExpression(exprText, _appState),
+    );
+    final steps = StepEngine.solve(preprocessed, varText, _engine);
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StepsDialog(
+        title: 'Solve steps',
+        expression: preprocessed,
+        variable: varText,
+        steps: steps,
+        subtitle: 'Solving for $varText:',
+        headlineLatex: preprocessed.contains('=')
+            ? preprocessed.replaceAll('=', r' \,=\, ')
+            : '$preprocessed = 0',
       ),
     );
   }

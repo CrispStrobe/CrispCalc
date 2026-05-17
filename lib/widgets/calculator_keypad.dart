@@ -106,6 +106,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
   ];
   static const List<String> _casKeys = [
     'solve',
+    'solve⌄',
     'factor',
     'expand',
     'simplify',

@@ -1,6 +1,6 @@
 // lib/widgets/steps_dialog.dart
 //
-// Renders a list of DerivativeStep entries as an expandable card list.
+// Renders a list of MathStep entries as an expandable card list.
 // Each card shows the rule name, a LaTeX-rendered formula, the
 // before/after expressions (also LaTeX), and any plain-language note.
 //
@@ -18,7 +18,16 @@ class StepsDialog extends StatelessWidget {
   final String title;
   final String expression;
   final String variable;
-  final List<DerivativeStep> steps;
+  final List<MathStep> steps;
+
+  /// Optional override of the small subtitle line above the headline
+  /// expression. When null, the dialog picks a sensible default based
+  /// on the title.
+  final String? subtitle;
+
+  /// Optional override of the LaTeX shown as the dialog headline. When
+  /// null, the headline is `d/dvar[expression]` (differentiation flow).
+  final String? headlineLatex;
 
   const StepsDialog({
     super.key,
@@ -26,6 +35,8 @@ class StepsDialog extends StatelessWidget {
     required this.expression,
     required this.variable,
     required this.steps,
+    this.subtitle,
+    this.headlineLatex,
   });
 
   @override
@@ -40,12 +51,19 @@ class StepsDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Differentiating with respect to $variable:',
+                subtitle ?? 'With respect to $variable:',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 4),
-              _latex(context, r'\frac{d}{d' + variable + r'}\left[' +
-                  _toLatex(expression) + r'\right]'),
+              _latex(
+                context,
+                headlineLatex ??
+                    r'\frac{d}{d' +
+                        variable +
+                        r'}\left[' +
+                        _toLatex(expression) +
+                        r'\right]',
+              ),
               const Divider(height: 24),
               for (final s in steps) _stepCard(context, s),
             ],
@@ -61,7 +79,7 @@ class StepsDialog extends StatelessWidget {
     );
   }
 
-  Widget _stepCard(BuildContext context, DerivativeStep s) {
+  Widget _stepCard(BuildContext context, MathStep s) {
     final isResult = s.rule == 'Result';
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),

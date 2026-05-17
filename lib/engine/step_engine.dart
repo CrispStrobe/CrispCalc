@@ -22,7 +22,7 @@ import 'calculator_engine.dart';
 
 /// A single step in a derivation. Each piece is plain text that the
 /// renderer wraps in LaTeX as needed.
-class DerivativeStep {
+class MathStep {
   /// Human-readable rule name. e.g. "Product rule".
   final String rule;
 
@@ -42,7 +42,7 @@ class DerivativeStep {
   /// "explanations" P5 follow-up; rendered below the formula when set.
   final String? note;
 
-  const DerivativeStep({
+  const MathStep({
     required this.rule,
     required this.formula,
     required this.before,
@@ -55,16 +55,16 @@ class StepEngine {
   /// Produce a step-by-step trace for d/d[variable] of [expression].
   /// The last step always carries SymEngine's simplified answer in its
   /// `after` field.
-  static List<DerivativeStep> differentiate(
+  static List<MathStep> differentiate(
       String expression, String variable, CalculatorEngine engine) {
-    final steps = <DerivativeStep>[];
+    final steps = <MathStep>[];
     _trace(expression, variable, engine, steps);
 
     // Append a "Result" step with the simplified canonical form from
     // SymEngine. That's what the user actually wants to copy, even if
     // they enjoy the path.
     final simplified = engine.differentiate(expression, variable);
-    steps.add(DerivativeStep(
+    steps.add(MathStep(
       rule: 'Result',
       formula: '',
       before: 'd/d$variable[$expression]',
@@ -74,15 +74,205 @@ class StepEngine {
     return steps;
   }
 
+  /// Produce a step-by-step trace for solving [input] for [variable].
+  /// [input] may be `lhs = rhs` (we split on top-level `=`) or just a
+  /// polynomial expression to set equal to zero. Detects degree via
+  /// SymEngine derivatives: linear if d/dvar is a non-zero constant,
+  /// quadratic if d²/dvar² is a non-zero constant. Anything else
+  /// falls through to a single "Symbolic solve" step carrying
+  /// SymEngine's `solve()` result — still useful, just un-elaborated.
+  static List<MathStep> solve(
+      String input, String variable, CalculatorEngine engine) {
+    final steps = <MathStep>[];
+
+    // 1. Normalize to `lhs - rhs = 0`.
+    String body;
+    final eqSplit = _splitTopLevelOnce(input, '=');
+    if (eqSplit != null) {
+      steps.add(MathStep(
+        rule: 'Original equation',
+        formula: '',
+        before: input,
+        after: '${eqSplit.lhs} = ${eqSplit.rhs}',
+      ));
+      final combined = '(${eqSplit.lhs}) - (${eqSplit.rhs})';
+      body = engine.simplify(combined);
+      if (body.startsWith('Error')) body = combined;
+      steps.add(MathStep(
+        rule: 'Move all terms to one side',
+        formula: r"f(x) = g(x) \;\Longleftrightarrow\; f(x) - g(x) = 0",
+        before: '${eqSplit.lhs} = ${eqSplit.rhs}',
+        after: '$body = 0',
+      ));
+    } else {
+      body = input;
+      steps.add(MathStep(
+        rule: 'Treat as equation = 0',
+        formula: '',
+        before: input,
+        after: '$body = 0',
+        note: 'No `=` in input; treating as $body = 0.',
+      ));
+    }
+
+    if (!_containsVar(body, variable)) {
+      steps.add(MathStep(
+        rule: 'No variable present',
+        formula: '',
+        before: '$body = 0',
+        after: body.trim() == '0' ? 'always true' : 'no solution',
+        note: 'The equation does not depend on $variable.',
+      ));
+      return steps;
+    }
+
+    // 2. Degree detection via derivatives.
+    final firstDeriv = engine.differentiate(body, variable);
+    final secondDeriv = engine.differentiate(firstDeriv, variable);
+    final firstHasVar = _containsVar(firstDeriv, variable);
+    final secondIsZero = _looksLikeZero(secondDeriv);
+
+    if (!firstHasVar && firstDeriv.trim() != '0') {
+      // Linear: body = a*x + b
+      _linearSteps(body, firstDeriv, variable, engine, steps);
+    } else if (secondIsZero == false &&
+        !_containsVar(secondDeriv, variable)) {
+      // Quadratic: body = a*x^2 + b*x + c
+      _quadraticSteps(body, variable, engine, steps);
+    } else {
+      // Fall through — let SymEngine handle it.
+      steps.add(MathStep(
+        rule: 'Symbolic solve',
+        formula: '',
+        before: '$body = 0',
+        after: engine.solve(body, variable),
+        note: 'Not a standard linear or quadratic form — handing off '
+            'to the symbolic solver for the answer.',
+      ));
+    }
+    return steps;
+  }
+
+  // === Solve helpers =======================================================
+
+  static void _linearSteps(String body, String coefA, String variable,
+      CalculatorEngine engine, List<MathStep> steps) {
+    // body = a*x + b, with a = d/dx[body] (constant).
+    // b = body | x=0.
+    final b = engine.evaluate(_substitute(body, variable, '0'));
+    final a = coefA.trim();
+
+    steps.add(MathStep(
+      rule: 'Identify coefficients',
+      formula: r"a\,$variable + b = 0",
+      before: '$body = 0',
+      after: 'a = $a,  b = $b',
+    ));
+
+    // a*x = -b
+    final negB = engine.simplify('-($b)');
+    steps.add(MathStep(
+      rule: 'Subtract the constant',
+      formula: r"a\,$variable = -b",
+      before: '$a·$variable + ($b) = 0',
+      after: '$a·$variable = $negB',
+    ));
+
+    // x = -b/a
+    final solution = engine.simplify('-($b)/($a)');
+    steps.add(MathStep(
+      rule: 'Divide by the coefficient',
+      formula: r"$variable = -\dfrac{b}{a}",
+      before: '$a·$variable = $negB',
+      after: '$variable = $solution',
+    ));
+
+    steps.add(MathStep(
+      rule: 'Result',
+      formula: '',
+      before: 'solve($body, $variable)',
+      after: '$variable = $solution',
+    ));
+  }
+
+  static void _quadraticSteps(String body, String variable,
+      CalculatorEngine engine, List<MathStep> steps) {
+    // body = a*x^2 + b*x + c with
+    //   a = (d^2/dvar^2 body) / 2
+    //   b = (d/dvar body) | var=0
+    //   c = body | var=0
+    final d2 = engine.differentiate(
+        engine.differentiate(body, variable), variable);
+    final d1 = engine.differentiate(body, variable);
+    final a = engine.simplify('($d2)/2');
+    final b = engine.simplify(_substitute(d1, variable, '0'));
+    final c = engine.simplify(_substitute(body, variable, '0'));
+
+    steps.add(MathStep(
+      rule: 'Identify coefficients',
+      formula: r"a\,x^2 + b\,x + c = 0",
+      before: '$body = 0',
+      after: 'a = $a,  b = $b,  c = $c',
+    ));
+
+    // Discriminant.
+    final disc = engine.simplify('($b)^2 - 4·($a)·($c)');
+    steps.add(MathStep(
+      rule: 'Compute the discriminant',
+      formula: r"\Delta = b^2 - 4ac",
+      before: 'a = $a,  b = $b,  c = $c',
+      after: 'Δ = $disc',
+    ));
+
+    // Roots via quadratic formula.
+    final rootPlus = engine.simplify('(-($b) + sqrt($disc))/(2·($a))');
+    final rootMinus = engine.simplify('(-($b) - sqrt($disc))/(2·($a))');
+    steps.add(MathStep(
+      rule: 'Apply the quadratic formula',
+      formula: r"x = \dfrac{-b \pm \sqrt{\Delta}}{2a}",
+      before: 'a = $a,  b = $b,  c = $c,  Δ = $disc',
+      after: '$variable = $rootPlus  or  $variable = $rootMinus',
+    ));
+
+    // Final canonical result via SymEngine.solve — confirms our answer
+    // and presents it in whatever shape SymEngine prefers.
+    steps.add(MathStep(
+      rule: 'Result',
+      formula: '',
+      before: 'solve($body, $variable)',
+      after: engine.solve(body, variable),
+    ));
+  }
+
+  /// Inline a substitution like `subst(expr, var, value)` as a raw
+  /// expression we can hand to the bridge. We don't have a public
+  /// substitute method on CalculatorEngine, so build the SymEngine-style
+  /// `subs(...)` form which the parser accepts.
+  static String _substitute(String expr, String variable, String value) {
+    // Wrap each variable occurrence with the value in parens. Doesn't
+    // handle every edge case but covers the polynomial cases this
+    // engine generates internally.
+    final pattern =
+        RegExp('(?<![a-zA-Z_])${RegExp.escape(variable)}(?![a-zA-Z_0-9])');
+    return expr.replaceAll(pattern, '($value)');
+  }
+
+  static bool _looksLikeZero(String s) {
+    final t = s.trim();
+    if (t == '0' || t == '0.0' || t == '-0') return true;
+    final n = double.tryParse(t);
+    return n != null && n == 0.0;
+  }
+
   // === Recursive rule walker ==============================================
 
   static void _trace(String expr, String variable, CalculatorEngine engine,
-      List<DerivativeStep> steps) {
+      List<MathStep> steps) {
     final s = _stripOuterParens(expr.trim());
 
     // Constant rule
     if (!_containsVar(s, variable)) {
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: 'Constant rule',
         formula: r"\frac{d}{dx}[c] = 0",
         before: 'd/d$variable[$s]',
@@ -94,7 +284,7 @@ class StepEngine {
 
     // Identity: d/dx[x] = 1
     if (s == variable) {
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: 'Identity',
         formula: r"\frac{d}{dx}[x] = 1",
         before: 'd/d$variable[$s]',
@@ -110,7 +300,7 @@ class StepEngine {
       for (final term in sumTerms) {
         derivedTerms.add('${term.sign}d/d$variable[${term.body}]');
       }
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: 'Sum/difference rule',
         formula: r"\frac{d}{dx}[f \pm g] = f' \pm g'",
         before: 'd/d$variable[$s]',
@@ -127,7 +317,7 @@ class StepEngine {
     if (quotSplit != null) {
       final f = quotSplit.lhs;
       final g = quotSplit.rhs;
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: 'Quotient rule',
         formula:
             r"\frac{d}{dx}\left[\frac{f}{g}\right] = \frac{f'g - fg'}{g^2}",
@@ -147,7 +337,7 @@ class StepEngine {
       // for 3+ factors. The recursion will fan out further.
       final first = prodFactors.first;
       final rest = prodFactors.skip(1).join('*');
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: 'Product rule',
         formula: r"\frac{d}{dx}[fg] = f'g + fg'",
         before: 'd/d$variable[$s]',
@@ -168,7 +358,7 @@ class StepEngine {
       final baseHasVar = _containsVar(base, variable);
       final expHasVar = _containsVar(exp, variable);
       if (baseHasVar && !expHasVar) {
-        steps.add(DerivativeStep(
+        steps.add(MathStep(
           rule: 'Power rule',
           formula: r"\frac{d}{dx}[x^n] = n x^{n-1}",
           before: 'd/d$variable[$s]',
@@ -182,7 +372,7 @@ class StepEngine {
         return;
       }
       if (!baseHasVar && expHasVar) {
-        steps.add(DerivativeStep(
+        steps.add(MathStep(
           rule: 'Exponential rule',
           formula: r"\frac{d}{dx}[a^{u(x)}] = a^{u(x)} \ln(a) \, u'(x)",
           before: 'd/d$variable[$s]',
@@ -200,7 +390,7 @@ class StepEngine {
     if (fc != null && _standardDerivatives.containsKey(fc.name)) {
       final rule = _standardDerivatives[fc.name]!;
       final argIsVar = fc.arg.trim() == variable;
-      steps.add(DerivativeStep(
+      steps.add(MathStep(
         rule: argIsVar ? rule.simpleRuleName : 'Chain rule (${rule.simpleRuleName})',
         formula: rule.formula,
         before: 'd/d$variable[$s]',
@@ -217,7 +407,7 @@ class StepEngine {
 
     // Fallback — we don't know the structure well enough to elaborate.
     // Emit a single generic step and let SymEngine produce the result.
-    steps.add(DerivativeStep(
+    steps.add(MathStep(
       rule: 'Differentiate',
       formula: '',
       before: 'd/d$variable[$s]',

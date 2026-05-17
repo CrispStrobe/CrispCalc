@@ -190,16 +190,17 @@ roughly double the perceived value of the app.
     drift from canonical. `StepsDialog` renders each step as a card
     with LaTeX-rendered formula + before/after. New `d/dx⌄` keypad
     button as the entry point.
+  - **Equation solving done** (HISTORY round 21): same engine extended
+    with `StepEngine.solve()`. Detects polynomial degree via SymEngine
+    derivatives; linear (1-step isolation), quadratic (discriminant +
+    formula), and a graceful fall-through to SymEngine's `solve()` for
+    higher-order / transcendental cases. New `solve⌄` keypad button.
   - **Integration pending**: harder because symbolic integration uses
     many algorithms (Risch, u-sub heuristics, integration by parts,
     partial fractions). Realistic V1: try a small number of heuristics
     Dart-side (power rule, simple trig, exp, basic u-sub, by-parts)
     and fall through to SymEngine's answer unaugmented when no
     pattern matches.
-  - **Equation solving pending**: V1 covers linear, quadratic
-    (factor / formula), polynomial factoring, isolate-the-variable.
-    Dart-side rule walker; falls through to SymEngine when no pattern
-    matches.
 - [ ] **Interactive parameter sliders** on the graphing screen.
   Replace constants in a graphed function with named parameters
   (`y = a*sin(b*x + c)`), attach a slider widget per parameter, drag

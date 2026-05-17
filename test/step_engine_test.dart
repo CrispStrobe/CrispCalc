@@ -74,6 +74,46 @@ void main() {
     });
   });
 
+  group('StepEngine.solve — equation handling without native bridge', () {
+    // The native bridge isn't loaded under flutter test, so every call
+    // to engine.simplify/solve/differentiate inside StepEngine returns
+    // an "Error: …" string. The step engine still produces structurally
+    // valid traces — we only check the shape, not the values.
+
+    test('emits an "Original equation" step when input has =', () {
+      final steps = StepEngine.solve('2*x + 3 = 7', 'x', engine);
+      expect(steps.first.rule, equals('Original equation'));
+    });
+
+    test('emits a "Move all terms to one side" step', () {
+      final steps = StepEngine.solve('2*x + 3 = 7', 'x', engine);
+      expect(steps.map((s) => s.rule),
+          contains('Move all terms to one side'));
+    });
+
+    test('input without "=" is treated as expression = 0', () {
+      final steps = StepEngine.solve('x^2 - 4', 'x', engine);
+      expect(steps.first.rule, equals('Treat as equation = 0'));
+    });
+
+    test('"no variable present" branch fires when expression is constant',
+        () {
+      final steps = StepEngine.solve('5 = 5', 'x', engine);
+      expect(steps.map((s) => s.rule), contains('No variable present'));
+    });
+
+    test('every solve trace has at least one step', () {
+      for (final input in const [
+        '2*x + 3 = 7',
+        'x^2 - 4 = 0',
+        'sin(x) = 1/2',
+      ]) {
+        expect(StepEngine.solve(input, 'x', engine), isNotEmpty,
+            reason: 'input=$input');
+      }
+    });
+  });
+
   group('StepEngine.differentiate — step content', () {
     test('product rule step references both factors in the after string', () {
       final steps = StepEngine.differentiate('x*sin(x)', 'x', engine);
