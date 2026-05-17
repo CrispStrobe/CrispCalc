@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 
 import '../engine/distributions.dart';
+import '../engine/hypothesis_tests.dart';
 import '../engine/statistics.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -43,10 +44,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         title: const Text('Statistics'),
         bottom: TabBar(
           controller: _tabs,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Descriptive'),
             Tab(text: 'Regression'),
             Tab(text: 'Distributions'),
+            Tab(text: 'Tests'),
           ],
         ),
       ),
@@ -56,6 +59,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           _DescriptiveTab(),
           _RegressionTab(),
           _DistributionsTab(),
+          _TestsTab(),
         ],
       ),
     );
@@ -444,6 +448,328 @@ class _DistributionsTabState extends State<_DistributionsTab> {
           ],
         ),
       );
+}
+
+// === Hypothesis tests tab ================================================
+
+enum _TestKind { oneSampleT, pairedT, chiSquareGof }
+
+class _TestsTab extends StatefulWidget {
+  const _TestsTab();
+  @override
+  State<_TestsTab> createState() => _TestsTabState();
+}
+
+class _TestsTabState extends State<_TestsTab> {
+  _TestKind _kind = _TestKind.oneSampleT;
+
+  // One-sample t-test inputs.
+  final _oneSampleData = TextEditingController(text: '172, 174, 168, 180, 176');
+  final _oneSampleMu = TextEditingController(text: '170');
+
+  // Paired t-test inputs.
+  final _pairedBefore =
+      TextEditingController(text: '10, 12, 14, 13, 15, 11, 14, 10, 13, 12');
+  final _pairedAfter =
+      TextEditingController(text: '7, 11, 10, 11, 12, 9, 10, 9, 10, 10');
+
+  // Chi-square GOF inputs.
+  final _gofObserved = TextEditingController(text: '9, 11, 10, 12, 9, 9');
+  final _gofExpected = TextEditingController(text: '10, 10, 10, 10, 10, 10');
+
+  // Significance level.
+  final _alpha = TextEditingController(text: '0.05');
+
+  @override
+  void dispose() {
+    for (final c in [
+      _oneSampleData,
+      _oneSampleMu,
+      _pairedBefore,
+      _pairedAfter,
+      _gofObserved,
+      _gofExpected,
+      _alpha,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  List<double> _parse(String s) => s
+      .split(RegExp(r'[\s,;]+'))
+      .map((t) => t.trim())
+      .where((t) => t.isNotEmpty)
+      .map(double.tryParse)
+      .whereType<double>()
+      .toList();
+
+  Widget _resultRow(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Expanded(child: Text(label)),
+            Text(value,
+                style: const TextStyle(
+                    fontFamily: 'monospace', fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+
+  Widget _verdictBlock(BuildContext context, bool rejects) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        color: rejects ? scheme.errorContainer : scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(rejects ? Icons.cancel : Icons.check_circle,
+              color: rejects
+                  ? scheme.onErrorContainer
+                  : scheme.onPrimaryContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              rejects
+                  ? 'Reject H₀ at α (the data are inconsistent with H₀).'
+                  : 'Fail to reject H₀ at α (the data are consistent with H₀).',
+              style: TextStyle(
+                color: rejects
+                    ? scheme.onErrorContainer
+                    : scheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOneSample(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final data = _parse(_oneSampleData.text);
+    final mu0 = double.tryParse(_oneSampleMu.text);
+    String? err;
+    TTestResult? r;
+    if (data.length >= 2 && mu0 != null) {
+      try {
+        r = HypothesisTests.oneSampleT(data: data, hypothesizedMean: mu0);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _oneSampleData,
+          maxLines: 3,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Sample data',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _oneSampleMu,
+          keyboardType: const TextInputType.numberWithOptions(
+              decimal: true, signed: true),
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Hypothesized mean μ₀',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('Sample mean x̄', _fmt(r.sampleMean)),
+          _resultRow('Sample stddev s', _fmt(r.sampleStddev)),
+          _resultRow('Sample size n', '${r.sampleSize}'),
+          _resultRow('Hypothesized μ₀', _fmt(r.hypothesizedMean)),
+          _resultRow('t-statistic', _fmt(r.statistic)),
+          _resultRow('Degrees of freedom', '${r.df}'),
+          _resultRow('p-value (two-sided)', _fmt(r.pValueTwoSided)),
+          _resultRow('p-value (upper tail)', _fmt(r.pValueOneSidedUpper)),
+          _resultRow('p-value (lower tail)', _fmt(r.pValueOneSidedLower)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaired(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final before = _parse(_pairedBefore.text);
+    final after = _parse(_pairedAfter.text);
+    String? err;
+    TTestResult? r;
+    if (before.length >= 2 && after.length == before.length) {
+      try {
+        r = HypothesisTests.pairedT(before: before, after: after);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _pairedBefore,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Before',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _pairedAfter,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'After',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('Mean difference', _fmt(r.sampleMean)),
+          _resultRow('Stddev of diffs', _fmt(r.sampleStddev)),
+          _resultRow('Pairs n', '${r.sampleSize}'),
+          _resultRow('t-statistic', _fmt(r.statistic)),
+          _resultRow('Degrees of freedom', '${r.df}'),
+          _resultRow('p-value (two-sided)', _fmt(r.pValueTwoSided)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGof(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final observed = _parse(_gofObserved.text);
+    final expected = _parse(_gofExpected.text);
+    String? err;
+    ChiSquareGofResult? r;
+    if (observed.length >= 2 && expected.length == observed.length) {
+      try {
+        r = HypothesisTests.chiSquareGof(
+            observed: observed, expected: expected);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _gofObserved,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Observed counts',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _gofExpected,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Expected counts',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('χ² statistic', _fmt(r.statistic)),
+          _resultRow('Degrees of freedom', '${r.df}'),
+          _resultRow('p-value (upper tail)', _fmt(r.pValue)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Test picker.
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              ChoiceChip(
+                label: const Text('One-sample t'),
+                selected: _kind == _TestKind.oneSampleT,
+                onSelected: (_) => setState(() => _kind = _TestKind.oneSampleT),
+              ),
+              ChoiceChip(
+                label: const Text('Paired t'),
+                selected: _kind == _TestKind.pairedT,
+                onSelected: (_) => setState(() => _kind = _TestKind.pairedT),
+              ),
+              ChoiceChip(
+                label: const Text('χ² goodness-of-fit'),
+                selected: _kind == _TestKind.chiSquareGof,
+                onSelected: (_) =>
+                    setState(() => _kind = _TestKind.chiSquareGof),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Common: significance level.
+          SizedBox(
+            width: 200,
+            child: TextField(
+              controller: _alpha,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Significance level α',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: () {
+                switch (_kind) {
+                  case _TestKind.oneSampleT:
+                    return _buildOneSample(context);
+                  case _TestKind.pairedT:
+                    return _buildPaired(context);
+                  case _TestKind.chiSquareGof:
+                    return _buildGof(context);
+                }
+              }(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // === Shared formatting helper ============================================

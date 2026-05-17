@@ -2,6 +2,58 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 32) — Hypothesis tests UI
+
+V3 of the Statistics module, built on the t/χ² infrastructure from
+round 30. The Statistics screen gains a 4th tab — "Tests" — and the
+underlying math layer ships three of the most-used:
+
+- **One-sample t-test**: H₀: μ = μ₀. Computes
+  t = (x̄ − μ₀)/(s/√n) with df = n−1.
+- **Paired t-test**: H₀: μ_diff = 0. Wraps one-sample t over the
+  pointwise differences.
+- **χ² goodness-of-fit**: χ² = Σ(Oᵢ−Eᵢ)²/Eᵢ with df = k−1 (no
+  parameters estimated). p-value is the upper-tail probability
+  under χ²(df).
+
+### Math (lib/engine/hypothesis_tests.dart)
+
+`HypothesisTests.oneSampleT()`, `pairedT()`, `chiSquareGof()` return
+result structs with statistic, df, p-values, and a `rejectsAt(alpha)`
+helper. Both two-sided and one-sided p-values are computed for t-tests
+so the UI can show all three. Defensive on inputs — throws
+`ArgumentError` on zero variance, length mismatches, or zero/negative
+expected counts.
+
+### UI (lib/screens/statistics_screen.dart)
+
+A 4th tab "Tests" with chip-row picker for test type, a shared
+significance-level field, per-test inputs (sample data + μ₀ for
+one-sample t; before/after lists for paired t; observed/expected
+counts for χ²), and a result card with every diagnostic plus a
+colored verdict block in the theme's `errorContainer` / `primaryContainer`
+depending on whether H₀ is rejected.
+
+### Verification (textbook examples)
+
+- One-sample t: heights [172, 174, 168, 180, 176], μ₀ = 170.
+  Hand-computed: x̄ = 174, s = √20 ≈ 4.472, t = 2.0, p ≈ 0.116
+  at df=4 — matches.
+- χ² GOF: Mendel's pea data {315, 108, 101, 32} against 9:3:3:1
+  ratios → χ² ≈ 0.470, df = 3, p ≈ 0.925 — matches historical value.
+- Fair die simulation {9,11,10,12,9,9} → χ² = 0.8, not rejected.
+- Rigged die {5,5,5,5,5,35} → rejected at α = 0.01 with p < 1e-6.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **595/595** (16 new tests: 6 one-sample t, 4
+  paired t, 6 χ² GOF; 1 skipped is documented as intentional —
+  identical pairs trigger the zero-variance throw).
+- macOS release: matrix self-test 7/7, step self-test 28/28.
+
+---
+
 ## 2026-05-17 (round 31) — Inline unit syntax in the calculator
 
 V2 of the unit converter (round 24). Users can now type

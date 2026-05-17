@@ -264,8 +264,13 @@ roughly double the perceived value of the app.
     coefficient vector + R² + a `.evaluate(x)` helper). Verified
     against textbook z- and chi-square critical values; cubic /
     quadratic fits recover exact coefficients.
-  - **V3 pending**: hypothesis test UI on top of t/chi-square,
-    exponential regression, F-distribution.
+  - **V3 partial** (HISTORY round 32): hypothesis tests UI shipped
+    as a 4th tab in the Statistics screen. One-sample t-test, paired
+    t-test, χ² goodness-of-fit. Each takes inputs + a significance
+    level α, returns the test statistic, df, p-values, and a colored
+    "reject H₀" / "fail to reject H₀" verdict block.
+  - **V4 pending**: two-sample t-test (independent), ANOVA, χ²
+    independence, exponential regression, F-distribution.
 - [~] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
   full SI prefix handling, dimension checking on results. Opens the
   engineering / physics / chemistry audience.
