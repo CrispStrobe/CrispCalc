@@ -2,6 +2,56 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 42) — Step engine: plain-language rule explanations
+
+Every common differentiation, integration, and solve rule now emits
+a one-sentence English `note` alongside its formal LaTeX formula.
+The StepsDialog already rendered the `note` field italicized below
+each step; this round audited which rules were quietly emitting `null`
+notes and gave them educational explanations.
+
+### Coverage added
+
+**Differentiation:** Identity (d/dx[x]=1), Sum/difference rule,
+Product rule, Quotient rule, Power rule (both pure-power and
+chain-rule cases), Exponential rule, standard function derivatives
+(sin/cos/tan/asin/.../sqrt) for direct-argument cases.
+
+**Solve (linear):** Original equation, Move all terms to one side,
+Identify coefficients, Subtract the constant, Divide by the
+coefficient.
+
+**Solve (quadratic):** Identify coefficients, Compute the
+discriminant (with a hint about how Δ's sign maps to root count),
+Apply the quadratic formula.
+
+**Integration:** Leading-minus Constant multiple, Power rule (both
+n=1 and general n), Sum/difference rule (linearity), Constant
+multiple, both Logarithm rule emission sites, Standard antiderivative
+(sin/cos/exp/sinh/cosh on the variable).
+
+V2 round-34 rules (linear u-substitution, integration by parts)
+already had detailed notes and were left untouched.
+
+### Smoke test
+
+Added a `rule notes — educational explanations are present` group to
+`step_engine_thorough_test.dart`. It picks 10 representative
+expressions, finds the named rule's step, and asserts the note
+isn't empty — so a future refactor that accidentally drops a note
+will fail loudly.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **694/694** (+10 new note-presence tests).
+
+### V2 deferred
+
+Translate the notes to DE/FR/ES locales. Currently English-only;
+the StepsDialog renderer doesn't need any change to localize them
+later — only the strings inside the engine.
+
 ## 2026-05-17 (round 41) — Statistics V8: Fisher's exact 2×2
 
 Pairs with round 39's χ² independence. When any expected cell count

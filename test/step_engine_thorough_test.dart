@@ -189,6 +189,59 @@ void main() {
     });
   });
 
+  group('rule notes — educational explanations are present', () {
+    // For each shape, find the named rule's step and assert it carries
+    // a plain-language note. Catches regressions where a rule emission
+    // accidentally drops its educational explanation.
+    MathStep stepNamed(String e, String rule, {bool integrate = false}) {
+      final steps = integrate
+          ? StepEngine.integrate(e, 'x', engine)
+          : StepEngine.differentiate(e, 'x', engine);
+      return steps.firstWhere(
+        (s) => s.rule == rule,
+        orElse: () => throw 'Expected a `$rule` step in trace for `$e`; '
+            'got rules ${steps.map((s) => s.rule).toList()}.',
+      );
+    }
+
+    test('differentiate — Identity', () {
+      expect(stepNamed('x', 'Identity').note, isNotEmpty);
+    });
+    test('differentiate — Sum/difference rule', () {
+      expect(stepNamed('x + 1', 'Sum/difference rule').note, isNotEmpty);
+    });
+    test('differentiate — Product rule', () {
+      expect(stepNamed('x*sin(x)', 'Product rule').note, isNotEmpty);
+    });
+    test('differentiate — Quotient rule', () {
+      expect(stepNamed('sin(x)/x', 'Quotient rule').note, isNotEmpty);
+    });
+    test('differentiate — Power rule (base = variable)', () {
+      expect(stepNamed('x^3', 'Power rule').note, isNotEmpty);
+    });
+    test('differentiate — Exponential rule', () {
+      expect(stepNamed('2^x', 'Exponential rule').note, isNotEmpty);
+    });
+    test('integrate — Power rule', () {
+      expect(stepNamed('x^2', 'Power rule', integrate: true).note,
+          isNotEmpty);
+    });
+    test('integrate — Sum/difference (linearity)', () {
+      expect(stepNamed('x + 1', 'Sum/difference rule (linearity)',
+              integrate: true)
+          .note,
+          isNotEmpty);
+    });
+    test('integrate — Constant multiple', () {
+      expect(stepNamed('3*x^2', 'Constant multiple', integrate: true).note,
+          isNotEmpty);
+    });
+    test('integrate — Logarithm rule', () {
+      expect(stepNamed('1/x', 'Logarithm rule', integrate: true).note,
+          isNotEmpty);
+    });
+  });
+
   // ============================================================
   // integrate — exhaustive rule coverage
   // ============================================================

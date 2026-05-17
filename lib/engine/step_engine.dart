@@ -94,6 +94,7 @@ class StepEngine {
         formula: '',
         before: input,
         after: '${eqSplit.lhs} = ${eqSplit.rhs}',
+        note: 'Start with the equation as given.',
       ));
       final combined = '(${eqSplit.lhs}) - (${eqSplit.rhs})';
       body = engine.simplify(combined);
@@ -103,6 +104,9 @@ class StepEngine {
         formula: r"f(x) = g(x) \;\Longleftrightarrow\; f(x) - g(x) = 0",
         before: '${eqSplit.lhs} = ${eqSplit.rhs}',
         after: '$body = 0',
+        note: 'Subtracting the right side from both sides puts the '
+            'equation in standard form `expression = 0`, which lets us '
+            'apply the linear or quadratic solver.',
       ));
     } else {
       body = input;
@@ -166,6 +170,8 @@ class StepEngine {
       formula: r"a\,$variable + b = 0",
       before: '$body = 0',
       after: 'a = $a,  b = $b',
+      note: 'Pick off the leading coefficient and the constant term — '
+          'this is a linear equation.',
     ));
 
     // a*x = -b
@@ -175,6 +181,7 @@ class StepEngine {
       formula: r"a\,$variable = -b",
       before: '$a·$variable + ($b) = 0',
       after: '$a·$variable = $negB',
+      note: 'Move the constant to the other side.',
     ));
 
     // x = -b/a
@@ -184,6 +191,8 @@ class StepEngine {
       formula: r"$variable = -\dfrac{b}{a}",
       before: '$a·$variable = $negB',
       after: '$variable = $solution',
+      note: 'Divide both sides by the leading coefficient to isolate '
+          '$variable.',
     ));
 
     steps.add(MathStep(
@@ -212,6 +221,10 @@ class StepEngine {
       formula: r"a\,x^2 + b\,x + c = 0",
       before: '$body = 0',
       after: 'a = $a,  b = $b,  c = $c',
+      note: 'Read the three coefficients off the polynomial. We pull '
+          'a from the second derivative ÷ 2, b from the first '
+          'derivative at $variable = 0, and c from the polynomial at '
+          '$variable = 0.',
     ));
 
     // Discriminant.
@@ -221,6 +234,9 @@ class StepEngine {
       formula: r"\Delta = b^2 - 4ac",
       before: 'a = $a,  b = $b,  c = $c',
       after: 'Δ = $disc',
+      note: 'The discriminant tells us how many real roots: positive '
+          '→ two distinct real roots; zero → one double root; '
+          'negative → two complex conjugate roots.',
     ));
 
     // Roots via quadratic formula.
@@ -231,6 +247,8 @@ class StepEngine {
       formula: r"x = \dfrac{-b \pm \sqrt{\Delta}}{2a}",
       before: 'a = $a,  b = $b,  c = $c,  Δ = $disc',
       after: '$variable = $rootPlus  or  $variable = $rootMinus',
+      note: 'Plug a, b, and Δ into the quadratic formula. The `±` '
+          'gives both roots in one step.',
     ));
 
     // Final canonical result via SymEngine.solve — confirms our answer
@@ -323,6 +341,8 @@ class StepEngine {
         formula: r"\int -f(x) \, dx = -\int f(x) \, dx",
         before: '∫ $s d$variable',
         after: '-∫ $body d$variable',
+        note: 'Pull the leading minus sign out of the integral; the '
+            'rest is just ∫f.',
       ));
       final inner = _traceIntegrate(body, variable, engine, steps);
       return inner == null ? null : '-($inner)';
@@ -349,6 +369,8 @@ class StepEngine {
         formula: r"\int x \, dx = \frac{x^2}{2}",
         before: '∫ $s d$variable',
         after: result,
+        note: 'The power rule for n=1: bump the exponent up to 2 and '
+            'divide by the new exponent.',
       ));
       return result;
     }
@@ -363,6 +385,8 @@ class StepEngine {
         formula: r"\int (f \pm g) \, dx = \int f \, dx \pm \int g \, dx",
         before: '∫ $s d$variable',
         after: parts,
+        note: 'Integration is linear: the integral of a sum is the '
+            'sum of the integrals.',
       ));
       final pieces = <String>[];
       var allMatched = true;
@@ -393,6 +417,8 @@ class StepEngine {
           formula: r"\int c\,f(x)\,dx = c \int f(x)\,dx",
           before: '∫ $s d$variable',
           after: '$constPart · ∫ $varPart d$variable',
+          note: 'Pull `$constPart` outside the integral — constants '
+              'multiply through.',
         ));
         final inner = _traceIntegrate(varPart, variable, engine, steps);
         return inner == null ? null : '($constPart)·($inner)';
@@ -413,6 +439,8 @@ class StepEngine {
             formula: r"\int \frac{1}{x} \, dx = \ln|x|",
             before: '∫ $s d$variable',
             after: result,
+            note: 'The integral of 1/$variable is the natural log of '
+                'its absolute value.',
           ));
           return result;
         }
@@ -424,6 +452,8 @@ class StepEngine {
           formula: r"\int x^n \, dx = \frac{x^{n+1}}{n+1}",
           before: '∫ $s d$variable',
           after: result,
+          note: 'Bump the exponent up by 1 and divide by the new '
+              'exponent. Works for any constant n ≠ −1.',
         ));
         return result;
       }
@@ -469,6 +499,8 @@ class StepEngine {
           formula: r"\int \frac{1}{x} \, dx = \ln|x|",
           before: '∫ $s d$variable',
           after: result,
+          note: 'The integral of 1/$variable is the natural log of '
+              'its absolute value.',
         ));
         return result;
       }
@@ -501,6 +533,7 @@ class StepEngine {
         formula: rule.formula,
         before: '∫ $s d$variable',
         after: result,
+        note: 'Use the standard antiderivative for ${fc.name}.',
       ));
       return result;
     }
@@ -694,6 +727,7 @@ class StepEngine {
         formula: r"\frac{d}{dx}[x] = 1",
         before: 'd/d$variable[$s]',
         after: '1',
+        note: 'Differentiating $variable with respect to itself is 1.',
       ));
       return;
     }
@@ -710,6 +744,8 @@ class StepEngine {
         formula: r"\frac{d}{dx}[f \pm g] = f' \pm g'",
         before: 'd/d$variable[$s]',
         after: derivedTerms.join(' '),
+        note: 'Differentiate each term on its own; the derivative '
+            'distributes across `+` and `−`.',
       ));
       for (final term in sumTerms) {
         _trace(term.body, variable, engine, steps);
@@ -728,6 +764,8 @@ class StepEngine {
             r"\frac{d}{dx}\left[\frac{f}{g}\right] = \frac{f'g - fg'}{g^2}",
         before: 'd/d$variable[$s]',
         after: '(d/d$variable[$f]·$g - $f·d/d$variable[$g]) / ($g)^2',
+        note: 'For a quotient, the numerator gets `f′g − fg′` and the '
+            'denominator gets squared.',
       ));
       _trace(f, variable, engine, steps);
       _trace(g, variable, engine, steps);
@@ -746,6 +784,8 @@ class StepEngine {
         formula: r"\frac{d}{dx}[fg] = f'g + fg'",
         before: 'd/d$variable[$s]',
         after: 'd/d$variable[$first]·($rest) + $first·d/d$variable[$rest]',
+        note: 'For a product, differentiate each factor and add the '
+            'pieces — `(fg)′ = f′g + fg′`.',
       ));
       _trace(first, variable, engine, steps);
       _trace(rest, variable, engine, steps);
@@ -767,8 +807,11 @@ class StepEngine {
           before: 'd/d$variable[$s]',
           after: '$exp·($base)^($exp - 1)·d/d$variable[$base]',
           note: base == variable
-              ? null
-              : 'Combined with chain rule because the base is not just $variable.',
+              ? 'Bring the exponent down as a coefficient and reduce '
+                  'the exponent by 1.'
+              : 'Bring the exponent down and reduce it by 1, then '
+                  'multiply by the derivative of the inner base — that '
+                  '`d/d$variable[$base]` factor is the chain rule.',
         ));
         if (base != variable) _trace(base, variable, engine, steps);
         return;
@@ -779,6 +822,9 @@ class StepEngine {
           formula: r"\frac{d}{dx}[a^{u(x)}] = a^{u(x)} \ln(a) \, u'(x)",
           before: 'd/d$variable[$s]',
           after: '($base)^($exp)·ln($base)·d/d$variable[$exp]',
+          note: 'When the variable is in the exponent, the derivative '
+              'is the same expression times `ln(base)` times the '
+              'derivative of the exponent.',
         ));
         _trace(exp, variable, engine, steps);
         return;
@@ -801,8 +847,9 @@ class StepEngine {
             ? rule.simpleAfter(fc.arg)
             : rule.chainAfter(fc.arg, variable),
         note: argIsVar
-            ? null
-            : 'The argument depends on $variable, so multiply by its derivative.',
+            ? 'Apply the standard derivative for ${fc.name}.'
+            : 'The argument depends on $variable, so multiply by its '
+                'derivative (chain rule).',
       ));
       if (!argIsVar) _trace(fc.arg, variable, engine, steps);
       return;

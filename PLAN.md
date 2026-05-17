@@ -345,9 +345,15 @@ roughly double the perceived value of the app.
 - [ ] **Worked-example library**. Curated catalogue of problem types
   (related rates, optimization, vector projection, eigenvalue) with
   click-to-try examples. Discoverability + learning.
-- [ ] **Plain-language step explanations**. After a step is shown
-  symbolically, render a one-sentence EN/DE/FR/ES description of the
-  rule applied. Builds directly on the step-by-step infrastructure.
+- [~] **Plain-language step explanations**. After a step is shown
+  symbolically, render a one-sentence description of the rule applied.
+  Builds directly on the step-by-step infrastructure.
+  - **V1 partial** (HISTORY round 42): every common differentiation,
+    integration, and solve rule now emits a clear one-sentence English
+    note explaining *why* the rule applies, on top of the formal
+    formula. The StepsDialog already renders the note italicized
+    below each step's before/after row.
+  - **V2 pending**: translate notes to DE/FR/ES.
 
 #### Input
 
