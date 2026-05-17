@@ -76,6 +76,17 @@ jobs:
           BIN="build/macos/Build/Products/Release/crisp_calc.app/Contents/MacOS/crisp_calc"
           CRISPCALC_DIAGNOSTIC=matrix "$BIN"
 
+      - name: Run step engine self-test against the release binary
+        # Headless invocation of the step-by-step diagnostic battery
+        # (diff / integrate / solve with ~28 examples). Confirms the
+        # step engine's recursive rule walker produces canonical
+        # answers that match SymEngine, and catches regressions when
+        # SymEngine's output format shifts between bridge versions.
+        run: |
+          set -eu
+          BIN="build/macos/Build/Products/Release/crisp_calc.app/Contents/MacOS/crisp_calc"
+          CRISPCALC_DIAGNOSTIC=steps "$BIN"
+
       - name: Zip the .app for download
         run: |
           cd build/macos/Build/Products/Release

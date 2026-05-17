@@ -240,6 +240,53 @@ class ExpressionPreprocessingUtils {
   /// Picks the variable to solve for. Reserved tokens (constants, function
   /// names) are skipped. Prefers `x, y, z, t, n, a, b, c` in that order.
   /// **Case-sensitive** — `X` and `x` are different variables.
+  /// Substitute parameter values into an expression. Each entry in
+  /// [params] maps a parameter name to its current numeric value; the
+  /// name is matched as an identifier (not as part of a longer name)
+  /// and replaced with its value wrapped in parentheses. Identifiers
+  /// followed by `(` are left alone so function calls don't get
+  /// mangled. Returns [expression] unchanged when [params] is empty.
+  static String substituteParameters(
+      String expression, Map<String, double> params) {
+    if (params.isEmpty) return expression;
+    var out = expression;
+    for (final entry in params.entries) {
+      final pattern = RegExp(
+          '(?<![a-zA-Z_0-9])${RegExp.escape(entry.key)}(?![a-zA-Z_0-9\\(])');
+      out = out.replaceAll(pattern, '(${entry.value})');
+    }
+    return out;
+  }
+
+  /// Pull out parameter names from a graphable function expression. A
+  /// parameter is any identifier in the expression that:
+  ///   - is not the plot variable [plotVar]
+  ///   - is not a reserved constant or function name
+  ///   - is not immediately followed by `(` (so a function call like
+  ///     `sin(x)` doesn't get its name harvested)
+  ///
+  /// Returns a deduplicated, sorted list — the graphing screen uses it
+  /// to decide which sliders to render. Returns an empty list when no
+  /// parameters are found.
+  static List<String> detectParameters(String expression, String plotVar) {
+    if (expression.isEmpty) return const [];
+
+    // Identifier candidates: letters (allowing multi-char names like
+    // `freq`), with a non-letter/digit boundary on either side, AND not
+    // immediately followed by `(`.
+    final paramPattern =
+        RegExp(r'(?<![a-zA-Z_0-9])([a-zA-Z][a-zA-Z]*)(?![a-zA-Z_0-9\(])');
+    final found = <String>{};
+    for (final m in paramPattern.allMatches(expression)) {
+      final name = m.group(1)!;
+      if (name == plotVar) continue;
+      if (_reservedTokens.contains(name)) continue;
+      found.add(name);
+    }
+    final list = found.toList()..sort();
+    return list;
+  }
+
   static String detectVariable(String equation) {
     // A single letter that isn't adjacent to another letter on either side.
     // `\b` alone would miss `k` in `2k+5` because the digit-letter boundary

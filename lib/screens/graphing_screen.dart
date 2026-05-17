@@ -6,6 +6,7 @@ import '../controllers/latex_controller.dart';
 import '../engine/calculator_engine.dart';
 import '../engine/app_state.dart';
 import '../localization/app_localizations.dart';
+import '../utils/expression_preprocessing_utils.dart';
 import '../utils/keyboard_input_handler.dart';
 import '../utils/latex_conversion_utils.dart';
 import '../screens/curve_analysis_input_screen.dart';
@@ -413,6 +414,15 @@ class GraphingScreenState extends State<GraphingScreen>
                               engine: _engine,
                               getColorForFunction: _getColorForFunction,
                               showAnnotations: _showAnnotations,
+                              parameters: {
+                                for (final i in activeFunctionIndices)
+                                  if (_appState.functionParameters[i] !=
+                                          null &&
+                                      _appState.functionParameters[i]!
+                                          .isNotEmpty)
+                                    i: Map<String, double>.from(
+                                        _appState.functionParameters[i]!),
+                              },
                             ),
                             size: Size.infinite,
                           ),
@@ -513,10 +523,25 @@ class GraphingScreenState extends State<GraphingScreen>
         ),
       );
     }
+
+    // Detect parameters per function. Empty list means no sliders for
+    // that function — chip-only rendering keeps the layout compact.
+    final paramsPerSlot = <int, List<String>>{};
+    for (var i = 0; i < activeFunctionIndices.length; i++) {
+      final params = ExpressionPreprocessingUtils.detectParameters(
+          activeFunctions[i], 'x');
+      paramsPerSlot[activeFunctionIndices[i]] = params;
+      // Drop stale slider state.
+      _appState.pruneParameters(activeFunctionIndices[i], params.toSet());
+    }
+
+    final anyParams = paramsPerSlot.values.any((p) => p.isNotEmpty);
+    final maxHeight = anyParams ? 130.0 : 50.0;
+
     return SizedBox(
-      height: 50,
+      height: maxHeight,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         scrollDirection: Axis.horizontal,
         itemCount: activeFunctionIndices.length,
         itemBuilder: (context, index) {
@@ -524,21 +549,45 @@ class GraphingScreenState extends State<GraphingScreen>
           final originalIndex = activeFunctionIndices[index];
           final yLabel = 'Y${originalIndex + 1}';
           final color = _getColorForFunction(originalIndex);
+          final params = paramsPerSlot[originalIndex] ?? const <String>[];
           return Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: Chip(
-              avatar: CircleAvatar(backgroundColor: color, radius: 8),
-              label: SizedBox(
-                width: 120,
-                child: Text(
-                  '$yLabel = $funcText',
-                  overflow: TextOverflow.ellipsis,
+            margin: const EdgeInsets.only(right: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Chip(
+                  avatar: CircleAvatar(backgroundColor: color, radius: 8),
+                  label: SizedBox(
+                    width: 140,
+                    child: Text(
+                      '$yLabel = $funcText',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  side: BorderSide(color: color, width: 1),
+                  onDeleted: () => _removeFunction(funcText),
+                  deleteIcon: const Icon(Icons.close, size: 16),
                 ),
-              ),
-              backgroundColor: color.withValues(alpha: 0.1),
-              side: BorderSide(color: color, width: 1),
-              onDeleted: () => _removeFunction(funcText),
-              deleteIcon: const Icon(Icons.close, size: 16),
+                if (params.isNotEmpty)
+                  SizedBox(
+                    width: 180,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final p in params)
+                          _ParameterSlider(
+                            name: p,
+                            value: _appState.getParameter(originalIndex, p),
+                            color: color,
+                            onChanged: (v) => _appState.setParameter(
+                                originalIndex, p, v),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           );
         },
@@ -556,6 +605,12 @@ class GraphPainter extends CustomPainter {
   final Color Function(int) getColorForFunction;
   final bool showAnnotations;
 
+  /// Per-function parameter values, keyed by the *original* function
+  /// slot index (the same indices that live in `functionIndices`).
+  /// Empty when no function has any parameters. Substituted in
+  /// before `x` when evaluating, so `a*sin(b*x)` plots correctly.
+  final Map<int, Map<String, double>> parameters;
+
   GraphPainter({
     required this.functions,
     required this.functionIndices,
@@ -564,6 +619,7 @@ class GraphPainter extends CustomPainter {
     required this.engine,
     required this.getColorForFunction,
     this.showAnnotations = false,
+    this.parameters = const {},
   });
 
   @override
@@ -588,15 +644,31 @@ class GraphPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
+      // Pre-substitute parameter values so neither _plotFunction nor
+      // _drawAnnotations needs to know about parameter storage. Each
+      // identifier-as-whole-word is replaced with its current value
+      // wrapped in parens (so 2x with parameter `x` doesn't become 21).
+      final substituted = _withParameters(func, originalIndex);
+
       try {
-        _plotFunction(canvas, size, func, centerX, centerY, unit, paint);
+        _plotFunction(canvas, size, substituted, centerX, centerY, unit, paint);
         if (showAnnotations) {
-          _drawAnnotations(canvas, size, func, centerX, centerY, unit, color);
+          _drawAnnotations(
+              canvas, size, substituted, centerX, centerY, unit, color);
         }
       } catch (e) {
         debugPrint('Error plotting function $func: $e');
       }
     }
+  }
+
+  /// Substitute every parameter in [func] for slot [slot] with its
+  /// current numeric value. Returns the original string when this slot
+  /// has no parameters.
+  String _withParameters(String func, int slot) {
+    final params = parameters[slot];
+    if (params == null || params.isEmpty) return func;
+    return ExpressionPreprocessingUtils.substituteParameters(func, params);
   }
 
   void _drawGrid(
@@ -1016,7 +1088,8 @@ class GraphPainter extends CustomPainter {
         oldDelegate.functionIndices.toString() != functionIndices.toString() ||
         oldDelegate.scale != scale ||
         oldDelegate.offset != offset ||
-        oldDelegate.showAnnotations != showAnnotations;
+        oldDelegate.showAnnotations != showAnnotations ||
+        oldDelegate.parameters.toString() != parameters.toString();
   }
 }
 
@@ -1025,4 +1098,69 @@ class _Extremum {
   final double y;
   final String kind; // 'min' or 'max'
   const _Extremum(this.x, this.y, this.kind);
+}
+
+/// Compact one-line slider for a single function parameter. Range is
+/// fixed at [-10, 10] for V1 — wide enough for typical textbook
+/// parameters, narrow enough to feel responsive. The current value is
+/// shown inline next to the name; tapping the value would open a
+/// numeric input (deferred).
+class _ParameterSlider extends StatelessWidget {
+  final String name;
+  final double value;
+  final Color color;
+  final ValueChanged<double> onChanged;
+
+  const _ParameterSlider({
+    required this.name,
+    required this.value,
+    required this.color,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 18,
+          child: Text(
+            name,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: color,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2,
+              thumbShape:
+                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape:
+                  const RoundSliderOverlayShape(overlayRadius: 12),
+              activeTrackColor: color,
+              thumbColor: color,
+            ),
+            child: Slider(
+              value: value.clamp(-10.0, 10.0),
+              min: -10,
+              max: 10,
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 36,
+          child: Text(
+            value.toStringAsFixed(1),
+            style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -280,47 +280,59 @@ class StepEngine {
   static List<MathStep> integrate(
       String expr, String variable, CalculatorEngine engine) {
     final steps = <MathStep>[];
-    _traceIntegrate(expr, variable, engine, steps);
+    final antideriv = _traceIntegrate(expr, variable, engine, steps);
 
-    // Always append the canonical SymEngine answer as the final step,
-    // even if rule walking fully elaborated the trace. Gives the user
-    // a clean "this is the answer" line at the bottom.
-    final canonical = engine.integrate(expr, variable);
+    // Append the assembled antiderivative as the final Result step.
+    // When the rule walker fully elaborated the trace we have an
+    // accurate Dart-computed answer; only when nothing matched do we
+    // fall back to whatever SymEngine returned in the last step's
+    // `after` field (which on a bridge that lacks integrate() will be
+    // an error string — but at least the trace itself is honest).
     steps.add(MathStep(
       rule: 'Result',
       formula: '',
       before: '∫ $expr d$variable',
-      after: canonical.startsWith('Error') ? canonical : '$canonical + C',
+      after: antideriv != null
+          ? '$antideriv + C'
+          : steps.isNotEmpty
+              ? steps.last.after
+              : 'Unable to integrate',
     ));
 
     return steps;
   }
 
-  static void _traceIntegrate(String expr, String variable,
+  /// Recursive walker. Returns the assembled antiderivative string
+  /// when a rule (possibly with nested rules) handled the input, or
+  /// null when the integrator fell through and the final step's
+  /// `after` field is the only available answer.
+  static String? _traceIntegrate(String expr, String variable,
       CalculatorEngine engine, List<MathStep> steps) {
     final s = _stripOuterParens(expr.trim());
 
     // Constant rule: ∫c d/var = c·var
     if (!_containsVar(s, variable)) {
+      final result = '($s)·$variable';
       steps.add(MathStep(
         rule: 'Constant rule',
         formula: r"\int c \, dx = c\,x",
         before: '∫ $s d$variable',
-        after: '$s·$variable',
+        after: result,
         note: '$s does not depend on $variable.',
       ));
-      return;
+      return result;
     }
 
     // Identity: ∫x dx = x²/2  (power rule with n = 1)
     if (s == variable) {
+      final result = '($variable)^2/2';
       steps.add(MathStep(
         rule: 'Power rule (n=1)',
         formula: r"\int x \, dx = \frac{x^2}{2}",
         before: '∫ $s d$variable',
-        after: '($variable)^2/2',
+        after: result,
       ));
-      return;
+      return result;
     }
 
     // Sum/difference rule: ∫(f ± g) dx = ∫f dx ± ∫g dx
@@ -335,17 +347,20 @@ class StepEngine {
         before: '∫ $s d$variable',
         after: parts,
       ));
+      final pieces = <String>[];
+      var allMatched = true;
       for (final term in sumTerms) {
-        _traceIntegrate(term.body, variable, engine, steps);
+        final sub = _traceIntegrate(term.body, variable, engine, steps);
+        if (sub == null) {
+          allMatched = false;
+          break;
+        }
+        pieces.add('${term.sign}($sub)');
       }
-      return;
+      return allMatched ? pieces.join(' ') : null;
     }
 
-    // Constant multiple: ∫c·f(x) dx = c·∫f(x) dx. Pulls every
-    // constant factor out front; the remaining factor goes back through
-    // the rule list. If every factor is a constant (handled by the
-    // constant rule above) or every factor contains the variable
-    // (so there's nothing to pull out), this rule no-ops.
+    // Constant multiple: ∫c·f(x) dx = c·∫f(x) dx.
     final factors = _splitTopLevelProduct(s);
     if (factors != null) {
       final constFactors = <String>[];
@@ -362,78 +377,76 @@ class StepEngine {
           before: '∫ $s d$variable',
           after: '$constPart · ∫ $varPart d$variable',
         ));
-        _traceIntegrate(varPart, variable, engine, steps);
-        return;
+        final inner = _traceIntegrate(varPart, variable, engine, steps);
+        return inner == null ? null : '($constPart)·($inner)';
       }
     }
 
     // Power rule: ∫x^n dx = x^(n+1)/(n+1) for constant n ≠ -1.
-    // The base must be exactly the variable; chain-rule cases (∫f(x)^n
-    // where f is non-trivial) need substitution which lives in V2.
     final powSplit = _splitTopLevelOnce(s, '^');
     if (powSplit != null) {
       final base = powSplit.lhs;
       final exp = powSplit.rhs;
       if (base == variable && !_containsVar(exp, variable)) {
-        // Special-case n = -1 (reciprocal → ln rule).
         if (exp.trim() == '-1' || exp.trim() == '(-1)') {
+          final result = 'ln|$variable|';
           steps.add(MathStep(
             rule: 'Logarithm rule',
             formula: r"\int \frac{1}{x} \, dx = \ln|x|",
             before: '∫ $s d$variable',
-            after: 'ln|$variable|',
+            after: result,
           ));
-        } else {
-          final nPlusOne = engine.simplify('($exp) + 1');
-          final newExp = nPlusOne.startsWith('Error') ? '$exp + 1' : nPlusOne;
-          steps.add(MathStep(
-            rule: 'Power rule',
-            formula: r"\int x^n \, dx = \frac{x^{n+1}}{n+1}",
-            before: '∫ $s d$variable',
-            after: '($variable)^($newExp)/($newExp)',
-          ));
+          return result;
         }
-        return;
+        final nPlusOne = engine.simplify('($exp) + 1');
+        final newExp = nPlusOne.startsWith('Error') ? '$exp + 1' : nPlusOne;
+        final result = '($variable)^($newExp)/($newExp)';
+        steps.add(MathStep(
+          rule: 'Power rule',
+          formula: r"\int x^n \, dx = \frac{x^{n+1}}{n+1}",
+          before: '∫ $s d$variable',
+          after: result,
+        ));
+        return result;
       }
     }
 
-    // Reciprocal: ∫(1/x) dx = ln|x| when the numerator is 1 and the
-    // denominator is the bare variable. (∫1/(x+1) etc. needs u-sub.)
+    // Reciprocal: ∫(1/x) dx = ln|x|.
     final divSplit = _splitTopLevelOnce(s, '/');
     if (divSplit != null) {
       final num = divSplit.lhs.trim();
       final den = divSplit.rhs.trim();
       if (num == '1' && den == variable) {
+        final result = 'ln|$variable|';
         steps.add(MathStep(
           rule: 'Logarithm rule',
           formula: r"\int \frac{1}{x} \, dx = \ln|x|",
           before: '∫ $s d$variable',
-          after: 'ln|$variable|',
+          after: result,
         ));
-        return;
+        return result;
       }
     }
 
-    // Standard antiderivatives for f(var). Argument must be exactly the
-    // variable — anything more general would need substitution.
+    // Standard antiderivatives for f(var).
     final fc = _matchFunctionCall(s);
     if (fc != null &&
         fc.arg.trim() == variable &&
         _standardAntiderivatives.containsKey(fc.name)) {
       final rule = _standardAntiderivatives[fc.name]!;
+      final result = rule.after(variable);
       steps.add(MathStep(
         rule: rule.ruleName,
         formula: rule.formula,
         before: '∫ $s d$variable',
-        after: rule.after(variable),
+        after: result,
       ));
-      return;
+      return result;
     }
 
-    // Fall through — no rule pattern matched. Emit a single "Symbolic
-    // integration" step that lets SymEngine handle it. The final
-    // "Result" step (added by `integrate`) carries the canonical answer
-    // regardless.
+    // Fall through — emit a "Symbolic integration" step that lets the
+    // bridge try. Returns null so the caller knows we couldn't compute
+    // an answer Dart-side.
     steps.add(MathStep(
       rule: 'Symbolic integration',
       formula: '',
@@ -443,6 +456,7 @@ class StepEngine {
           'to the symbolic integrator. (Substitution and integration by '
           'parts are not yet recognized by the step walker.)',
     ));
+    return null;
   }
 
   /// Lookup table of antiderivatives for standard 1-arg functions when

@@ -2,6 +2,73 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 23) — Parameter sliders + thorough test sweep
+
+Two threads in one round: shipping P5 #2 (parameter sliders on the
+graphing screen) and a wide testing pass on every step engine that
+surfaced — and fixed — a real bug.
+
+### Parameter sliders
+
+`ExpressionPreprocessingUtils.detectParameters(expr, plotVar)` walks
+an expression and returns identifiers that aren't the plot variable
+or a reserved name/function. `AppState` carries per-slot parameter
+values (`functionParameters: Map<int, Map<String, double>>`),
+persisted via shared_preferences as JSON. The graphing screen renders
+a compact `_ParameterSlider` (range [-10, 10]) under each function
+chip that has any parameter. `GraphPainter._withParameters`
+substitutes values pre-evaluation via the new
+`ExpressionPreprocessingUtils.substituteParameters` utility, so
+`a*sin(b*x + c)` plots correctly and the curve animates as the user
+drags sliders.
+
+### Bug found by the thorough test sweep
+
+The user asked for thorough unit + math tests on the step engine
+work. Added two new test files (`step_engine_thorough_test.dart`
+with 58 rule-selection / edge-case checks, `parameter_detection_test.dart`
+with 27 checks for the new utility) and a new headless end-to-end
+diagnostic: `CRISPCALC_DIAGNOSTIC=steps` runs ~28 examples of diff /
+integrate / solve against the live bridge and verifies the final
+result.
+
+The first run revealed: **every integration check failed**. Root
+cause: the SymEngine C bridge doesn't actually implement
+`integrate()` — it returns "not implemented in SymEngine C API".
+Round 22's step engine relied on `engine.integrate()` for the final
+"Result" step, so every elaborated trace ended in an error string.
+
+Fix: refactor `_traceIntegrate` to return the Dart-computed
+antiderivative string from each rule, composing through sum/
+constant-multiple recursion. The Result step now carries our own
+answer, not SymEngine's — and the rules cover power, log, sum,
+constant-multiple, and the standard antiderivatives, which is enough
+for the full V1 set.
+
+### Diagnostic normalizer
+
+`StepDiagnostics._normalize` strips parens, whitespace, `|` (so
+`ln|x|` matches `ln(x)`), and collapses Python-style `**` to `^` and
+the readability middle-dot `·` to `*`. Matches a list of
+`|`-separated alternates so we can encode "either `2*x` or `x*2`"
+without overfitting SymEngine's canonical output shape.
+
+### CI hookup
+
+`build-macos.yml` gains a second self-test step: after the matrix
+diagnostic, the workflow runs `CRISPCALC_DIAGNOSTIC=steps`. The
+binary exits non-zero on any failure, so step-engine regressions
+land in CI.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **372/372** (85 new tests for parameter detection,
+  parameter substitution, and thorough step engine rule selection).
+- macOS release: matrix self-test **7/7**, step self-test **28/28**.
+
+---
+
 ## 2026-05-17 (round 22) — Step-by-step integration (P5 #1, V3)
 
 Third slice of the step-by-step workstream. Modeled on SymPy's

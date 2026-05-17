@@ -16,6 +16,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'engine/app_state.dart';
 import 'engine/calculator_engine.dart';
 import 'engine/matrix_diagnostics.dart';
+import 'engine/step_diagnostics.dart';
 import 'localization/app_localizations.dart';
 import 'screens/about_screen.dart';
 import 'screens/analysis_hub_screen.dart';
@@ -37,22 +38,41 @@ void main() async {
   // env var is the cleanest hook from a launched binary). Runs the matrix
   // battery against the native bridge, prints PASS/FAIL lines to stdout,
   // exits non-zero on any failure.
+  final diag = Platform.environment['CRISPCALC_DIAGNOSTIC'];
   if (!kIsWebShim &&
       (Platform.isMacOS || Platform.isLinux || Platform.isWindows) &&
-      Platform.environment['CRISPCALC_DIAGNOSTIC'] == 'matrix') {
-    final results = MatrixDiagnostics.run(CalculatorEngine());
-    var anyFailed = false;
-    for (final r in results) {
-      stdout.writeln('${r.passed ? "PASS" : "FAIL"}  ${r.name}');
-      stdout.writeln('  expr:     ${r.expression}');
-      stdout.writeln('  expected: ${r.expected}');
-      stdout.writeln('  actual:   ${r.actual}');
-      if (!r.passed) anyFailed = true;
+      diag != null) {
+    if (diag == 'matrix') {
+      final results = MatrixDiagnostics.run(CalculatorEngine());
+      var anyFailed = false;
+      for (final r in results) {
+        stdout.writeln('${r.passed ? "PASS" : "FAIL"}  ${r.name}');
+        stdout.writeln('  expr:     ${r.expression}');
+        stdout.writeln('  expected: ${r.expected}');
+        stdout.writeln('  actual:   ${r.actual}');
+        if (!r.passed) anyFailed = true;
+      }
+      final passed = results.where((r) => r.passed).length;
+      stdout.writeln('---');
+      stdout.writeln('$passed of ${results.length} checks passed');
+      exit(anyFailed ? 1 : 0);
     }
-    final passed = results.where((r) => r.passed).length;
-    stdout.writeln('---');
-    stdout.writeln('$passed of ${results.length} checks passed');
-    exit(anyFailed ? 1 : 0);
+    if (diag == 'steps') {
+      final results = StepDiagnostics.run(CalculatorEngine());
+      var anyFailed = false;
+      for (final r in results) {
+        stdout.writeln(
+            '${r.passed ? "PASS" : "FAIL"}  [${r.operation}]  ${r.name}');
+        stdout.writeln('  expr:     ${r.expression}');
+        stdout.writeln('  expected: ${r.expected}');
+        stdout.writeln('  actual:   ${r.actual}');
+        if (!r.passed) anyFailed = true;
+      }
+      final passed = results.where((r) => r.passed).length;
+      stdout.writeln('---');
+      stdout.writeln('$passed of ${results.length} checks passed');
+      exit(anyFailed ? 1 : 0);
+    }
   }
 
   runApp(const CrispCalcApp());

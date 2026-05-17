@@ -205,12 +205,12 @@ roughly double the perceived value of the app.
     just the variable. Substitution and integration by parts deferred
     to V2 — they need heuristic u-picking (LIATE) that V1 can't
     safely guess.
-- [ ] **Interactive parameter sliders** on the graphing screen.
-  Replace constants in a graphed function with named parameters
-  (`y = a*sin(b*x + c)`), attach a slider widget per parameter, drag
-  to animate the curve. Algorithmically small (re-evaluate on
-  parameter change, repaint), perceptually huge — single biggest
-  "wow" we can ship.
+- [x] ~~**Interactive parameter sliders** on the graphing screen.~~
+  Done 2026-05-17 — see HISTORY round 23. Identifiers in a function
+  string that aren't the plot variable or a reserved name become
+  parameters; a compact slider per parameter appears under each
+  function chip, and the curve repaints live as the user drags.
+  Values persist across restarts via shared_preferences.
 - [ ] **Statistics + probability module**. Descriptive stats on a list
   of numbers, linear / polynomial / exponential regression, normal /
   binomial / t / chi-square distributions and quantiles, basic

@@ -71,6 +71,7 @@ class AppState extends ChangeNotifier {
   static const _kHistory = 'crisp.history';
   static const _kVariables = 'crisp.variables';
   static const _kFunctions = 'crisp.functions';
+  static const _kParameters = 'crisp.parameters';
 
   static const int _kGraphSlotCount = 10;
   static const int _kHistoryCap = 200;
@@ -100,6 +101,7 @@ class AppState extends ChangeNotifier {
     _themeMode = ThemeMode.dark;
     history.clear();
     userVariables.clear();
+    functionParameters.clear();
     for (var i = 0; i < graphFunctions.length; i++) {
       graphFunctions[i] = '';
     }
@@ -152,6 +154,23 @@ class AppState extends ChangeNotifier {
           }
         } catch (e) {
           debugPrint('STATE: failed to parse functions: $e');
+        }
+      }
+      final paramJson = _prefs!.getString(_kParameters);
+      if (paramJson != null) {
+        try {
+          final map = jsonDecode(paramJson) as Map<String, dynamic>;
+          for (final entry in map.entries) {
+            final slot = int.tryParse(entry.key);
+            if (slot == null) continue;
+            final inner = entry.value as Map<String, dynamic>;
+            functionParameters[slot] = {
+              for (final p in inner.entries)
+                p.key: (p.value as num).toDouble(),
+            };
+          }
+        } catch (e) {
+          debugPrint('STATE: failed to parse parameters: $e');
         }
       }
     } catch (e) {
@@ -207,6 +226,13 @@ class AppState extends ChangeNotifier {
   final Map<String, String> userVariables = {};
   late final List<String> graphFunctions;
 
+  /// Parameter values per graph slot. Keyed by slot index, then by
+  /// parameter name. Used by the graphing screen's slider panel: any
+  /// identifier in a function string that isn't `x` (or a reserved
+  /// constant / function name) becomes a parameter; this map carries
+  /// its current value, defaulting to 1.0 the first time it's seen.
+  final Map<int, Map<String, double>> functionParameters = {};
+
   String formatNumber(String numberString) {
     final number = double.tryParse(numberString);
     if (number == null) return numberString;
@@ -254,6 +280,51 @@ class AppState extends ChangeNotifier {
     _prefs?.setString(_kFunctions, jsonEncode(graphFunctions));
   }
 
+  void _persistParameters() {
+    _prefs?.setString(
+      _kParameters,
+      jsonEncode(functionParameters.map(
+        (slot, params) => MapEntry(slot.toString(), params),
+      )),
+    );
+  }
+
+  /// Current value of [name] for the function in [slot], defaulting to
+  /// 1.0 the first time we see it. Auto-creates the per-slot map so
+  /// callers don't have to.
+  double getParameter(int slot, String name) {
+    final params = functionParameters.putIfAbsent(slot, () => {});
+    return params.putIfAbsent(name, () => 1.0);
+  }
+
+  void setParameter(int slot, String name, double value) {
+    final params = functionParameters.putIfAbsent(slot, () => {});
+    if (params[name] == value) return;
+    params[name] = value;
+    _persistParameters();
+    notifyListeners();
+  }
+
+  /// Drop any parameters for [slot] that aren't in [keep]. Called by the
+  /// graphing screen after a function string changes so stale slider
+  /// state doesn't accumulate.
+  void pruneParameters(int slot, Set<String> keep) {
+    final params = functionParameters[slot];
+    if (params == null) return;
+    var changed = false;
+    for (final k in params.keys.toList()) {
+      if (!keep.contains(k)) {
+        params.remove(k);
+        changed = true;
+      }
+    }
+    if (changed) {
+      if (params.isEmpty) functionParameters.remove(slot);
+      _persistParameters();
+      notifyListeners();
+    }
+  }
+
   void setVariable(String name, String value) {
     userVariables[name] = value;
     _persistVariables();
@@ -284,7 +355,9 @@ class AppState extends ChangeNotifier {
     if (index >= 0 && index < graphFunctions.length) {
       if (graphFunctions[index].isNotEmpty) {
         graphFunctions[index] = '';
+        functionParameters.remove(index);
         _persistFunctions();
+        _persistParameters();
         notifyListeners();
       }
     }
