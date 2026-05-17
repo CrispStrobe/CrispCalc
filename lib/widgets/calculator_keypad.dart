@@ -68,10 +68,13 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
   _PaneKind _leftPane = _PaneKind.num;
   _PaneKind _rightPane = _PaneKind.cas;
 
-  // Full key inventory — same content as the narrow tab bar.
+  // Full key inventory — same content as the narrow tab bar. Cursor
+  // movement, backspace, and EXE live in the always-visible input
+  // toolbar (see `calculator_screen.dart`), so the per-tab grids stay
+  // focused on operators/functions rather than navigation widgets.
   static const List<String> _numKeys = [
     'C',
-    '⌫',
+    'Ans',
     '%',
     '/',
     '7',
@@ -90,10 +93,10 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     '.',
     '(',
     ')',
+    'x',
     '^',
     'sqrt',
     'π',
-    'EXE',
   ];
   static const List<String> _trigKeys = [
     'sin',
@@ -112,6 +115,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'acosh',
     'atanh',
     'abs',
+    'C',
   ];
   static const List<String> _casKeys = [
     'solve',
@@ -130,9 +134,6 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     '=',
     ',',
     'f(x)',
-    '◀',
-    '▶',
-    'EXE',
   ];
   static const List<String> _advKeys = [
     'gamma',
@@ -152,10 +153,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'cross',
     'norm',
     'unit',
-    'x',
-    'Ans',
     'i',
-    'EXE',
   ];
 
   List<String> _keysFor(_PaneKind kind) {

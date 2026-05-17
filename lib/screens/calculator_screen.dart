@@ -29,6 +29,7 @@ import '../utils/math_display_utils.dart';
 // Other imports
 import '../controllers/latex_controller.dart';
 import '../localization/app_localizations.dart';
+import '../screens/curve_analysis_input_screen.dart';
 import '../screens/matrix_editor_screen.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -219,6 +220,45 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _resultPreview = '';
       });
     }
+  }
+
+  /// Recover from a stuck HardwareKeyboard state. Hot reload, a brief
+  /// volume disconnect (the project lives on an external SSD), or just
+  /// abruptly killing the app while a key was held can leave Flutter's
+  /// HardwareKeyboard with stale `_pressedKeys` entries. In debug mode
+  /// those stale entries trip an `assert(...)` inside `handleKeyEvent`
+  /// that fires BEFORE the event is dispatched to our handler — so the
+  /// keyboard becomes completely unresponsive in the calculator until
+  /// the map is cleared.
+  ///
+  /// Three steps:
+  /// 1. `HardwareKeyboard.clearState()` (visible-for-testing in Flutter,
+  ///    but the right hammer here) wipes both `_pressedKeys` and the
+  ///    framework's registered handlers.
+  /// 2. `FocusManager.registerGlobalHandlers()` re-adds the framework's
+  ///    global handler that step 1 removed, so future events dispatch.
+  /// 3. Unfocus and re-request focus on the calculator's KeyboardListener
+  ///    node so it sits in the active focus chain.
+  Future<void> _resetFocus() async {
+    // Best-effort query the engine for the real pressed-key set so the
+    // framework state lines up with reality.
+    try {
+      await HardwareKeyboard.instance.syncKeyboardState();
+    } catch (_) {
+      // Channel may not be ready — fall through; clearState() below is
+      // the more aggressive fix anyway.
+    }
+    if (!mounted) return;
+    // The framework-test-only state reset that flushes _pressedKeys and
+    // _handlers. Followed by re-registering global handlers, this gets
+    // the keyboard back to a clean known state.
+    // ignore: invalid_use_of_visible_for_testing_member
+    HardwareKeyboard.instance.clearState();
+    FocusManager.instance.registerGlobalHandlers();
+    FocusManager.instance.primaryFocus?.unfocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _calculatorFocusNode.requestFocus();
+    });
   }
 
   bool _handleKeyboardInput(KeyEvent event) {
@@ -1285,10 +1325,9 @@ class CalculatorScreenState extends State<CalculatorScreen>
     );
   }
 
-  /// Long-press on a history entry opens a bottom sheet with copy
-  /// / share actions. No share_plus dependency — the clipboard is
-  /// universal and works on every Flutter platform, including web,
-  /// without a plugin.
+  /// Long-press OR right-click on a history entry opens a context menu
+  /// with copy/reuse + the same math actions exposed on the function-tile
+  /// menu (Show on graph, Analyze, Differentiate, Integrate, Solve f=0).
   Future<void> _showHistoryEntryMenu(
       BuildContext context, CalculationEntry entry) async {
     final t = AppLocalizations.of(context);
@@ -1298,6 +1337,47 @@ class CalculatorScreenState extends State<CalculatorScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.show_chart),
+              title: Text(t.funcCtxShowOnGraph),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showOnGraph(entry.expression);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: Text(t.funcCtxAnalyze),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _analyzeExpression(entry.expression);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.trending_up),
+              title: Text(t.funcCtxDifferentiate),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _latexController.insert('diff(${entry.expression}, x)');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.area_chart),
+              title: Text(t.funcCtxIntegrate),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _latexController.insert('integrate(${entry.expression}, x)');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lightbulb_outline),
+              title: Text(t.funcCtxSolve),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _latexController.insert('solve(${entry.expression} = 0, x)');
+              },
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.copy),
               title: Text(t.historyEntryCopyResult),
@@ -1335,6 +1415,24 @@ class CalculatorScreenState extends State<CalculatorScreen>
         ),
       ),
     );
+  }
+
+  /// Park the given expression in the first free Y-slot and switch to
+  /// the Graphing tab. Used by both the history context menu and the
+  /// variable-viewer function-tile menu.
+  void _showOnGraph(String expression) {
+    final slot = _appState.graphFunctions.indexWhere((f) => f.isEmpty);
+    if (slot >= 0) {
+      _appState.updateFunction(slot, expression);
+    }
+    widget.onGoToGraphing?.call();
+  }
+
+  /// Push the curve-analysis input screen pre-filled with the expression.
+  void _analyzeExpression(String expression) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => CurveAnalysisInputScreen(initialFunction: expression),
+    ));
   }
 
   void _toast(BuildContext context, String message) {
@@ -1538,6 +1636,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                   return GestureDetector(
                                     onLongPress: () =>
                                         _showHistoryEntryMenu(context, entry),
+                                    onSecondaryTap: () =>
+                                        _showHistoryEntryMenu(context, entry),
                                     behavior: HitTestBehavior.opaque,
                                     child: Column(
                                       crossAxisAlignment:
@@ -1576,7 +1676,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
             const Divider(height: 1),
 
-            // LaTeX input field
+            // LaTeX input field + always-visible action row (reset focus,
+            // backspace, ◀/▶, =/EXE) so the user never has to hunt for a
+            // submit button across keypad tabs and can always recover from
+            // a stuck focus state by tapping the refresh icon.
             Container(
               height: 120,
               width: double.infinity,
@@ -1586,17 +1689,60 @@ class CalculatorScreenState extends State<CalculatorScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 60),
-                        child: SingleChildScrollView(
-                          reverse: true,
-                          scrollDirection: Axis.horizontal,
-                          child: LatexInputField(controller: _latexController),
+                    child: Row(
+                      children: [
+                        // Toolbar on the LEFT — the LaTeX field below is
+                        // right-bound (new characters appear on the right),
+                        // so keeping tools on the left keeps them out of
+                        // the way of the live input.
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: 'Reset keyboard focus',
+                          onPressed: _resetFocus,
+                          visualDensity: VisualDensity.compact,
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.backspace_outlined),
+                          tooltip: 'Backspace',
+                          onPressed: () => _latexController.backspace(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          tooltip: 'Move cursor left',
+                          onPressed: () => _latexController.moveCursor(-1),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          tooltip: 'Move cursor right',
+                          onPressed: () => _latexController.moveCursor(1),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        FilledButton.icon(
+                          icon: const Icon(Icons.keyboard_return, size: 18),
+                          label: const Text('='),
+                          onPressed: () => _onButtonPressed('EXE'),
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.centerRight,
+                            constraints: const BoxConstraints(minHeight: 60),
+                            child: SingleChildScrollView(
+                              reverse: true,
+                              scrollDirection: Axis.horizontal,
+                              child:
+                                  LatexInputField(controller: _latexController),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   if (_resultPreview.isNotEmpty)

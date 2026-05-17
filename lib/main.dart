@@ -31,6 +31,25 @@ import 'widgets/unit_converter_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Silence the "A KeyDownEvent is dispatched, but the state shows that
+  // the physical key is already pressed" assertion. It fires inside
+  // HardwareKeyboard.handleKeyEvent BEFORE event dispatch in debug mode,
+  // which means key events get DROPPED whenever the framework's
+  // _pressedKeys map has stale entries — typically after hot reload, a
+  // brief volume disconnect, or an abrupt app kill while a key was held.
+  // In release mode the assert is removed and the framework just runs
+  // through. We delegate to the default reporter for every other error.
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    final msg = details.exception.toString();
+    if (msg.contains('physical key is already pressed') ||
+        msg.contains('physical key is not pressed')) {
+      return; // swallow
+    }
+    previousOnError?.call(details);
+  };
+
   await AppState().load();
   // Register native (SymEngine / GMP / MPFR / MPC / FLINT) license texts so
   // they appear in `showLicensePage` alongside the pub deps.
