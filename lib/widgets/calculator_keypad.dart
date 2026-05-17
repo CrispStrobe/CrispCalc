@@ -110,6 +110,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'expand',
     'simplify',
     'd/dx',
+    'd/dx⌄',
     '∫',
     'lim',
     'subst',

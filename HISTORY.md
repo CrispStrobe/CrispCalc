@@ -2,6 +2,71 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 20) — Step-by-step differentiation (P5 #1, V1)
+
+First slice of PLAN P5's top recommendation: when the user
+differentiates an expression, show *why* the answer is what it is.
+
+### Architecture
+
+`lib/engine/step_engine.dart` is a rule-tracing walker. For each input
+it identifies the top-level expression shape and emits a
+`DerivativeStep` carrying the rule name, the generic LaTeX formula,
+and the rule-unfolded result. Then it recurses on sub-expressions so
+the trace fans out into a complete derivation. The final step's
+`after` field comes from SymEngine — so the canonical answer never
+drifts even though the trace is computed in Dart.
+
+Rules covered:
+
+- Constant rule, identity (`d/dx[x] = 1`)
+- Sum / difference rule (paren-aware top-level split on `+` / `-`)
+- Product rule (recurses as `first · rest`, fans out further)
+- Quotient rule
+- Power rule (numeric exponent in the variable) and exponential rule
+  (`a^u(x)`)
+- Chain-rule-aware standard derivatives for sin / cos / tan / asin /
+  acos / atan / sinh / cosh / tanh / exp / ln / log / sqrt
+- Generic fall-through that just emits SymEngine's answer when no
+  pattern matches
+
+Each step structure carries an optional `note` for plain-language
+explanations — wired today for constant and chain-rule cases, easy to
+extend.
+
+### UI
+
+`lib/widgets/steps_dialog.dart` renders the step list as a card stack
+with `flutter_math_fork` LaTeX rendering for the formula + before/after
+expressions. Result step is highlighted with the primary container
+color. Falls back to monospace text on LaTeX parse failures so the
+dialog never goes blank on a malformed step.
+
+Entry point: new `d/dx⌄` keypad button in the CAS tab. Pressed → small
+dialog asks for expression + variable (pre-filled from the LaTeX field
+if there's anything in it) → step list dialog opens. Doesn't touch the
+existing `d/dx` flow, so users who just want the answer keep getting
+it the old way.
+
+### Why not also integrate + solve
+
+Differentiation rules are finite and well-known; the trace generator
+fits in 250 lines of Dart with no SymEngine modifications. Integration
+and equation solving need either fork SymEngine to emit traces or
+implement enough of the algorithms Dart-side to recognize patterns —
+significantly larger. Documented in PLAN as the next two slices.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: 272/272 (13 new step engine tests covering rule
+  selection, step content, and the "always ends with a Result step"
+  invariant).
+- Local release smoke: app boots clean. `CRISPCALC_DIAGNOSTIC=matrix`
+  still 7/7.
+
+---
+
 ## 2026-05-17 (round 19) — RREF via SymEngine-backed Gauss-Jordan
 
 Added `rref(Matrix([...]))` to the matrix evaluator. The algorithm is

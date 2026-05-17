@@ -177,15 +177,29 @@ roughly double the perceived value of the app.
 
 ### Recommended next (top 4, in priority order)
 
-- [ ] **Step-by-step solutions** for `diff`, `integrate`, and `solve`.
+- [~] **Step-by-step solutions** for `diff`, `integrate`, and `solve`.
   Show *why* an answer is what it is — the rule applied at each step
   (chain rule, product rule, u-substitution, partial fractions, …) —
-  not just the final symbolic result. This is the single biggest
-  perceived-value gap. Realistic path: instrument the bridge to also
-  emit the rule sequence alongside the result, render in the UI as an
-  expandable steps list. The user-facing engineering is mostly Dart;
-  the trace generation is C++ on top of SymEngine's existing
-  intermediate-form support.
+  not just the final symbolic result. The single biggest perceived-
+  value gap.
+  - **Differentiation done** (HISTORY round 20): `lib/engine/step_engine.dart`
+    walks the top-level expression shape and emits rule-named steps
+    (constant, identity, sum/difference, product, quotient, power,
+    exponential, chain rule for sin/cos/tan/asin/acos/atan/sinh/cosh/
+    tanh/exp/ln/sqrt). Final answer comes from SymEngine so we don't
+    drift from canonical. `StepsDialog` renders each step as a card
+    with LaTeX-rendered formula + before/after. New `d/dx⌄` keypad
+    button as the entry point.
+  - **Integration pending**: harder because symbolic integration uses
+    many algorithms (Risch, u-sub heuristics, integration by parts,
+    partial fractions). Realistic V1: try a small number of heuristics
+    Dart-side (power rule, simple trig, exp, basic u-sub, by-parts)
+    and fall through to SymEngine's answer unaugmented when no
+    pattern matches.
+  - **Equation solving pending**: V1 covers linear, quadratic
+    (factor / formula), polynomial factoring, isolate-the-variable.
+    Dart-side rule walker; falls through to SymEngine when no pattern
+    matches.
 - [ ] **Interactive parameter sliders** on the graphing screen.
   Replace constants in a graphed function with named parameters
   (`y = a*sin(b*x + c)`), attach a slider widget per parameter, drag

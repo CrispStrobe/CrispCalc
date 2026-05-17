@@ -15,6 +15,8 @@ import '../widgets/calculator_keypad.dart';
 import '../widgets/latex_input_field.dart';
 import '../widgets/memory_dialogs.dart';
 import '../widgets/function_picker_dialogs.dart';
+import '../widgets/steps_dialog.dart';
+import '../engine/step_engine.dart';
 
 // Utils imports
 import '../utils/keyboard_input_handler.dart';
@@ -410,6 +412,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
       case 'd/dx':
         _latexController.insert(r'\frac{d}{dx}()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'd/dx⌄':
+        await _showDifferentiationSteps();
         break;
 
       case 'gcd':
@@ -1001,6 +1007,87 @@ class CalculatorScreenState extends State<CalculatorScreen>
     } catch (e) {
       return 'Error: Invalid limit() syntax';
     }
+  }
+
+  /// Prompt for an expression + variable, then open the step-by-step
+  /// derivative trace dialog. The current LaTeX field's text is used as
+  /// the default expression so a user can type a function first and then
+  /// tap this button.
+  Future<void> _showDifferentiationSteps() async {
+    final expr = _latexController.text.trim();
+    final defaultExpr = expr.isEmpty
+        ? 'x*sin(x)'
+        : LatexConversionUtils.fromLatex(expr);
+    final defaultVar =
+        ExpressionPreprocessingUtils.detectVariable(defaultExpr);
+
+    final exprCtl = TextEditingController(text: defaultExpr);
+    final varCtl = TextEditingController(text: defaultVar);
+
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Differentiation steps'),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: exprCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Expression',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: varCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Variable',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Show steps'),
+          ),
+        ],
+      ),
+    );
+
+    final exprText = exprCtl.text.trim();
+    final varText = varCtl.text.trim();
+    exprCtl.dispose();
+    varCtl.dispose();
+
+    if (go != true || exprText.isEmpty || varText.isEmpty) return;
+
+    final preprocessed =
+        ExpressionPreprocessingUtils.preprocessNativeExpression(
+      ExpressionPreprocessingUtils.preprocessExpression(exprText, _appState),
+    );
+    final steps =
+        StepEngine.differentiate(preprocessed, varText, _engine);
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StepsDialog(
+        title: 'Differentiation steps',
+        expression: preprocessed,
+        variable: varText,
+        steps: steps,
+      ),
+    );
   }
 
   void _confirmClearHistory() {
