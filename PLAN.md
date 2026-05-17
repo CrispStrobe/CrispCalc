@@ -57,7 +57,11 @@ and the light/dark/system theme picker.
 ## P3 — Long tail
 
 - [ ] Symbolic Gauss / RREF on matrices.
-- [ ] CI: GitHub Actions to run `flutter analyze` + `flutter test` on PR.
+- [x] ~~CI: GitHub Actions to run `flutter analyze` + `flutter test` on PR.~~
+  In place since round 8 (`.github/workflows/ci.yml`). Round 18 also
+  switched the macOS build workflow to `--release` and added a
+  headless matrix-diagnostic step, so the bridge plugin's release
+  symbol-keep regression risk is caught in CI now.
 - [x] ~~History view filtering / search.~~ Done 2026-05-17 — see
   HISTORY round 14.
 

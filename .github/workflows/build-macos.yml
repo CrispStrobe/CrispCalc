@@ -1,6 +1,11 @@
-# macOS smoke build — runs on PRs and pushes to main. Confirms the native
-# SymEngine bridge links correctly. Produces an unsigned `.app` as a build
-# artifact so reviewers can grab and run it locally without a checkout.
+# macOS smoke build — runs on PRs and pushes to main. Builds in release
+# to exercise the same link path that HISTORY round 13 fixed (the
+# bridge's +load asm-clobber keep-alive lives in the plugin and can
+# regress when we bump the bridge ref). After the build, we verify
+# 45+ flutter_symengine_* symbols actually landed in the binary, then
+# run the headless matrix diagnostic to confirm the FFI matrix path
+# round-trips end-to-end. The resulting unsigned .app is uploaded as a
+# build artifact so reviewers can grab and run it locally.
 
 name: Build macOS
 
@@ -14,7 +19,7 @@ on:
 jobs:
   build:
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -28,22 +33,24 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Build macOS (debug, unsigned)
+      - name: Build macOS (release, unsigned)
         # GitHub macOS runners ship preset GEM_HOME / GEM_PATH that point at
         # a stale gem cache; CocoaPods refuses to start. We `unset` them
         # inline rather than via `env:` (empty strings still trip rubygems).
         run: |
           unset GEM_HOME GEM_PATH GEM_ROOT RUBY_ROOT RUBYOPT RUBY_ENGINE RUBY_VERSION
-          flutter build macos --debug
+          flutter build macos --release
 
       - name: Verify SymEngine symbols are linked
         # Scan every Mach-O in the .app bundle. Different Flutter versions
-        # put the Dart VM in different files (`crisp_calc.debug.dylib` on
-        # some, embedded in the main binary on others), so we just look
-        # everywhere instead of guessing a single path.
+        # put the Dart VM in different files, so we just look everywhere
+        # instead of guessing a single path. Release builds with the bridge
+        # ref from HISTORY round 13 land all 45 flutter_symengine_* symbols
+        # in the main binary; we threshold at >= 30 to leave room for the
+        # bridge to grow without making CI brittle.
         run: |
           set -eu
-          APP="build/macos/Build/Products/Debug/crisp_calc.app"
+          APP="build/macos/Build/Products/Release/crisp_calc.app"
           ls -la "$APP/Contents/MacOS"
           TOTAL=0
           for bin in $(find "$APP" -type f -perm -u+x); do
@@ -59,13 +66,23 @@ jobs:
             exit 1
           fi
 
+      - name: Run matrix self-test against the release binary
+        # Headless invocation of the matrix diagnostic battery (det / inv /
+        # transpose / + / * across 2x2 and 3x3). Confirms the FFI matrix
+        # bindings actually round-trip, not just that the symbols are
+        # statically present. The binary exits non-zero on any failure.
+        run: |
+          set -eu
+          BIN="build/macos/Build/Products/Release/crisp_calc.app/Contents/MacOS/crisp_calc"
+          CRISPCALC_DIAGNOSTIC=matrix "$BIN"
+
       - name: Zip the .app for download
         run: |
-          cd build/macos/Build/Products/Debug
-          zip -ryq ../../../../../crisp_calc-macos-debug.zip crisp_calc.app
+          cd build/macos/Build/Products/Release
+          zip -ryq ../../../../../crisp_calc-macos-release.zip crisp_calc.app
 
       - uses: actions/upload-artifact@v4
         with:
-          name: crisp_calc-macos-debug
-          path: crisp_calc-macos-debug.zip
+          name: crisp_calc-macos-release
+          path: crisp_calc-macos-release.zip
           retention-days: 14

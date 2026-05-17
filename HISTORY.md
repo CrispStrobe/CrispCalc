@@ -2,6 +2,30 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 18) — CI catches matrix + symbol-keep regressions
+
+Two tightenings to `build-macos.yml`:
+
+1. **Switched the workflow from `--debug` to `--release`.** The
+   symbol-keep trick that HISTORY round 13 fixed lives in the bridge
+   plugin, not in CrispCalc. It can silently regress on a bridge bump.
+   Running the release link in CI directly exercises the same path
+   that release builds use locally, so a regression in the asm-clobber
+   keepalive can't slip through unnoticed.
+
+2. **Added a headless matrix-diagnostic step.** After the `nm`
+   symbol-presence check, CI now runs
+   `CRISPCALC_DIAGNOSTIC=matrix <app>`, which exits non-zero on any
+   matrix self-test failure. The presence check verifies symbols are
+   statically linked; the diagnostic verifies they actually round-trip
+   through the FFI matrix bindings. Together they catch both
+   regression classes that bit us in rounds 13 and 16.
+
+PLAN.md's open "GitHub Actions to run analyze + test on PR" item was
+also redundant — `ci.yml` has provided that since round 8. Marked done.
+
+---
+
 ## 2026-05-17 (round 17) — French + Spanish locales
 
 Added `FrLocalizations` and `EsLocalizations` to
