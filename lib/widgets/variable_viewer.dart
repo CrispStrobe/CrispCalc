@@ -2,7 +2,9 @@
 // Displays a scrollable list of all user-defined variables, functions, and memory slots.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../engine/app_state.dart';
+import '../localization/app_localizations.dart';
 
 class VariableViewer extends StatelessWidget {
   const VariableViewer({
@@ -11,6 +13,9 @@ class VariableViewer extends StatelessWidget {
     required this.onVariableTap,
     this.memory,
     this.onMemoryAction,
+    this.onGoToGraphing,
+    this.onGoToAnalysis,
+    this.onInsertExpression,
   });
 
   final AppState appState;
@@ -18,8 +23,22 @@ class VariableViewer extends StatelessWidget {
   final Map<String, String>? memory;
   final void Function(String action)? onMemoryAction;
 
+  /// Optional: switch the main nav to the graphing tab. When provided,
+  /// the function-tile context menu's "Show on graph" action calls it.
+  final VoidCallback? onGoToGraphing;
+
+  /// Optional: switch the main nav to the analysis hub. Used by the
+  /// "Analyze" context menu action.
+  final VoidCallback? onGoToAnalysis;
+
+  /// Optional: insert a raw expression into the calculator input. Used
+  /// by the context menu's Differentiate / Integrate / Solve / Copy
+  /// actions. Falls back to the existing onVariableTap when absent.
+  final void Function(String expression)? onInsertExpression;
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return ListenableBuilder(
       listenable: appState,
       builder: (context, child) {
@@ -54,9 +73,11 @@ class VariableViewer extends StatelessWidget {
                     // --- Variables Section ---
                     if (variableKeys.isNotEmpty) ...[
                       _SectionHeader(
-                        title: 'Variables',
+                        title: t.sectionVariables,
                         icon: Icons.abc,
-                        onClear: () => _showClearDialog(context, 'variables',
+                        onClear: () => _showClearDialog(
+                            context,
+                            t.sectionVariables,
                             () => appState.clearAllVariables()),
                       ),
                       ...variableKeys.map((key) {
@@ -73,10 +94,10 @@ class VariableViewer extends StatelessWidget {
                     // --- Graph Functions Section (Y1, Y2, etc.) ---
                     if (graphFunctionEntries.isNotEmpty) ...[
                       _SectionHeader(
-                        title: 'Graph Functions',
+                        title: t.sectionGraphFunctions,
                         icon: Icons.show_chart,
-                        onClear: () =>
-                            _showClearDialog(context, 'graph functions', () {
+                        onClear: () => _showClearDialog(
+                            context, t.sectionGraphFunctions, () {
                           for (int i = 0;
                               i < appState.graphFunctions.length;
                               i++) {
@@ -92,6 +113,9 @@ class VariableViewer extends StatelessWidget {
                           color: _getColorForGraphFunction(entry.key),
                           onTap: () => onVariableTap(entry.value),
                           onDelete: () => appState.clearFunction(entry.key),
+                          onShowOnGraph: onGoToGraphing,
+                          onAnalyze: onGoToAnalysis,
+                          onInsertExpression: onInsertExpression ?? onVariableTap,
                         );
                       }),
                       const SizedBox(height: 16),
@@ -100,9 +124,10 @@ class VariableViewer extends StatelessWidget {
                     // --- Memory Section ---
                     if (hasMemory && memory!.isNotEmpty) ...[
                       _SectionHeader(
-                        title: 'Memory Slots',
+                        title: t.sectionMemorySlots,
                         icon: Icons.memory,
-                        onClear: () => _showClearDialog(context, 'memory slots',
+                        onClear: () => _showClearDialog(context,
+                            t.sectionMemorySlots,
                             () => onMemoryAction!('CLEAR_ALL')),
                       ),
                       ...List.generate(9, (i) {
@@ -372,6 +397,9 @@ class _FunctionTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback? onShowOnGraph;
+  final VoidCallback? onAnalyze;
+  final void Function(String expression)? onInsertExpression;
 
   const _FunctionTile({
     required this.name,
@@ -379,50 +407,154 @@ class _FunctionTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     required this.onDelete,
+    this.onShowOnGraph,
+    this.onAnalyze,
+    this.onInsertExpression,
   });
+
+  /// Show the long-press / right-click context menu next to the tile.
+  /// Items: Show on graph, Analyze, Differentiate, Integrate, Solve = 0,
+  /// Copy. Each is wired through the callbacks supplied to VariableViewer.
+  Future<void> _openContextMenu(BuildContext context, Offset globalPos) async {
+    final t = AppLocalizations.of(context);
+    final box = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPos.dx, globalPos.dy, 0, 0),
+        Offset.zero & box.size,
+      ),
+      items: [
+        if (onShowOnGraph != null)
+          PopupMenuItem(
+            value: 'graph',
+            child: Row(children: [
+              const Icon(Icons.show_chart, size: 18),
+              const SizedBox(width: 8),
+              Text(t.funcCtxShowOnGraph),
+            ]),
+          ),
+        if (onAnalyze != null)
+          PopupMenuItem(
+            value: 'analyze',
+            child: Row(children: [
+              const Icon(Icons.analytics, size: 18),
+              const SizedBox(width: 8),
+              Text(t.funcCtxAnalyze),
+            ]),
+          ),
+        PopupMenuItem(
+          value: 'diff',
+          child: Row(children: [
+            const Icon(Icons.trending_up, size: 18),
+            const SizedBox(width: 8),
+            Text(t.funcCtxDifferentiate),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'integrate',
+          child: Row(children: [
+            const Icon(Icons.area_chart, size: 18),
+            const SizedBox(width: 8),
+            Text(t.funcCtxIntegrate),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'solve',
+          child: Row(children: [
+            const Icon(Icons.lightbulb_outline, size: 18),
+            const SizedBox(width: 8),
+            Text(t.funcCtxSolve),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'copy',
+          child: Row(children: [
+            const Icon(Icons.copy, size: 18),
+            const SizedBox(width: 8),
+            Text(t.funcCtxCopy),
+          ]),
+        ),
+      ],
+    );
+    if (selected == null) return;
+    switch (selected) {
+      case 'graph':
+        onShowOnGraph?.call();
+        break;
+      case 'analyze':
+        onAnalyze?.call();
+        break;
+      case 'diff':
+        onInsertExpression?.call('diff($expression, x)');
+        break;
+      case 'integrate':
+        onInsertExpression?.call('integrate($expression, x)');
+        break;
+      case 'solve':
+        onInsertExpression?.call('solve($expression = 0, x)');
+        break;
+      case 'copy':
+        await Clipboard.setData(ClipboardData(text: expression));
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.2),
-        radius: 16,
-        child: Text(
+    return GestureDetector(
+      // Right-click (secondary tap) opens the context menu on desktop.
+      onSecondaryTapDown: (d) => _openContextMenu(context, d.globalPosition),
+      // Long-press opens it on touch.
+      onLongPressStart: (d) => _openContextMenu(context, d.globalPosition),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.2),
+          radius: 16,
+          child: Text(
+            name,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: color,
+            ),
+          ),
+        ),
+        title: Text(
           name,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 12,
+            fontSize: 16,
             color: color,
           ),
         ),
-      ),
-      title: Text(
-        name,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-          color: color,
+        subtitle: Text(
+          expression,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: TextStyle(color: Colors.grey[600]),
         ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onShowOnGraph != null)
+              IconButton(
+                onPressed: onShowOnGraph,
+                icon: const Icon(Icons.show_chart, size: 18),
+                iconSize: 18,
+                tooltip: AppLocalizations.of(context).funcCtxShowOnGraph,
+              ),
+            IconButton(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline, size: 18),
+              iconSize: 18,
+              tooltip: 'Delete function',
+            ),
+          ],
+        ),
+        onTap: onTap,
       ),
-      subtitle: Text(
-        expression,
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-        style: TextStyle(color: Colors.grey[600]),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.keyboard_return, size: 16, color: Colors.grey),
-          IconButton(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, size: 18),
-            iconSize: 18,
-            tooltip: 'Delete function',
-          ),
-        ],
-      ),
-      onTap: onTap,
     );
   }
 }

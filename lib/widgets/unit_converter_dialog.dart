@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/unit_catalog.dart';
 import '../engine/unit_converter.dart';
+import '../localization/app_localizations.dart';
 
 class UnitConverterDialog extends StatefulWidget {
   const UnitConverterDialog({super.key});
@@ -68,9 +69,10 @@ class _UnitConverterDialogState extends State<UnitConverterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final units = UnitCatalog.unitsFor(_dimension);
     return AlertDialog(
-      title: const Text('Unit converter'),
+      title: Text(t.moduleUnitConverterTitle),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -84,7 +86,7 @@ class _UnitConverterDialogState extends State<UnitConverterDialog> {
               children: [
                 for (final d in UnitCatalog.allDimensions())
                   ChoiceChip(
-                    label: Text(_dimensionLabel(d)),
+                    label: Text(_dimensionLabel(d, t)),
                     selected: _dimension == d,
                     onSelected: (_) => _switchDimension(d),
                   ),
@@ -96,9 +98,9 @@ class _UnitConverterDialogState extends State<UnitConverterDialog> {
               controller: _input,
               keyboardType: const TextInputType.numberWithOptions(
                   decimal: true, signed: true),
-              decoration: const InputDecoration(
-                labelText: 'Value',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: t.dialogValue,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -150,7 +152,7 @@ class _UnitConverterDialogState extends State<UnitConverterDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text(t.dialogClose),
         ),
       ],
     );
@@ -177,20 +179,20 @@ class _UnitConverterDialogState extends State<UnitConverterDialog> {
     );
   }
 
-  String _dimensionLabel(UnitDimension d) {
+  String _dimensionLabel(UnitDimension d, AppLocalizations t) {
     switch (d) {
       case UnitDimension.length:
-        return 'Length';
+        return t.unitDimLength;
       case UnitDimension.time:
-        return 'Time';
+        return t.unitDimTime;
       case UnitDimension.mass:
-        return 'Mass';
+        return t.unitDimMass;
       case UnitDimension.temperature:
-        return 'Temperature';
+        return t.unitDimTemperature;
       case UnitDimension.velocity:
-        return 'Velocity';
+        return t.unitDimVelocity;
       case UnitDimension.angle:
-        return 'Angle';
+        return t.unitDimAngle;
     }
   }
 }

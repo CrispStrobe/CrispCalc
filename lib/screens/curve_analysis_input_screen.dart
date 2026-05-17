@@ -244,9 +244,10 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Curve Sketching'),
+        title: Text(t.moduleCurveSketching),
         actions: [
           IconButton(
             icon: const Icon(Icons.functions),
@@ -263,9 +264,9 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Enter a function to analyze:',
-                style: TextStyle(fontSize: 16),
+              Text(
+                t.curveAnalysisEnterFunction,
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 16),
               Row(
@@ -312,7 +313,7 @@ class _CurveAnalysisInputScreenState extends State<CurveAnalysisInputScreen>
                 ElevatedButton.icon(
                   onPressed: _runAnalysis,
                   icon: const Icon(Icons.analytics_outlined),
-                  label: const Text('Analyze'),
+                  label: Text(t.buttonAnalyze),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     textStyle: const TextStyle(

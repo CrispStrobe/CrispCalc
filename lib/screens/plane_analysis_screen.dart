@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 
 import '../engine/plane_math.dart';
+import '../localization/app_localizations.dart';
 
 class PlaneAnalysisScreen extends StatefulWidget {
   const PlaneAnalysisScreen({super.key});
@@ -143,24 +144,25 @@ class _PlaneAnalysisScreenState extends State<PlaneAnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Plane Analysis')),
+      appBar: AppBar(title: Text(t.planeAnalysisTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SegmentedButton<_Form>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: _Form.coordinate,
-                  label: Text('Coordinate'),
-                  icon: Icon(Icons.linear_scale),
+                  label: Text(t.planeRepCoordinate),
+                  icon: const Icon(Icons.linear_scale),
                 ),
                 ButtonSegment(
                   value: _Form.parametric,
-                  label: Text('Parametric'),
-                  icon: Icon(Icons.view_in_ar),
+                  label: Text(t.planeRepParametric),
+                  icon: const Icon(Icons.view_in_ar),
                 ),
               ],
               selected: {_form},
@@ -174,7 +176,7 @@ class _PlaneAnalysisScreenState extends State<PlaneAnalysisScreen> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.calculate),
-              label: const Text('Analyze'),
+              label: Text(t.buttonAnalyze),
               onPressed: _analyze,
             ),
             const SizedBox(height: 16),

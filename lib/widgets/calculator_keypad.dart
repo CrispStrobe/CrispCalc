@@ -34,6 +34,8 @@ class CalculatorKeypad extends StatefulWidget {
     this.memory,
     this.onMemoryAction,
     this.forceCompact = false,
+    this.onGoToGraphing,
+    this.onGoToAnalysis,
   });
 
   final Map<String, String>? memory;
@@ -45,6 +47,13 @@ class CalculatorKeypad extends StatefulWidget {
   final AppLocalizations localizations;
   final AppState appState;
   final void Function(String) onVariableTap;
+
+  /// Forwarded to the VariableViewer's function-tile context menu so
+  /// "Show on graph" can switch the main nav.
+  final VoidCallback? onGoToGraphing;
+
+  /// Forwarded to the VariableViewer's "Analyze" action.
+  final VoidCallback? onGoToAnalysis;
 
   /// Force the tab-bar layout even when there's room to spread out.
   final bool forceCompact;
@@ -224,6 +233,9 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
                 onVariableTap: widget.onVariableTap,
                 memory: widget.memory,
                 onMemoryAction: widget.onMemoryAction,
+                onGoToGraphing: widget.onGoToGraphing,
+                onGoToAnalysis: widget.onGoToAnalysis,
+                onInsertExpression: widget.onVariableTap,
               ),
             ],
           ),
@@ -284,6 +296,9 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
         onVariableTap: widget.onVariableTap,
         memory: widget.memory,
         onMemoryAction: widget.onMemoryAction,
+        onGoToGraphing: widget.onGoToGraphing,
+        onGoToAnalysis: widget.onGoToAnalysis,
+        onInsertExpression: widget.onVariableTap,
       );
     }
     return KeypadGrid(

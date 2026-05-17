@@ -67,6 +67,83 @@ abstract class AppLocalizations {
   String get module3DRangeLabel;
   String get module3DResample;
   String get module3DTapPlot;
+  String get moduleUnitConverterTitle;
+  String get moduleUnitConverterSubtitle;
+  // -- Variable / function panel --
+  String get sectionVariables;
+  String get sectionGraphFunctions;
+  String get sectionMemorySlots;
+  // -- Function context menu (long-press / right-click on a function tile) --
+  String get funcCtxShowOnGraph;
+  String get funcCtxAnalyze;
+  String get funcCtxDifferentiate;
+  String get funcCtxIntegrate;
+  String get funcCtxSolve;
+  String get funcCtxCopy;
+  // -- Function editor --
+  String get funcEditorTitle;
+  String get funcEditorDone;
+  String get funcEditorSelectFirst;
+  String get funcEditorAnalyzeTooltip;
+  String get funcEditorGraphTooltip;
+  // -- Unit dimension labels (used in the Unit Converter dialog) --
+  String get unitDimLength;
+  String get unitDimTime;
+  String get unitDimMass;
+  String get unitDimTemperature;
+  String get unitDimVelocity;
+  String get unitDimAngle;
+  // -- Plane analysis --
+  String get planeAnalysisTitle;
+  String get planeRepCoordinate;
+  String get planeRepParametric;
+  // -- Generic action buttons --
+  String get buttonAnalyze;
+  String get buttonClassify;
+  // -- Curve analysis input + results --
+  String get curveAnalysisEnterFunction;
+  String get curveResultWarnings;
+  String get curveResultDerivatives;
+  String get curveResultKeyPoints;
+  String get curveResultYIntercept;
+  String get curveResultRoots;
+  String get curveResultExtrema;
+  String get curveResultInflectionPoints;
+  String get curveResultNoExtrema;
+  String get curveResultNoInflection;
+  String curveAnalysisOfFunction(String function);
+  String curveResultPointPrefix(String point);
+  // -- Classifications from the analysis engine (rendered via the
+  //    `translateClassification` helper below) --
+  String get extremumLocalMinimum;
+  String get extremumLocalMaximum;
+  String get extremumCriticalPoint;
+  String get extremumInflectionPoint;
+  String get extremumNoCriticalPoints;
+  String get extremumConstantConcavity;
+  // -- Statistics screen --
+  String get statisticsTitle;
+  String get statsTabDescriptive;
+  String get statsTabRegression;
+  String get statsTabDistributions;
+  String get statsTabTests;
+  String get statsDescCount;
+  String get statsDescSum;
+  String get statsDescMean;
+  String get statsDescMedian;
+  String get statsDescMode;
+  String get statsDescMin;
+  String get statsDescMax;
+  String get statsDescRange;
+  String get statsDescVariance;
+  String get statsDescStddev;
+  String get statsDescQ1;
+  String get statsDescQ3;
+  String get statsDescIqr;
+  // -- Help screen pieces --
+  String get helpGroupProbability;
+  String get helpFnRrefDescription;
+
 
   // -- Settings --
   String get settingsTitle;
@@ -326,6 +403,140 @@ class EnLocalizations implements AppLocalizations {
   String get module3DResample => 'Re-sample grid';
   @override
   String get module3DTapPlot => 'Enter a function of x and y, then tap Plot.';
+  @override
+  String get moduleUnitConverterTitle => 'Unit Converter';
+  @override
+  String get moduleUnitConverterSubtitle =>
+      'Convert across length, time, mass, temperature, velocity, angle';
+  @override
+  String get sectionVariables => 'Variables';
+  @override
+  String get sectionGraphFunctions => 'Graph Functions';
+  @override
+  String get sectionMemorySlots => 'Memory Slots';
+  @override
+  String get funcCtxShowOnGraph => 'Show on graph';
+  @override
+  String get funcCtxAnalyze => 'Analyze (curve sketching)';
+  @override
+  String get funcCtxDifferentiate => 'Differentiate';
+  @override
+  String get funcCtxIntegrate => 'Integrate';
+  @override
+  String get funcCtxSolve => 'Solve f(x) = 0';
+  @override
+  String get funcCtxCopy => 'Copy expression';
+  @override
+  String get funcEditorTitle => 'Function Editor (Y=)';
+  @override
+  String get funcEditorDone => 'Done';
+  @override
+  String get funcEditorSelectFirst =>
+      'Please select a function field to edit.';
+  @override
+  String get funcEditorAnalyzeTooltip => 'Analyze this function';
+  @override
+  String get funcEditorGraphTooltip => 'Graph this function';
+  @override
+  String get unitDimLength => 'Length';
+  @override
+  String get unitDimTime => 'Time';
+  @override
+  String get unitDimMass => 'Mass';
+  @override
+  String get unitDimTemperature => 'Temperature';
+  @override
+  String get unitDimVelocity => 'Velocity';
+  @override
+  String get unitDimAngle => 'Angle';
+  @override
+  String get planeAnalysisTitle => 'Plane Analysis';
+  @override
+  String get planeRepCoordinate => 'Coordinate';
+  @override
+  String get planeRepParametric => 'Parametric';
+  @override
+  String get buttonAnalyze => 'Analyze';
+  @override
+  String get buttonClassify => 'Classify';
+  @override
+  String get curveAnalysisEnterFunction => 'Enter a function to analyze:';
+  @override
+  String get curveResultWarnings => 'Warnings';
+  @override
+  String get curveResultDerivatives => 'Derivatives';
+  @override
+  String get curveResultKeyPoints => 'Key Points';
+  @override
+  String get curveResultYIntercept => 'Y-Intercept';
+  @override
+  String get curveResultRoots => 'Roots';
+  @override
+  String get curveResultExtrema => 'Extrema (Minima/Maxima)';
+  @override
+  String get curveResultInflectionPoints => 'Inflection Points';
+  @override
+  String get curveResultNoExtrema => 'No extrema found.';
+  @override
+  String get curveResultNoInflection => 'No inflection points found.';
+  @override
+  String curveAnalysisOfFunction(String function) =>
+      'Analysis of f(x) = $function';
+  @override
+  String curveResultPointPrefix(String point) => 'Point: $point';
+  @override
+  String get extremumLocalMinimum => 'Local Minimum';
+  @override
+  String get extremumLocalMaximum => 'Local Maximum';
+  @override
+  String get extremumCriticalPoint => 'Critical Point';
+  @override
+  String get extremumInflectionPoint => 'Inflection Point';
+  @override
+  String get extremumNoCriticalPoints => 'No critical points found';
+  @override
+  String get extremumConstantConcavity =>
+      'Function has constant concavity (f\'\'(x) = 0 everywhere)';
+  @override
+  String get statisticsTitle => 'Statistics';
+  @override
+  String get statsTabDescriptive => 'Descriptive';
+  @override
+  String get statsTabRegression => 'Regression';
+  @override
+  String get statsTabDistributions => 'Distributions';
+  @override
+  String get statsTabTests => 'Tests';
+  @override
+  String get statsDescCount => 'Count';
+  @override
+  String get statsDescSum => 'Sum';
+  @override
+  String get statsDescMean => 'Mean';
+  @override
+  String get statsDescMedian => 'Median';
+  @override
+  String get statsDescMode => 'Mode';
+  @override
+  String get statsDescMin => 'Min';
+  @override
+  String get statsDescMax => 'Max';
+  @override
+  String get statsDescRange => 'Range';
+  @override
+  String get statsDescVariance => 'Variance';
+  @override
+  String get statsDescStddev => 'Std. deviation';
+  @override
+  String get statsDescQ1 => 'Q1';
+  @override
+  String get statsDescQ3 => 'Q3';
+  @override
+  String get statsDescIqr => 'IQR';
+  @override
+  String get helpGroupProbability => 'Probability';
+  @override
+  String get helpFnRrefDescription => 'Reduced row echelon form (Gauss-Jordan)';
 
   @override
   String get settingsTitle => 'Settings';
@@ -732,6 +943,141 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get module3DTapPlot =>
       'Funktion in x und y eingeben, dann auf Zeichnen tippen.';
+  @override
+  String get moduleUnitConverterTitle => 'Einheitenumrechner';
+  @override
+  String get moduleUnitConverterSubtitle =>
+      'Umrechnung zwischen Längen, Zeit, Masse, Temperatur, Geschwindigkeit, Winkel';
+  @override
+  String get sectionVariables => 'Variablen';
+  @override
+  String get sectionGraphFunctions => 'Graphfunktionen';
+  @override
+  String get sectionMemorySlots => 'Speicherplätze';
+  @override
+  String get funcCtxShowOnGraph => 'Im Graphen anzeigen';
+  @override
+  String get funcCtxAnalyze => 'Kurvendiskussion';
+  @override
+  String get funcCtxDifferentiate => 'Ableiten';
+  @override
+  String get funcCtxIntegrate => 'Integrieren';
+  @override
+  String get funcCtxSolve => 'Lösen f(x) = 0';
+  @override
+  String get funcCtxCopy => 'Ausdruck kopieren';
+  @override
+  String get funcEditorTitle => 'Funktionseditor (Y=)';
+  @override
+  String get funcEditorDone => 'Fertig';
+  @override
+  String get funcEditorSelectFirst =>
+      'Bitte ein Funktionsfeld zum Bearbeiten auswählen.';
+  @override
+  String get funcEditorAnalyzeTooltip => 'Diese Funktion analysieren';
+  @override
+  String get funcEditorGraphTooltip => 'Diese Funktion zeichnen';
+  @override
+  String get unitDimLength => 'Länge';
+  @override
+  String get unitDimTime => 'Zeit';
+  @override
+  String get unitDimMass => 'Masse';
+  @override
+  String get unitDimTemperature => 'Temperatur';
+  @override
+  String get unitDimVelocity => 'Geschwindigkeit';
+  @override
+  String get unitDimAngle => 'Winkel';
+  @override
+  String get planeAnalysisTitle => 'Ebenenanalyse';
+  @override
+  String get planeRepCoordinate => 'Koordinaten';
+  @override
+  String get planeRepParametric => 'Parametrisch';
+  @override
+  String get buttonAnalyze => 'Analysieren';
+  @override
+  String get buttonClassify => 'Klassifizieren';
+  @override
+  String get curveAnalysisEnterFunction =>
+      'Zu analysierende Funktion eingeben:';
+  @override
+  String get curveResultWarnings => 'Warnungen';
+  @override
+  String get curveResultDerivatives => 'Ableitungen';
+  @override
+  String get curveResultKeyPoints => 'Wichtige Punkte';
+  @override
+  String get curveResultYIntercept => 'Y-Achsenabschnitt';
+  @override
+  String get curveResultRoots => 'Nullstellen';
+  @override
+  String get curveResultExtrema => 'Extrema (Minima/Maxima)';
+  @override
+  String get curveResultInflectionPoints => 'Wendepunkte';
+  @override
+  String get curveResultNoExtrema => 'Keine Extrema gefunden.';
+  @override
+  String get curveResultNoInflection => 'Keine Wendepunkte gefunden.';
+  @override
+  String curveAnalysisOfFunction(String function) =>
+      'Analyse von f(x) = $function';
+  @override
+  String curveResultPointPrefix(String point) => 'Punkt: $point';
+  @override
+  String get extremumLocalMinimum => 'Lokales Minimum';
+  @override
+  String get extremumLocalMaximum => 'Lokales Maximum';
+  @override
+  String get extremumCriticalPoint => 'Kritischer Punkt';
+  @override
+  String get extremumInflectionPoint => 'Wendepunkt';
+  @override
+  String get extremumNoCriticalPoints => 'Keine kritischen Punkte gefunden';
+  @override
+  String get extremumConstantConcavity =>
+      'Funktion hat konstante Krümmung (f\'\'(x) = 0 überall)';
+  @override
+  String get statisticsTitle => 'Statistik';
+  @override
+  String get statsTabDescriptive => 'Deskriptiv';
+  @override
+  String get statsTabRegression => 'Regression';
+  @override
+  String get statsTabDistributions => 'Verteilungen';
+  @override
+  String get statsTabTests => 'Tests';
+  @override
+  String get statsDescCount => 'Anzahl';
+  @override
+  String get statsDescSum => 'Summe';
+  @override
+  String get statsDescMean => 'Mittelwert';
+  @override
+  String get statsDescMedian => 'Median';
+  @override
+  String get statsDescMode => 'Modus';
+  @override
+  String get statsDescMin => 'Min';
+  @override
+  String get statsDescMax => 'Max';
+  @override
+  String get statsDescRange => 'Spannweite';
+  @override
+  String get statsDescVariance => 'Varianz';
+  @override
+  String get statsDescStddev => 'Standardabweichung';
+  @override
+  String get statsDescQ1 => 'Q1';
+  @override
+  String get statsDescQ3 => 'Q3';
+  @override
+  String get statsDescIqr => 'IQR';
+  @override
+  String get helpGroupProbability => 'Wahrscheinlichkeit';
+  @override
+  String get helpFnRrefDescription => 'Reduzierte Stufenform (Gauß-Jordan)';
 
   @override
   String get settingsTitle => 'Einstellungen';
@@ -1142,6 +1488,141 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get module3DTapPlot =>
       'Saisissez une fonction de x et y, puis appuyez sur Tracer.';
+  @override
+  String get moduleUnitConverterTitle => 'Convertisseur d\'unités';
+  @override
+  String get moduleUnitConverterSubtitle =>
+      'Convertir longueurs, temps, masse, température, vitesse, angle';
+  @override
+  String get sectionVariables => 'Variables';
+  @override
+  String get sectionGraphFunctions => 'Fonctions graphiques';
+  @override
+  String get sectionMemorySlots => 'Emplacements mémoire';
+  @override
+  String get funcCtxShowOnGraph => 'Afficher dans le graphique';
+  @override
+  String get funcCtxAnalyze => 'Analyser (étude de fonction)';
+  @override
+  String get funcCtxDifferentiate => 'Dériver';
+  @override
+  String get funcCtxIntegrate => 'Intégrer';
+  @override
+  String get funcCtxSolve => 'Résoudre f(x) = 0';
+  @override
+  String get funcCtxCopy => 'Copier l\'expression';
+  @override
+  String get funcEditorTitle => 'Éditeur de fonctions (Y=)';
+  @override
+  String get funcEditorDone => 'Terminé';
+  @override
+  String get funcEditorSelectFirst =>
+      'Sélectionnez un champ de fonction à modifier.';
+  @override
+  String get funcEditorAnalyzeTooltip => 'Analyser cette fonction';
+  @override
+  String get funcEditorGraphTooltip => 'Tracer cette fonction';
+  @override
+  String get unitDimLength => 'Longueur';
+  @override
+  String get unitDimTime => 'Temps';
+  @override
+  String get unitDimMass => 'Masse';
+  @override
+  String get unitDimTemperature => 'Température';
+  @override
+  String get unitDimVelocity => 'Vitesse';
+  @override
+  String get unitDimAngle => 'Angle';
+  @override
+  String get planeAnalysisTitle => 'Analyse de plan';
+  @override
+  String get planeRepCoordinate => 'Coordonnées';
+  @override
+  String get planeRepParametric => 'Paramétrique';
+  @override
+  String get buttonAnalyze => 'Analyser';
+  @override
+  String get buttonClassify => 'Classifier';
+  @override
+  String get curveAnalysisEnterFunction =>
+      'Saisissez une fonction à analyser :';
+  @override
+  String get curveResultWarnings => 'Avertissements';
+  @override
+  String get curveResultDerivatives => 'Dérivées';
+  @override
+  String get curveResultKeyPoints => 'Points clés';
+  @override
+  String get curveResultYIntercept => 'Ordonnée à l\'origine';
+  @override
+  String get curveResultRoots => 'Racines';
+  @override
+  String get curveResultExtrema => 'Extrema (Minima/Maxima)';
+  @override
+  String get curveResultInflectionPoints => 'Points d\'inflexion';
+  @override
+  String get curveResultNoExtrema => 'Aucun extremum trouvé.';
+  @override
+  String get curveResultNoInflection => 'Aucun point d\'inflexion trouvé.';
+  @override
+  String curveAnalysisOfFunction(String function) =>
+      'Analyse de f(x) = $function';
+  @override
+  String curveResultPointPrefix(String point) => 'Point : $point';
+  @override
+  String get extremumLocalMinimum => 'Minimum local';
+  @override
+  String get extremumLocalMaximum => 'Maximum local';
+  @override
+  String get extremumCriticalPoint => 'Point critique';
+  @override
+  String get extremumInflectionPoint => 'Point d\'inflexion';
+  @override
+  String get extremumNoCriticalPoints => 'Aucun point critique trouvé';
+  @override
+  String get extremumConstantConcavity =>
+      'La fonction a une concavité constante (f\'\'(x) = 0 partout)';
+  @override
+  String get statisticsTitle => 'Statistiques';
+  @override
+  String get statsTabDescriptive => 'Descriptive';
+  @override
+  String get statsTabRegression => 'Régression';
+  @override
+  String get statsTabDistributions => 'Distributions';
+  @override
+  String get statsTabTests => 'Tests';
+  @override
+  String get statsDescCount => 'Effectif';
+  @override
+  String get statsDescSum => 'Somme';
+  @override
+  String get statsDescMean => 'Moyenne';
+  @override
+  String get statsDescMedian => 'Médiane';
+  @override
+  String get statsDescMode => 'Mode';
+  @override
+  String get statsDescMin => 'Min';
+  @override
+  String get statsDescMax => 'Max';
+  @override
+  String get statsDescRange => 'Étendue';
+  @override
+  String get statsDescVariance => 'Variance';
+  @override
+  String get statsDescStddev => 'Écart-type';
+  @override
+  String get statsDescQ1 => 'Q1';
+  @override
+  String get statsDescQ3 => 'Q3';
+  @override
+  String get statsDescIqr => 'EIQ';
+  @override
+  String get helpGroupProbability => 'Probabilité';
+  @override
+  String get helpFnRrefDescription => 'Forme échelonnée réduite (Gauss-Jordan)';
 
   @override
   String get settingsTitle => 'Paramètres';
@@ -1555,6 +2036,143 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get module3DTapPlot =>
       'Introduce una función de x e y y pulsa Representar.';
+  @override
+  String get moduleUnitConverterTitle => 'Conversor de unidades';
+  @override
+  String get moduleUnitConverterSubtitle =>
+      'Convierte longitud, tiempo, masa, temperatura, velocidad, ángulo';
+  @override
+  String get sectionVariables => 'Variables';
+  @override
+  String get sectionGraphFunctions => 'Funciones gráficas';
+  @override
+  String get sectionMemorySlots => 'Espacios de memoria';
+  @override
+  String get funcCtxShowOnGraph => 'Mostrar en la gráfica';
+  @override
+  String get funcCtxAnalyze => 'Analizar (estudio de la función)';
+  @override
+  String get funcCtxDifferentiate => 'Derivar';
+  @override
+  String get funcCtxIntegrate => 'Integrar';
+  @override
+  String get funcCtxSolve => 'Resolver f(x) = 0';
+  @override
+  String get funcCtxCopy => 'Copiar expresión';
+  @override
+  String get funcEditorTitle => 'Editor de funciones (Y=)';
+  @override
+  String get funcEditorDone => 'Listo';
+  @override
+  String get funcEditorSelectFirst =>
+      'Selecciona un campo de función para editar.';
+  @override
+  String get funcEditorAnalyzeTooltip => 'Analizar esta función';
+  @override
+  String get funcEditorGraphTooltip => 'Representar esta función';
+  @override
+  String get unitDimLength => 'Longitud';
+  @override
+  String get unitDimTime => 'Tiempo';
+  @override
+  String get unitDimMass => 'Masa';
+  @override
+  String get unitDimTemperature => 'Temperatura';
+  @override
+  String get unitDimVelocity => 'Velocidad';
+  @override
+  String get unitDimAngle => 'Ángulo';
+  @override
+  String get planeAnalysisTitle => 'Análisis de plano';
+  @override
+  String get planeRepCoordinate => 'Coordenadas';
+  @override
+  String get planeRepParametric => 'Paramétrica';
+  @override
+  String get buttonAnalyze => 'Analizar';
+  @override
+  String get buttonClassify => 'Clasificar';
+  @override
+  String get curveAnalysisEnterFunction =>
+      'Introduce una función para analizar:';
+  @override
+  String get curveResultWarnings => 'Advertencias';
+  @override
+  String get curveResultDerivatives => 'Derivadas';
+  @override
+  String get curveResultKeyPoints => 'Puntos clave';
+  @override
+  String get curveResultYIntercept => 'Intersección con Y';
+  @override
+  String get curveResultRoots => 'Raíces';
+  @override
+  String get curveResultExtrema => 'Extremos (Mínimos/Máximos)';
+  @override
+  String get curveResultInflectionPoints => 'Puntos de inflexión';
+  @override
+  String get curveResultNoExtrema => 'No se encontraron extremos.';
+  @override
+  String get curveResultNoInflection =>
+      'No se encontraron puntos de inflexión.';
+  @override
+  String curveAnalysisOfFunction(String function) =>
+      'Análisis de f(x) = $function';
+  @override
+  String curveResultPointPrefix(String point) => 'Punto: $point';
+  @override
+  String get extremumLocalMinimum => 'Mínimo local';
+  @override
+  String get extremumLocalMaximum => 'Máximo local';
+  @override
+  String get extremumCriticalPoint => 'Punto crítico';
+  @override
+  String get extremumInflectionPoint => 'Punto de inflexión';
+  @override
+  String get extremumNoCriticalPoints => 'No se encontraron puntos críticos';
+  @override
+  String get extremumConstantConcavity =>
+      'La función tiene concavidad constante (f\'\'(x) = 0 en todas partes)';
+  @override
+  String get statisticsTitle => 'Estadística';
+  @override
+  String get statsTabDescriptive => 'Descriptiva';
+  @override
+  String get statsTabRegression => 'Regresión';
+  @override
+  String get statsTabDistributions => 'Distribuciones';
+  @override
+  String get statsTabTests => 'Pruebas';
+  @override
+  String get statsDescCount => 'Conteo';
+  @override
+  String get statsDescSum => 'Suma';
+  @override
+  String get statsDescMean => 'Media';
+  @override
+  String get statsDescMedian => 'Mediana';
+  @override
+  String get statsDescMode => 'Moda';
+  @override
+  String get statsDescMin => 'Mín';
+  @override
+  String get statsDescMax => 'Máx';
+  @override
+  String get statsDescRange => 'Rango';
+  @override
+  String get statsDescVariance => 'Varianza';
+  @override
+  String get statsDescStddev => 'Desviación típica';
+  @override
+  String get statsDescQ1 => 'Q1';
+  @override
+  String get statsDescQ3 => 'Q3';
+  @override
+  String get statsDescIqr => 'RIQ';
+  @override
+  String get helpGroupProbability => 'Probabilidad';
+  @override
+  String get helpFnRrefDescription =>
+      'Forma escalonada reducida (Gauss-Jordan)';
 
   @override
   String get settingsTitle => 'Ajustes';
@@ -1883,4 +2501,32 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool shouldReload(AppLocalizationsDelegate old) => false;
+}
+
+extension AppLocalizationsExtensions on AppLocalizations {
+  /// Best-effort translation of engine-emitted classification strings
+  /// (e.g. "Local Minimum: (x, y)" → "Lokales Minimum: (x, y)"). Patterns
+  /// match case-sensitively against the well-known English markers the
+  /// analysis engine produces; unrecognized text passes through.
+  ///
+  /// Long markers (sentences) are tried before short labels so a string
+  /// like "No inflection points found" doesn't get partially clobbered
+  /// by the short labels.
+  String translateClassification(String raw) {
+    final replacements = <String, String>{
+      'Function has constant concavity (f\'\'(x) = 0 everywhere)':
+          extremumConstantConcavity,
+      'No critical points found': extremumNoCriticalPoints,
+      'No inflection points found': curveResultNoInflection,
+      'Local Minimum': extremumLocalMinimum,
+      'Local Maximum': extremumLocalMaximum,
+      'Critical Point': extremumCriticalPoint,
+      'Inflection Point': extremumInflectionPoint,
+    };
+    var out = raw;
+    for (final entry in replacements.entries) {
+      if (out.contains(entry.key)) out = out.replaceAll(entry.key, entry.value);
+    }
+    return out;
+  }
 }

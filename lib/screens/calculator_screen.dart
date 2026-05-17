@@ -32,7 +32,14 @@ import '../localization/app_localizations.dart';
 import '../screens/matrix_editor_screen.dart';
 
 class CalculatorScreen extends StatefulWidget {
-  const CalculatorScreen({super.key});
+  const CalculatorScreen({super.key, this.onGoToGraphing, this.onGoToAnalysis});
+
+  /// Optional: switch the main nav to the Graphing tab. Forwarded down
+  /// to the VariableViewer's function-tile context menu.
+  final VoidCallback? onGoToGraphing;
+
+  /// Optional: switch the main nav to the Analysis hub.
+  final VoidCallback? onGoToAnalysis;
 
   @override
   State<CalculatorScreen> createState() => CalculatorScreenState();
@@ -1615,6 +1622,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
                 onVariableTap: (name) => _latexController.insert(name),
                 memory: _memory, // Pass memory
                 onMemoryAction: _handleMemoryAction, // Pass button handler
+                onGoToGraphing: widget.onGoToGraphing,
+                onGoToAnalysis: widget.onGoToAnalysis,
               ),
             ),
           ],

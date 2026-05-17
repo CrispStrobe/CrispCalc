@@ -17,6 +17,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../engine/conic_math.dart';
+import '../localization/app_localizations.dart';
 
 class ConicSectionScreen extends StatefulWidget {
   const ConicSectionScreen({super.key});
@@ -150,8 +151,9 @@ class _ConicSectionScreenState extends State<ConicSectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Conic Sections')),
+      appBar: AppBar(title: Text(t.moduleConics)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -187,7 +189,7 @@ class _ConicSectionScreenState extends State<ConicSectionScreen> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.calculate),
-              label: const Text('Classify'),
+              label: Text(t.buttonClassify),
               onPressed: _analyze,
             ),
             const SizedBox(height: 16),

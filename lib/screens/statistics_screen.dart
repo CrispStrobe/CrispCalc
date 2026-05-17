@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../engine/distributions.dart';
 import '../engine/hypothesis_tests.dart';
 import '../engine/statistics.dart';
+import '../localization/app_localizations.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -39,17 +40,18 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Statistics'),
+        title: Text(t.statisticsTitle),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,
-          tabs: const [
-            Tab(text: 'Descriptive'),
-            Tab(text: 'Regression'),
-            Tab(text: 'Distributions'),
-            Tab(text: 'Tests'),
+          tabs: [
+            Tab(text: t.statsTabDescriptive),
+            Tab(text: t.statsTabRegression),
+            Tab(text: t.statsTabDistributions),
+            Tab(text: t.statsTabTests),
           ],
         ),
       ),
@@ -140,22 +142,23 @@ class _StatsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final rows = <_Row>[
-      _Row('Count', s.count.toString()),
-      _Row('Sum', _fmt(s.sum)),
-      _Row('Mean', _fmt(s.mean)),
-      _Row('Median', _fmt(s.median)),
-      _Row('Mode', s.modes.isEmpty ? '—' : s.modes.map(_fmt).join(', ')),
-      _Row('Min', _fmt(s.min)),
-      _Row('Max', _fmt(s.max)),
-      _Row('Range', _fmt(s.range)),
-      _Row('Q1 (25th %ile)', _fmt(s.q1)),
-      _Row('Q3 (75th %ile)', _fmt(s.q3)),
-      _Row('IQR', _fmt(s.iqr)),
-      _Row('Sample variance (n−1)', _fmt(s.sampleVariance)),
-      _Row('Sample stddev (n−1)', _fmt(s.sampleStddev)),
-      _Row('Population variance (n)', _fmt(s.populationVariance)),
-      _Row('Population stddev (n)', _fmt(s.populationStddev)),
+      _Row(t.statsDescCount, s.count.toString()),
+      _Row(t.statsDescSum, _fmt(s.sum)),
+      _Row(t.statsDescMean, _fmt(s.mean)),
+      _Row(t.statsDescMedian, _fmt(s.median)),
+      _Row(t.statsDescMode, s.modes.isEmpty ? '—' : s.modes.map(_fmt).join(', ')),
+      _Row(t.statsDescMin, _fmt(s.min)),
+      _Row(t.statsDescMax, _fmt(s.max)),
+      _Row(t.statsDescRange, _fmt(s.range)),
+      _Row('${t.statsDescQ1} (25%)', _fmt(s.q1)),
+      _Row('${t.statsDescQ3} (75%)', _fmt(s.q3)),
+      _Row(t.statsDescIqr, _fmt(s.iqr)),
+      _Row('${t.statsDescVariance} (n−1)', _fmt(s.sampleVariance)),
+      _Row('${t.statsDescStddev} (n−1)', _fmt(s.sampleStddev)),
+      _Row('${t.statsDescVariance} (n)', _fmt(s.populationVariance)),
+      _Row('${t.statsDescStddev} (n)', _fmt(s.populationStddev)),
     ];
     return Card(
       child: Padding(

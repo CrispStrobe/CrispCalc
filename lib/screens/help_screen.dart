@@ -23,7 +23,16 @@ class HelpScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
           _heading(context, t.helpFunctionsHeading),
-          for (final group in _functionGroups) _functionGroup(context, group),
+          for (final group in _functionGroups)
+            _functionGroup(
+              context,
+              _Group(
+                _translateGroupName(group.title, t),
+                group.items
+                    .map((f) => _Fn(f.name, _translateFnDesc(f.desc, t)))
+                    .toList(),
+              ),
+            ),
           const SizedBox(height: 24),
           _heading(context, t.helpMatrixHeading),
           _body(context, t.helpMatrixBody),
@@ -100,6 +109,26 @@ class HelpScreen extends StatelessWidget {
           ),
         ),
       );
+
+  /// Translate one of the static group titles into the active locale.
+  /// Only "Probability" is localized for now; the rest fall through.
+  String _translateGroupName(String englishTitle, AppLocalizations t) {
+    switch (englishTitle) {
+      case 'Probability':
+        return t.helpGroupProbability;
+      default:
+        return englishTitle;
+    }
+  }
+
+  /// Translate one of the static function descriptions. Only `rref`'s
+  /// description is localized for now.
+  String _translateFnDesc(String englishDesc, AppLocalizations t) {
+    if (englishDesc == 'Reduced row echelon form (Gauss-Jordan)') {
+      return t.helpFnRrefDescription;
+    }
+    return englishDesc;
+  }
 }
 
 class _Group {

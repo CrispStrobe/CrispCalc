@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../localization/app_localizations.dart';
+import '../widgets/unit_converter_dialog.dart';
 import 'conic_section_screen.dart';
 import 'curve_analysis_input_screen.dart';
 import 'graphing_3d_screen.dart';
@@ -72,6 +73,17 @@ class AnalysisHubScreen extends StatelessWidget {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => const Graphing3DScreen(),
               ));
+            },
+          ),
+          _ModuleCard(
+            icon: Icons.swap_horiz,
+            title: t.moduleUnitConverterTitle,
+            subtitle: t.moduleUnitConverterSubtitle,
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => const UnitConverterDialog(),
+              );
             },
           ),
         ],

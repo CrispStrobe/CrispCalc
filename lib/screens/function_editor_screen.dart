@@ -68,11 +68,18 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
   void _graphFunction(int index) {
     final function = _appState.graphFunctions[index];
     if (function.isNotEmpty) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const GraphingScreen(),
-        ),
-      );
+      // Prefer the tab-switch callback supplied by the main nav. Falls
+      // back to a Navigator.push when the editor is opened outside the
+      // main scaffold (e.g. from a test harness).
+      if (widget.onSwitchToGraphing != null) {
+        widget.onSwitchToGraphing!(index);
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const GraphingScreen(),
+          ),
+        );
+      }
     }
   }
 
@@ -122,18 +129,18 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
     if (_activeFunctionIndex != null) {
       _activeController.insert(name);
     } else {
+      final t = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please select a function field to edit.')),
+        SnackBar(content: Text(t.funcEditorSelectFirst)),
       );
     }
   }
 
   void _onButtonPressed(String value) {
     if (_activeFunctionIndex == null) {
+      final t = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please select a function field to edit.')),
+        SnackBar(content: Text(t.funcEditorSelectFirst)),
       );
       return;
     }
@@ -300,14 +307,15 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
       child: ListenableBuilder(
         listenable: _appState,
         builder: (context, child) {
+          final t = AppLocalizations.of(context);
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Function Editor (Y=)'),
+              title: Text(t.funcEditorTitle),
               actions: [
                 if (_activeFunctionIndex != null)
                   TextButton(
                     onPressed: _deactivateFunction,
-                    child: const Text('Done'),
+                    child: Text(t.funcEditorDone),
                   ),
               ],
             ),
@@ -408,12 +416,14 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.analytics, size: 18),
-                                tooltip: 'Analyze this function',
+                                tooltip: AppLocalizations.of(context)
+                                    .funcEditorAnalyzeTooltip,
                                 onPressed: () => _analyzeFunction(index),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.show_chart, size: 18),
-                                tooltip: 'Graph this function',
+                                tooltip: AppLocalizations.of(context)
+                                    .funcEditorGraphTooltip,
                                 onPressed: () => _graphFunction(index),
                               ),
                               IconButton(

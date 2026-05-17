@@ -157,6 +157,7 @@ const double _extendedRailBreakpoint = 1100;
 
 const int _kCalculator = 0;
 const int _kGraphing = 1;
+const int _kAnalysis = 3;
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -177,9 +178,15 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _screens = [
-      CalculatorScreen(key: _calculatorKey),
+      CalculatorScreen(
+        key: _calculatorKey,
+        onGoToGraphing: () => _select(_kGraphing),
+        onGoToAnalysis: () => _select(_kAnalysis),
+      ),
       GraphingScreen(key: _graphingKey),
-      const FunctionEditorScreen(),
+      FunctionEditorScreen(
+        onSwitchToGraphing: (_) => _select(_kGraphing),
+      ),
       const AnalysisHubScreen(),
       const SettingsScreen(),
     ];

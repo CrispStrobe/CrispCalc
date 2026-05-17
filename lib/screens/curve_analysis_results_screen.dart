@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../engine/analysis_engine.dart';
+import '../localization/app_localizations.dart';
 
 class CurveAnalysisResultsScreen extends StatelessWidget {
   final AnalysisResult results;
@@ -19,13 +20,14 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     // Safely access the function string, providing a fallback.
     final functionString =
         results.originalFunction.isNotEmpty ? results.originalFunction : 'f(x)';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Analysis of f(x) = $functionString'),
+        title: Text(t.curveAnalysisOfFunction(functionString)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(8),
@@ -33,7 +35,7 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
           // Show errors if any
           if (results.errors.isNotEmpty)
             _ResultCard(
-              title: 'Warnings',
+              title: t.curveResultWarnings,
               children: results.errors
                   .map((error) => ListTile(
                         leading:
@@ -44,36 +46,37 @@ class CurveAnalysisResultsScreen extends StatelessWidget {
                   .toList(),
             ),
 
-          _ResultCard(title: 'Derivatives', children: [
+          _ResultCard(title: t.curveResultDerivatives, children: [
             _ResultTile(label: "f'(x)", value: results.firstDerivative),
             _ResultTile(label: "f''(x)", value: results.secondDerivative),
           ]),
 
-          _ResultCard(title: 'Key Points', children: [
-            _ResultTile(
-                label: 'Roots (Nullstellen)', value: results.roots.join(', ')),
-            _ResultTile(label: 'Y-Intercept', value: results.yIntercept),
+          _ResultCard(title: t.curveResultKeyPoints, children: [
+            _ResultTile(label: t.curveResultRoots, value: results.roots.join(', ')),
+            _ResultTile(label: t.curveResultYIntercept, value: results.yIntercept),
           ]),
 
-          _ResultCard(title: 'Extrema (Minima/Maxima)', children: [
+          _ResultCard(title: t.curveResultExtrema, children: [
             // Handle the case where there might be no extrema.
             if (results.extrema.isEmpty)
-              const Text('No extrema found.')
+              Text(t.curveResultNoExtrema)
             else
               ...results.extrema.map((extremum) => ListTile(
                     visualDensity: VisualDensity.compact,
-                    title: Text(extremum, style: const TextStyle(fontSize: 16)),
+                    title: Text(t.translateClassification(extremum),
+                        style: const TextStyle(fontSize: 16)),
                   )),
           ]),
 
-          _ResultCard(title: 'Inflection Points (Wendepunkte)', children: [
+          _ResultCard(title: t.curveResultInflectionPoints, children: [
             // Handle the case where there might be no inflection points.
             if (results.inflectionPoints.isEmpty)
-              const Text('No inflection points found.')
+              Text(t.curveResultNoInflection)
             else
               ...results.inflectionPoints.map((point) => ListTile(
                     visualDensity: VisualDensity.compact,
-                    title: Text('Point: $point',
+                    title: Text(t.curveResultPointPrefix(
+                            t.translateClassification(point)),
                         style: const TextStyle(fontSize: 16)),
                   )),
           ]),

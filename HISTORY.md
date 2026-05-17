@@ -2,6 +2,89 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 43) — i18n sweep + function context menu
+
+Two coordinated UX improvements driven by user feedback during the
+live dev-build session:
+
+1. **Navigation from function tile straight to graphing.** The
+   variable viewer's "Graph Functions" section already showed each
+   Y-slot, but tapping just inserted the expression back into the
+   calculator. Now each tile carries a dedicated chart-icon button
+   that switches the main nav to the Graphing tab, plus a richer
+   **context menu** on long-press / right-click (`onSecondaryTap`)
+   with six actions:
+   - Show on graph (switches to the Graphing tab)
+   - Analyze (curve sketching) — switches to the Analysis hub
+   - Differentiate — inserts `diff(<expr>, x)` into the calculator
+   - Integrate — inserts `integrate(<expr>, x)`
+   - Solve f(x) = 0 — inserts `solve(<expr> = 0, x)`
+   - Copy expression — to clipboard
+
+   The callback chain runs from `MainScreen._select()` →
+   `CalculatorScreen` → `CalculatorKeypad` → `VariableViewer` →
+   `_FunctionTile`. The FunctionEditor's `Graph this function`
+   button now uses the same callback rather than pushing a fresh
+   route on top of the IndexedStack, so back-navigation no longer
+   pops you into a stale duplicate calculator.
+
+2. **Big i18n sweep.** Replaced the last batch of hardcoded English
+   strings the user flagged:
+   - Variable viewer: section headers ("Variables", "Graph Functions",
+     "Memory Slots") + the function-tile context menu labels.
+   - Unit converter dialog: title, the six dimension labels (Length,
+     Time, Mass, Temperature, Velocity, Angle), value field, Close
+     button.
+   - Plane Analysis: title, Coordinate / Parametric segmented-button
+     labels, Analyze button.
+   - Curve Sketching: input prompt, all result-card titles (Warnings,
+     Derivatives, Key Points, Y-Intercept, Roots, Extrema, Inflection
+     Points), "no extrema / no inflection" messages, and the
+     "Point: ..." prefix.
+   - Statistics: screen title, all four tab labels (Descriptive,
+     Regression, Distributions, Tests), and every descriptive-stats
+     row label (Count, Sum, Mean, Median, Mode, Min, Max, Range,
+     Variance, Std. deviation, Q1, Q3, IQR).
+   - Conic Sections: screen title, Classify button.
+   - Help screen: "Probability" group header and the rref function
+     description (rest of the help-text deferred).
+   - Function Editor: title, Done button, snackbar message, Analyze
+     and Graph tooltips.
+
+3. **Engine-emitted classification strings.** Rather than refactor
+   the analysis engine to emit symbolic keys, a small
+   `AppLocalizations.translateClassification(raw)` extension method
+   maps the well-known English markers ("Local Minimum", "Local
+   Maximum", "Critical Point", "Inflection Point", "No critical
+   points found", "Function has constant concavity (f''(x) = 0
+   everywhere)", "No inflection points found") to their localized
+   equivalents at render time. Unrecognized text passes through. The
+   curve-analysis results screen uses this when rendering extremum
+   and inflection lists.
+
+4. **Unit Converter is now in the Analysis hub.** Previously buried
+   in Settings. Surfaced as a 6th `_ModuleCard` with `Icons.swap_horiz`.
+   The Settings entry is left in place for backward compatibility.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **694/694** (the existing localization test now
+  exercises 50+ new keys across all four locales).
+- Updated `ui_flows_test.dart`'s "Analysis hub lists all five modules"
+  → "all six modules" to include Unit Converter.
+
+### V2 deferred
+
+The analysis engine still emits English markers for less-common
+strings ("No critical points (f'(x) = ...)", "Function is constant",
+"Error: Invalid function", etc.) — the `translateClassification`
+helper covers the common cases but a fuller engine-side refactor to
+return structured kind/payload tuples would be cleaner. Help screen
+group titles (Arithmetic, Trigonometric, Vector, Matrix) and per-
+function descriptions are still English; only "Probability" + the
+rref description are localized.
+
 ## 2026-05-17 (round 42) — Step engine: plain-language rule explanations
 
 Every common differentiation, integration, and solve rule now emits
