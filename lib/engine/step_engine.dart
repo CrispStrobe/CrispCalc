@@ -274,8 +274,12 @@ class StepEngine {
   /// V1 covers constant, identity, power (constant exponent ≠ -1),
   /// reciprocal (1/x → ln|x|), sum/difference, constant-multiple, and
   /// standard antiderivatives for sin/cos/exp/sinh/cosh when the
-  /// argument is exactly [variable]. Substitution and integration by
-  /// parts are deferred to V2.
+  /// argument is exactly [variable].
+  ///
+  /// V2 adds: linear u-substitution (∫f(ax+b)dx = F(ax+b)/a) for the
+  /// power rule, the logarithm rule, and standard sin/cos/exp/sinh/cosh;
+  /// integration by parts for ∫x·f(x)dx with f ∈ {sin, cos, exp, sinh,
+  /// cosh}; and the special case ∫ln(x)dx = x·ln(x) − x.
   static List<MathStep> integrate(
       String expr, String variable, CalculatorEngine engine) {
     final steps = <MathStep>[];
@@ -308,6 +312,21 @@ class StepEngine {
   static String? _traceIntegrate(String expr, String variable,
       CalculatorEngine engine, List<MathStep> steps) {
     final s = _stripOuterParens(expr.trim());
+
+    // Leading minus: ∫(-f) dx = -∫f dx. This is structurally a
+    // constant-multiple step but the splitter only sees an explicit `*`,
+    // so we handle it inline.
+    if (s.startsWith('-') && s.length > 1) {
+      final body = s.substring(1).trim();
+      steps.add(MathStep(
+        rule: 'Constant multiple',
+        formula: r"\int -f(x) \, dx = -\int f(x) \, dx",
+        before: '∫ $s d$variable',
+        after: '-∫ $body d$variable',
+      ));
+      final inner = _traceIntegrate(body, variable, engine, steps);
+      return inner == null ? null : '-($inner)';
+    }
 
     // Constant rule: ∫c d/var = c·var
     if (!_containsVar(s, variable)) {
@@ -380,7 +399,8 @@ class StepEngine {
       }
     }
 
-    // Power rule: ∫x^n dx = x^(n+1)/(n+1) for constant n ≠ -1.
+    // Power rule: ∫x^n dx = x^(n+1)/(n+1) for constant n ≠ -1, plus
+    // the linear-u-sub generalization ∫(a·x+b)^n dx = (a·x+b)^(n+1)/(a·(n+1)).
     final powSplit = _splitTopLevelOnce(s, '^');
     if (powSplit != null) {
       final base = powSplit.lhs;
@@ -407,9 +427,37 @@ class StepEngine {
         ));
         return result;
       }
+      // Linear u-substitution on the power rule.
+      final slope = _linearSlope(base, variable);
+      if (slope != null && !_containsVar(exp, variable)) {
+        final baseStripped = _stripOuterParens(base);
+        if (exp.trim() == '-1' || exp.trim() == '(-1)') {
+          final result = 'ln|$baseStripped|/($slope)';
+          steps.add(MathStep(
+            rule: 'Linear u-substitution (logarithm rule)',
+            formula: r"\int \frac{1}{ax+b} \, dx = \frac{\ln|ax+b|}{a}",
+            before: '∫ $s d$variable',
+            after: result,
+            note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
+          ));
+          return result;
+        }
+        final nPlusOne = engine.simplify('($exp) + 1');
+        final newExp = nPlusOne.startsWith('Error') ? '$exp + 1' : nPlusOne;
+        final result = '($baseStripped)^($newExp)/(($slope)·($newExp))';
+        steps.add(MathStep(
+          rule: 'Linear u-substitution (power rule)',
+          formula:
+              r"\int (ax+b)^n \, dx = \frac{(ax+b)^{n+1}}{a(n+1)}",
+          before: '∫ $s d$variable',
+          after: result,
+          note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
+        ));
+        return result;
+      }
     }
 
-    // Reciprocal: ∫(1/x) dx = ln|x|.
+    // Reciprocal: ∫(1/x) dx = ln|x|, plus ∫1/(linear) dx via linear u-sub.
     final divSplit = _splitTopLevelOnce(s, '/');
     if (divSplit != null) {
       final num = divSplit.lhs.trim();
@@ -423,6 +471,21 @@ class StepEngine {
           after: result,
         ));
         return result;
+      }
+      if (num == '1') {
+        final denStripped = _stripOuterParens(den);
+        final slope = _linearSlope(den, variable);
+        if (slope != null) {
+          final result = 'ln|$denStripped|/($slope)';
+          steps.add(MathStep(
+            rule: 'Linear u-substitution (logarithm rule)',
+            formula: r"\int \frac{1}{ax+b} \, dx = \frac{\ln|ax+b|}{a}",
+            before: '∫ $s d$variable',
+            after: result,
+            note: 'Let u = $denStripped; then du = ($slope)·d$variable.',
+          ));
+          return result;
+        }
       }
     }
 
@@ -442,6 +505,75 @@ class StepEngine {
       return result;
     }
 
+    // Linear u-substitution for f(ax+b) where f has a standard
+    // antiderivative.
+    if (fc != null && _standardAntiderivatives.containsKey(fc.name)) {
+      final slope = _linearSlope(fc.arg, variable);
+      if (slope != null) {
+        final rule = _standardAntiderivatives[fc.name]!;
+        // Substitute the linear arg into the standard antiderivative
+        // template by reusing `rule.after()` on the arg directly.
+        final F = rule.after(fc.arg);
+        final result = '($F)/($slope)';
+        steps.add(MathStep(
+          rule: 'Linear u-substitution (${rule.ruleName.toLowerCase()})',
+          formula:
+              r"\int f(ax+b) \, dx = \frac{F(ax+b)}{a}",
+          before: '∫ $s d$variable',
+          after: result,
+          note: 'Let u = ${fc.arg}; then du = ($slope)·d$variable. The '
+              'antiderivative of ${fc.name} is the standard form, '
+              'evaluated at u and divided by the slope.',
+        ));
+        return result;
+      }
+    }
+
+    // Integration by parts: ∫ln(x) dx = x·ln(x) − x.
+    if (fc != null &&
+        (fc.name == 'ln' || fc.name == 'log') &&
+        fc.arg.trim() == variable) {
+      final result = '$variable·ln($variable) - $variable';
+      steps.add(MathStep(
+        rule: 'Integration by parts',
+        formula: r"\int \ln(x) \, dx = x \ln(x) - x",
+        before: '∫ $s d$variable',
+        after: result,
+        note: 'Let u = ln($variable), dv = d$variable. Then '
+            'du = (1/$variable)·d$variable and v = $variable, so '
+            '∫u·dv = u·v − ∫v·du = $variable·ln($variable) − ∫1 d$variable.',
+      ));
+      return result;
+    }
+
+    // Integration by parts for x · f(x) where f is standard. Picks
+    // u = x (the algebraic factor), dv = f(x)·dx (the standard-antideriv
+    // factor) — LIATE places Algebraic before Trig/Exponential.
+    final factorsForIbp = _splitTopLevelProduct(s);
+    if (factorsForIbp != null && factorsForIbp.length == 2) {
+      for (var i = 0; i < 2; i++) {
+        final left = _stripOuterParens(factorsForIbp[i].trim());
+        final right = _stripOuterParens(factorsForIbp[1 - i].trim());
+        if (left != variable) continue;
+        final rightFc = _matchFunctionCall(right);
+        if (rightFc == null || rightFc.arg.trim() != variable) continue;
+        if (!_standardAntiderivatives.containsKey(rightFc.name)) continue;
+        final vRule = _standardAntiderivatives[rightFc.name]!;
+        final v = vRule.after(variable);
+        steps.add(MathStep(
+          rule: 'Integration by parts',
+          formula: r"\int u \, dv = u v - \int v \, du",
+          before: '∫ $s d$variable',
+          after: '$variable·($v) - ∫ ($v) d$variable',
+          note: 'Let u = $variable (so du = d$variable) and '
+              'dv = $right·d$variable, giving v = $v.',
+        ));
+        final innerResult = _traceIntegrate(v, variable, engine, steps);
+        if (innerResult == null) return null;
+        return '($variable)·($v) - ($innerResult)';
+      }
+    }
+
     // Fall through — emit a "Symbolic integration" step that lets the
     // bridge try. Returns null so the caller knows we couldn't compute
     // an answer Dart-side.
@@ -451,10 +583,59 @@ class StepEngine {
       before: '∫ $s d$variable',
       after: engine.integrate(s, variable),
       note: 'No standard textbook rule matched this shape — handing off '
-          'to the symbolic integrator. (Substitution and integration by '
-          'parts are not yet recognized by the step walker.)',
+          'to the symbolic integrator.',
     ));
     return null;
+  }
+
+  /// If [expr] is linear in [variable] with a non-zero slope and is NOT
+  /// just `variable` alone (that case is handled by the basic power /
+  /// standard-antideriv rules), return the slope as an expression string.
+  /// Returns null when the expression is non-linear or constant in
+  /// [variable].
+  ///
+  /// Linearity here means: a top-level sum of signed terms where each
+  /// term is either a constant (no [variable]) or a product whose only
+  /// [variable]-containing factor is exactly [variable] (so things like
+  /// `x^2`, `sin(x)`, or `1/x` disqualify the term).
+  static String? _linearSlope(String expr, String variable) {
+    final s = _stripOuterParens(expr.trim());
+    if (s == variable) return null; // trivial case — handled elsewhere
+    if (!_containsVar(s, variable)) return null;
+
+    final terms = _splitTopLevelSum(s) ?? [_SignedTerm('+', s)];
+    String? slopeAccum;
+    var hasVarTerm = false;
+
+    for (final term in terms) {
+      final body = _stripOuterParens(term.body);
+      if (!_containsVar(body, variable)) continue; // pure constant term
+
+      // The body must be a product where exactly one factor is `variable`
+      // and the rest are variable-free constants.
+      final factors = _splitTopLevelProduct(body) ?? [body];
+      String? coeff;
+      var seenVar = false;
+      for (final f in factors) {
+        final ft = _stripOuterParens(f);
+        if (ft == variable) {
+          if (seenVar) return null; // var twice → not linear
+          seenVar = true;
+        } else if (_containsVar(ft, variable)) {
+          return null; // var inside something non-trivial
+        } else {
+          coeff = coeff == null ? ft : '($coeff)·($ft)';
+        }
+      }
+      if (!seenVar) return null;
+
+      var slope = coeff ?? '1';
+      if (term.sign == '-') slope = '-($slope)';
+      slopeAccum = slopeAccum == null ? slope : '($slopeAccum) + ($slope)';
+      hasVarTerm = true;
+    }
+
+    return hasVarTerm ? slopeAccum : null;
   }
 
   /// Lookup table of antiderivatives for standard 1-arg functions when

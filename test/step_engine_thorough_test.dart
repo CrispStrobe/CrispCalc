@@ -224,8 +224,17 @@ void main() {
     test('∫1/x dx', () {
       expect(intRules('1/x').first, equals('Logarithm rule'));
     });
-    test('∫1/(x+1) dx falls through (no u-sub in V1)', () {
-      expect(intRules('1/(x+1)').first, equals('Symbolic integration'));
+    test('∫1/(x+1) dx now picks up linear u-substitution', () {
+      expect(
+        intRules('1/(x+1)').first,
+        equals('Linear u-substitution (logarithm rule)'),
+      );
+    });
+    test('∫1/(2*x) dx — non-unit slope', () {
+      expect(
+        intRules('1/(2*x)').first,
+        equals('Linear u-substitution (logarithm rule)'),
+      );
     });
   });
 
@@ -272,8 +281,126 @@ void main() {
     test('cosh', () {
       expect(intRules('cosh(x)').first, equals('Antiderivative of cosh'));
     });
-    test('sin(x^2) — no u-sub in V1, falls through', () {
+    test('sin(x^2) — non-linear argument still falls through', () {
       expect(intRules('sin(x^2)').first, equals('Symbolic integration'));
+    });
+  });
+
+  group('integrate — V2 linear u-substitution', () {
+    test('∫sin(2*x) dx picks up linear u-substitution', () {
+      final r = intRules('sin(2*x)');
+      expect(
+        r.first,
+        equals('Linear u-substitution (antiderivative of sin)'),
+      );
+    });
+    test('∫cos(3*x + 1) dx with non-zero intercept', () {
+      final r = intRules('cos(3*x + 1)');
+      expect(
+        r.first,
+        equals('Linear u-substitution (antiderivative of cos)'),
+      );
+    });
+    test('∫exp(2*x) dx', () {
+      final r = intRules('exp(2*x)');
+      expect(
+        r.first,
+        equals('Linear u-substitution (antiderivative of exp)'),
+      );
+    });
+    test('∫(2*x + 1)^5 dx picks up linear-power u-substitution', () {
+      final r = intRules('(2*x + 1)^5');
+      expect(r.first, equals('Linear u-substitution (power rule)'));
+    });
+    test('∫(x - 3)^2 dx — slope 1, non-zero intercept', () {
+      final r = intRules('(x - 3)^2');
+      expect(r.first, equals('Linear u-substitution (power rule)'));
+    });
+    test('non-linear arg leaves substitution untouched', () {
+      // sin(x^2 + 1) is not linear in x; falls through.
+      expect(intRules('sin(x^2 + 1)').first, equals('Symbolic integration'));
+    });
+  });
+
+  group('integrate — V2 integration by parts', () {
+    test('∫ln(x) dx → x·ln(x) − x', () {
+      final r = intRules('ln(x)');
+      expect(r.first, equals('Integration by parts'));
+    });
+    test('∫log(x) dx (alias for ln) → IBP', () {
+      final r = intRules('log(x)');
+      expect(r.first, equals('Integration by parts'));
+    });
+    test('∫x·sin(x) dx → IBP, then antideriv of cos', () {
+      final r = intRules('x*sin(x)');
+      expect(r.first, equals('Integration by parts'));
+      // After IBP, we recurse on ∫v du = ∫(-cos(x)) dx — which becomes
+      // a constant-multiple step → antideriv of cos.
+      expect(r, contains('Antiderivative of cos'));
+    });
+    test('∫x·cos(x) dx → IBP, then antideriv of sin', () {
+      final r = intRules('x*cos(x)');
+      expect(r.first, equals('Integration by parts'));
+      expect(r, contains('Antiderivative of sin'));
+    });
+    test('∫x·exp(x) dx → IBP, then antideriv of exp', () {
+      final r = intRules('x*exp(x)');
+      expect(r.first, equals('Integration by parts'));
+      expect(r, contains('Antiderivative of exp'));
+    });
+    test('∫sin(x)·x dx — operand order does not matter', () {
+      // Same integrand, factors reversed.
+      final r = intRules('sin(x)*x');
+      expect(r.first, equals('Integration by parts'));
+    });
+    test('∫x·x^2 dx — both factors algebraic, no IBP', () {
+      // Constant multiple / power rule should fire here, not IBP.
+      final r = intRules('x*x^2');
+      expect(r.first, isNot(equals('Integration by parts')));
+    });
+  });
+
+  group('integrate — V2 antiderivative correctness', () {
+    // The Result step's `after` field carries the assembled antideriv
+    // string. We don't have a CAS in unit tests, but we can substring-
+    // check the structural shape of the answer.
+    String resultAfter(String e) => StepEngine.integrate(e, 'x', engine)
+        .firstWhere((s) => s.rule == 'Result')
+        .after;
+
+    test('∫sin(2*x) dx ≡ (-cos(2*x))/2 + C', () {
+      final after = resultAfter('sin(2*x)');
+      expect(after, contains('-cos(2*x)'));
+      expect(after, contains('/(2)'));
+      expect(after, endsWith('+ C'));
+    });
+    test('∫exp(3*x) dx ≡ exp(3*x)/3 + C', () {
+      final after = resultAfter('exp(3*x)');
+      expect(after, contains('exp(3*x)'));
+      expect(after, contains('/(3)'));
+    });
+    test('∫1/(x+1) dx ≡ ln|x+1|/1 + C', () {
+      final after = resultAfter('1/(x+1)');
+      expect(after, contains('ln|x+1|'));
+    });
+    test('∫(2*x+1)^3 dx ≡ (2*x+1)^4 / (2·4) + C', () {
+      final after = resultAfter('(2*x+1)^3');
+      expect(after, contains('(2*x+1)^'));
+      // slope is 2, n+1 is 4 → denominator includes both.
+      expect(after, contains('(2)'));
+    });
+    test('∫ln(x) dx ≡ x·ln(x) - x + C', () {
+      final after = resultAfter('ln(x)');
+      expect(after, contains('ln(x)'));
+      expect(after, contains('- x'));
+    });
+    test('∫x·sin(x) dx assembles a Result string with sin and cos', () {
+      final after = resultAfter('x*sin(x)');
+      // u·v = x·(-cos(x)); inner integral, after the leading-minus rule
+      // pulls out -1, reduces to -sin(x). So the assembled answer is
+      // (x)·(-cos(x)) - (-(sin(x))).
+      expect(after, contains('-cos(x)'));
+      expect(after, contains('sin(x)'));
     });
   });
 

@@ -2,6 +2,63 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 34) — Step engine V2: u-substitution + IBP
+
+Extends `StepEngine.integrate()` beyond the V1 fixed-rule list. The
+two single biggest textbook techniques — linear u-substitution and
+integration by parts — now produce proper step traces instead of
+falling through to the symbolic integrator with a "no rule matched"
+note.
+
+### New rules
+
+- **Linear u-substitution (power)**: `∫(ax+b)^n dx = (ax+b)^(n+1)/(a(n+1))`
+  for constant `n ≠ -1`.
+- **Linear u-substitution (logarithm)**: `∫1/(ax+b) dx = ln|ax+b|/a`,
+  triggered from both `(ax+b)^(-1)` and `1/(ax+b)` shapes.
+- **Linear u-substitution (standard antideriv)**: `∫f(ax+b) dx = F(ax+b)/a`
+  for `f ∈ {sin, cos, exp, sinh, cosh}`.
+- **Integration by parts (LIATE-Algebraic-vs-rest)**: for `∫x·f(x) dx`
+  with `f ∈ {sin, cos, exp, sinh, cosh}`. Picks `u = x` (Algebraic
+  beats Trig and Exponential in LIATE), `dv = f(x) dx`, recurses on
+  the resulting `∫v du`.
+- **Integration by parts (ln)**: `∫ln(x) dx = x·ln(x) − x` as the
+  special case where the integrand has no obvious product structure
+  but IBP with `dv = dx` collapses cleanly.
+- **Leading minus normalization**: `∫(-f) dx = -∫f dx`, so the IBP
+  recursion on shapes like `-cos(x)` doesn't dead-end at a function
+  call the existing rules didn't see (they only matched the bare
+  function name without a leading minus).
+
+### Implementation
+
+`_linearSlope(expr, variable)` is a pure-Dart linearity test that
+returns the slope-as-string when `expr` is a top-level sum of
+constant-multiple-of-variable terms plus pure-constant terms. It
+deliberately excludes function calls, denominators, and powers in
+any variable-containing factor, so it picks up `2*x + 1` and `x - 3`
+but never `sin(x) + 1`, `x^2 + 1`, or `1/x`.
+
+Outer parens on the inferred `u` are stripped before being woven
+into the result string, so the user sees `ln|x+1|/(1)` instead of
+`ln|(x+1)|/(1)`.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **615/615** (20 new tests: 8 V2 linear u-sub rule-
+  selection, 6 V2 IBP rule-selection, 6 V2 antideriv shape checks).
+- Steps diagnostic battery (`CRISPCALC_DIAGNOSTIC=steps` on the
+  macOS release binary): 37/37 with new V2 specs for `∫sin(2x)`,
+  `∫cos(3x)`, `∫exp(3x)`, `∫(2x+1)^3`, `∫1/(x+1)`, `∫1/(2x+1)`,
+  `∫ln(x)`, `∫x·sin(x)`, `∫x·exp(x)`.
+
+### V3 deferred
+
+Non-linear u-substitution via pattern detection (`∫f(g(x))g'(x)dx`),
+partial fractions, repeated IBP for `∫x^n·f(x)dx`, trig
+substitution, and Weierstrass substitution.
+
 ## 2026-05-17 (round 33) — 3D graphing (V1)
 
 A new Analysis-hub module: interactive 3D wireframe surface plots of

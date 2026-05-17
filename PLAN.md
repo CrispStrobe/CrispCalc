@@ -237,9 +237,18 @@ roughly double the perceived value of the app.
     Coverage: constant, identity (∫x dx), power rule, logarithm rule
     (1/x and x^-1), sum/linearity, constant multiple, and standard
     antiderivatives for sin/cos/exp/sinh/cosh when the argument is
-    just the variable. Substitution and integration by parts deferred
-    to V2 — they need heuristic u-picking (LIATE) that V1 can't
-    safely guess.
+    just the variable.
+  - **Integration V2 done** (HISTORY round 34): linear u-substitution
+    for the power rule (∫(ax+b)^n dx), logarithm rule (∫1/(ax+b) dx),
+    and the standard sin/cos/exp/sinh/cosh antiderivatives; integration
+    by parts for ∫x·f(x)dx with f ∈ {sin,cos,exp,sinh,cosh} (LIATE
+    chooses u = the algebraic factor) and the special case ∫ln(x)dx;
+    plus a leading-minus normalization rule so the IBP recursion
+    cleanly resolves the sub-integral. Verified end-to-end against the
+    native SymEngine via the steps diagnostic battery (37/37 specs).
+  - **V3 deferred**: non-linear u-substitution (∫f(g(x))g'(x)dx via
+    pattern detection), partial fractions, repeated integration by
+    parts, trig substitution.
 - [x] ~~**Interactive parameter sliders** on the graphing screen.~~
   Done 2026-05-17 — see HISTORY round 23. Identifiers in a function
   string that aren't the plot variable or a reserved name become
