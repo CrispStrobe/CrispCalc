@@ -135,12 +135,17 @@ single feature. Roughly in priority order — top items unblock the next.
 
 ### User experience
 
-- [ ] **Real error messages**. A student typing `det(x)` gets
+- [x] ~~**Real error messages**. A student typing `det(x)` gets
   "Error: evaluate failed: SymbolicMathException: evaluate - parse
-  failed". Replace with plain-language explanations + the offending
-  fragment underlined + a fix suggestion. Map the common error classes
-  (parse error, dimension mismatch, missing variable, etc.) to
-  curated messages.
+  failed". Replace with plain-language explanations…~~
+  Done 2026-05-17 — see HISTORY round 27. New
+  `EngineErrorFormatter` pattern-matches the raw engine error
+  strings (parse failed, requires native, not implemented,
+  invalid X() syntax, …) and returns localized friendly messages.
+  History entries that look like errors render with an italic
+  warning style in the theme's error color instead of the normal
+  blue result. Unrecognized errors get a `⚠ ` prefix and keep their
+  detail. Fragment-underlining and fix suggestions deferred to V2.
 - [ ] **Onboarding tour**. First launch shows a 4-card tour: keypad
   tabs, history scroll, function picker, analysis hub. Skippable.
   Discoverable features stop being a problem.

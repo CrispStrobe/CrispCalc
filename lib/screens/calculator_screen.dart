@@ -21,6 +21,7 @@ import '../engine/step_engine.dart';
 // Utils imports
 import '../utils/keyboard_input_handler.dart';
 import '../utils/latex_conversion_utils.dart';
+import '../utils/error_formatter.dart';
 import '../utils/expression_preprocessing_utils.dart';
 import '../utils/math_display_utils.dart';
 
@@ -1453,19 +1454,40 @@ class CalculatorScreenState extends State<CalculatorScreen>
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24, vertical: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    // Expression display (with LaTeX toggle)
-                                    _buildExpressionDisplay(entry.expression),
-                                    const SizedBox(height: 4),
-                                    // Result display
-                                    Text("= ${entry.result}",
+                                child: Builder(builder: (context) {
+                                  final tt = AppLocalizations.of(context);
+                                  final display = EngineErrorFormatter.format(
+                                      entry.result, tt);
+                                  final isError =
+                                      EngineErrorFormatter.isError(entry.result);
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.end,
+                                    children: [
+                                      // Expression display (with LaTeX toggle)
+                                      _buildExpressionDisplay(entry.expression),
+                                      const SizedBox(height: 4),
+                                      // Result display — friendly plain-
+                                      // language text for errors, normal
+                                      // result text otherwise.
+                                      Text(
+                                        isError ? display : '= $display',
                                         style: TextStyle(
-                                            fontSize: 28,
-                                            color: Colors.blue[300])),
-                                  ],
-                                ),
+                                          fontSize: isError ? 16 : 28,
+                                          color: isError
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .error
+                                              : Colors.blue[300],
+                                          fontStyle: isError
+                                              ? FontStyle.italic
+                                              : FontStyle.normal,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ],
+                                  );
+                                }),
                               );
                             },
                           );

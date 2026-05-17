@@ -2,6 +2,76 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 27) — Friendly error messages
+
+Before: a student typing `det(x)` got `Error: evaluate failed:
+SymbolicMathException: evaluate - parse failed` in bold blue text
+that looked exactly like a successful answer. After: a short italic
+warning in the theme's error color saying "Couldn't understand the
+expression. Check for unmatched parentheses, typos, or missing
+operators."
+
+### How
+
+`lib/utils/error_formatter.dart` adds an `EngineErrorFormatter`
+class with two entry points:
+
+- `format(raw, t)` — if `raw` starts with `Error`, pattern-matches
+  against known shapes and returns a localized friendly version.
+  Falls through with a `⚠ ` prefix and the detail intact when
+  nothing matches.
+- `isError(text)` — boolean used by the history renderer to switch
+  to the warning style.
+
+Categories recognized today:
+
+- **Parse failures** (`parse failed`, `ParseException`, `ParseError`).
+- **Native library not loaded** (`requires native library`).
+- **Integrate not implemented** (`not implemented in SymEngine C API`,
+  `indefinite integrate() is not available`).
+- **Invalid X() syntax** — extracts the function name and explains.
+- **Matrix literal malformed** (`invalid matrix literal`).
+- **Internal disposed matrix reference**.
+- Argument-count messages (`gcd() requires exactly 2 arguments`) and
+  format hints (`solve() format is …`) keep their useful text but
+  lose the hostile `Error:` prefix.
+
+### Visual change
+
+The history renderer was always blue (`Colors.blue[300]`). Now:
+
+- Normal results: `= <value>` in blue, 28pt (unchanged).
+- Errors: friendly text in the theme's `colorScheme.error`, italic,
+  16pt — visually clear that something went wrong.
+
+The detection is via `EngineErrorFormatter.isError(entry.result)`
+on the raw stored value, so we can change formatting later without
+re-storing history.
+
+### Localization
+
+`errorParse`, `errorNativeRequired`,
+`errorIntegrateNotImplemented`, `errorMatrixLiteral`,
+`errorInternalMatrixDisposed`, `errorInvalidSyntax(op)` — 6 new
+keys × 4 locales = 24 new strings.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **499/499** (19 new tests covering each error
+  category, the non-error pass-through, and the unknown-error
+  fallback).
+- macOS release matrix self-test 7/7, step self-test 28/28.
+
+### Out of scope for V1
+
+The PLAN entry also mentioned underlining the offending fragment
+and adding "did you mean" fix suggestions. That needs deeper
+parser support (column numbers, token streams) which the bridge
+doesn't expose. V2 work.
+
+---
+
 ## 2026-05-17 (round 26) — Dialog localization sweep
 
 A P4 polish item from PLAN. The FR/ES locales we added in round 17

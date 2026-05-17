@@ -156,6 +156,14 @@ abstract class AppLocalizations {
   String get errorLcmArgs;
   String get errorInvalidLcm;
 
+  // -- Friendly errors (shown in history when an op fails) --
+  String get errorParse;
+  String get errorNativeRequired;
+  String get errorIntegrateNotImplemented;
+  String get errorMatrixLiteral;
+  String get errorInternalMatrixDisposed;
+  String errorInvalidSyntax(String op);
+
   // -- Keypad tab labels --
   String get tabNum;
   String get tabTrig;
@@ -447,6 +455,25 @@ class EnLocalizations implements AppLocalizations {
   String get errorLcmArgs => 'Error: lcm() requires exactly 2 arguments';
   @override
   String get errorInvalidLcm => 'Error: Invalid lcm() syntax';
+
+  @override
+  String get errorParse =>
+      'Couldn\'t understand the expression. Check for unmatched parentheses, typos, or missing operators.';
+  @override
+  String get errorNativeRequired =>
+      'This operation needs the native math library, which isn\'t loaded on this platform.';
+  @override
+  String get errorIntegrateNotImplemented =>
+      'Symbolic integration isn\'t available in this build. Use the ∫ button with bounds for a numerical (definite) result.';
+  @override
+  String get errorMatrixLiteral =>
+      'The matrix literal looks malformed. Use the format [a,b; c,d] or build it with the matrix editor.';
+  @override
+  String get errorInternalMatrixDisposed =>
+      'Internal matrix reference is no longer valid. Please run the operation again.';
+  @override
+  String errorInvalidSyntax(String op) =>
+      'The arguments to $op() weren\'t in the expected shape. Check the example in the help / About screen.';
 
   @override
   String get tabNum => 'Num';
@@ -750,6 +777,25 @@ class DeLocalizations implements AppLocalizations {
   String get errorLcmArgs => 'Fehler: lcm() benötigt genau 2 Argumente';
   @override
   String get errorInvalidLcm => 'Fehler: Ungültige lcm()-Syntax';
+
+  @override
+  String get errorParse =>
+      'Der Ausdruck konnte nicht verstanden werden. Bitte auf unausgewogene Klammern, Tippfehler oder fehlende Operatoren prüfen.';
+  @override
+  String get errorNativeRequired =>
+      'Diese Operation benötigt die native Mathematik-Bibliothek, die auf dieser Plattform nicht geladen ist.';
+  @override
+  String get errorIntegrateNotImplemented =>
+      'Symbolische Integration ist in diesem Build nicht verfügbar. Bitte ∫ mit Integrationsgrenzen verwenden für ein numerisches (bestimmtes) Ergebnis.';
+  @override
+  String get errorMatrixLiteral =>
+      'Das Matrix-Literal ist fehlerhaft. Bitte Format [a,b; c,d] verwenden oder den Matrix-Editor öffnen.';
+  @override
+  String get errorInternalMatrixDisposed =>
+      'Interne Matrix-Referenz ist nicht mehr gültig. Bitte die Operation erneut ausführen.';
+  @override
+  String errorInvalidSyntax(String op) =>
+      'Die Argumente an $op() hatten nicht die erwartete Form. Bitte das Beispiel in Hilfe / Über prüfen.';
 
   @override
   String get tabNum => 'Num';
@@ -1059,6 +1105,25 @@ class FrLocalizations implements AppLocalizations {
   String get errorInvalidLcm => 'Erreur : syntaxe lcm() invalide';
 
   @override
+  String get errorParse =>
+      'L\'expression n\'a pas pu être analysée. Vérifiez les parenthèses non appariées, les fautes de frappe ou les opérateurs manquants.';
+  @override
+  String get errorNativeRequired =>
+      'Cette opération nécessite la bibliothèque mathématique native, non chargée sur cette plateforme.';
+  @override
+  String get errorIntegrateNotImplemented =>
+      'L\'intégration symbolique n\'est pas disponible dans cette version. Utilisez ∫ avec des bornes pour un résultat numérique (défini).';
+  @override
+  String get errorMatrixLiteral =>
+      'Le littéral de matrice est mal formé. Utilisez le format [a,b; c,d] ou l\'éditeur de matrice.';
+  @override
+  String get errorInternalMatrixDisposed =>
+      'Référence de matrice interne non valide. Veuillez relancer l\'opération.';
+  @override
+  String errorInvalidSyntax(String op) =>
+      'Les arguments passés à $op() n\'avaient pas la forme attendue. Consultez l\'exemple dans l\'aide / À propos.';
+
+  @override
   String get tabNum => 'Num';
   @override
   String get tabTrig => 'Trig';
@@ -1363,6 +1428,25 @@ class EsLocalizations implements AppLocalizations {
   String get errorLcmArgs => 'Error: lcm() requiere exactamente 2 argumentos';
   @override
   String get errorInvalidLcm => 'Error: sintaxis de lcm() inválida';
+
+  @override
+  String get errorParse =>
+      'No se pudo analizar la expresión. Revisa paréntesis sin pareja, erratas u operadores ausentes.';
+  @override
+  String get errorNativeRequired =>
+      'Esta operación necesita la biblioteca matemática nativa, no cargada en esta plataforma.';
+  @override
+  String get errorIntegrateNotImplemented =>
+      'La integración simbólica no está disponible en esta versión. Usa ∫ con límites para un resultado numérico (definido).';
+  @override
+  String get errorMatrixLiteral =>
+      'El literal de matriz no es válido. Usa el formato [a,b; c,d] o el editor de matrices.';
+  @override
+  String get errorInternalMatrixDisposed =>
+      'La referencia interna a la matriz ya no es válida. Vuelve a ejecutar la operación.';
+  @override
+  String errorInvalidSyntax(String op) =>
+      'Los argumentos pasados a $op() no tenían el formato esperado. Consulta el ejemplo en la ayuda / Acerca de.';
 
   @override
   String get tabNum => 'Núm';
