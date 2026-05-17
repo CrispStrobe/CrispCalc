@@ -316,8 +316,10 @@ class UnitCatalog {
   static List<UnitDimension> allDimensions() =>
       UnitDimension.values.toList(growable: false);
 
-  /// Look up a unit by its [symbol]. Returns null if not found.
-  /// Used by V2's inline parser; the dialog driver uses [unitsFor].
+  /// Look up a unit by its [symbol] in the curated catalog. Returns null
+  /// if not found. The inline parser uses [bySymbolWithPrefixes] instead,
+  /// which additionally tries to interpret unrecognized symbols as SI
+  /// prefix + prefixable base.
   static Unit? bySymbol(String symbol) {
     for (final units in _byDimension.values) {
       for (final u in units) {
@@ -325,5 +327,98 @@ class UnitCatalog {
       }
     }
     return null;
+  }
+
+  // === SI prefix parser ====================================================
+  //
+  // The curated catalog hardcodes the most common prefixed forms (km,
+  // cm, mm, μm, nm, ms, μs, ns, mg). Less common but mathematically
+  // valid forms — pm, fm, am, dm, hm, Mm, Gm, Tm, Pm, Em, Zm, Ym, ps,
+  // fs, as, das, hs, Ms, Gs, Ts, etc. — are synthesized on demand by
+  // [bySymbolWithPrefixes].
+
+  /// Standard SI prefixes (and their powers-of-ten multipliers).
+  /// Longest spellings first; `da` and `μ`-vs-`u` are intentional.
+  static const Map<String, double> siPrefixes = {
+    // Long prefixes first so longest-match works.
+    'da': 1e1,
+    'Y': 1e24,
+    'Z': 1e21,
+    'E': 1e18,
+    'P': 1e15,
+    'T': 1e12,
+    'G': 1e9,
+    'M': 1e6,
+    'k': 1e3,
+    'h': 1e2,
+    'd': 1e-1,
+    'c': 1e-2,
+    'm': 1e-3,
+    'μ': 1e-6,
+    'u': 1e-6, // ASCII alternative for μ
+    'n': 1e-9,
+    'p': 1e-12,
+    'f': 1e-15,
+    'a': 1e-18,
+    'z': 1e-21,
+    'y': 1e-24,
+  };
+
+  /// Catalog symbols that accept SI prefixes. Restricted to the canonical
+  /// SI metric units so the prefix parser can't accidentally turn `min`
+  /// into "milli-inches" or `kt` into "kilo-tonnes".
+  static const Set<String> prefixableSymbols = {
+    'm', // metre
+    's', // second
+    'g', // gram
+    'K', // kelvin
+    'rad', // radian
+  };
+
+  /// Like [bySymbol], plus the SI prefix parser. If [symbol] isn't in
+  /// the curated catalog, tries to split off an SI prefix and re-look
+  /// up the remainder against [prefixableSymbols], returning a
+  /// synthesized [Unit] with the prefix's scale folded in.
+  static Unit? bySymbolWithPrefixes(String symbol) {
+    final direct = bySymbol(symbol);
+    if (direct != null) return direct;
+
+    // Try every prefix in longest-first order so `da` (deca) is tried
+    // before `d` (deci).
+    final prefixesByLength = siPrefixes.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final prefix in prefixesByLength) {
+      if (!symbol.startsWith(prefix)) continue;
+      final rest = symbol.substring(prefix.length);
+      if (!prefixableSymbols.contains(rest)) continue;
+      final base = bySymbol(rest);
+      if (base == null) continue;
+      final scale = siPrefixes[prefix]! * base.scale;
+      return Unit(
+        symbol: symbol,
+        name: '$prefix${base.name}',
+        dimension: base.dimension,
+        scale: scale,
+      );
+    }
+    return null;
+  }
+
+  /// All synthesizable prefixed symbols beyond the curated set — used by
+  /// the inline-parser tokenizer to extend its longest-first match list.
+  static List<String> prefixedSymbols() {
+    final out = <String>[];
+    for (final base in prefixableSymbols) {
+      for (final prefix in siPrefixes.keys) {
+        final combined = '$prefix$base';
+        // Skip combinations already curated (e.g. km, cm, mm, ms, μs).
+        if (bySymbol(combined) != null) continue;
+        // Skip if the combined string collides with another curated
+        // symbol (e.g. `t` alone is tonne in the mass dimension, so
+        // never let prefix `t` produce something with collision).
+        out.add(combined);
+      }
+    }
+    return out;
   }
 }

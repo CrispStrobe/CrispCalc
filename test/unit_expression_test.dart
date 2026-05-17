@@ -167,4 +167,87 @@ void main() {
           reason: 'got $r');
     });
   });
+
+  group('SI prefix parser (V3)', () {
+    test('1 pm in m', () {
+      // 1 picometre = 1e-12 m
+      final r = _eval('1 pm in m');
+      expect(_numericResultMatches(r, 1e-12, unit: 'm'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 Tm in km — 1 terametre = 1e9 km', () {
+      final r = _eval('1 Tm in km');
+      expect(_numericResultMatches(r, 1e9, unit: 'km'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 Gm in m — 1 gigametre = 1e9 m', () {
+      final r = _eval('1 Gm in m');
+      expect(_numericResultMatches(r, 1e9, unit: 'm'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 fm in nm — femtometre into nanometre', () {
+      // 1 fm = 1e-15 m = 1e-6 nm
+      final r = _eval('1 fm in nm');
+      expect(_numericResultMatches(r, 1e-6, unit: 'nm'), isTrue,
+          reason: 'got $r');
+    });
+    test('500 dm in m — decimetre prefix', () {
+      // 500 dm = 50 m
+      final r = _eval('500 dm in m');
+      expect(_numericResultMatches(r, 50.0, unit: 'm'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 hm in m — hectometre prefix', () {
+      final r = _eval('1 hm in m');
+      expect(_numericResultMatches(r, 100.0, unit: 'm'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 dam in m — deca prefix is 2 chars (longest-match)', () {
+      // 1 dam = 10 m. The `da` prefix must beat the bare `d` prefix.
+      final r = _eval('1 dam in m');
+      expect(_numericResultMatches(r, 10.0, unit: 'm'), isTrue,
+          reason: 'got $r');
+    });
+    test('5 ps + 3 ns in ns — picosecond + nanosecond mix', () {
+      // 5 ps + 3 ns = 5e-12 + 3e-9 = 3.005e-9 s
+      final r = _eval('5 ps + 3 ns in ns');
+      expect(_numericResultMatches(r, 3.005, unit: 'ns'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 Gg in t — gigagram into tonne', () {
+      // 1 Gg = 1e9 g = 1e6 kg = 1000 tonnes
+      final r = _eval('1 Gg in t');
+      expect(_numericResultMatches(r, 1000.0, unit: 't'), isTrue,
+          reason: 'got $r');
+    });
+    test('300 μK in K — microkelvin', () {
+      final r = _eval('300 μK in K');
+      expect(_numericResultMatches(r, 3e-4, unit: 'K'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 ums (ASCII μ → u) parses as microsecond', () {
+      // The catalog already has μs explicitly. We're testing the ASCII
+      // fallback `us` produced via the prefix parser. 1 us = 1e-6 s.
+      final r = _eval('1 us in ns');
+      expect(_numericResultMatches(r, 1000.0, unit: 'ns'), isTrue,
+          reason: 'got $r');
+    });
+    test('curated symbol still wins over prefix interpretation', () {
+      // `mg` is curated → milligram (mass). The prefix parser would
+      // also recognize it as milli-gram, with the same scale, so the
+      // dimension must stay mass.
+      final r = _eval('5 mg in g');
+      expect(_numericResultMatches(r, 0.005, unit: 'g'), isTrue,
+          reason: 'got $r');
+    });
+    test('1 min stays as minute, NOT milli-inch', () {
+      // The `m` + `in` prefix combo MUST NOT shadow the explicit `min`.
+      // We don't claim "min" is parsed as a prefix anyway — `in` is the
+      // conversion keyword — but make sure the test confirms the
+      // catalog-side meaning by converting.
+      final r = _eval('1 min in s');
+      expect(_numericResultMatches(r, 60.0, unit: 's'), isTrue,
+          reason: 'got $r');
+    });
+  });
 }

@@ -11,9 +11,13 @@
 // expressions like `5*k*m + 3*m`. We intercept before SymEngine sees
 // the input.
 //
-// V2 territory (deferred): derived units (`m/s² * 2 s`), composite
+// V3 adds SI prefix parsing — `5 pm + 3 nm`, `1 Tm`, `42 μK` all parse
+// without needing an explicit catalog entry per prefixed form. Built
+// on top of UnitCatalog.bySymbolWithPrefixes(), which derives the
+// scale automatically from prefix × base.
+//
+// V4 territory (still deferred): derived units (`m/s² * 2 s`), composite
 // dimensions for division, scalar * quantity, parens, variables.
-// V1 covers the most common conversion + arithmetic flows.
 
 import 'unit_catalog.dart';
 import 'unit_converter.dart';
@@ -112,6 +116,10 @@ class UnitExpressionEvaluator {
       // Natural-spelling aliases for the user-facing inline syntax.
       // The longest-first sort handles overlap (`miles` before `mi`).
       ..._aliases.keys,
+      // SI-prefixed forms that aren't already in the curated catalog
+      // (pm, fm, am, dm, hm, dam, Mm, Gm, Tm, Pm, Em, Zm, Ym, etc., and
+      // the analogous time / mass / kelvin / radian variants).
+      ...UnitCatalog.prefixedSymbols(),
     ];
     symbols.sort((a, b) => b.length.compareTo(a.length));
 
@@ -201,10 +209,11 @@ class UnitExpressionEvaluator {
       // this was a substring of a longer name and shouldn't match.
       final after = start + sym.length < s.length ? s[start + sym.length] : '';
       if (after.isNotEmpty && _isWordChar(after)) continue;
-      // Look up either as a catalog symbol directly, or via the
-      // natural-spelling alias map.
+      // Look up either as a catalog symbol directly, via the natural-
+      // spelling alias map, or via the SI prefix parser (which handles
+      // forms like `pm`, `Tm`, `μs` that aren't in the curated list).
       final canonical = _aliases[sym] ?? sym;
-      final u = UnitCatalog.bySymbol(canonical);
+      final u = UnitCatalog.bySymbolWithPrefixes(canonical);
       if (u == null) continue;
       return _UnitMatch(u, start + sym.length);
     }

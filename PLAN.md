@@ -297,8 +297,15 @@ roughly double the perceived value of the app.
     dimension `+`/`-` and `in <unit>` conversion suffix. Refuses
     temperature arithmetic explicitly (offset units are ambiguous;
     conversion still works).
+  - **V3 partial** (HISTORY round 35): SI prefix parser shipped.
+    Synthesizes prefixed forms (`pm`, `Tm`, `Gg`, `μK`, `dam`, `hm`,
+    etc.) on demand by combining one of the 21 SI prefixes with one
+    of the prefixable canonical bases (`m`, `s`, `g`, `K`, `rad`).
+    Longest-prefix-first lookup so `da` (deca, 1e1) wins over `d`
+    (deci, 1e-1). Curated catalog symbols (`mg`, `min`, `t`) still
+    take precedence over a prefix interpretation.
   - Pending: composite-dimension arithmetic (`m/s² * 2 s`),
-    scalar-times-quantity, SI prefix parser.
+    scalar-times-quantity, derived-unit catalog entries (N, J, W, Pa).
 
 ### Other meaningful gaps
 

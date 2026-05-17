@@ -2,6 +2,47 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 35) — Unit V3: SI prefix parser
+
+Extends `UnitCatalog` so the inline parser recognizes every standard
+SI prefix combined with the canonical metric bases, without having
+to hardcode hundreds of catalog entries.
+
+### Mechanics
+
+`UnitCatalog.bySymbolWithPrefixes(symbol)` is the new entry point:
+
+1. Try the curated catalog first — `mg`, `km`, `cm`, `μs`, `ms` etc.
+   stay as their explicit entries so the dimension classification is
+   unambiguous.
+2. If miss, walk SI prefixes longest-first (so `da` beats `d`) and
+   ask whether the remainder is one of the prefixable bases:
+   `{m, s, g, K, rad}`. On match, synthesize a `Unit` with
+   `scale = prefix.factor * base.scale`.
+
+Prefixable bases are intentionally tight — restricted to the canonical
+SI metric units — so the parser can't accidentally interpret `tin`
+("teraInch") or `kt` ("kilotonne") as something the user didn't mean.
+
+### Examples now working inline
+
+- `1 pm in m` → `1e-12 m`
+- `1 Tm in km` → `1e9 km`
+- `1 dam in m` → `10 m` (deca beats deci)
+- `5 ps + 3 ns in ns` → `3.005 ns`
+- `1 Gg in t` → `1000 t`
+- `300 μK in K` → `0.0003 K`
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **628/628** (+13 new SI-prefix tests).
+
+### V4 deferred
+
+Composite-dimension arithmetic (`m/s² * 2 s = m/s`), scalar-quantity
+multiplication, derived-unit catalog entries (N, J, W, Pa, Hz).
+
 ## 2026-05-17 (round 34) — Step engine V2: u-substitution + IBP
 
 Extends `StepEngine.integrate()` beyond the V1 fixed-rule list. The
