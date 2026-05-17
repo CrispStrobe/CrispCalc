@@ -239,21 +239,23 @@ class SettingsScreen extends StatelessWidget {
                       Text(t.settingsLanguage,
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      RadioListTile<String>(
-                        title: Text(t.settingsLanguageEnglish),
-                        value: 'en',
+                      RadioGroup<String>(
                         groupValue: appState.locale.languageCode,
                         onChanged: (v) {
                           if (v != null) appState.setLocale(Locale(v));
                         },
-                      ),
-                      RadioListTile<String>(
-                        title: Text(t.settingsLanguageGerman),
-                        value: 'de',
-                        groupValue: appState.locale.languageCode,
-                        onChanged: (v) {
-                          if (v != null) appState.setLocale(Locale(v));
-                        },
+                        child: Column(
+                          children: [
+                            RadioListTile<String>(
+                              title: Text(t.settingsLanguageEnglish),
+                              value: 'en',
+                            ),
+                            RadioListTile<String>(
+                              title: Text(t.settingsLanguageGerman),
+                              value: 'de',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -269,37 +271,31 @@ class SettingsScreen extends StatelessWidget {
                       Text(t.settingsNumberFormat,
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      RadioListTile<NumberDisplayFormat>(
-                        title: Text(t.settingsNumberFormatAuto),
-                        value: NumberDisplayFormat.auto,
+                      RadioGroup<NumberDisplayFormat>(
                         groupValue: appState.numberFormat,
                         onChanged: (v) {
                           if (v != null) appState.setNumberFormat(v);
                         },
-                      ),
-                      RadioListTile<NumberDisplayFormat>(
-                        title: Text(t.settingsNumberFormatInteger),
-                        value: NumberDisplayFormat.integer,
-                        groupValue: appState.numberFormat,
-                        onChanged: (v) {
-                          if (v != null) appState.setNumberFormat(v);
-                        },
-                      ),
-                      RadioListTile<NumberDisplayFormat>(
-                        title: Text(t.settingsNumberFormatOneDecimal),
-                        value: NumberDisplayFormat.oneDecimal,
-                        groupValue: appState.numberFormat,
-                        onChanged: (v) {
-                          if (v != null) appState.setNumberFormat(v);
-                        },
-                      ),
-                      RadioListTile<NumberDisplayFormat>(
-                        title: Text(t.settingsNumberFormatTwoDecimal),
-                        value: NumberDisplayFormat.twoDecimal,
-                        groupValue: appState.numberFormat,
-                        onChanged: (v) {
-                          if (v != null) appState.setNumberFormat(v);
-                        },
+                        child: Column(
+                          children: [
+                            RadioListTile<NumberDisplayFormat>(
+                              title: Text(t.settingsNumberFormatAuto),
+                              value: NumberDisplayFormat.auto,
+                            ),
+                            RadioListTile<NumberDisplayFormat>(
+                              title: Text(t.settingsNumberFormatInteger),
+                              value: NumberDisplayFormat.integer,
+                            ),
+                            RadioListTile<NumberDisplayFormat>(
+                              title: Text(t.settingsNumberFormatOneDecimal),
+                              value: NumberDisplayFormat.oneDecimal,
+                            ),
+                            RadioListTile<NumberDisplayFormat>(
+                              title: Text(t.settingsNumberFormatTwoDecimal),
+                              value: NumberDisplayFormat.twoDecimal,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -315,29 +311,27 @@ class SettingsScreen extends StatelessWidget {
                       Text(t.settingsTheme,
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      RadioListTile<ThemeMode>(
-                        title: Text(t.settingsThemeSystem),
-                        value: ThemeMode.system,
+                      RadioGroup<ThemeMode>(
                         groupValue: appState.themeMode,
                         onChanged: (v) {
                           if (v != null) appState.setThemeMode(v);
                         },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        title: Text(t.settingsThemeLight),
-                        value: ThemeMode.light,
-                        groupValue: appState.themeMode,
-                        onChanged: (v) {
-                          if (v != null) appState.setThemeMode(v);
-                        },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        title: Text(t.settingsThemeDark),
-                        value: ThemeMode.dark,
-                        groupValue: appState.themeMode,
-                        onChanged: (v) {
-                          if (v != null) appState.setThemeMode(v);
-                        },
+                        child: Column(
+                          children: [
+                            RadioListTile<ThemeMode>(
+                              title: Text(t.settingsThemeSystem),
+                              value: ThemeMode.system,
+                            ),
+                            RadioListTile<ThemeMode>(
+                              title: Text(t.settingsThemeLight),
+                              value: ThemeMode.light,
+                            ),
+                            RadioListTile<ThemeMode>(
+                              title: Text(t.settingsThemeDark),
+                              value: ThemeMode.dark,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

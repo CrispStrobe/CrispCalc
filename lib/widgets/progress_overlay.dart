@@ -8,13 +8,13 @@ class ProgressOverlay extends StatelessWidget {
   final VoidCallback? onCancel;
 
   const ProgressOverlay({
-    Key? key,
+    super.key,
     required this.isVisible,
     required this.title,
     this.subtitle,
     this.progress,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

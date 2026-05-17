@@ -1,6 +1,5 @@
 // lib/screens/function_editor_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 
 import '../controllers/latex_controller.dart';
@@ -71,7 +70,7 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
     if (function.isNotEmpty) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => GraphingScreen(),
+          builder: (context) => const GraphingScreen(),
         ),
       );
     }

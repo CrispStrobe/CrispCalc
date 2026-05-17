@@ -2,7 +2,6 @@
 // A custom controller to manage the state of the LaTeX input field.
 // This version is "structure-aware" for better editing of math expressions.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class LatexController extends ChangeNotifier {

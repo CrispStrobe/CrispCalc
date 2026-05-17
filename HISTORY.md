@@ -2,6 +2,50 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 15) — Plot annotations + zero-issue analyze
+
+### Plot annotations
+
+New AppBar toggle on the graphing screen overlays roots and extrema
+markers on every active curve. Numerical implementation:
+
+- Scan ~200 samples across the visible x-range using the painter's
+  existing per-point evaluator (`_evaluateFunction`).
+- **Roots**: sign change in f(x), refined by 40-iter bisection.
+- **Extrema**: sign change in finite-difference f'(x), refined by
+  parabolic interpolation through three samples bracketing the change.
+  Classification (`min` / `max`) from the parabola's curvature sign.
+- Markers: filled colored dot + white outline, with a labeled coord
+  pair above-right (flipped if it would clip the canvas).
+
+Why fully numerical rather than reusing AnalysisEngine: AnalysisEngine
+does symbolic root/extremum solving via SymEngine, which is slow and
+overkill for an interactive overlay that needs to repaint on every pan
+and zoom. The numerical scan is fast enough to rerun each frame and
+adapts to whatever x-range is on screen, so it shows roots/extrema
+outside the analytic solution set too (e.g., for transcendental
+functions where SymEngine can't find closed-form roots).
+
+### Zero-issue analyze
+
+In the same round, drove `flutter analyze` from 31 issues down to **0**:
+
+- Dropped 6 redundant `flutter/foundation.dart` and `flutter/services.dart`
+  imports that were fully shadowed by `flutter/material.dart`.
+- Migrated 18 deprecated `Radio.groupValue` / `Radio.onChanged` usages
+  in `main.dart` to the new `RadioGroup<T>` ancestor pattern
+  (Flutter 3.32+). Cleaner shape too — one set of group state at the
+  Card level instead of repeated on every `RadioListTile`.
+- Added `super.key` to `IntegralDialog`, `NthRootDialog`, `LimitDialog`
+  constructors; tightened a stale `Key? key` in `progress_overlay.dart`.
+- Three `const` constructor lints (Text, KeyUpEvent, GraphingScreen
+  push).
+
+`flutter test`: 236/236. macOS release builds clean and launches with
+all bridge symbols linked.
+
+---
+
 ## 2026-05-17 (round 14) — P2: substitute dialog + history search
 
 Two user-facing improvements with the bridge fix from round 13

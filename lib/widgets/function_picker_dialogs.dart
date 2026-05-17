@@ -2,7 +2,6 @@
 // Dialogs for selecting and managing functions - Complete Fixed Version
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'dart:async';
 import '../engine/app_state.dart';
@@ -127,21 +126,21 @@ class FunctionPickerDialogs {
   static Future<String?> showIntegralDialog(BuildContext context) async {
     return await showDialog<String>(
       context: context,
-      builder: (context) => IntegralDialog(),
+      builder: (context) => const IntegralDialog(),
     );
   }
 
   static Future<String?> showNthRootDialog(BuildContext context) async {
     return await showDialog<String>(
       context: context,
-      builder: (context) => NthRootDialog(),
+      builder: (context) => const NthRootDialog(),
     );
   }
 
   static Future<String?> showLimitDialog(BuildContext context) async {
     return await showDialog<String>(
       context: context,
-      builder: (context) => LimitDialog(),
+      builder: (context) => const LimitDialog(),
     );
   }
 
@@ -373,6 +372,8 @@ class _DialogLatexFieldState extends State<DialogLatexField>
 }
 
 class IntegralDialog extends StatefulWidget {
+  const IntegralDialog({super.key});
+
   @override
   State<IntegralDialog> createState() => _IntegralDialogState();
 }
@@ -546,6 +547,8 @@ class _IntegralDialogState extends State<IntegralDialog> {
 }
 
 class NthRootDialog extends StatefulWidget {
+  const NthRootDialog({super.key});
+
   @override
   State<NthRootDialog> createState() => _NthRootDialogState();
 }
@@ -669,6 +672,8 @@ class _NthRootDialogState extends State<NthRootDialog> {
 }
 
 class LimitDialog extends StatefulWidget {
+  const LimitDialog({super.key});
+
   @override
   State<LimitDialog> createState() => _LimitDialogState();
 }

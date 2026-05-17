@@ -1,7 +1,6 @@
 // lib/screens/graphing_screen.dart - with LaTeX Input & Keypad
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import '../controllers/latex_controller.dart';
 import '../engine/calculator_engine.dart';
@@ -40,6 +39,9 @@ class GraphingScreenState extends State<GraphingScreen>
   double _startScale = 1.0;
   Offset _startOffset = Offset.zero;
   Offset _focalStart = Offset.zero;
+
+  // When true, the painter overlays root and extremum markers on each curve.
+  bool _showAnnotations = false;
 
   @override
   void initState() {
@@ -339,6 +341,17 @@ class GraphingScreenState extends State<GraphingScreen>
                     icon: const Icon(Icons.analytics),
                     tooltip: AppLocalizations.of(context).analyzeFunctions,
                   ),
+                if (activeFunctions.isNotEmpty)
+                  IconButton(
+                    onPressed: () => setState(
+                        () => _showAnnotations = !_showAnnotations),
+                    icon: Icon(_showAnnotations
+                        ? Icons.bubble_chart
+                        : Icons.bubble_chart_outlined),
+                    tooltip: _showAnnotations
+                        ? AppLocalizations.of(context).hideAnnotations
+                        : AppLocalizations.of(context).showAnnotations,
+                  ),
                 IconButton(
                   onPressed: () {
                     setState(() => _showKeypad = !_showKeypad);
@@ -399,6 +412,7 @@ class GraphingScreenState extends State<GraphingScreen>
                               offset: _offset,
                               engine: _engine,
                               getColorForFunction: _getColorForFunction,
+                              showAnnotations: _showAnnotations,
                             ),
                             size: Size.infinite,
                           ),
@@ -533,7 +547,6 @@ class GraphingScreenState extends State<GraphingScreen>
   }
 }
 
-// GraphPainter class remains unchanged
 class GraphPainter extends CustomPainter {
   final List<String> functions;
   final List<int> functionIndices;
@@ -541,6 +554,7 @@ class GraphPainter extends CustomPainter {
   final Offset offset;
   final CalculatorEngine engine;
   final Color Function(int) getColorForFunction;
+  final bool showAnnotations;
 
   GraphPainter({
     required this.functions,
@@ -549,6 +563,7 @@ class GraphPainter extends CustomPainter {
     required this.offset,
     required this.engine,
     required this.getColorForFunction,
+    this.showAnnotations = false,
   });
 
   @override
@@ -566,14 +581,18 @@ class GraphPainter extends CustomPainter {
     for (int i = 0; i < functions.length; i++) {
       final func = functions[i];
       final originalIndex = functionIndices[i];
+      final color = getColorForFunction(originalIndex);
       final paint = Paint()
-        ..color = getColorForFunction(originalIndex)
+        ..color = color
         ..strokeWidth = 2.5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
       try {
         _plotFunction(canvas, size, func, centerX, centerY, unit, paint);
+        if (showAnnotations) {
+          _drawAnnotations(canvas, size, func, centerX, centerY, unit, color);
+        }
       } catch (e) {
         debugPrint('Error plotting function $func: $e');
       }
@@ -777,12 +796,233 @@ class GraphPainter extends CustomPainter {
     return value;
   }
 
+  void _drawAnnotations(Canvas canvas, Size size, String func, double centerX,
+      double centerY, double unit, Color color) {
+    // Numerical scan across the visible x-range, detecting sign changes in
+    // f(x) (roots) and in a finite-difference f'(x) (extrema). Roots refined
+    // by bisection; extrema by parabolic interpolation of the three samples
+    // bracketing the derivative sign change. All numerical — no SymEngine
+    // roundtrip per point.
+
+    final double startX = (-size.width / 2 - offset.dx) / unit;
+    final double endX = (size.width / 2 - offset.dx) / unit;
+    final double span = endX - startX;
+    if (span <= 0) return;
+
+    // ~200 scan steps across the visible width is plenty for picking up
+    // every reasonable root/extremum and stays well under the per-point
+    // budget of the plot loop.
+    const int scanSteps = 200;
+    final double dx = span / scanSteps;
+
+    final samples = <double, double>{};
+    double? safeEval(double x) {
+      final cached = samples[x];
+      if (cached != null) return cached.isFinite ? cached : null;
+      try {
+        final y = _evaluateFunction(func, x);
+        samples[x] = y;
+        return y.isFinite ? y : null;
+      } catch (_) {
+        samples[x] = double.nan;
+        return null;
+      }
+    }
+
+    final roots = <double>[];
+    final extrema = <_Extremum>[];
+
+    // Step 1: roots via sign change in f, refined by bisection.
+    double? prevX;
+    double? prevY;
+    for (int i = 0; i <= scanSteps; i++) {
+      final x = startX + i * dx;
+      final y = safeEval(x);
+      if (y == null) {
+        prevX = null;
+        prevY = null;
+        continue;
+      }
+      if (prevX != null && prevY != null) {
+        if (prevY.sign != y.sign && (y - prevY).abs() < 50 / scale) {
+          // Sign change without a huge jump — likely a real root, not a
+          // discontinuity. Refine.
+          final root = _bisectRoot(func, prevX, x);
+          if (root != null) {
+            roots.add(root);
+          }
+        }
+      }
+      prevX = x;
+      prevY = y;
+    }
+
+    // Step 2: extrema via sign change in central-difference derivative.
+    final double h = dx; // step for central difference matches scan
+    double? prevDeriv;
+    double? prevXForDeriv;
+    for (int i = 1; i < scanSteps; i++) {
+      final x = startX + i * dx;
+      final left = safeEval(x - h);
+      final right = safeEval(x + h);
+      final mid = safeEval(x);
+      if (left == null || right == null || mid == null) {
+        prevDeriv = null;
+        prevXForDeriv = null;
+        continue;
+      }
+      final deriv = (right - left) / (2 * h);
+      if (prevDeriv != null && prevXForDeriv != null) {
+        if (prevDeriv.sign != deriv.sign &&
+            (deriv - prevDeriv).abs() < 50 / scale) {
+          // Refine by parabolic interpolation through the three derivative
+          // samples bracketing the sign change. Falls back to the midpoint.
+          final ext = _refineExtremum(func, prevXForDeriv, x);
+          if (ext != null) extrema.add(ext);
+        }
+      }
+      prevDeriv = deriv;
+      prevXForDeriv = x;
+    }
+
+    // Step 3: draw markers + labels.
+    final fillPaint = Paint()..color = color;
+    final outlinePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    final tp = TextPainter(textDirection: TextDirection.ltr);
+
+    void drawMarker(double mx, double my, String label) {
+      final sx = centerX + mx * unit;
+      final sy = centerY - my * unit;
+      if (sx < 0 || sx > size.width || sy < 0 || sy > size.height) return;
+
+      canvas.drawCircle(Offset(sx, sy), 5, fillPaint);
+      canvas.drawCircle(Offset(sx, sy), 5, outlinePaint);
+
+      tp.text = TextSpan(
+        text: label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          backgroundColor: Colors.black.withValues(alpha: 0.55),
+        ),
+      );
+      tp.layout();
+      // Position label above-right of the marker, with a small offset; flip
+      // if it would clip the canvas edge.
+      double lx = sx + 8;
+      double ly = sy - tp.height - 8;
+      if (lx + tp.width > size.width - 4) lx = sx - tp.width - 8;
+      if (ly < 4) ly = sy + 8;
+      tp.paint(canvas, Offset(lx, ly));
+    }
+
+    for (final r in roots) {
+      drawMarker(r, 0, '(${_fmt(r)}, 0)');
+    }
+    for (final e in extrema) {
+      drawMarker(e.x, e.y, '${e.kind} (${_fmt(e.x)}, ${_fmt(e.y)})');
+    }
+  }
+
+  /// Bisect for f(a) and f(b) of opposite sign. Returns null if either
+  /// endpoint can't be evaluated. Up to 40 iterations, stops when the
+  /// interval is below 1/100th of a screen pixel.
+  double? _bisectRoot(String func, double a, double b) {
+    double? evalSafe(double x) {
+      try {
+        final y = _evaluateFunction(func, x);
+        return y.isFinite ? y : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final faInit = evalSafe(a);
+    final fbInit = evalSafe(b);
+    if (faInit == null || fbInit == null) return null;
+    if (faInit == 0) return a;
+    if (fbInit == 0) return b;
+    if (faInit.sign == fbInit.sign) return null;
+
+    double lo = a, hi = b;
+    double fa = faInit;
+    for (int i = 0; i < 40; i++) {
+      final mid = (lo + hi) / 2;
+      final fm = evalSafe(mid);
+      if (fm == null) return null;
+      if (fm == 0) return mid;
+      if (fm.sign == fa.sign) {
+        lo = mid;
+        fa = fm;
+      } else {
+        hi = mid;
+      }
+      if ((hi - lo).abs() < 0.01 / (25 * scale)) break;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /// Parabolic refinement of an extremum bracketed by [a, b]. Samples three
+  /// equally-spaced points and fits a parabola; returns the vertex if it
+  /// lies in (a, b), else the better of the bracket midpoints. Classifies
+  /// max vs min by the sign of the second derivative.
+  _Extremum? _refineExtremum(String func, double a, double b) {
+    double? evalSafe(double x) {
+      try {
+        final y = _evaluateFunction(func, x);
+        return y.isFinite ? y : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final mid = (a + b) / 2;
+    final ya = evalSafe(a);
+    final ym = evalSafe(mid);
+    final yb = evalSafe(b);
+    if (ya == null || ym == null || yb == null) return null;
+
+    double bestX = mid;
+    final denom = (ya - 2 * ym + yb);
+    if (denom.abs() > 1e-12) {
+      final shift = 0.5 * (ya - yb) / denom;
+      final candidate = mid + shift * (b - a) / 2;
+      if (candidate > a && candidate < b) bestX = candidate;
+    }
+    final bestY = evalSafe(bestX);
+    if (bestY == null) return null;
+
+    // Classify by second derivative sign (concave up = min, down = max).
+    final kind = denom > 0 ? 'min' : 'max';
+    return _Extremum(bestX, bestY, kind);
+  }
+
+  String _fmt(double v) {
+    if (v.abs() < 1e-9) return '0';
+    final abs = v.abs();
+    if (abs >= 1000 || abs < 0.01) return v.toStringAsExponential(2);
+    return v.toStringAsFixed(abs >= 10 ? 1 : (abs >= 1 ? 2 : 3));
+  }
+
   @override
   bool shouldRepaint(covariant GraphPainter oldDelegate) {
     return oldDelegate.functions.length != functions.length ||
         oldDelegate.functions.toString() != functions.toString() ||
         oldDelegate.functionIndices.toString() != functionIndices.toString() ||
         oldDelegate.scale != scale ||
-        oldDelegate.offset != offset;
+        oldDelegate.offset != offset ||
+        oldDelegate.showAnnotations != showAnnotations;
   }
+}
+
+class _Extremum {
+  final double x;
+  final double y;
+  final String kind; // 'min' or 'max'
+  const _Extremum(this.x, this.y, this.kind);
 }

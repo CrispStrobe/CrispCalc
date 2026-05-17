@@ -40,9 +40,9 @@ class AboutScreen extends StatelessWidget {
             label: l.aboutContact,
             child: InkWell(
               onTap: () => _open('mailto:$_email'),
-              child: Text(
+              child: const Text(
                 _email,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.blue,
                   decoration: TextDecoration.underline,
                 ),

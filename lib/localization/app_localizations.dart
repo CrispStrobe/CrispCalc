@@ -44,6 +44,8 @@ abstract class AppLocalizations {
   String get resetView;
   String get showKeypad;
   String get hideKeypad;
+  String get showAnnotations;
+  String get hideAnnotations;
   String get analyzeFunctions;
   String get selectFunctionToAnalyze;
   String get plotButton;
@@ -180,6 +182,10 @@ class EnLocalizations implements AppLocalizations {
   String get showKeypad => 'Show Keypad';
   @override
   String get hideKeypad => 'Hide Keypad';
+  @override
+  String get showAnnotations => 'Show roots & extrema';
+  @override
+  String get hideAnnotations => 'Hide roots & extrema';
   @override
   String get analyzeFunctions => 'Analyze Functions';
   @override
@@ -389,6 +395,10 @@ class DeLocalizations implements AppLocalizations {
   String get showKeypad => 'Tastatur einblenden';
   @override
   String get hideKeypad => 'Tastatur ausblenden';
+  @override
+  String get showAnnotations => 'Nullstellen & Extrema einblenden';
+  @override
+  String get hideAnnotations => 'Nullstellen & Extrema ausblenden';
   @override
   String get analyzeFunctions => 'Funktionen analysieren';
   @override

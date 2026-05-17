@@ -134,7 +134,7 @@ void main() {
 
   test('non-key-down events are not handled', () {
     final s = _Sink();
-    final up = KeyUpEvent(
+    const up = KeyUpEvent(
       physicalKey: PhysicalKeyboardKey.escape,
       logicalKey: LogicalKeyboardKey.enter,
       timeStamp: Duration.zero,

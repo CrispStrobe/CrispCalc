@@ -2,7 +2,6 @@
 // Input screen for the curve sketching module (Kurvendiskussion).
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../controllers/latex_controller.dart';
 import '../engine/calculator_engine.dart';
 import '../engine/analysis_engine.dart';

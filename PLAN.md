@@ -39,8 +39,11 @@ and the light/dark/system theme picker.
   would be cheap follow-ups.
 - [x] ~~**Variable substitution dialog** — no more typing `subst(...)`.~~
   Done 2026-05-17 — see HISTORY round 14.
-- [ ] **Plot annotations** — mark extrema and roots on the graph when
-  an analysis is open.
+- [x] ~~**Plot annotations** — mark extrema and roots on the graph
+  when an analysis is open.~~ Done 2026-05-17 — see HISTORY round 15.
+  Toggleable from the graphing screen toolbar; uses numerical scan
+  with bisection / parabolic refinement so no SymEngine round-trip
+  per point.
 
 ## P3 — Long tail
 
