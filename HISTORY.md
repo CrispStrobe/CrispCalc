@@ -2,6 +2,49 @@
 
 Completed work, newest first.
 
+## 2026-05-17 (round 39) — Statistics V7: χ² independence
+
+The seventh and likely last "core" hypothesis test the V1 inferential
+toolkit needs. Tests whether two categorical variables are
+statistically independent given an R×C contingency table.
+
+### Math (lib/engine/hypothesis_tests.dart)
+
+`HypothesisTests.chiSquareIndependence(observed)` returns
+`ChiSquareIndependenceResult{statistic, df, pValue, rowTotals,
+colTotals, grandTotal, expected, observed, rejectsAt(α)}`.
+
+Under H₀ (row and column are independent), expected cell counts are
+`E[i,j] = (rowTotal[i] · colTotal[j]) / grandTotal`. The test
+statistic is `χ² = Σᵢⱼ (Oᵢⱼ − Eᵢⱼ)² / Eᵢⱼ` with df = (R − 1)(C − 1).
+p-value comes from the upper tail of χ²(df).
+
+Validation: throws on <2 rows or <2 cols, ragged rows, negative
+cells, any zero row or column total, or zero grand total. The zero-
+margin checks prevent division-by-zero in the expected-count
+calculation and call out the bad cell directly so the user knows
+what to fix.
+
+### UI (lib/screens/statistics_screen.dart)
+
+Tests tab now has six chips. The contingency table input is a multi-
+line TextField — one row per line, comma- or space-separated cells.
+Result card shows χ² statistic, df, grand total, p-value, and the
+verdict block.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **665/665** (+9 new tests: proportional table → χ² = 0,
+  classic 2×2 smokers/cancer example with strong association,
+  hand-checked 3×2 with all-15 expecteds, and six error-path tests).
+
+### V8 deferred
+
+Paired sign test, Wilcoxon rank-sum (non-parametric two-sample),
+Fisher's exact test (small-sample 2×2 alternative when expected
+counts are below 5).
+
 ## 2026-05-17 (round 38) — Statistics V6: ANOVA + F-distribution
 
 Adds the standard one-way analysis of variance to the Tests tab,

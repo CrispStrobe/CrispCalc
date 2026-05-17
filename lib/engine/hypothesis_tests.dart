@@ -12,8 +12,8 @@
 // level. The UI renders the verdict in plain language.
 //
 // V2 adds Welch's two-sample t-test for independent samples with
-// unequal variances. V3 adds one-way ANOVA. Chi-square independence
-// remains V4.
+// unequal variances. V3 adds one-way ANOVA. V4 adds χ² independence
+// for contingency tables.
 
 import 'dart:math' as math;
 
@@ -137,6 +137,41 @@ class AnovaResult {
     required this.groupSizes,
     required this.grandMean,
     required this.pValue,
+  });
+
+  bool rejectsAt(double alpha) => pValue < alpha;
+}
+
+/// Result of a chi-square test of independence on a contingency table.
+class ChiSquareIndependenceResult {
+  final double statistic;
+  final int df;
+  final double pValue;
+
+  /// Row totals.
+  final List<double> rowTotals;
+
+  /// Column totals.
+  final List<double> colTotals;
+
+  /// Total of all cells.
+  final double grandTotal;
+
+  /// Expected counts, same shape as the input observed table.
+  final List<List<double>> expected;
+
+  /// The observed table (echoed back for display convenience).
+  final List<List<double>> observed;
+
+  const ChiSquareIndependenceResult({
+    required this.statistic,
+    required this.df,
+    required this.pValue,
+    required this.rowTotals,
+    required this.colTotals,
+    required this.grandTotal,
+    required this.expected,
+    required this.observed,
   });
 
   bool rejectsAt(double alpha) => pValue < alpha;
@@ -373,6 +408,106 @@ class HypothesisTests {
       groupSizes: List.unmodifiable(groupSizes),
       grandMean: grandMean,
       pValue: p.toDouble(),
+    );
+  }
+
+  /// χ² test of independence on an R × C contingency table.
+  ///
+  /// Expected counts under H₀ (row and column are independent) are
+  /// `E[i,j] = (rowTotal[i] · colTotal[j]) / grandTotal`. The statistic
+  /// is `χ² = Σᵢⱼ (Oᵢⱼ − Eᵢⱼ)² / Eᵢⱼ` with df = (R − 1)(C − 1). The
+  /// p-value is the upper-tail probability under χ²(df).
+  ///
+  /// Throws if the table has fewer than 2 rows or 2 columns, any row
+  /// is the wrong length, any cell is negative, any row or column
+  /// total is zero, or the grand total is zero.
+  static ChiSquareIndependenceResult chiSquareIndependence(
+    List<List<double>> observed,
+  ) {
+    if (observed.length < 2) {
+      throw ArgumentError(
+          'chiSquareIndependence() needs at least 2 rows.');
+    }
+    final cols = observed.first.length;
+    if (cols < 2) {
+      throw ArgumentError(
+          'chiSquareIndependence() needs at least 2 columns.');
+    }
+    for (var i = 0; i < observed.length; i++) {
+      if (observed[i].length != cols) {
+        throw ArgumentError(
+            'chiSquareIndependence() rows must have the same length; '
+            'row $i has ${observed[i].length} cells (expected $cols).');
+      }
+      for (final v in observed[i]) {
+        if (v < 0) {
+          throw ArgumentError(
+              'chiSquareIndependence() observed counts must be '
+              'non-negative.');
+        }
+      }
+    }
+
+    final rows = observed.length;
+    final rowTotals = List<double>.filled(rows, 0);
+    final colTotals = List<double>.filled(cols, 0);
+    var grandTotal = 0.0;
+    for (var i = 0; i < rows; i++) {
+      for (var j = 0; j < cols; j++) {
+        rowTotals[i] += observed[i][j];
+        colTotals[j] += observed[i][j];
+        grandTotal += observed[i][j];
+      }
+    }
+    if (grandTotal == 0) {
+      throw ArgumentError(
+          'chiSquareIndependence() grand total is zero.');
+    }
+    for (var i = 0; i < rows; i++) {
+      if (rowTotals[i] == 0) {
+        throw ArgumentError(
+            'chiSquareIndependence() row $i has total 0 (cannot form '
+            'expected counts).');
+      }
+    }
+    for (var j = 0; j < cols; j++) {
+      if (colTotals[j] == 0) {
+        throw ArgumentError(
+            'chiSquareIndependence() column $j has total 0 (cannot '
+            'form expected counts).');
+      }
+    }
+
+    final expected = List<List<double>>.generate(
+      rows,
+      (i) => List<double>.generate(
+        cols,
+        (j) => rowTotals[i] * colTotals[j] / grandTotal,
+      ),
+    );
+    var chi2 = 0.0;
+    for (var i = 0; i < rows; i++) {
+      for (var j = 0; j < cols; j++) {
+        final d = observed[i][j] - expected[i][j];
+        chi2 += d * d / expected[i][j];
+      }
+    }
+    final df = (rows - 1) * (cols - 1);
+    final p = (1.0 - ChiSquare(df: df).cdf(chi2)).clamp(0.0, 1.0).toDouble();
+
+    return ChiSquareIndependenceResult(
+      statistic: chi2,
+      df: df,
+      pValue: p,
+      rowTotals: List.unmodifiable(rowTotals),
+      colTotals: List.unmodifiable(colTotals),
+      grandTotal: grandTotal,
+      expected: List.unmodifiable([
+        for (final row in expected) List<double>.unmodifiable(row),
+      ]),
+      observed: List.unmodifiable([
+        for (final row in observed) List<double>.unmodifiable(row),
+      ]),
     );
   }
 

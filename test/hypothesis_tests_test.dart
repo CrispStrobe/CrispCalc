@@ -372,4 +372,120 @@ void main() {
       );
     });
   });
+
+  group('chiSquareIndependence', () {
+    test('proportional table → χ² ≈ 0', () {
+      // Row and column proportions identical → exact independence.
+      // Row totals: 30, 60. Col totals: 30, 60. Grand: 90.
+      // Expected[0,0] = 30·30/90 = 10 = observed.
+      final r = HypothesisTests.chiSquareIndependence(const [
+        [10, 20],
+        [20, 40],
+      ]);
+      expect(r.statistic, closeTo(0.0, 1e-9));
+      expect(r.df, equals(1));
+      expect(r.pValue, closeTo(1.0, 1e-3));
+    });
+
+    test('classic textbook 2x2 — strong association', () {
+      // Observed: smokers vs lung cancer, exaggerated for clarity.
+      //   yes/yes 80, yes/no 20 → row total 100
+      //   no/yes  10, no/no  90 → row total 100
+      //   col totals: 90, 110, grand 200
+      //   E[0,0] = 100·90/200 = 45; (80-45)² / 45 ≈ 27.22
+      //   χ² ≈ 4 × 27.22 ≈ 98.99, df = 1 → p essentially 0.
+      final r = HypothesisTests.chiSquareIndependence(const [
+        [80, 20],
+        [10, 90],
+      ]);
+      expect(r.df, equals(1));
+      expect(r.statistic, greaterThan(90));
+      expect(r.rejectsAt(0.001), isTrue);
+    });
+
+    test('3x2 example with hand-checked expected', () {
+      // Observed:
+      //   A: [10, 20] → row total 30
+      //   B: [20, 10] → row total 30
+      //   C: [15, 15] → row total 30
+      // Col totals: 45, 45. Grand: 90.
+      // Expected: all 15.
+      final r = HypothesisTests.chiSquareIndependence(const [
+        [10, 20],
+        [20, 10],
+        [15, 15],
+      ]);
+      expect(r.rowTotals, equals([30.0, 30.0, 30.0]));
+      expect(r.colTotals, equals([45.0, 45.0]));
+      expect(r.grandTotal, equals(90.0));
+      for (final row in r.expected) {
+        for (final e in row) {
+          expect(e, closeTo(15.0, 1e-9));
+        }
+      }
+      expect(r.df, equals(2));
+      // χ² = ((10-15)²+(20-15)²+(20-15)²+(10-15)²+(15-15)²+(15-15)²)/15
+      //    = (25+25+25+25)/15 = 100/15 ≈ 6.667.
+      expect(r.statistic, closeTo(6.667, 0.01));
+    });
+
+    test('observed = expected after proportional scaling → χ² = 0', () {
+      // 2×3 table where rows are scalar multiples of each other.
+      final r = HypothesisTests.chiSquareIndependence(const [
+        [4, 8, 12],
+        [8, 16, 24],
+      ]);
+      expect(r.statistic, closeTo(0.0, 1e-9));
+      expect(r.df, equals(2));
+    });
+
+    test('fewer than 2 rows throws', () {
+      expect(
+        () => HypothesisTests.chiSquareIndependence(const [
+          [1.0, 2, 3],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('fewer than 2 columns throws', () {
+      expect(
+        () => HypothesisTests.chiSquareIndependence(const [
+          [1.0],
+          [2.0],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('ragged rows throw', () {
+      expect(
+        () => HypothesisTests.chiSquareIndependence(const [
+          [1.0, 2, 3],
+          [4.0, 5],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('zero row total throws', () {
+      expect(
+        () => HypothesisTests.chiSquareIndependence(const [
+          [0.0, 0],
+          [1.0, 1],
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('negative cell throws', () {
+      expect(
+        () => HypothesisTests.chiSquareIndependence(const [
+          [1.0, 2],
+          [-1.0, 3],
+        ]),
+        throwsArgumentError,
+      );
+    });
+  });
 }

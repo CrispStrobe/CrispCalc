@@ -545,7 +545,14 @@ class _DistributionsTabState extends State<_DistributionsTab> {
 
 // === Hypothesis tests tab ================================================
 
-enum _TestKind { oneSampleT, twoSampleT, pairedT, anovaOneWay, chiSquareGof }
+enum _TestKind {
+  oneSampleT,
+  twoSampleT,
+  pairedT,
+  anovaOneWay,
+  chiSquareGof,
+  chiSquareIndep,
+}
 
 class _TestsTab extends StatefulWidget {
   const _TestsTab();
@@ -580,6 +587,11 @@ class _TestsTabState extends State<_TestsTab> {
   final _gofObserved = TextEditingController(text: '9, 11, 10, 12, 9, 9');
   final _gofExpected = TextEditingController(text: '10, 10, 10, 10, 10, 10');
 
+  // Chi-square independence inputs. One row per line, columns
+  // separated by commas/spaces.
+  final _indepTable =
+      TextEditingController(text: '10, 20\n20, 10\n15, 15');
+
   // Significance level.
   final _alpha = TextEditingController(text: '0.05');
 
@@ -595,6 +607,7 @@ class _TestsTabState extends State<_TestsTab> {
       _pairedAfter,
       _gofObserved,
       _gofExpected,
+      _indepTable,
       _alpha,
     ]) {
       c.dispose();
@@ -870,6 +883,52 @@ class _TestsTabState extends State<_TestsTab> {
     );
   }
 
+  Widget _buildIndependence(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final lines = _indepTable.text
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+    final table = lines.map(_parse).toList();
+    String? err;
+    ChiSquareIndependenceResult? r;
+    if (table.length >= 2 &&
+        table.first.length >= 2 &&
+        table.every((row) => row.length == table.first.length)) {
+      try {
+        r = HypothesisTests.chiSquareIndependence(table);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _indepTable,
+          maxLines: 6,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Contingency table (one row per line)',
+            helperText: 'Each line is a row, comma- or space-separated.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('χ² statistic', _fmt(r.statistic)),
+          _resultRow('Degrees of freedom', '${r.df}'),
+          _resultRow('Grand total', _fmt(r.grandTotal)),
+          _resultRow('p-value (upper tail)', _fmt(r.pValue)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
   Widget _buildGof(BuildContext context) {
     final alpha = double.tryParse(_alpha.text) ?? 0.05;
     final observed = _parse(_gofObserved.text);
@@ -958,6 +1017,12 @@ class _TestsTabState extends State<_TestsTab> {
                 onSelected: (_) =>
                     setState(() => _kind = _TestKind.chiSquareGof),
               ),
+              ChoiceChip(
+                label: const Text('χ² independence'),
+                selected: _kind == _TestKind.chiSquareIndep,
+                onSelected: (_) =>
+                    setState(() => _kind = _TestKind.chiSquareIndep),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -992,6 +1057,8 @@ class _TestsTabState extends State<_TestsTab> {
                     return _buildAnova(context);
                   case _TestKind.chiSquareGof:
                     return _buildGof(context);
+                  case _TestKind.chiSquareIndep:
+                    return _buildIndependence(context);
                 }
               }(),
             ),

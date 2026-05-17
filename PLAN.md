@@ -293,8 +293,12 @@ roughly double the perceived value of the app.
     F-distribution gains a `sf()` survival-function method using the
     reciprocal-F relation (P(X > x) = F(d2,d1).cdf(1/x)) so deep
     upper-tail p-values for huge F statistics stay accurate.
-  - **V7 pending**: χ² independence (contingency tables), paired
-    sign test, Wilcoxon rank-sum.
+  - **V7 partial** (HISTORY round 39): χ² test of independence on
+    a contingency table. Computes expected counts under the null
+    `E[i,j] = (rowTotal[i]·colTotal[j])/grand`, then χ² = Σ(O−E)²/E
+    with df = (R−1)(C−1). Added as a 6th chip on the Tests tab.
+  - **V8 pending**: paired sign test, Wilcoxon rank-sum, Fisher's
+    exact (for sparse 2×2 tables).
 - [~] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
   full SI prefix handling, dimension checking on results. Opens the
   engineering / physics / chemistry audience.
