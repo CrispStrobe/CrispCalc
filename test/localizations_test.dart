@@ -254,6 +254,22 @@ void main() {
         expect(t.exactIntegerBadge(158), contains('158'));
       });
 
+      test('import data strings are present', () {
+        for (final s in [
+          t.importDataTitle,
+          t.importDataSubtitle,
+          t.importDataWarning,
+          t.importDataApply,
+          t.importDataEmpty,
+          t.importDataNotObject,
+          t.importDataApplied,
+          t.settingsImportData,
+          t.settingsImportDataSubtitle,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
+
       test('user-defined functions strings are present', () {
         for (final s in [
           t.userFunctionsTitle,

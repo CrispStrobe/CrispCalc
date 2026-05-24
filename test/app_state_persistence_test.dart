@@ -257,6 +257,75 @@ void main() {
     });
   });
 
+  group('importFromJson round-trip', () {
+    test('round-trips a known export back to the same state', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      // Set up some state to export.
+      s.setLocale(const Locale('de'));
+      s.setNumberFormat(NumberDisplayFormat.twoDecimal);
+      s.setThemeMode(ThemeMode.light);
+      s.setExactIntegerMode(false);
+      s.addHistoryEntry('2+3', '5');
+      s.setVariable('a', '42');
+      s.updateFunction(0, 'sin(x)');
+      s.setUserFunction(
+          const UserFunction(name: 'f', paramVar: 'x', body: 'x^2'));
+
+      final exported = s.exportToJson();
+
+      // Reset to defaults via fresh load.
+      SharedPreferences.setMockInitialValues({});
+      await s.load(force: true);
+      expect(s.locale.languageCode, 'en');
+      expect(s.userVariables, isEmpty);
+
+      // Re-import the exported payload.
+      final summary = s.importFromJson(exported);
+      expect(summary, contains('locale'));
+      expect(summary, contains('history'));
+
+      // Verify state restored.
+      expect(s.locale.languageCode, 'de');
+      expect(s.numberFormat, NumberDisplayFormat.twoDecimal);
+      expect(s.themeMode, ThemeMode.light);
+      expect(s.exactIntegerMode, isFalse);
+      expect(s.history.length, 1);
+      expect(s.history.first.expression, '2+3');
+      expect(s.getVariable('a'), '42');
+      expect(s.getGraphFunction(0), 'sin(x)');
+      expect(s.userFunctions['f']?.body, 'x^2');
+    });
+
+    test('partial payload only touches present keys', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      s.setVariable('keep', 'me');
+      // Import a payload that only carries locale.
+      s.importFromJson({'locale': 'fr'});
+      expect(s.locale.languageCode, 'fr');
+      expect(s.getVariable('keep'), 'me'); // untouched
+    });
+
+    test('returns "Nothing recognized" for empty payload', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      final summary = s.importFromJson({});
+      expect(summary, contains('Nothing'));
+    });
+
+    test('unknown locale code is ignored', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      s.importFromJson({'locale': 'xx'});
+      expect(s.locale.languageCode, 'en'); // unchanged default
+    });
+  });
+
   group('onboarding dismissed flag', () {
     test('default is false (first launch shows tour)', () async {
       SharedPreferences.setMockInitialValues({});

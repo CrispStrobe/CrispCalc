@@ -271,6 +271,17 @@ abstract class AppLocalizations {
   String exactIntegerBadge(int digits);
   String get exactIntegerTapToCopy;
 
+  // -- Import data --
+  String get importDataTitle;
+  String get importDataSubtitle;
+  String get importDataWarning;
+  String get importDataApply;
+  String get importDataEmpty;
+  String get importDataNotObject;
+  String get importDataApplied;
+  String get settingsImportData;
+  String get settingsImportDataSubtitle;
+
   // -- User-defined functions --
   String get userFunctionsTitle;
   String get userFunctionsHelp;
@@ -832,6 +843,32 @@ class EnLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exact integer · $digits digits';
   @override
   String get exactIntegerTapToCopy => 'Tap to copy';
+
+  @override
+  String get importDataTitle => 'Import data';
+  @override
+  String get importDataSubtitle =>
+      'Paste a JSON payload from a previous Export data run to restore '
+      'your history, variables, functions, and settings.';
+  @override
+  String get importDataWarning =>
+      'This overwrites your current history, variables, and graph '
+      'functions. There is no undo — copy your current state first if '
+      'you want to keep it.';
+  @override
+  String get importDataApply => 'Apply';
+  @override
+  String get importDataEmpty => 'Paste a JSON payload to import.';
+  @override
+  String get importDataNotObject =>
+      'The payload must be a JSON object (starts with `{`).';
+  @override
+  String get importDataApplied => 'Imported';
+  @override
+  String get settingsImportData => 'Import data';
+  @override
+  String get settingsImportDataSubtitle =>
+      'Paste a JSON payload from a previous export to restore.';
 
   @override
   String get userFunctionsTitle => 'User-defined functions';
@@ -1586,6 +1623,32 @@ class DeLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exakte Ganzzahl · $digits Ziffern';
   @override
   String get exactIntegerTapToCopy => 'Tippen zum Kopieren';
+
+  @override
+  String get importDataTitle => 'Daten importieren';
+  @override
+  String get importDataSubtitle =>
+      'Füge ein JSON aus einem früheren Export ein, um Verlauf, '
+      'Variablen, Funktionen und Einstellungen wiederherzustellen.';
+  @override
+  String get importDataWarning =>
+      'Dies überschreibt den aktuellen Verlauf, Variablen und '
+      'Graphfunktionen. Es gibt keine Rückgängig-Funktion — kopiere '
+      'vorher den aktuellen Zustand, wenn du ihn behalten möchtest.';
+  @override
+  String get importDataApply => 'Anwenden';
+  @override
+  String get importDataEmpty => 'Füge ein JSON ein, um zu importieren.';
+  @override
+  String get importDataNotObject =>
+      'Das JSON muss ein Objekt sein (beginnt mit `{`).';
+  @override
+  String get importDataApplied => 'Importiert';
+  @override
+  String get settingsImportData => 'Daten importieren';
+  @override
+  String get settingsImportDataSubtitle =>
+      'Füge ein JSON aus einem früheren Export zum Wiederherstellen ein.';
 
   @override
   String get userFunctionsTitle => 'Benutzerdefinierte Funktionen';
@@ -2354,6 +2417,32 @@ class FrLocalizations implements AppLocalizations {
   String get exactIntegerTapToCopy => 'Toucher pour copier';
 
   @override
+  String get importDataTitle => 'Importer les données';
+  @override
+  String get importDataSubtitle =>
+      'Colle un JSON issu d\'un export précédent pour restaurer '
+      'l\'historique, les variables, les fonctions et les réglages.';
+  @override
+  String get importDataWarning =>
+      'Cela écrase l\'historique actuel, les variables et les fonctions '
+      'graphiques. Pas d\'annulation — copie d\'abord l\'état actuel '
+      'si tu veux le conserver.';
+  @override
+  String get importDataApply => 'Appliquer';
+  @override
+  String get importDataEmpty => 'Colle un JSON pour importer.';
+  @override
+  String get importDataNotObject =>
+      'Le JSON doit être un objet (commence par `{`).';
+  @override
+  String get importDataApplied => 'Importé';
+  @override
+  String get settingsImportData => 'Importer les données';
+  @override
+  String get settingsImportDataSubtitle =>
+      'Colle un JSON d\'un export précédent pour restaurer.';
+
+  @override
   String get userFunctionsTitle => 'Fonctions personnalisées';
   @override
   String get userFunctionsHelp =>
@@ -3117,6 +3206,32 @@ class EsLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Entero exacto · $digits dígitos';
   @override
   String get exactIntegerTapToCopy => 'Toca para copiar';
+
+  @override
+  String get importDataTitle => 'Importar datos';
+  @override
+  String get importDataSubtitle =>
+      'Pega un JSON de una exportación anterior para restaurar el '
+      'historial, las variables, las funciones y los ajustes.';
+  @override
+  String get importDataWarning =>
+      'Esto sobrescribe el historial actual, las variables y las '
+      'funciones gráficas. No hay deshacer — copia primero el estado '
+      'actual si quieres conservarlo.';
+  @override
+  String get importDataApply => 'Aplicar';
+  @override
+  String get importDataEmpty => 'Pega un JSON para importar.';
+  @override
+  String get importDataNotObject =>
+      'El JSON debe ser un objeto (empieza con `{`).';
+  @override
+  String get importDataApplied => 'Importado';
+  @override
+  String get settingsImportData => 'Importar datos';
+  @override
+  String get settingsImportDataSubtitle =>
+      'Pega un JSON de una exportación anterior para restaurar.';
 
   @override
   String get userFunctionsTitle => 'Funciones definidas por el usuario';

@@ -2,6 +2,57 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 52) — Import-from-JSON pairs the existing Export
+
+Round 14 shipped Export → JSON-to-clipboard. This round closes the
+loop with Import: Settings → "Import data" pastes the same payload
+back. AppState gains `importFromJson(Map)` that round-trips through
+the existing `exportToJson()` output.
+
+### Tolerant restore
+
+Each top-level key is restored only when present and well-typed:
+locale, numberFormat, themeMode, exactIntegerMode, history,
+variables, functions, parameters, userFunctions. Missing keys leave
+existing state alone — so an export from round 44 (before
+`userFunctions` existed) still applies cleanly to a current build.
+Unknown keys are silently ignored — so a payload from a *newer*
+release doesn't crash on import either. Returns a human-readable
+summary string ("locale, theme, 5 history entries, …") for the toast.
+
+### UI
+
+`ImportDataDialog` mirrors `ExportDataDialog`: a multiline `TextField`
+with a hint showing the expected `{ "version": 1, … }` shape, a
+prominent red "this overwrites your state, no undo" warning, and an
+Apply button that runs the import and dismisses with a SnackBar
+showing what was restored. JSON parse errors surface as inline
+`errorText` rather than a blocking dialog.
+
+### i18n
+
+9 new strings (`importDataTitle`, `importDataSubtitle`,
+`importDataWarning`, `importDataApply`, `importDataEmpty`,
+`importDataNotObject`, `importDataApplied`, `settingsImportData`,
+`settingsImportDataSubtitle`) across en/de/fr/es.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **932/932** (4 new persistence tests covering the
+  full round-trip, partial-payload tolerance, empty-payload
+  behavior, and unknown-locale graceful skip).
+- `dart format`: clean.
+
+### What's still pending
+
+The PLAN bullet for storage hardening originally asked for
+"file-system export" too. Held off because cross-platform file
+writes need either `file_saver` (third-party dep) or platform-
+specific channels, and the existing clipboard-export already covers
+the same use case (paste into iCloud Drive, Google Drive, Notes,
+etc.). Will reconsider if users ask.
+
 ## 2026-05-24 (round 51) — Long-evaluation off-main-thread (V1)
 
 Big integrals, factorials, and matrix ops no longer freeze the UI.

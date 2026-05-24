@@ -510,6 +510,106 @@ class AppState extends ChangeNotifier {
   /// The schema is intentionally simple — each top-level key is the
   /// same name we use for the matching shared_preferences entry, so a
   /// future import-from-JSON path can just round-trip these.
+  /// Restores everything in [json] over the current AppState. Returns
+  /// a short human-readable summary describing what was imported (used
+  /// by the import dialog's toast). Throws [FormatException] on a
+  /// malformed payload — caller surfaces that to the user.
+  ///
+  /// Missing keys are tolerated: a payload from an older export round
+  /// won't crash, it just leaves the unknown fields alone. Same for a
+  /// payload from a newer release with extra keys we don't yet
+  /// recognize.
+  String importFromJson(Map<String, dynamic> json) {
+    final imported = <String>[];
+
+    if (json['locale'] is String) {
+      final code = json['locale'] as String;
+      if (const {'en', 'de', 'fr', 'es'}.contains(code)) {
+        setLocale(Locale(code));
+        imported.add('locale');
+      }
+    }
+    if (json['numberFormat'] is String) {
+      final fmt = NumberDisplayFormat.values
+          .where((v) => v.name == json['numberFormat'])
+          .firstOrNull;
+      if (fmt != null) {
+        setNumberFormat(fmt);
+        imported.add('number format');
+      }
+    }
+    if (json['themeMode'] is String) {
+      final mode = ThemeMode.values
+          .where((v) => v.name == json['themeMode'])
+          .firstOrNull;
+      if (mode != null) {
+        setThemeMode(mode);
+        imported.add('theme');
+      }
+    }
+    if (json['exactIntegerMode'] is bool) {
+      setExactIntegerMode(json['exactIntegerMode'] as bool);
+      imported.add('exact integer mode');
+    }
+    if (json['history'] is List) {
+      history.clear();
+      for (final raw in (json['history'] as List)) {
+        if (raw is Map) {
+          history
+              .add(CalculationEntry.fromJson(Map<String, dynamic>.from(raw)));
+        }
+      }
+      _persistHistory();
+      imported.add('${history.length} history entries');
+    }
+    if (json['variables'] is Map) {
+      userVariables.clear();
+      (json['variables'] as Map).forEach((k, v) {
+        userVariables[k.toString()] = v.toString();
+      });
+      _persistVariables();
+      imported.add('${userVariables.length} variables');
+    }
+    if (json['functions'] is List) {
+      final list = json['functions'] as List;
+      for (var i = 0; i < graphFunctions.length; i++) {
+        graphFunctions[i] = i < list.length ? (list[i]?.toString() ?? '') : '';
+      }
+      _persistFunctions();
+      imported.add('graph functions');
+    }
+    if (json['parameters'] is Map) {
+      functionParameters.clear();
+      (json['parameters'] as Map).forEach((k, v) {
+        final slot = int.tryParse(k.toString());
+        if (slot == null || v is! Map) return;
+        functionParameters[slot] = {
+          for (final p in v.entries)
+            p.key.toString():
+                (p.value is num ? (p.value as num).toDouble() : 0.0)
+        };
+      });
+      _persistParameters();
+      imported.add('parameters');
+    }
+    if (json['userFunctions'] is List) {
+      userFunctions.clear();
+      for (final raw in (json['userFunctions'] as List)) {
+        if (raw is Map) {
+          final f = UserFunction.fromJson(Map<String, dynamic>.from(raw));
+          if (f.name.isNotEmpty) userFunctions[f.name] = f;
+        }
+      }
+      _persistUserFunctions();
+      imported.add('${userFunctions.length} user functions');
+    }
+
+    notifyListeners();
+    return imported.isEmpty
+        ? 'Nothing recognized in payload'
+        : imported.join(', ');
+  }
+
   Map<String, dynamic> exportToJson() {
     return {
       'version': 1,

@@ -27,6 +27,7 @@ import 'screens/help_screen.dart';
 import 'services/native_licenses.dart';
 import 'widgets/constants_dialog.dart';
 import 'widgets/export_data_dialog.dart';
+import 'widgets/import_data_dialog.dart';
 import 'widgets/onboarding_tour.dart';
 import 'widgets/unit_converter_dialog.dart';
 import 'widgets/user_functions_dialog.dart';
@@ -541,6 +542,19 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const ExportDataDialog(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.file_upload),
+                  title: Text(t.settingsImportData),
+                  subtitle: Text(t.settingsImportDataSubtitle),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const ImportDataDialog(),
                   ),
                 ),
               ),

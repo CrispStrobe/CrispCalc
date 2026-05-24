@@ -105,9 +105,14 @@ single feature. Roughly in priority order — top items unblock the next.
     (history, variables, graph functions, parameters, locale,
     number format, theme). User pastes into a notes/cloud doc as
     backup. No new dependency needed.
-  - Pending: file-system export, import-from-JSON, move to
-    `sembast` or `sqflite` (only matters when storage size becomes
-    a real problem).
+  - **Import-from-JSON** done 2026-05-24 — Settings → "Import data"
+    pairs with the existing Export. Paste-or-edit JSON in a
+    multiline textarea, Apply validates and restores into
+    AppState; partial payloads (missing keys) are tolerated so
+    older exports still apply forward-compatibly.
+  - Pending: file-system export via `file_saver` / share sheet;
+    move to `sembast` or `sqflite` (only matters when storage size
+    becomes a real problem).
 - [ ] **Distribution pipeline**. macOS and iOS builds are unsigned, so
   the App Store / TestFlight / hardened-runtime paths aren't open. Apple
   Developer enrollment + notarization workflow + automatic version
