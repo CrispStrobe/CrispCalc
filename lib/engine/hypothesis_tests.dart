@@ -213,6 +213,93 @@ class ChiSquareIndependenceResult {
   bool rejectsAt(double alpha) => pValue < alpha;
 }
 
+/// Result of a paired sign test.
+class SignTestResult {
+  /// Number of pairs where before > after.
+  final int positives;
+
+  /// Number of pairs where before < after.
+  final int negatives;
+
+  /// Number of pairs where before == after (excluded from the test).
+  final int zeros;
+
+  /// Effective sample size = positives + negatives.
+  int get n => positives + negatives;
+
+  /// Two-sided p-value: 2 · min(P(X ≤ k), P(X ≥ k)) clamped to [0, 1].
+  /// k is the smaller of [positives] and [negatives]; under H₀ both
+  /// follow Binomial(n, 0.5).
+  final double pValueTwoSided;
+
+  /// Upper-tail (right) one-sided p-value: P(X ≥ positives | H₀).
+  final double pValueOneSidedUpper;
+
+  /// Lower-tail (left) one-sided p-value: P(X ≤ positives | H₀).
+  final double pValueOneSidedLower;
+
+  const SignTestResult({
+    required this.positives,
+    required this.negatives,
+    required this.zeros,
+    required this.pValueTwoSided,
+    required this.pValueOneSidedUpper,
+    required this.pValueOneSidedLower,
+  });
+
+  bool rejectsAt(double alpha, {bool twoSided = true}) =>
+      (twoSided ? pValueTwoSided : pValueOneSidedUpper) < alpha;
+}
+
+/// Result of a Wilcoxon rank-sum (Mann-Whitney U) test.
+class WilcoxonRankSumResult {
+  /// Sum of ranks in sample 1 (after pooled ranking with average-rank
+  /// tie correction).
+  final double rankSum1;
+
+  /// Mann-Whitney U statistic for sample 1:
+  /// U₁ = R₁ − n₁(n₁ + 1)/2. Equivalent in information content to W
+  /// (the rank-sum); we keep both for display convenience.
+  final double u1;
+
+  /// Mann-Whitney U statistic for sample 2: U₂ = n₁·n₂ − U₁.
+  final double u2;
+
+  /// Standard-normal approximation z, with tie correction in σ_U:
+  ///   μ_U = n₁n₂ / 2
+  ///   σ_U² = n₁n₂(n₁+n₂+1)/12 · (1 − Σ(tᵢ³ − tᵢ) / ((n₁+n₂)³ − (n₁+n₂)))
+  /// Continuity correction (±0.5) is *not* applied — matches R's
+  /// `wilcox.test(..., exact = FALSE, correct = FALSE)`.
+  final double z;
+
+  final int n1;
+  final int n2;
+
+  /// Two-sided p-value: 2 · Φ(−|z|), clamped to [0, 1].
+  final double pValueTwoSided;
+
+  /// Upper-tail one-sided p-value: P(Z ≥ z).
+  final double pValueOneSidedUpper;
+
+  /// Lower-tail one-sided p-value: P(Z ≤ z).
+  final double pValueOneSidedLower;
+
+  const WilcoxonRankSumResult({
+    required this.rankSum1,
+    required this.u1,
+    required this.u2,
+    required this.z,
+    required this.n1,
+    required this.n2,
+    required this.pValueTwoSided,
+    required this.pValueOneSidedUpper,
+    required this.pValueOneSidedLower,
+  });
+
+  bool rejectsAt(double alpha, {bool twoSided = true}) =>
+      (twoSided ? pValueTwoSided : pValueOneSidedUpper) < alpha;
+}
+
 /// Result of a chi-square goodness-of-fit test.
 class ChiSquareGofResult {
   final double statistic;
@@ -613,6 +700,175 @@ class HypothesisTests {
       pValueTwoSided: pTwoSided.clamp(0.0, 1.0).toDouble(),
       pValueOneSidedUpper: pUpper.clamp(0.0, 1.0).toDouble(),
       pValueOneSidedLower: pLower.clamp(0.0, 1.0).toDouble(),
+    );
+  }
+
+  /// Paired sign test on matched samples [before] and [after]. Counts
+  /// positive (before > after) and negative (before < after) pair
+  /// differences, dropping zeros. Under H₀: median(before − after) = 0,
+  /// the count of positives follows Binomial(n_nonzero, 0.5). The
+  /// p-value is `2 · min(P(X ≤ k), P(X ≥ k))` with k = min(pos, neg),
+  /// clamped to [0, 1].
+  ///
+  /// This is the nonparametric counterpart to [pairedT]: it makes no
+  /// distributional assumption about the differences, so it's the
+  /// right choice when the data have outliers, are ordinal, or when
+  /// the difference distribution is plainly non-normal. Less powerful
+  /// than the paired t-test when the t-test's assumptions hold.
+  ///
+  /// Throws on length mismatch or when there are zero non-zero
+  /// differences (every pair is a tie — the test is undefined).
+  static SignTestResult pairedSign({
+    required List<double> before,
+    required List<double> after,
+  }) {
+    if (before.length != after.length) {
+      throw ArgumentError(
+          'pairedSign() expects same-length lists; got ${before.length} vs ${after.length}.');
+    }
+    if (before.isEmpty) {
+      throw ArgumentError(
+          'pairedSign() needs at least one paired observation.');
+    }
+    var positives = 0;
+    var negatives = 0;
+    var zeros = 0;
+    for (var i = 0; i < before.length; i++) {
+      final d = before[i] - after[i];
+      if (d > 0) {
+        positives++;
+      } else if (d < 0) {
+        negatives++;
+      } else {
+        zeros++;
+      }
+    }
+    final n = positives + negatives;
+    if (n == 0) {
+      throw ArgumentError(
+          'pairedSign() needs at least one non-zero difference (every '
+          'pair was a tie).');
+    }
+    final binom = Binomial(n: n, p: 0.5);
+    final k = math.min(positives, negatives);
+    // Lower tail at k, upper tail at k. By symmetry of Binomial(n, 0.5)
+    // the smaller-side cumulative probability is what the two-sided
+    // p-value doubles. Clamp to 1 (the two-sided sum can exceed 1
+    // by a hair when k = n/2 because we count the median bin twice).
+    final tail = binom.cdf(k);
+    final twoSided = math.min(1.0, 2 * tail);
+    // One-sided p-values centered on the observed `positives` count.
+    final lower = binom.cdf(positives).clamp(0.0, 1.0).toDouble();
+    final upper = positives == 0
+        ? 1.0
+        : (1.0 - binom.cdf(positives - 1)).clamp(0.0, 1.0).toDouble();
+    return SignTestResult(
+      positives: positives,
+      negatives: negatives,
+      zeros: zeros,
+      pValueTwoSided: twoSided,
+      pValueOneSidedUpper: upper,
+      pValueOneSidedLower: lower,
+    );
+  }
+
+  /// Wilcoxon rank-sum (Mann-Whitney U) test on two independent
+  /// samples. Pools and ranks the combined data with average-rank tie
+  /// correction, computes the rank-sum of sample 1, then uses the
+  /// large-sample normal approximation
+  ///
+  ///   z = (U₁ − μ_U) / σ_U     with   μ_U = n₁n₂/2
+  ///   σ_U² = n₁n₂(n₁+n₂+1)/12 · (1 − Σ(tᵢ³ − tᵢ) / ((N)³ − N))
+  ///
+  /// where the tᵢ are tie-group sizes. The two-sided p-value is
+  /// 2·Φ(−|z|). No continuity correction — matches R's
+  /// `wilcox.test(..., exact = FALSE, correct = FALSE)`.
+  ///
+  /// This is the nonparametric counterpart to [welchT]; use it when
+  /// the samples are ordinal or non-normal. The normal approximation
+  /// is reliable for n₁, n₂ ≳ 10.
+  ///
+  /// Throws if either sample is empty.
+  static WilcoxonRankSumResult wilcoxonRankSum({
+    required List<double> sample1,
+    required List<double> sample2,
+  }) {
+    if (sample1.isEmpty || sample2.isEmpty) {
+      throw ArgumentError(
+          'wilcoxonRankSum() needs at least one observation in each sample.');
+    }
+    final n1 = sample1.length;
+    final n2 = sample2.length;
+    final n = n1 + n2;
+
+    // Pool with origin tags, sort by value, then assign average ranks
+    // to tied runs. Tag 1 → sample1, 2 → sample2.
+    final pooled = <(double value, int tag)>[
+      for (final v in sample1) (v, 1),
+      for (final v in sample2) (v, 2),
+    ];
+    pooled.sort((a, b) => a.$1.compareTo(b.$1));
+
+    final ranks = List<double>.filled(n, 0);
+    final tieSizes = <int>[];
+    var i = 0;
+    while (i < n) {
+      var j = i;
+      while (j + 1 < n && pooled[j + 1].$1 == pooled[i].$1) {
+        j++;
+      }
+      // Tied run spans indices [i, j]; average rank (1-indexed) is
+      // ((i+1) + (j+1)) / 2.
+      final avg = ((i + 1) + (j + 1)) / 2.0;
+      for (var k = i; k <= j; k++) {
+        ranks[k] = avg;
+      }
+      if (j - i + 1 > 1) tieSizes.add(j - i + 1);
+      i = j + 1;
+    }
+
+    var rankSum1 = 0.0;
+    for (var k = 0; k < n; k++) {
+      if (pooled[k].$2 == 1) rankSum1 += ranks[k];
+    }
+    final u1 = rankSum1 - n1 * (n1 + 1) / 2.0;
+    final u2 = n1.toDouble() * n2 - u1;
+
+    final muU = n1 * n2 / 2.0;
+    // Tie correction factor for σ_U².
+    var tieSum = 0.0;
+    for (final t in tieSizes) {
+      tieSum += t * t * t - t;
+    }
+    final varU = (n1.toDouble() * n2 * (n + 1) / 12.0) *
+        (1.0 - tieSum / (n.toDouble() * n * n - n));
+    final sigmaU = math.sqrt(math.max(varU, 0));
+
+    double z;
+    double upper;
+    double lower;
+    if (sigmaU == 0) {
+      // Degenerate (all values tied) — z undefined, treat as no effect.
+      z = 0;
+      upper = 0.5;
+      lower = 0.5;
+    } else {
+      z = (u1 - muU) / sigmaU;
+      upper = (1.0 - standardNormal.cdf(z)).clamp(0.0, 1.0).toDouble();
+      lower = standardNormal.cdf(z).clamp(0.0, 1.0).toDouble();
+    }
+    final twoSided = (2 * math.min(upper, lower)).clamp(0.0, 1.0).toDouble();
+
+    return WilcoxonRankSumResult(
+      rankSum1: rankSum1,
+      u1: u1,
+      u2: u2,
+      z: z,
+      n1: n1,
+      n2: n2,
+      pValueTwoSided: twoSided,
+      pValueOneSidedUpper: upper,
+      pValueOneSidedLower: lower,
     );
   }
 

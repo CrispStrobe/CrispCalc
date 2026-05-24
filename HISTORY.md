@@ -2,6 +2,59 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 46) — Statistics V9: paired sign + Wilcoxon rank-sum
+
+Two more nonparametric tests in the Statistics screen's Tests tab,
+the natural pair-ups for paired t (V1) and Welch's two-sample t (V2)
+when the data violate the normality assumption.
+
+### Paired sign test
+
+`HypothesisTests.pairedSign(before, after)` returns
+`SignTestResult` with positive / negative / zero pair counts and
+two- + one-sided p-values. Zero differences are dropped (Cochran's
+convention). Under H₀: median(difference) = 0, the count of
+positives follows `Binomial(n_nonzero, 0.5)`, so the two-sided
+p-value is `2 · min(P(X ≤ k), P(X ≥ k))` with k = min(pos, neg),
+clamped at 1. Uses the existing `Binomial` distribution from
+`distributions.dart` — no new numerical primitives.
+
+### Wilcoxon rank-sum (Mann-Whitney U)
+
+`HypothesisTests.wilcoxonRankSum(sample1, sample2)` returns
+`WilcoxonRankSumResult` with the sample-1 rank sum, both U
+statistics, and the standard-normal-approximation z + p-values.
+Pools the data, ranks with average-rank tie correction, then uses
+
+    z = (U₁ − μ_U) / σ_U
+    μ_U = n₁n₂ / 2
+    σ_U² = n₁n₂(n₁+n₂+1)/12 · (1 − Σ(tᵢ³ − tᵢ) / (N³ − N))
+
+No continuity correction (matches R's `wilcox.test(..., exact =
+FALSE, correct = FALSE)`). Two-sided p = 2·Φ(−|z|). Reliable for
+n₁, n₂ ≳ 10. Tie correction kicks in cleanly: the test "handles ties
+with average ranks" check pools `[1,2,3,5] vs [2,3,4,6]` and
+verifies R₁ = 15 against the hand-ranked average pattern.
+
+### UI
+
+Two new chips on the Tests tab (8th and 9th, after Fisher's exact).
+Sign test reuses the paired-t Before/After layout; rank-sum borrows
+the Welch's two-sample layout. Same `_verdictBlock` rendering as
+every other test.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **868/868** (12 new test cases — 6 for sign,
+  6 for rank-sum). Sign-test edge cases: all-positive, all-negative,
+  ties-only-throws, symmetric-data-p≈1. Rank-sum edge cases:
+  identical samples → z = 0; clearly separated → very small p;
+  U₁ + U₂ = n₁·n₂ algebraic check; tie handling via the
+  `[1,2,3,5]/[2,3,4,6]` example; swapping samples flips z sign;
+  empty sample throws.
+- `dart format`: clean.
+
 ## 2026-05-24 (round 45) — Step-engine explanations translated to DE/FR/ES
 
 V2 of the plain-language step explanations shipped in round 42. Until

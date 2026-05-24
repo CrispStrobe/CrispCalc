@@ -557,6 +557,8 @@ enum _TestKind {
   chiSquareGof,
   chiSquareIndep,
   fisherExact,
+  pairedSign,
+  wilcoxonRankSum,
 }
 
 class _TestsTab extends StatefulWidget {
@@ -600,6 +602,18 @@ class _TestsTabState extends State<_TestsTab> {
   // table is [[a, b], [c, d]].
   final _fisherTable = TextEditingController(text: '3, 1, 1, 3');
 
+  // Paired sign test inputs. Reuses the paired t-test layout (before /
+  // after) but treats the differences nonparametrically — robust to
+  // outliers and non-normality at the cost of statistical power.
+  final _signBefore =
+      TextEditingController(text: '10, 12, 14, 13, 15, 11, 14, 10, 13, 12');
+  final _signAfter =
+      TextEditingController(text: '7, 11, 10, 11, 12, 9, 10, 9, 10, 10');
+
+  // Wilcoxon rank-sum (Mann-Whitney U) inputs.
+  final _wilcoxonA = TextEditingController(text: '8, 9, 10, 10, 11, 12');
+  final _wilcoxonB = TextEditingController(text: '10, 11, 12, 12, 13, 14');
+
   // Significance level.
   final _alpha = TextEditingController(text: '0.05');
 
@@ -617,6 +631,10 @@ class _TestsTabState extends State<_TestsTab> {
       _gofExpected,
       _indepTable,
       _fisherTable,
+      _signBefore,
+      _signAfter,
+      _wilcoxonA,
+      _wilcoxonB,
       _alpha,
     ]) {
       c.dispose();
@@ -983,6 +1001,107 @@ class _TestsTabState extends State<_TestsTab> {
     );
   }
 
+  Widget _buildSign(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final before = _parse(_signBefore.text);
+    final after = _parse(_signAfter.text);
+    String? err;
+    SignTestResult? r;
+    if (before.isNotEmpty && after.length == before.length) {
+      try {
+        r = HypothesisTests.pairedSign(before: before, after: after);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _signBefore,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Before',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _signAfter,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'After',
+            helperText: 'Pairs with zero difference are dropped.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('Positives (before > after)', '${r.positives}'),
+          _resultRow('Negatives (before < after)', '${r.negatives}'),
+          _resultRow('Ties (excluded)', '${r.zeros}'),
+          _resultRow('Effective n', '${r.n}'),
+          _resultRow('p-value (two-sided)', _fmt(r.pValueTwoSided)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildWilcoxon(BuildContext context) {
+    final alpha = double.tryParse(_alpha.text) ?? 0.05;
+    final a = _parse(_wilcoxonA.text);
+    final b = _parse(_wilcoxonB.text);
+    String? err;
+    WilcoxonRankSumResult? r;
+    if (a.isNotEmpty && b.isNotEmpty) {
+      try {
+        r = HypothesisTests.wilcoxonRankSum(sample1: a, sample2: b);
+      } catch (e) {
+        err = e.toString();
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _wilcoxonA,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Sample 1',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _wilcoxonB,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Sample 2',
+            helperText: 'Normal-approximation p-value; reliable for n ≳ 10.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (err != null)
+          Text(err,
+              style: TextStyle(color: Theme.of(context).colorScheme.error))
+        else if (r != null) ...[
+          _resultRow('Rank sum R₁', _fmt(r.rankSum1)),
+          _resultRow('U₁', _fmt(r.u1)),
+          _resultRow('U₂', _fmt(r.u2)),
+          _resultRow('n₁ / n₂', '${r.n1} / ${r.n2}'),
+          _resultRow('z statistic', _fmt(r.z)),
+          _resultRow('p-value (two-sided)', _fmt(r.pValueTwoSided)),
+          _verdictBlock(context, r.rejectsAt(alpha)),
+        ],
+      ],
+    );
+  }
+
   Widget _buildGof(BuildContext context) {
     final alpha = double.tryParse(_alpha.text) ?? 0.05;
     final observed = _parse(_gofObserved.text);
@@ -1082,6 +1201,17 @@ class _TestsTabState extends State<_TestsTab> {
                 onSelected: (_) =>
                     setState(() => _kind = _TestKind.fisherExact),
               ),
+              ChoiceChip(
+                label: const Text('Paired sign'),
+                selected: _kind == _TestKind.pairedSign,
+                onSelected: (_) => setState(() => _kind = _TestKind.pairedSign),
+              ),
+              ChoiceChip(
+                label: const Text('Wilcoxon rank-sum'),
+                selected: _kind == _TestKind.wilcoxonRankSum,
+                onSelected: (_) =>
+                    setState(() => _kind = _TestKind.wilcoxonRankSum),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1120,6 +1250,10 @@ class _TestsTabState extends State<_TestsTab> {
                     return _buildIndependence(context);
                   case _TestKind.fisherExact:
                     return _buildFisher(context);
+                  case _TestKind.pairedSign:
+                    return _buildSign(context);
+                  case _TestKind.wilcoxonRankSum:
+                    return _buildWilcoxon(context);
                 }
               }(),
             ),

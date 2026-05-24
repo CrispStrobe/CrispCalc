@@ -303,7 +303,12 @@ roughly double the perceived value of the app.
     hypergeometric distribution (log-domain for numerical stability
     on large totals). 7th chip on the Tests tab. Use this when any
     expected count in χ² independence is below ~5.
-  - **V9 pending**: paired sign test, Wilcoxon rank-sum.
+  - **V9 partial** (HISTORY round 46): paired sign test (Binomial
+    on positives, drops zero-difference pairs) and Wilcoxon rank-sum
+    / Mann-Whitney U (pooled-ranks with average-rank tie correction;
+    normal-approximation p-value with tie-corrected σ_U). Added as
+    8th and 9th chips on the Tests tab — the nonparametric
+    counterparts to paired t and Welch's two-sample t.
 - [~] **Unit-aware arithmetic**. `5 km / 30 min in mph`, `1 mile + 5 ft`,
   full SI prefix handling, dimension checking on results. Opens the
   engineering / physics / chemistry audience.
