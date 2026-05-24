@@ -2,6 +2,74 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 45) — Step-engine explanations translated to DE/FR/ES
+
+V2 of the plain-language step explanations shipped in round 42. Until
+today, every `MathStep.note` was a hard-coded English sentence, so
+French and Spanish users got German UI chrome wrapped around English
+explanations of the chain rule, IBP, the quadratic formula, etc. — a
+glaring i18n gap right in the pedagogical surface.
+
+### Mechanism
+
+Adding a 34-string flat `t.foo` getter for every rule wasn't great
+because most of the sentences interpolate variable names (`Let u =
+$baseStripped; then du = ($slope)·d$variable`). Per-call-site getter
+wouldn't even let the engine encode which placeholders the renderer
+needs to fill.
+
+Instead: a tiny `StepNote(String key, Map<String, String> params)`
+sidecar on `MathStep`. The engine emits the structured form alongside
+the existing English `note` field:
+
+```dart
+note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
+noteI18n: StepNote('uSubLinear',
+    {'u': baseStripped, 'slope': slope, 'var': variable}),
+```
+
+`AppLocalizations` gains one new method: `String? stepNote(StepNote)`.
+Each locale implements it as a single switch over `note.key`,
+interpolating from `note.params`. Returns null for unknown keys, so
+the StepsDialog can gracefully fall back to the English `note`:
+
+```dart
+final localized = s.noteI18n == null ? null : t.stepNote(s.noteI18n!);
+final text = localized ?? s.note ?? '';
+```
+
+### Coverage
+
+34 distinct keys total — 11 in solve, 13 in integrate, 10 in
+differentiate. Notes that fire from multiple code paths (e.g.
+`exprDoesNotDependOn` reused by both the integration and the
+differentiation constant rules; `uSubLinear` reused by power-rule
+and logarithm-rule u-sub branches) share a single key. Conditional
+notes (`base == variable ? simple : chainRule` inside the power rule;
+`argIsVar ? standardSimple : standardChain` inside the function-call
+rule) ship as two separate keys so each can be translated naturally
+without ternaries leaking into the locale code.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **856/856**. New
+  `test/step_notes_localization_test.dart` pins all 34 keys × 4
+  locales (137 individual tests), checking each call returns a
+  non-empty string and every `params` value appears in the output —
+  so a `${p['var']}` typo in any of the 136 sentences would fail
+  CI rather than ship as a dropped variable name.
+- `dart format`: clean.
+
+### Notes on translation choices
+
+Where idioms diverge: German uses *Mitternachtsformel* for the
+quadratic formula, French *formule quadratique*. Inline math (`u`,
+`du`, `dv`, `∫`, `Δ`, `±`) is kept verbatim across locales for
+universality. The IBP-for-ln(x) note ships as one sentence per locale
+rather than splitting on `;` because German prefers the longer
+single-clause form.
+
 ## 2026-05-24 (round 44) — Exact integer mode (arbitrary-precision results)
 
 First slice of the **P5 Precision & number theory** section: actually

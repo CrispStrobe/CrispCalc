@@ -38,9 +38,16 @@ class MathStep {
   /// answer.
   final String after;
 
-  /// Optional one-sentence plain-language note. Useful for the
-  /// "explanations" P5 follow-up; rendered below the formula when set.
+  /// Optional one-sentence plain-language note (English). Rendered as
+  /// the fallback when no `noteI18n` is set or the locale lacks a
+  /// translation for that key.
   final String? note;
+
+  /// Structured form of [note] for localization. The renderer asks the
+  /// current `AppLocalizations` for a translated template and
+  /// interpolates [StepNote.params]. Falls back to [note] when the
+  /// locale doesn't have an entry for the given key.
+  final StepNote? noteI18n;
 
   const MathStep({
     required this.rule,
@@ -48,7 +55,18 @@ class MathStep {
     required this.before,
     required this.after,
     this.note,
+    this.noteI18n,
   });
+}
+
+/// I18n key + interpolation args for a step note. Kept structurally
+/// minimal so the call sites in [StepEngine] stay readable — the
+/// English `note` field on [MathStep] is the source-of-truth fallback,
+/// this just gives the renderer a hook to swap in a localized form.
+class StepNote {
+  final String key;
+  final Map<String, String> params;
+  const StepNote(this.key, [this.params = const {}]);
 }
 
 class StepEngine {
@@ -95,6 +113,7 @@ class StepEngine {
         before: input,
         after: '${eqSplit.lhs} = ${eqSplit.rhs}',
         note: 'Start with the equation as given.',
+        noteI18n: const StepNote('startEquation'),
       ));
       final combined = '(${eqSplit.lhs}) - (${eqSplit.rhs})';
       body = engine.simplify(combined);
@@ -107,6 +126,7 @@ class StepEngine {
         note: 'Subtracting the right side from both sides puts the '
             'equation in standard form `expression = 0`, which lets us '
             'apply the linear or quadratic solver.',
+        noteI18n: const StepNote('moveRightSideOver'),
       ));
     } else {
       body = input;
@@ -116,6 +136,7 @@ class StepEngine {
         before: input,
         after: '$body = 0',
         note: 'No `=` in input; treating as $body = 0.',
+        noteI18n: StepNote('noEqualsSign', {'body': body}),
       ));
     }
 
@@ -126,6 +147,7 @@ class StepEngine {
         before: '$body = 0',
         after: body.trim() == '0' ? 'always true' : 'no solution',
         note: 'The equation does not depend on $variable.',
+        noteI18n: StepNote('doesNotDependOn', {'var': variable}),
       ));
       return steps;
     }
@@ -151,6 +173,7 @@ class StepEngine {
         after: engine.solve(body, variable),
         note: 'Not a standard linear or quadratic form — handing off '
             'to the symbolic solver for the answer.',
+        noteI18n: const StepNote('solveFallthroughSymbolic'),
       ));
     }
     return steps;
@@ -172,6 +195,7 @@ class StepEngine {
       after: 'a = $a,  b = $b',
       note: 'Pick off the leading coefficient and the constant term — '
           'this is a linear equation.',
+      noteI18n: const StepNote('linearIdentifyCoefs'),
     ));
 
     // a*x = -b
@@ -182,6 +206,7 @@ class StepEngine {
       before: '$a·$variable + ($b) = 0',
       after: '$a·$variable = $negB',
       note: 'Move the constant to the other side.',
+      noteI18n: const StepNote('moveConstant'),
     ));
 
     // x = -b/a
@@ -193,6 +218,7 @@ class StepEngine {
       after: '$variable = $solution',
       note: 'Divide both sides by the leading coefficient to isolate '
           '$variable.',
+      noteI18n: StepNote('divideByCoef', {'var': variable}),
     ));
 
     steps.add(MathStep(
@@ -225,6 +251,7 @@ class StepEngine {
           'a from the second derivative ÷ 2, b from the first '
           'derivative at $variable = 0, and c from the polynomial at '
           '$variable = 0.',
+      noteI18n: StepNote('quadraticIdentifyCoefs', {'var': variable}),
     ));
 
     // Discriminant.
@@ -237,6 +264,7 @@ class StepEngine {
       note: 'The discriminant tells us how many real roots: positive '
           '→ two distinct real roots; zero → one double root; '
           'negative → two complex conjugate roots.',
+      noteI18n: const StepNote('discriminant'),
     ));
 
     // Roots via quadratic formula.
@@ -249,6 +277,7 @@ class StepEngine {
       after: '$variable = $rootPlus  or  $variable = $rootMinus',
       note: 'Plug a, b, and Δ into the quadratic formula. The `±` '
           'gives both roots in one step.',
+      noteI18n: const StepNote('quadFormulaApply'),
     ));
 
     // Final canonical result via SymEngine.solve — confirms our answer
@@ -343,6 +372,7 @@ class StepEngine {
         after: '-∫ $body d$variable',
         note: 'Pull the leading minus sign out of the integral; the '
             'rest is just ∫f.',
+        noteI18n: const StepNote('integralPullMinusOut'),
       ));
       final inner = _traceIntegrate(body, variable, engine, steps);
       return inner == null ? null : '-($inner)';
@@ -357,6 +387,7 @@ class StepEngine {
         before: '∫ $s d$variable',
         after: result,
         note: '$s does not depend on $variable.',
+        noteI18n: StepNote('exprDoesNotDependOn', {'expr': s, 'var': variable}),
       ));
       return result;
     }
@@ -371,6 +402,7 @@ class StepEngine {
         after: result,
         note: 'The power rule for n=1: bump the exponent up to 2 and '
             'divide by the new exponent.',
+        noteI18n: const StepNote('integralIdentityPower1'),
       ));
       return result;
     }
@@ -387,6 +419,7 @@ class StepEngine {
         after: parts,
         note: 'Integration is linear: the integral of a sum is the '
             'sum of the integrals.',
+        noteI18n: const StepNote('integralLinearity'),
       ));
       final pieces = <String>[];
       var allMatched = true;
@@ -419,6 +452,7 @@ class StepEngine {
           after: '$constPart · ∫ $varPart d$variable',
           note: 'Pull `$constPart` outside the integral — constants '
               'multiply through.',
+          noteI18n: StepNote('integralPullConstantOut', {'const': constPart}),
         ));
         final inner = _traceIntegrate(varPart, variable, engine, steps);
         return inner == null ? null : '($constPart)·($inner)';
@@ -441,6 +475,7 @@ class StepEngine {
             after: result,
             note: 'The integral of 1/$variable is the natural log of '
                 'its absolute value.',
+            noteI18n: StepNote('integralReciprocalLog', {'var': variable}),
           ));
           return result;
         }
@@ -454,6 +489,7 @@ class StepEngine {
           after: result,
           note: 'Bump the exponent up by 1 and divide by the new '
               'exponent. Works for any constant n ≠ −1.',
+          noteI18n: const StepNote('integralPowerRule'),
         ));
         return result;
       }
@@ -469,6 +505,8 @@ class StepEngine {
             before: '∫ $s d$variable',
             after: result,
             note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
+            noteI18n: StepNote('uSubLinear',
+                {'u': baseStripped, 'slope': slope, 'var': variable}),
           ));
           return result;
         }
@@ -481,6 +519,8 @@ class StepEngine {
           before: '∫ $s d$variable',
           after: result,
           note: 'Let u = $baseStripped; then du = ($slope)·d$variable.',
+          noteI18n: StepNote('uSubLinear',
+              {'u': baseStripped, 'slope': slope, 'var': variable}),
         ));
         return result;
       }
@@ -500,6 +540,7 @@ class StepEngine {
           after: result,
           note: 'The integral of 1/$variable is the natural log of '
               'its absolute value.',
+          noteI18n: StepNote('integralReciprocalLog', {'var': variable}),
         ));
         return result;
       }
@@ -514,6 +555,8 @@ class StepEngine {
             before: '∫ $s d$variable',
             after: result,
             note: 'Let u = $denStripped; then du = ($slope)·d$variable.',
+            noteI18n: StepNote('uSubLinear',
+                {'u': denStripped, 'slope': slope, 'var': variable}),
           ));
           return result;
         }
@@ -533,6 +576,7 @@ class StepEngine {
         before: '∫ $s d$variable',
         after: result,
         note: 'Use the standard antiderivative for ${fc.name}.',
+        noteI18n: StepNote('integralStandardAntideriv', {'fn': fc.name}),
       ));
       return result;
     }
@@ -555,6 +599,12 @@ class StepEngine {
           note: 'Let u = ${fc.arg}; then du = ($slope)·d$variable. The '
               'antiderivative of ${fc.name} is the standard form, '
               'evaluated at u and divided by the slope.',
+          noteI18n: StepNote('uSubLinearFn', {
+            'u': fc.arg,
+            'slope': slope,
+            'var': variable,
+            'fn': fc.name,
+          }),
         ));
         return result;
       }
@@ -573,6 +623,7 @@ class StepEngine {
         note: 'Let u = ln($variable), dv = d$variable. Then '
             'du = (1/$variable)·d$variable and v = $variable, so '
             '∫u·dv = u·v − ∫v·du = $variable·ln($variable) − ∫1 d$variable.',
+        noteI18n: StepNote('ibpLnX', {'var': variable}),
       ));
       return result;
     }
@@ -598,6 +649,8 @@ class StepEngine {
           after: '$variable·($v) - ∫ ($v) d$variable',
           note: 'Let u = $variable (so du = d$variable) and '
               'dv = $right·d$variable, giving v = $v.',
+          noteI18n:
+              StepNote('ibpXTimesF', {'var': variable, 'right': right, 'v': v}),
         ));
         final innerResult = _traceIntegrate(v, variable, engine, steps);
         if (innerResult == null) return null;
@@ -615,6 +668,7 @@ class StepEngine {
       after: engine.integrate(s, variable),
       note: 'No standard textbook rule matched this shape — handing off '
           'to the symbolic integrator.',
+      noteI18n: const StepNote('integralFallthroughSymbolic'),
     ));
     return null;
   }
@@ -714,6 +768,7 @@ class StepEngine {
         before: 'd/d$variable[$s]',
         after: '0',
         note: '$s does not depend on $variable.',
+        noteI18n: StepNote('exprDoesNotDependOn', {'expr': s, 'var': variable}),
       ));
       return;
     }
@@ -726,6 +781,7 @@ class StepEngine {
         before: 'd/d$variable[$s]',
         after: '1',
         note: 'Differentiating $variable with respect to itself is 1.',
+        noteI18n: StepNote('diffIdentity', {'var': variable}),
       ));
       return;
     }
@@ -744,6 +800,7 @@ class StepEngine {
         after: derivedTerms.join(' '),
         note: 'Differentiate each term on its own; the derivative '
             'distributes across `+` and `−`.',
+        noteI18n: const StepNote('diffSumDifference'),
       ));
       for (final term in sumTerms) {
         _trace(term.body, variable, engine, steps);
@@ -764,6 +821,7 @@ class StepEngine {
         after: '(d/d$variable[$f]·$g - $f·d/d$variable[$g]) / ($g)^2',
         note: 'For a quotient, the numerator gets `f′g − fg′` and the '
             'denominator gets squared.',
+        noteI18n: const StepNote('diffQuotient'),
       ));
       _trace(f, variable, engine, steps);
       _trace(g, variable, engine, steps);
@@ -784,6 +842,7 @@ class StepEngine {
         after: 'd/d$variable[$first]·($rest) + $first·d/d$variable[$rest]',
         note: 'For a product, differentiate each factor and add the '
             'pieces — `(fg)′ = f′g + fg′`.',
+        noteI18n: const StepNote('diffProduct'),
       ));
       _trace(first, variable, engine, steps);
       _trace(rest, variable, engine, steps);
@@ -810,6 +869,9 @@ class StepEngine {
               : 'Bring the exponent down and reduce it by 1, then '
                   'multiply by the derivative of the inner base — that '
                   '`d/d$variable[$base]` factor is the chain rule.',
+          noteI18n: base == variable
+              ? const StepNote('diffPowerSimple')
+              : StepNote('diffPowerChain', {'base': base, 'var': variable}),
         ));
         if (base != variable) _trace(base, variable, engine, steps);
         return;
@@ -823,6 +885,7 @@ class StepEngine {
           note: 'When the variable is in the exponent, the derivative '
               'is the same expression times `ln(base)` times the '
               'derivative of the exponent.',
+          noteI18n: const StepNote('diffExponential'),
         ));
         _trace(exp, variable, engine, steps);
         return;
@@ -848,6 +911,9 @@ class StepEngine {
             ? 'Apply the standard derivative for ${fc.name}.'
             : 'The argument depends on $variable, so multiply by its '
                 'derivative (chain rule).',
+        noteI18n: argIsVar
+            ? StepNote('diffStandardSimple', {'fn': fc.name})
+            : StepNote('diffStandardChain', {'var': variable}),
       ));
       if (!argIsVar) _trace(fc.arg, variable, engine, steps);
       return;
@@ -861,6 +927,7 @@ class StepEngine {
       before: 'd/d$variable[$s]',
       after: engine.differentiate(s, variable),
       note: 'No higher-level rule pattern recognized for this shape.',
+      noteI18n: const StepNote('diffFallthrough'),
     ));
   }
 

@@ -7,6 +7,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../engine/step_engine.dart' show StepNote;
+
 abstract class AppLocalizations {
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
@@ -268,6 +270,13 @@ abstract class AppLocalizations {
   String get settingsExactIntegerModeSubtitle;
   String exactIntegerBadge(int digits);
   String get exactIntegerTapToCopy;
+
+  // -- Step-engine plain-language notes (V2). Returns a localized
+  //    sentence for the given key, interpolating `note.params`.
+  //    Returns null when the locale doesn't carry a translation for
+  //    the key — the caller should fall back to the English `note`
+  //    field carried alongside `noteI18n` on each MathStep.
+  String? stepNote(StepNote note);
 
   // -- Help screen --
   String get helpTitle;
@@ -846,6 +855,113 @@ class EnLocalizations implements AppLocalizations {
   String get tabBasic => 'Basic';
   @override
   String get tabSymbolic => 'Symbolic';
+
+  @override
+  String? stepNote(StepNote note) {
+    final p = note.params;
+    switch (note.key) {
+      case 'startEquation':
+        return 'Start with the equation as given.';
+      case 'moveRightSideOver':
+        return 'Subtracting the right side from both sides puts the '
+            'equation in standard form `expression = 0`, which lets us '
+            'apply the linear or quadratic solver.';
+      case 'noEqualsSign':
+        return 'No `=` in input; treating as ${p['body']} = 0.';
+      case 'doesNotDependOn':
+        return 'The equation does not depend on ${p['var']}.';
+      case 'solveFallthroughSymbolic':
+        return 'Not a standard linear or quadratic form — handing off '
+            'to the symbolic solver for the answer.';
+      case 'linearIdentifyCoefs':
+        return 'Pick off the leading coefficient and the constant term — '
+            'this is a linear equation.';
+      case 'moveConstant':
+        return 'Move the constant to the other side.';
+      case 'divideByCoef':
+        return 'Divide both sides by the leading coefficient to isolate '
+            '${p['var']}.';
+      case 'quadraticIdentifyCoefs':
+        return 'Read the three coefficients off the polynomial. We pull '
+            'a from the second derivative ÷ 2, b from the first derivative '
+            'at ${p['var']} = 0, and c from the polynomial at ${p['var']} = 0.';
+      case 'discriminant':
+        return 'The discriminant tells us how many real roots: positive → '
+            'two distinct real roots; zero → one double root; negative → '
+            'two complex conjugate roots.';
+      case 'quadFormulaApply':
+        return 'Plug a, b, and Δ into the quadratic formula. The `±` gives '
+            'both roots in one step.';
+      case 'integralPullMinusOut':
+        return 'Pull the leading minus sign out of the integral; the rest '
+            'is just ∫f.';
+      case 'exprDoesNotDependOn':
+        return '${p['expr']} does not depend on ${p['var']}.';
+      case 'integralIdentityPower1':
+        return 'The power rule for n=1: bump the exponent up to 2 and '
+            'divide by the new exponent.';
+      case 'integralLinearity':
+        return 'Integration is linear: the integral of a sum is the sum of '
+            'the integrals.';
+      case 'integralPullConstantOut':
+        return 'Pull `${p['const']}` outside the integral — constants '
+            'multiply through.';
+      case 'integralReciprocalLog':
+        return 'The integral of 1/${p['var']} is the natural log of its '
+            'absolute value.';
+      case 'integralPowerRule':
+        return 'Bump the exponent up by 1 and divide by the new exponent. '
+            'Works for any constant n ≠ −1.';
+      case 'uSubLinear':
+        return 'Let u = ${p['u']}; then du = (${p['slope']})·d${p['var']}.';
+      case 'integralStandardAntideriv':
+        return 'Use the standard antiderivative for ${p['fn']}.';
+      case 'uSubLinearFn':
+        return 'Let u = ${p['u']}; then du = (${p['slope']})·d${p['var']}. '
+            'The antiderivative of ${p['fn']} is the standard form, '
+            'evaluated at u and divided by the slope.';
+      case 'ibpLnX':
+        final v = p['var']!;
+        return 'Let u = ln($v), dv = d$v. Then du = (1/$v)·d$v and v = $v, '
+            'so ∫u·dv = u·v − ∫v·du = $v·ln($v) − ∫1 d$v.';
+      case 'ibpXTimesF':
+        return 'Let u = ${p['var']} (so du = d${p['var']}) and '
+            'dv = ${p['right']}·d${p['var']}, giving v = ${p['v']}.';
+      case 'integralFallthroughSymbolic':
+        return 'No standard textbook rule matched this shape — handing off '
+            'to the symbolic integrator.';
+      case 'diffIdentity':
+        return 'Differentiating ${p['var']} with respect to itself is 1.';
+      case 'diffSumDifference':
+        return 'Differentiate each term on its own; the derivative '
+            'distributes across `+` and `−`.';
+      case 'diffQuotient':
+        return 'For a quotient, the numerator gets `f′g − fg′` and the '
+            'denominator gets squared.';
+      case 'diffProduct':
+        return 'For a product, differentiate each factor and add the pieces '
+            '— `(fg)′ = f′g + fg′`.';
+      case 'diffPowerSimple':
+        return 'Bring the exponent down as a coefficient and reduce the '
+            'exponent by 1.';
+      case 'diffPowerChain':
+        return 'Bring the exponent down and reduce it by 1, then multiply '
+            'by the derivative of the inner base — that '
+            '`d/d${p['var']}[${p['base']}]` factor is the chain rule.';
+      case 'diffExponential':
+        return 'When the variable is in the exponent, the derivative is the '
+            'same expression times `ln(base)` times the derivative of the '
+            'exponent.';
+      case 'diffStandardSimple':
+        return 'Apply the standard derivative for ${p['fn']}.';
+      case 'diffStandardChain':
+        return 'The argument depends on ${p['var']}, so multiply by its '
+            'derivative (chain rule).';
+      case 'diffFallthrough':
+        return 'No higher-level rule pattern recognized for this shape.';
+    }
+    return null;
+  }
 }
 
 class DeLocalizations implements AppLocalizations {
@@ -1402,6 +1518,118 @@ class DeLocalizations implements AppLocalizations {
   String get tabBasic => 'Basis';
   @override
   String get tabSymbolic => 'Symbolisch';
+
+  @override
+  String? stepNote(StepNote note) {
+    final p = note.params;
+    switch (note.key) {
+      case 'startEquation':
+        return 'Wir beginnen mit der gegebenen Gleichung.';
+      case 'moveRightSideOver':
+        return 'Subtrahieren der rechten Seite von beiden Seiten bringt '
+            'die Gleichung in die Standardform `Ausdruck = 0`, sodass der '
+            'lineare oder quadratische Löser anwendbar ist.';
+      case 'noEqualsSign':
+        return 'Kein `=` in der Eingabe; wir behandeln sie als '
+            '${p['body']} = 0.';
+      case 'doesNotDependOn':
+        return 'Die Gleichung hängt nicht von ${p['var']} ab.';
+      case 'solveFallthroughSymbolic':
+        return 'Keine standardmäßige lineare oder quadratische Form — '
+            'die Antwort übernimmt der symbolische Löser.';
+      case 'linearIdentifyCoefs':
+        return 'Lies den Leitkoeffizienten und den konstanten Term ab — '
+            'dies ist eine lineare Gleichung.';
+      case 'moveConstant':
+        return 'Bringe die Konstante auf die andere Seite.';
+      case 'divideByCoef':
+        return 'Teile beide Seiten durch den Leitkoeffizienten, um '
+            '${p['var']} zu isolieren.';
+      case 'quadraticIdentifyCoefs':
+        return 'Lies die drei Koeffizienten am Polynom ab. Wir nehmen a aus '
+            'der zweiten Ableitung ÷ 2, b aus der ersten Ableitung bei '
+            '${p['var']} = 0 und c aus dem Polynom bei ${p['var']} = 0.';
+      case 'discriminant':
+        return 'Die Diskriminante sagt uns, wie viele reelle Wurzeln es '
+            'gibt: positiv → zwei verschiedene reelle Wurzeln; null → eine '
+            'Doppelwurzel; negativ → zwei komplex konjugierte Wurzeln.';
+      case 'quadFormulaApply':
+        return 'Setze a, b und Δ in die Mitternachtsformel ein. Das `±` '
+            'liefert beide Wurzeln in einem Schritt.';
+      case 'integralPullMinusOut':
+        return 'Ziehe das führende Minuszeichen aus dem Integral; der '
+            'Rest ist einfach ∫f.';
+      case 'exprDoesNotDependOn':
+        return '${p['expr']} hängt nicht von ${p['var']} ab.';
+      case 'integralIdentityPower1':
+        return 'Die Potenzregel für n=1: Erhöhe den Exponenten auf 2 und '
+            'teile durch den neuen Exponenten.';
+      case 'integralLinearity':
+        return 'Integration ist linear: Das Integral einer Summe ist die '
+            'Summe der Integrale.';
+      case 'integralPullConstantOut':
+        return 'Ziehe `${p['const']}` vor das Integral — Konstanten '
+            'lassen sich herausziehen.';
+      case 'integralReciprocalLog':
+        return 'Das Integral von 1/${p['var']} ist der natürliche '
+            'Logarithmus des Betrags.';
+      case 'integralPowerRule':
+        return 'Erhöhe den Exponenten um 1 und teile durch den neuen '
+            'Exponenten. Funktioniert für jede Konstante n ≠ −1.';
+      case 'uSubLinear':
+        return 'Setze u = ${p['u']}; dann ist du = '
+            '(${p['slope']})·d${p['var']}.';
+      case 'integralStandardAntideriv':
+        return 'Verwende die Standard-Stammfunktion für ${p['fn']}.';
+      case 'uSubLinearFn':
+        return 'Setze u = ${p['u']}; dann ist du = '
+            '(${p['slope']})·d${p['var']}. Die Stammfunktion von '
+            '${p['fn']} ist die Standardform, ausgewertet an u und durch '
+            'die Steigung geteilt.';
+      case 'ibpLnX':
+        final v = p['var']!;
+        return 'Setze u = ln($v), dv = d$v. Dann ist du = (1/$v)·d$v und '
+            'v = $v, also ∫u·dv = u·v − ∫v·du = $v·ln($v) − ∫1 d$v.';
+      case 'ibpXTimesF':
+        return 'Setze u = ${p['var']} (also du = d${p['var']}) und '
+            'dv = ${p['right']}·d${p['var']}, woraus v = ${p['v']} folgt.';
+      case 'integralFallthroughSymbolic':
+        return 'Keine standardmäßige Lehrbuchregel passt zu dieser Form '
+            '— die Antwort übernimmt der symbolische Integrator.';
+      case 'diffIdentity':
+        return 'Die Ableitung von ${p['var']} nach sich selbst ist 1.';
+      case 'diffSumDifference':
+        return 'Leite jeden Summanden einzeln ab; die Ableitung verteilt '
+            'sich über `+` und `−`.';
+      case 'diffQuotient':
+        return 'Für einen Quotienten gilt: Zähler `f′g − fg′`, Nenner '
+            'wird quadriert.';
+      case 'diffProduct':
+        return 'Für ein Produkt: leite jeden Faktor ab und addiere die '
+            'Stücke — `(fg)′ = f′g + fg′`.';
+      case 'diffPowerSimple':
+        return 'Ziehe den Exponenten als Koeffizient herunter und '
+            'reduziere den Exponenten um 1.';
+      case 'diffPowerChain':
+        return 'Ziehe den Exponenten herunter und reduziere ihn um 1, '
+            'multipliziere dann mit der Ableitung der inneren Basis — '
+            'dieser Faktor `d/d${p['var']}[${p['base']}]` ist die '
+            'Kettenregel.';
+      case 'diffExponential':
+        return 'Wenn die Variable im Exponenten steht, ist die Ableitung '
+            'der gleiche Ausdruck mal `ln(Basis)` mal die Ableitung des '
+            'Exponenten.';
+      case 'diffStandardSimple':
+        return 'Wende die Standardableitung für ${p['fn']} an.';
+      case 'diffStandardChain':
+        return 'Das Argument hängt von ${p['var']} ab, also multipliziere '
+            'mit dessen Ableitung (Kettenregel).';
+      case 'diffFallthrough':
+        return 'Kein Muster einer höherwertigen Regel erkannt für diese '
+            'Form.';
+    }
+    return null;
+  }
 }
 
 class FrLocalizations implements AppLocalizations {
@@ -1962,6 +2190,117 @@ class FrLocalizations implements AppLocalizations {
   String get tabBasic => 'Base';
   @override
   String get tabSymbolic => 'Symbolique';
+
+  @override
+  String? stepNote(StepNote note) {
+    final p = note.params;
+    switch (note.key) {
+      case 'startEquation':
+        return 'Partons de l\'équation telle qu\'elle est donnée.';
+      case 'moveRightSideOver':
+        return 'Soustraire le membre de droite des deux côtés met '
+            'l\'équation sous la forme standard `expression = 0`, ce qui '
+            'permet d\'appliquer le solveur linéaire ou quadratique.';
+      case 'noEqualsSign':
+        return 'Pas de `=` dans l\'entrée ; on la traite comme '
+            '${p['body']} = 0.';
+      case 'doesNotDependOn':
+        return 'L\'équation ne dépend pas de ${p['var']}.';
+      case 'solveFallthroughSymbolic':
+        return 'Pas de forme linéaire ou quadratique standard — la réponse '
+            'est confiée au solveur symbolique.';
+      case 'linearIdentifyCoefs':
+        return 'Repérons le coefficient dominant et le terme constant — '
+            'c\'est une équation linéaire.';
+      case 'moveConstant':
+        return 'Passe la constante de l\'autre côté.';
+      case 'divideByCoef':
+        return 'Divise les deux membres par le coefficient dominant pour '
+            'isoler ${p['var']}.';
+      case 'quadraticIdentifyCoefs':
+        return 'Lis les trois coefficients sur le polynôme. On prend a à '
+            'partir de la dérivée seconde ÷ 2, b à partir de la dérivée '
+            'première en ${p['var']} = 0, et c à partir du polynôme en '
+            '${p['var']} = 0.';
+      case 'discriminant':
+        return 'Le discriminant indique le nombre de racines réelles : '
+            'positif → deux racines réelles distinctes ; nul → une racine '
+            'double ; négatif → deux racines complexes conjuguées.';
+      case 'quadFormulaApply':
+        return 'Substitue a, b et Δ dans la formule quadratique. Le `±` '
+            'donne les deux racines en une étape.';
+      case 'integralPullMinusOut':
+        return 'Sors le signe moins de l\'intégrale ; le reste est '
+            'simplement ∫f.';
+      case 'exprDoesNotDependOn':
+        return '${p['expr']} ne dépend pas de ${p['var']}.';
+      case 'integralIdentityPower1':
+        return 'La règle des puissances pour n=1 : monte l\'exposant à 2 '
+            'et divise par le nouvel exposant.';
+      case 'integralLinearity':
+        return 'L\'intégration est linéaire : l\'intégrale d\'une somme '
+            'est la somme des intégrales.';
+      case 'integralPullConstantOut':
+        return 'Sors `${p['const']}` de l\'intégrale — les constantes se '
+            'factorisent.';
+      case 'integralReciprocalLog':
+        return 'L\'intégrale de 1/${p['var']} est le logarithme naturel '
+            'de sa valeur absolue.';
+      case 'integralPowerRule':
+        return 'Augmente l\'exposant de 1 et divise par le nouvel '
+            'exposant. Valable pour toute constante n ≠ −1.';
+      case 'uSubLinear':
+        return 'Pose u = ${p['u']} ; alors du = '
+            '(${p['slope']})·d${p['var']}.';
+      case 'integralStandardAntideriv':
+        return 'Utilise la primitive standard de ${p['fn']}.';
+      case 'uSubLinearFn':
+        return 'Pose u = ${p['u']} ; alors du = '
+            '(${p['slope']})·d${p['var']}. La primitive de ${p['fn']} est '
+            'la forme standard, évaluée en u et divisée par la pente.';
+      case 'ibpLnX':
+        final v = p['var']!;
+        return 'Pose u = ln($v), dv = d$v. Alors du = (1/$v)·d$v et '
+            'v = $v, donc ∫u·dv = u·v − ∫v·du = $v·ln($v) − ∫1 d$v.';
+      case 'ibpXTimesF':
+        return 'Pose u = ${p['var']} (donc du = d${p['var']}) et '
+            'dv = ${p['right']}·d${p['var']}, ce qui donne v = ${p['v']}.';
+      case 'integralFallthroughSymbolic':
+        return 'Aucune règle classique ne correspond à cette forme — la '
+            'réponse est confiée à l\'intégrateur symbolique.';
+      case 'diffIdentity':
+        return 'La dérivée de ${p['var']} par rapport à elle-même vaut 1.';
+      case 'diffSumDifference':
+        return 'Dérive chaque terme séparément ; la dérivation se '
+            'distribue sur `+` et `−`.';
+      case 'diffQuotient':
+        return 'Pour un quotient, le numérateur devient `f′g − fg′` et le '
+            'dénominateur est mis au carré.';
+      case 'diffProduct':
+        return 'Pour un produit, dérive chaque facteur et additionne les '
+            'morceaux — `(fg)′ = f′g + fg′`.';
+      case 'diffPowerSimple':
+        return 'Descends l\'exposant comme coefficient et diminue '
+            'l\'exposant de 1.';
+      case 'diffPowerChain':
+        return 'Descends l\'exposant et diminue-le de 1, puis multiplie '
+            'par la dérivée de la base — ce facteur '
+            '`d/d${p['var']}[${p['base']}]` est la règle de la chaîne.';
+      case 'diffExponential':
+        return 'Quand la variable est en exposant, la dérivée est la même '
+            'expression multipliée par `ln(base)` et par la dérivée de '
+            'l\'exposant.';
+      case 'diffStandardSimple':
+        return 'Applique la dérivée standard de ${p['fn']}.';
+      case 'diffStandardChain':
+        return 'L\'argument dépend de ${p['var']}, donc multiplie par sa '
+            'dérivée (règle de la chaîne).';
+      case 'diffFallthrough':
+        return 'Aucun motif de règle de plus haut niveau reconnu pour '
+            'cette forme.';
+    }
+    return null;
+  }
 }
 
 class EsLocalizations implements AppLocalizations {
@@ -2521,6 +2860,117 @@ class EsLocalizations implements AppLocalizations {
   String get tabBasic => 'Básico';
   @override
   String get tabSymbolic => 'Simbólico';
+
+  @override
+  String? stepNote(StepNote note) {
+    final p = note.params;
+    switch (note.key) {
+      case 'startEquation':
+        return 'Partimos de la ecuación tal como está dada.';
+      case 'moveRightSideOver':
+        return 'Restar el lado derecho en ambos lados deja la ecuación en '
+            'la forma estándar `expresión = 0`, lo que permite aplicar el '
+            'solver lineal o cuadrático.';
+      case 'noEqualsSign':
+        return 'No hay `=` en la entrada; se trata como '
+            '${p['body']} = 0.';
+      case 'doesNotDependOn':
+        return 'La ecuación no depende de ${p['var']}.';
+      case 'solveFallthroughSymbolic':
+        return 'No es una forma lineal o cuadrática estándar — la '
+            'respuesta la calcula el solver simbólico.';
+      case 'linearIdentifyCoefs':
+        return 'Identifica el coeficiente principal y el término '
+            'constante — esta es una ecuación lineal.';
+      case 'moveConstant':
+        return 'Pasa la constante al otro lado.';
+      case 'divideByCoef':
+        return 'Divide ambos lados entre el coeficiente principal para '
+            'despejar ${p['var']}.';
+      case 'quadraticIdentifyCoefs':
+        return 'Lee los tres coeficientes en el polinomio. Tomamos a de '
+            'la segunda derivada ÷ 2, b de la primera derivada en '
+            '${p['var']} = 0, y c del polinomio en ${p['var']} = 0.';
+      case 'discriminant':
+        return 'El discriminante indica cuántas raíces reales hay: '
+            'positivo → dos raíces reales distintas; cero → una raíz '
+            'doble; negativo → dos raíces complejas conjugadas.';
+      case 'quadFormulaApply':
+        return 'Sustituye a, b y Δ en la fórmula cuadrática. El `±` '
+            'entrega ambas raíces en un solo paso.';
+      case 'integralPullMinusOut':
+        return 'Saca el signo menos de la integral; el resto es '
+            'simplemente ∫f.';
+      case 'exprDoesNotDependOn':
+        return '${p['expr']} no depende de ${p['var']}.';
+      case 'integralIdentityPower1':
+        return 'La regla de la potencia para n=1: sube el exponente a 2 '
+            'y divide entre el nuevo exponente.';
+      case 'integralLinearity':
+        return 'La integración es lineal: la integral de una suma es la '
+            'suma de las integrales.';
+      case 'integralPullConstantOut':
+        return 'Saca `${p['const']}` de la integral — las constantes '
+            'se factorizan.';
+      case 'integralReciprocalLog':
+        return 'La integral de 1/${p['var']} es el logaritmo natural de '
+            'su valor absoluto.';
+      case 'integralPowerRule':
+        return 'Sube el exponente en 1 y divide entre el nuevo '
+            'exponente. Vale para cualquier constante n ≠ −1.';
+      case 'uSubLinear':
+        return 'Sea u = ${p['u']}; entonces du = '
+            '(${p['slope']})·d${p['var']}.';
+      case 'integralStandardAntideriv':
+        return 'Usa la antiderivada estándar de ${p['fn']}.';
+      case 'uSubLinearFn':
+        return 'Sea u = ${p['u']}; entonces du = '
+            '(${p['slope']})·d${p['var']}. La antiderivada de ${p['fn']} '
+            'es la forma estándar, evaluada en u y dividida por la '
+            'pendiente.';
+      case 'ibpLnX':
+        final v = p['var']!;
+        return 'Sea u = ln($v), dv = d$v. Entonces du = (1/$v)·d$v y '
+            'v = $v, así ∫u·dv = u·v − ∫v·du = $v·ln($v) − ∫1 d$v.';
+      case 'ibpXTimesF':
+        return 'Sea u = ${p['var']} (entonces du = d${p['var']}) y '
+            'dv = ${p['right']}·d${p['var']}, dando v = ${p['v']}.';
+      case 'integralFallthroughSymbolic':
+        return 'Ninguna regla de libro de texto encaja con esta forma — '
+            'la respuesta la calcula el integrador simbólico.';
+      case 'diffIdentity':
+        return 'La derivada de ${p['var']} con respecto a sí misma es 1.';
+      case 'diffSumDifference':
+        return 'Deriva cada término por separado; la derivación se '
+            'distribuye sobre `+` y `−`.';
+      case 'diffQuotient':
+        return 'Para un cociente, el numerador queda `f′g − fg′` y el '
+            'denominador se eleva al cuadrado.';
+      case 'diffProduct':
+        return 'Para un producto, deriva cada factor y suma las piezas '
+            '— `(fg)′ = f′g + fg′`.';
+      case 'diffPowerSimple':
+        return 'Baja el exponente como coeficiente y reduce el exponente '
+            'en 1.';
+      case 'diffPowerChain':
+        return 'Baja el exponente y redúcelo en 1, luego multiplica por '
+            'la derivada de la base interna — ese factor '
+            '`d/d${p['var']}[${p['base']}]` es la regla de la cadena.';
+      case 'diffExponential':
+        return 'Cuando la variable está en el exponente, la derivada es '
+            'la misma expresión multiplicada por `ln(base)` y por la '
+            'derivada del exponente.';
+      case 'diffStandardSimple':
+        return 'Aplica la derivada estándar de ${p['fn']}.';
+      case 'diffStandardChain':
+        return 'El argumento depende de ${p['var']}, así que multiplica '
+            'por su derivada (regla de la cadena).';
+      case 'diffFallthrough':
+        return 'No se reconoce ningún patrón de regla de alto nivel para '
+            'esta forma.';
+    }
+    return null;
+  }
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

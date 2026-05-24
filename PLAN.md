@@ -345,15 +345,19 @@ roughly double the perceived value of the app.
 - [ ] **Worked-example library**. Curated catalogue of problem types
   (related rates, optimization, vector projection, eigenvalue) with
   click-to-try examples. Discoverability + learning.
-- [~] **Plain-language step explanations**. After a step is shown
-  symbolically, render a one-sentence description of the rule applied.
-  Builds directly on the step-by-step infrastructure.
-  - **V1 partial** (HISTORY round 42): every common differentiation,
-    integration, and solve rule now emits a clear one-sentence English
+- [x] ~~**Plain-language step explanations**.~~ Done 2026-05-24 —
+  see HISTORY round 45.
+  - **V1** (HISTORY round 42): every common differentiation,
+    integration, and solve rule emits a clear one-sentence English
     note explaining *why* the rule applies, on top of the formal
     formula. The StepsDialog already renders the note italicized
     below each step's before/after row.
-  - **V2 pending**: translate notes to DE/FR/ES.
+  - **V2** (HISTORY round 45): notes translated to DE/FR/ES via a
+    `StepNote(key, params)` sidecar on `MathStep`. AppLocalizations
+    gains a `String? stepNote(StepNote)` resolver per locale; the
+    StepsDialog asks for a translation and falls back to the
+    embedded English `note` when the locale doesn't carry the key.
+    34 unique keys × 4 locales with an exhaustive coverage test.
 
 #### Input
 

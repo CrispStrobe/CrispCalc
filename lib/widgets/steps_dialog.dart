@@ -130,14 +130,21 @@ class StepsDialog extends StatelessWidget {
                 Expanded(child: _latex(context, _toLatex(s.after))),
               ],
             ),
-            if (s.note != null) ...[
+            if (s.note != null || s.noteI18n != null) ...[
               const SizedBox(height: 6),
-              Text(
-                s.note!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-              ),
+              Builder(builder: (ctx) {
+                final t = AppLocalizations.of(ctx);
+                final localized =
+                    s.noteI18n == null ? null : t.stepNote(s.noteI18n!);
+                final text = localized ?? s.note ?? '';
+                if (text.isEmpty) return const SizedBox.shrink();
+                return Text(
+                  text,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
+                );
+              }),
             ],
           ],
         ),
