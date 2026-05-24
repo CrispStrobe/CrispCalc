@@ -252,9 +252,16 @@ roughly double the perceived value of the app.
     plus a leading-minus normalization rule so the IBP recursion
     cleanly resolves the sub-integral. Verified end-to-end against the
     native SymEngine via the steps diagnostic battery (37/37 specs).
-  - **V3 deferred**: non-linear u-substitution (∫f(g(x))g'(x)dx via
-    pattern detection), partial fractions, repeated integration by
-    parts, trig substitution.
+  - **V3 partial** (HISTORY round 49): repeated integration by parts
+    (∫x^n·f(x)dx for f ∈ {sin, cos, exp, sinh, cosh} now recurses
+    on x^(n-1)·F(x) instead of bailing); non-linear u-substitution
+    (∫c·g'(x)·f(g(x))dx → c·F(g(x))) using the bridge to verify
+    `(other_factor)/g'(x)` is constant; logarithmic-derivative rule
+    (∫(c·f'(x)/f(x))dx → c·ln|f(x)|). Three new `StepNote` keys
+    (`ibpRepeated`, `uSubNonlinear`, `integralLogDerivative`) across
+    en/de/fr/es.
+    **V4 deferred**: partial fractions (∫P(x)/Q(x)dx with general Q),
+    trig substitution (∫√(a²−x²)dx etc.).
 - [x] ~~**Interactive parameter sliders** on the graphing screen.~~
   Done 2026-05-17 — see HISTORY round 23. Identifiers in a function
   string that aren't the plot variable or a reserved name become

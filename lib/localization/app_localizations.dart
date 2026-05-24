@@ -982,6 +982,20 @@ class EnLocalizations implements AppLocalizations {
       case 'ibpXTimesF':
         return 'Let u = ${p['var']} (so du = d${p['var']}) and '
             'dv = ${p['right']}·d${p['var']}, giving v = ${p['v']}.';
+      case 'ibpRepeated':
+        return 'Let u = ${p['u']} and dv = ${p['right']}·d${p['var']}. '
+            'Then du = ${p['n']}·… (one lower power of ${p['var']}) and '
+            'v = ${p['v']}, so the new integrand drops a power of '
+            '${p['var']} — recursing.';
+      case 'uSubNonlinear':
+        return 'Let u = ${p['u']}; then du = (${p['du']})·d${p['var']}. '
+            'The integrand has the form f(u)·du, so substitution turns '
+            'it into ∫f(u) du = standard antiderivative of ${p['fn']} '
+            'evaluated at u'
+            '${p['ratio'] == '1' ? '.' : ', times the constant factor ${p['ratio']}.'}';
+      case 'integralLogDerivative':
+        return 'The numerator is (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
+            'so the integral is ${p['ratio']}·ln|${p['den']}|.';
       case 'integralFallthroughSymbolic':
         return 'No standard textbook rule matched this shape — handing off '
             'to the symbolic integrator.';
@@ -1688,6 +1702,20 @@ class DeLocalizations implements AppLocalizations {
       case 'ibpXTimesF':
         return 'Setze u = ${p['var']} (also du = d${p['var']}) und '
             'dv = ${p['right']}·d${p['var']}, woraus v = ${p['v']} folgt.';
+      case 'ibpRepeated':
+        return 'Setze u = ${p['u']} und dv = ${p['right']}·d${p['var']}. '
+            'Dann ist du = ${p['n']}·… (eine Potenz von ${p['var']} weniger) '
+            'und v = ${p['v']}, sodass das neue Integral eine Potenz von '
+            '${p['var']} verliert — Rekursion.';
+      case 'uSubNonlinear':
+        return 'Setze u = ${p['u']}; dann ist du = '
+            '(${p['du']})·d${p['var']}. Der Integrand hat die Form '
+            'f(u)·du, daher liefert die Substitution ∫f(u) du = '
+            'Standard-Stammfunktion von ${p['fn']} ausgewertet an u'
+            '${p['ratio'] == '1' ? '.' : ', mal dem konstanten Faktor ${p['ratio']}.'}';
+      case 'integralLogDerivative':
+        return 'Der Zähler ist (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
+            'also ist das Integral ${p['ratio']}·ln|${p['den']}|.';
       case 'integralFallthroughSymbolic':
         return 'Keine standardmäßige Lehrbuchregel passt zu dieser Form '
             '— die Antwort übernimmt der symbolische Integrator.';
@@ -2401,6 +2429,19 @@ class FrLocalizations implements AppLocalizations {
       case 'ibpXTimesF':
         return 'Pose u = ${p['var']} (donc du = d${p['var']}) et '
             'dv = ${p['right']}·d${p['var']}, ce qui donne v = ${p['v']}.';
+      case 'ibpRepeated':
+        return 'Pose u = ${p['u']} et dv = ${p['right']}·d${p['var']}. '
+            'Alors du = ${p['n']}·… (une puissance de ${p['var']} en moins) '
+            'et v = ${p['v']}, et la nouvelle intégrale perd une puissance '
+            'de ${p['var']} — récursion.';
+      case 'uSubNonlinear':
+        return 'Pose u = ${p['u']} ; alors du = (${p['du']})·d${p['var']}. '
+            'L\'intégrande a la forme f(u)·du, donc la substitution donne '
+            '∫f(u) du = primitive standard de ${p['fn']} évaluée en u'
+            '${p['ratio'] == '1' ? '.' : ', multipliée par le facteur constant ${p['ratio']}.'}';
+      case 'integralLogDerivative':
+        return 'Le numérateur vaut (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
+            'donc l\'intégrale est ${p['ratio']}·ln|${p['den']}|.';
       case 'integralFallthroughSymbolic':
         return 'Aucune règle classique ne correspond à cette forme — la '
             'réponse est confiée à l\'intégrateur symbolique.';
@@ -3112,6 +3153,20 @@ class EsLocalizations implements AppLocalizations {
       case 'ibpXTimesF':
         return 'Sea u = ${p['var']} (entonces du = d${p['var']}) y '
             'dv = ${p['right']}·d${p['var']}, dando v = ${p['v']}.';
+      case 'ibpRepeated':
+        return 'Sea u = ${p['u']} y dv = ${p['right']}·d${p['var']}. '
+            'Entonces du = ${p['n']}·… (una potencia de ${p['var']} menos) '
+            'y v = ${p['v']}, por lo que el nuevo integrando pierde una '
+            'potencia de ${p['var']} — recursión.';
+      case 'uSubNonlinear':
+        return 'Sea u = ${p['u']}; entonces du = (${p['du']})·d${p['var']}. '
+            'El integrando tiene la forma f(u)·du, así la sustitución '
+            'lo convierte en ∫f(u) du = antiderivada estándar de ${p['fn']} '
+            'evaluada en u'
+            '${p['ratio'] == '1' ? '.' : ', multiplicada por el factor constante ${p['ratio']}.'}';
+      case 'integralLogDerivative':
+        return 'El numerador es (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
+            'así que la integral es ${p['ratio']}·ln|${p['den']}|.';
       case 'integralFallthroughSymbolic':
         return 'Ninguna regla de libro de texto encaja con esta forma — '
             'la respuesta la calcula el integrador simbólico.';

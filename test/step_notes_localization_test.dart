@@ -49,6 +49,28 @@ void main() {
     const StepNote('ibpLnX', {'var': 'x'}),
     const StepNote(
         'ibpXTimesF', {'var': 'x', 'right': 'sin(x)', 'v': '-cos(x)'}),
+    const StepNote('ibpRepeated', {
+      'u': 'x^2',
+      'n': '2',
+      'right': 'sin(x)',
+      'v': '-cos(x)',
+      'var': 'x',
+    }),
+    const StepNote('uSubNonlinear', {
+      'u': 'x^2',
+      'du': '2*x',
+      'var': 'x',
+      'fn': 'cos',
+      // Use a non-unity ratio so the placeholder appears in every
+      // locale's output — when ratio == '1' the templates use a
+      // shorter branch that doesn't echo the value back.
+      'ratio': '7',
+    }),
+    const StepNote('integralLogDerivative', {
+      'den': 'x^2+1',
+      'ratio': '1',
+      'var': 'x',
+    }),
     const StepNote('integralFallthroughSymbolic'),
     const StepNote('diffIdentity', {'var': 'x'}),
     const StepNote('diffSumDifference'),
@@ -62,9 +84,9 @@ void main() {
     const StepNote('diffFallthrough'),
   ];
 
-  test('there are exactly 34 distinct keys to translate', () {
-    expect(samples.length, 34);
-    expect(samples.map((n) => n.key).toSet().length, 34);
+  test('there are exactly 37 distinct keys to translate', () {
+    expect(samples.length, 37);
+    expect(samples.map((n) => n.key).toSet().length, 37);
   });
 
   for (final entry in locales.entries) {

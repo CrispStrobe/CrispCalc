@@ -164,9 +164,25 @@ void main() {
     });
 
     test('falls through to "Symbolic integration" for unrecognized shapes', () {
-      // sin(x^2) needs substitution, which V1 doesn't handle.
+      // sin(x^2) needs substitution but has no factor of 2x to detect
+      // it, so even V3's non-linear u-sub doesn't fire — falls through.
       final rules = rulesFor('sin(x^2)', 'x');
       expect(rules.first, equals('Symbolic integration'));
+    });
+
+    test('repeated IBP rule label fires for ∫x^2*sin(x) dx', () {
+      // x^2 · sin(x) is the canonical repeated-IBP example. The
+      // detection logic doesn't require the bridge (pattern-only),
+      // even though the recursion does — so the *first* step is
+      // always the IBP step regardless of native availability.
+      final rules = rulesFor('x^2*sin(x)', 'x');
+      expect(rules.first, equals('Integration by parts'));
+    });
+
+    test('first-degree IBP still fires for ∫x*sin(x) dx (V2 path)', () {
+      // The new n=1 branch must behave exactly like the V2 path.
+      final rules = rulesFor('x*sin(x)', 'x');
+      expect(rules.first, equals('Integration by parts'));
     });
 
     test('every trace ends with a Result step', () {

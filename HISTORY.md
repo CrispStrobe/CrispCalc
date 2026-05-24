@@ -2,6 +2,74 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 49) — Step engine integration V3
+
+Three new integration rules in `StepEngine.integrate()`, closing the
+two biggest gaps in V2:
+
+### Repeated IBP (∫x^n · f(x) dx for n ≥ 1)
+
+The V2 single-shot IBP only handled n = 1 (∫x·sin(x)dx etc.). V3
+generalizes to n ∈ {2..9} by recognizing `x^N` as the algebraic
+factor via a new `_smallIntegerPowerOfVar` helper, emitting the IBP
+step, and recursing on `N · x^(N-1) · v` where `v` is the
+antiderivative of the trig/exp factor. The recursion drops one
+power of x each application and bottoms out at the existing n = 1
+path (which in turn recurses into the antiderivative-of-`v` step).
+
+The recursive sub-integrand uses `*` rather than the middle-dot for
+operator separator — `_splitTopLevelProduct` only recognizes `*`,
+and silently failing to decompose the recursive expression would
+leave the rule walker stuck on a single-atom string.
+
+### Non-linear u-substitution (∫c · g'(x) · f(g(x)) dx)
+
+For top-level products of the shape `(constant times g'(x)) · f(g(x))`
+where g(x) is non-linear and f has a standard antiderivative, V3
+verifies the structural match via the bridge: `simplify(other / g'(x))`
+must be variable-free. When it is, the rule emits `c · F(g(x))` and
+returns. Covers the canonical textbook cases like `2x·cos(x²)`,
+`x·exp(x²)` (ratio 1/2), `6x²·sin(x³)` (ratio 2).
+
+The rule sits between the V2 linear u-substitution block and the V2
+IBP block in the rule walker, so it gets the right precedence:
+`2x·cos(x²)` is u-sub, not IBP. Without a native bridge the bridge
+call fails and the rule simply doesn't fire — keeps the existing
+"falls through to Symbolic integration" headless behavior.
+
+### Logarithmic-derivative rule (∫c · f'(x)/f(x) dx)
+
+Detects `num / den` where `simplify(num / den')` is a non-zero
+constant `c`. Result: `c · ln|den|`. Reuses the same ratio
+technique as the non-linear u-sub. Catches `2x/(x²+1)`,
+`cos(x)/sin(x)`, etc. — patterns the bare reciprocal rule (V2)
+couldn't see because the denominator was non-linear.
+
+### i18n
+
+Three new `StepNote` keys (`ibpRepeated`, `uSubNonlinear`,
+`integralLogDerivative`) implemented across en/de/fr/es. The
+existing exhaustive-coverage test grows from 34 to 37 keys with
+2 new structural tests for the V3 rule labels.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **900/900** (12 new tests for V3 rules + i18n
+  coverage). `step_engine_test.dart` gains structural assertions for
+  the repeated-IBP rule label on `x^2*sin(x)` and the V2-preserving
+  single-shot label on `x*sin(x)`.
+- `dart format`: clean.
+
+### Notes
+
+The placeholder-substitution check in
+`step_notes_localization_test.dart` uses ratio = '7' rather than '1'
+for the `uSubNonlinear` sample, because the localization templates
+have a shorter branch when ratio == '1' that doesn't echo the
+value back — testing with '1' would falsely accuse the templates of
+dropping the placeholder.
+
 ## 2026-05-24 (round 48) — Onboarding tour
 
 First-launch overlay introducing the four big features (keypad tabs,

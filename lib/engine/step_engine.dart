@@ -610,6 +610,96 @@ class StepEngine {
       }
     }
 
+    // V3: non-linear u-substitution. Detect ∫ c·g'(x)·f(g(x)) dx where
+    //   * f has a standard antiderivative,
+    //   * g(x) is non-linear in x (linear case already handled above),
+    //   * the remaining factor matches a constant multiple of g'(x).
+    // The check uses engine.simplify to verify that
+    // remainingFactor / g'(x) is a constant — covers patterns like
+    // 2x·cos(x²) (ratio = 1), x·exp(x²) (ratio = 1/2), 6x²·sin(x³)
+    // (ratio = 2), etc.
+    final nonlinearFactors = _splitTopLevelProduct(s);
+    if (nonlinearFactors != null && nonlinearFactors.length == 2) {
+      for (var i = 0; i < 2; i++) {
+        final fnSide = _stripOuterParens(nonlinearFactors[i].trim());
+        final other = _stripOuterParens(nonlinearFactors[1 - i].trim());
+        final inner = _matchFunctionCall(fnSide);
+        if (inner == null) continue;
+        if (!_standardAntiderivatives.containsKey(inner.name)) continue;
+        if (inner.arg.trim() == variable) continue; // handled by V1
+        // Skip linear args — V2 already does those cleanly.
+        if (_linearSlope(inner.arg, variable) != null) continue;
+        // Compute g'(x). If the bridge can't (no native), bail.
+        final gPrime = engine.differentiate(inner.arg, variable);
+        if (gPrime.startsWith('Error')) continue;
+        // The remaining factor must equal a constant times g'(x).
+        // Use the bridge: simplify(other / g'(x)) should be variable-free.
+        final ratio = engine.simplify('($other) / ($gPrime)');
+        if (ratio.startsWith('Error')) continue;
+        if (_containsVar(ratio, variable)) continue;
+        final rule = _standardAntiderivatives[inner.name]!;
+        final F = rule.after(inner.arg);
+        final result = ratio == '1' ? F : '($ratio)·($F)';
+        steps.add(MathStep(
+          rule: 'u-substitution (${rule.ruleName.toLowerCase()})',
+          formula: r"\int f(u(x))\,u'(x) \, dx = F(u(x))",
+          before: '∫ $s d$variable',
+          after: result,
+          note: 'Let u = ${inner.arg}; then du = ($gPrime)·d$variable. '
+              'The integrand has the form f(u)·du, so substitution turns '
+              'it into ∫f(u) du = ${rule.ruleName.toLowerCase()} evaluated '
+              'at u'
+              '${ratio == '1' ? '.' : ', times the constant factor $ratio.'}',
+          noteI18n: StepNote('uSubNonlinear', {
+            'u': inner.arg,
+            'du': gPrime,
+            'var': variable,
+            'fn': inner.name,
+            'ratio': ratio,
+          }),
+        ));
+        return result;
+      }
+    }
+
+    // V3: ∫ f'(x)/f(x) dx = ln|f(x)|. Detect by splitting on division,
+    // computing the numerator's expected match (= simplify of `den' / num`
+    // — wait, we want num = (const)·den'). Same ratio test as above.
+    final lnDivSplit = _splitTopLevelOnce(s, '/');
+    if (lnDivSplit != null) {
+      final num = lnDivSplit.lhs.trim();
+      final den = lnDivSplit.rhs.trim();
+      // The general 1/x and 1/(linear) cases already shipped earlier;
+      // here we want the rule that catches 2x/(x²+1), cos(x)/sin(x), etc.
+      if (num != '1' &&
+          _containsVar(num, variable) &&
+          _containsVar(den, variable)) {
+        final denPrime = engine.differentiate(den, variable);
+        if (!denPrime.startsWith('Error')) {
+          final ratio = engine.simplify('($num) / ($denPrime)');
+          if (!ratio.startsWith('Error') && !_containsVar(ratio, variable)) {
+            final denStripped = _stripOuterParens(den);
+            final result =
+                ratio == '1' ? 'ln|$denStripped|' : '($ratio)·ln|$denStripped|';
+            steps.add(MathStep(
+              rule: 'Logarithm rule (general)',
+              formula: r"\int \frac{f'(x)}{f(x)} \, dx = \ln|f(x)|",
+              before: '∫ $s d$variable',
+              after: result,
+              note: 'The numerator is ($ratio)·(d/d$variable[$denStripped]), '
+                  'so the integral is $ratio·ln|$denStripped|.',
+              noteI18n: StepNote('integralLogDerivative', {
+                'den': denStripped,
+                'ratio': ratio,
+                'var': variable,
+              }),
+            ));
+            return result;
+          }
+        }
+      }
+    }
+
     // Integration by parts: ∫ln(x) dx = x·ln(x) − x.
     if (fc != null &&
         (fc.name == 'ln' || fc.name == 'log') &&
@@ -628,33 +718,76 @@ class StepEngine {
       return result;
     }
 
-    // Integration by parts for x · f(x) where f is standard. Picks
-    // u = x (the algebraic factor), dv = f(x)·dx (the standard-antideriv
-    // factor) — LIATE places Algebraic before Trig/Exponential.
+    // Integration by parts for x^n · f(x) where f is standard. Picks
+    // u = x^n (the algebraic factor), dv = f(x)·dx (the standard-antideriv
+    // factor) — LIATE places Algebraic before Trig/Exponential. n = 1
+    // is the V2 single-shot case; n > 1 recurses through V3's
+    // [_repeatedIbpStep] for ∫x²·sin(x)dx, ∫x³·exp(x)dx, etc.
     final factorsForIbp = _splitTopLevelProduct(s);
     if (factorsForIbp != null && factorsForIbp.length == 2) {
       for (var i = 0; i < 2; i++) {
         final left = _stripOuterParens(factorsForIbp[i].trim());
         final right = _stripOuterParens(factorsForIbp[1 - i].trim());
-        if (left != variable) continue;
+        // Power-of-variable factor: just `variable` (n=1) or `var^N`
+        // with integer N ≥ 1.
+        final n = _smallIntegerPowerOfVar(left, variable);
+        if (n == null) continue;
         final rightFc = _matchFunctionCall(right);
         if (rightFc == null || rightFc.arg.trim() != variable) continue;
         if (!_standardAntiderivatives.containsKey(rightFc.name)) continue;
         final vRule = _standardAntiderivatives[rightFc.name]!;
         final v = vRule.after(variable);
+
+        if (n == 1) {
+          // V2 single-shot path — emit the IBP step and recurse on v
+          // (one more integration of the antiderivative).
+          steps.add(MathStep(
+            rule: 'Integration by parts',
+            formula: r"\int u \, dv = u v - \int v \, du",
+            before: '∫ $s d$variable',
+            after: '$variable·($v) - ∫ ($v) d$variable',
+            note: 'Let u = $variable (so du = d$variable) and '
+                'dv = $right·d$variable, giving v = $v.',
+            noteI18n: StepNote(
+                'ibpXTimesF', {'var': variable, 'right': right, 'v': v}),
+          ));
+          final innerResult = _traceIntegrate(v, variable, engine, steps);
+          if (innerResult == null) return null;
+          return '($variable)·($v) - ($innerResult)';
+        }
+
+        // V3 repeated IBP: u = x^n, du = n·x^(n-1)·dx. The new
+        // integrand is `n * x^(n-1) * v` which has the same shape
+        // as the original with `n` decremented — so we just recurse.
+        // Use `*` (not the middle-dot) here so the recursive
+        // _splitTopLevelProduct can re-decompose the string.
+        final uExpr = '$variable^$n';
+        final duFactor = n == 2 ? variable : '$variable^${n - 1}';
+        final newIntegrand = '$n*$duFactor*($v)';
         steps.add(MathStep(
           rule: 'Integration by parts',
           formula: r"\int u \, dv = u v - \int v \, du",
           before: '∫ $s d$variable',
-          after: '$variable·($v) - ∫ ($v) d$variable',
-          note: 'Let u = $variable (so du = d$variable) and '
-              'dv = $right·d$variable, giving v = $v.',
-          noteI18n:
-              StepNote('ibpXTimesF', {'var': variable, 'right': right, 'v': v}),
+          after: '($uExpr)·($v) - ∫ $newIntegrand d$variable',
+          note: 'Let u = $uExpr and dv = $right·d$variable. Then '
+              'du = $n·$duFactor·d$variable and v = $v, so the new '
+              'integrand has one lower power of $variable — recursing.',
+          noteI18n: StepNote('ibpRepeated', {
+            'u': uExpr,
+            'n': '$n',
+            'right': right,
+            'v': v,
+            'var': variable,
+          }),
         ));
-        final innerResult = _traceIntegrate(v, variable, engine, steps);
+        // Recurse via the simplified expression so the leading-minus
+        // / constant-multiple rules can fire cleanly on the sub-integral.
+        final simplified = engine.simplify(newIntegrand);
+        final recurseOn =
+            simplified.startsWith('Error') ? newIntegrand : simplified;
+        final innerResult = _traceIntegrate(recurseOn, variable, engine, steps);
         if (innerResult == null) return null;
-        return '($variable)·($v) - ($innerResult)';
+        return '($uExpr)·($v) - ($innerResult)';
       }
     }
 
@@ -671,6 +804,23 @@ class StepEngine {
       noteI18n: const StepNote('integralFallthroughSymbolic'),
     ));
     return null;
+  }
+
+  /// If [expr] is exactly `variable` or `variable^N` with `N` a
+  /// small positive integer literal (1..9), returns N. Otherwise null.
+  /// Used by the repeated-IBP rule to detect `x^n · f(x)` patterns
+  /// without firing on `x^2.5`, `x^x`, or symbolic powers — for which
+  /// IBP wouldn't terminate cleanly anyway.
+  static int? _smallIntegerPowerOfVar(String expr, String variable) {
+    final s = _stripOuterParens(expr.trim());
+    if (s == variable) return 1;
+    final powSplit = _splitTopLevelOnce(s, '^');
+    if (powSplit == null) return null;
+    if (_stripOuterParens(powSplit.lhs).trim() != variable) return null;
+    final rhs = _stripOuterParens(powSplit.rhs).trim();
+    final n = int.tryParse(rhs);
+    if (n == null || n < 1 || n > 9) return null;
+    return n;
   }
 
   /// If [expr] is linear in [variable] with a non-zero slope and is NOT
