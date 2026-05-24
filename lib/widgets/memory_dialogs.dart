@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../engine/app_state.dart';
+import '../localization/app_localizations.dart';
 
 class MemoryDialogs {
   static void showStoreDialog(
@@ -181,6 +182,8 @@ class MemoryDialogs {
                         trailing: memory['M$i'] != null
                             ? IconButton(
                                 icon: const Icon(Icons.delete),
+                                tooltip: AppLocalizations.of(context)
+                                    .deleteMemorySlotTooltip,
                                 onPressed: () {
                                   setState(() {
                                     memory.remove('M$i');

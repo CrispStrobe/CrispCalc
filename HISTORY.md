@@ -2,6 +2,64 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 55) — Accessibility audit V1
+
+First pass at making the calculator usable to screen-reader users.
+Until today, VoiceOver / TalkBack would announce the keypad's
+glyph-only buttons as either nothing or unicode-codepoint mumble —
+"u+221A" instead of "square root", silence instead of "backspace".
+
+### CalculatorButton wrapper
+
+`CalculatorButton` now wraps its `FilledButton` in a `Semantics`
+widget with `excludeSemantics: true` on the inner button so the
+override is the only label screen readers see. A static
+`_semanticLabel` map provides spoken equivalents for the
+non-pronounceable glyphs:
+
+- Symbols: `⌫ → backspace`, `±`, `√`, `∛`, `ⁿ√`, `^`, `×`, `÷`,
+  `·`, `π`, `e`, `∞`, `°`, `φ`.
+- CAS shortcuts: `∫ dx → integral`, `d/dx → derivative`,
+  `∫⌄ → integral with bounds picker`, etc.
+- Misc: `Ans → last answer`, `EXE → evaluate`, `= → equals`,
+  `C → clear`.
+
+Plain digits and named functions (`sin`, `solve`, `factor`) aren't
+in the map — the literal text is fine for screen readers as-is.
+
+### IconButton tooltips
+
+A bash awk pass over every `IconButton(` in `lib/` confirmed only
+two sites still lacked a `tooltip:`. Both fixed:
+
+- `function_editor_screen.dart` — the per-slot clear (`×`) button.
+- `memory_dialogs.dart` — the memory-slot delete button.
+
+The calculator's history-search clear-X also gained a tooltip while
+I was in there.
+
+### i18n
+
+Three new strings for the new tooltips (`clearSearchTooltip`,
+`clearFunctionSlotTooltip`, `deleteMemorySlotTooltip`) implemented
+across en/de/fr/es with the standard non-emptiness coverage check.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **964/964** (4 new `calculator_button_test.dart`
+  cases pinning the Semantics override behavior + 3 new locale
+  strings).
+- `dart format`: clean.
+
+### V2 deferred
+
+Keyboard navigation audit (Tab order through Settings + Analysis),
+color-contrast verification in both light/dark themes against WCAG
+AA, and an on-device VoiceOver / TalkBack pass are V2 work — they
+need physical-device testing or screenshot diffing rather than the
+synchronous code/string changes that fit a single round.
+
 ## 2026-05-24 (round 54) — Worked-example library
 
 Discoverability win: a curated catalog of 21 example problems

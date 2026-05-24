@@ -254,6 +254,16 @@ void main() {
         expect(t.exactIntegerBadge(158), contains('158'));
       });
 
+      test('accessibility tooltip strings are present', () {
+        for (final s in [
+          t.clearSearchTooltip,
+          t.clearFunctionSlotTooltip,
+          t.deleteMemorySlotTooltip,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
+
       test('worked examples strings are present', () {
         for (final s in [
           t.workedExamplesTitle,

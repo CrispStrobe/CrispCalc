@@ -428,6 +428,8 @@ class _FunctionEditorScreenState extends State<FunctionEditorScreen>
                               ),
                               IconButton(
                                 icon: const Icon(Icons.clear, size: 18),
+                                tooltip: AppLocalizations.of(context)
+                                    .clearFunctionSlotTooltip,
                                 onPressed: () => _appState.clearFunction(index),
                               ),
                             ],

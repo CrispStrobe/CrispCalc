@@ -13,25 +13,64 @@ class CalculatorButton extends StatelessWidget {
     required this.onPressed,
   });
 
+  /// Maps glyph-only button labels to spoken descriptions for screen
+  /// readers. VoiceOver / TalkBack would otherwise announce "√" as
+  /// nothing or "u+221A" depending on the platform. Plain digits and
+  /// recognizable function names (`sin`, `solve`) pass through their
+  /// own text and aren't in this table.
+  static const Map<String, String> _semanticLabel = {
+    '⌫': 'backspace',
+    '±': 'plus or minus',
+    '√': 'square root',
+    '∛': 'cube root',
+    'ⁿ√': 'nth root',
+    '^': 'to the power of',
+    '×': 'times',
+    '÷': 'divided by',
+    '·': 'times',
+    'π': 'pi',
+    'e': 'Euler\'s number',
+    '∞': 'infinity',
+    '°': 'degrees',
+    'φ': 'phi',
+    '∫ dx': 'integral',
+    'd/dx': 'derivative',
+    '∫⌄': 'integral with bounds picker',
+    'd/dx⌄': 'differentiation steps picker',
+    'solve⌄': 'solve steps picker',
+    'Ans': 'last answer',
+    'EXE': 'evaluate',
+    '=': 'equals',
+    'C': 'clear',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(4.0),
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: _getButtonColor(text),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.all(12),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
+      child: Semantics(
+        // Override the auto-derived label with a screen-reader-friendly
+        // form for glyph-only buttons; fall back to the visible text
+        // for digits and named functions where the literal is fine.
+        label: _semanticLabel[text] ?? text,
+        button: true,
+        excludeSemantics: true,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: _getButtonColor(text),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.all(12),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),

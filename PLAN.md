@@ -166,11 +166,23 @@ single feature. Roughly in priority order — top items unblock the next.
   - Pixel-comparison goldens for plot painter + LaTeX rendering
     still pending — renderer-version drift would make CI fragile,
     so we'd need a fixed Flutter-version pin first.
-- [ ] **Accessibility audit**. Add `Semantics` widgets to keypad
+- [~] **Accessibility audit**. Add `Semantics` widgets to keypad
   buttons, label every IconButton, verify keyboard navigation for the
   full settings flow, audit color contrast in both themes, test with
   VoiceOver / TalkBack. Currently the keypad is a wall of unlabeled
   buttons to a screen reader.
+  - **V1 partial** (HISTORY round 55): every `CalculatorButton` now
+    carries a `Semantics(label: ...)` wrapper with a glyph-to-speech
+    map (√ → "square root", ⌫ → "backspace", π → "pi", d/dx →
+    "derivative", etc.). Plain digits and named functions pass
+    through. Plus tooltips wired on the two remaining bare
+    `IconButton` sites (function-slot clear, memory-slot delete) +
+    the calculator history-search clear-button. Three new
+    accessibility-tooltip i18n strings × 4 locales. New
+    `calculator_button_test.dart` pins the Semantics labels.
+  - **V2 pending**: keyboard navigation audit (Tab order across
+    settings + analysis), contrast verification in both themes,
+    on-device VoiceOver / TalkBack pass.
 
 ### User experience
 

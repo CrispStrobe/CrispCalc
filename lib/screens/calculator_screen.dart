@@ -1689,6 +1689,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
                               ? null
                               : IconButton(
                                   icon: const Icon(Icons.clear, size: 18),
+                                  tooltip: AppLocalizations.of(context)
+                                      .clearSearchTooltip,
                                   onPressed: () {
                                     _historySearchController.clear();
                                   },

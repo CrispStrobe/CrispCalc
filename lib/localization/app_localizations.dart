@@ -271,6 +271,11 @@ abstract class AppLocalizations {
   String exactIntegerBadge(int digits);
   String get exactIntegerTapToCopy;
 
+  // -- Accessibility tooltips (V1 a11y pass) --
+  String get clearSearchTooltip;
+  String get clearFunctionSlotTooltip;
+  String get deleteMemorySlotTooltip;
+
   // -- Worked examples library --
   String get workedExamplesTitle;
   String get workedExamplesSearchHint;
@@ -859,6 +864,13 @@ class EnLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exact integer · $digits digits';
   @override
   String get exactIntegerTapToCopy => 'Tap to copy';
+
+  @override
+  String get clearSearchTooltip => 'Clear search';
+  @override
+  String get clearFunctionSlotTooltip => 'Clear function slot';
+  @override
+  String get deleteMemorySlotTooltip => 'Delete memory slot';
 
   @override
   String get workedExamplesTitle => 'Worked examples';
@@ -1682,6 +1694,13 @@ class DeLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exakte Ganzzahl · $digits Ziffern';
   @override
   String get exactIntegerTapToCopy => 'Tippen zum Kopieren';
+
+  @override
+  String get clearSearchTooltip => 'Suche leeren';
+  @override
+  String get clearFunctionSlotTooltip => 'Funktion löschen';
+  @override
+  String get deleteMemorySlotTooltip => 'Speicherplatz löschen';
 
   @override
   String get workedExamplesTitle => 'Beispielaufgaben';
@@ -2520,6 +2539,13 @@ class FrLocalizations implements AppLocalizations {
   String get exactIntegerTapToCopy => 'Toucher pour copier';
 
   @override
+  String get clearSearchTooltip => 'Effacer la recherche';
+  @override
+  String get clearFunctionSlotTooltip => 'Effacer l\'emplacement de fonction';
+  @override
+  String get deleteMemorySlotTooltip => 'Supprimer l\'emplacement mémoire';
+
+  @override
   String get workedExamplesTitle => 'Exemples résolus';
   @override
   String get workedExamplesSearchHint => 'Rechercher des exemples…';
@@ -3354,6 +3380,13 @@ class EsLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Entero exacto · $digits dígitos';
   @override
   String get exactIntegerTapToCopy => 'Toca para copiar';
+
+  @override
+  String get clearSearchTooltip => 'Borrar búsqueda';
+  @override
+  String get clearFunctionSlotTooltip => 'Borrar función';
+  @override
+  String get deleteMemorySlotTooltip => 'Eliminar espacio de memoria';
 
   @override
   String get workedExamplesTitle => 'Ejemplos resueltos';
