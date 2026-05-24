@@ -29,6 +29,7 @@ import 'widgets/constants_dialog.dart';
 import 'widgets/export_data_dialog.dart';
 import 'widgets/onboarding_tour.dart';
 import 'widgets/unit_converter_dialog.dart';
+import 'widgets/user_functions_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -500,6 +501,19 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const ConstantsDialog(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.functions),
+                  title: Text(t.settingsUserFunctions),
+                  subtitle: Text(t.settingsUserFunctionsSubtitle),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const UserFunctionsDialog(),
                   ),
                 ),
               ),

@@ -254,6 +254,28 @@ void main() {
         expect(t.exactIntegerBadge(158), contains('158'));
       });
 
+      test('user-defined functions strings are present', () {
+        for (final s in [
+          t.userFunctionsTitle,
+          t.userFunctionsHelp,
+          t.userFunctionsEmpty,
+          t.userFunctionsAdd,
+          t.userFunctionsEdit,
+          t.userFunctionsDelete,
+          t.userFunctionsName,
+          t.userFunctionsNameHelp,
+          t.userFunctionsNameRequired,
+          t.userFunctionsNameInvalid,
+          t.userFunctionsParam,
+          t.userFunctionsBody,
+          t.userFunctionsBodyRequired,
+          t.settingsUserFunctions,
+          t.settingsUserFunctionsSubtitle,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
+
       test('onboarding tour strings are present', () {
         for (final s in [
           t.onboardingSkip,

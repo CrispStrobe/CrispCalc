@@ -56,6 +56,44 @@ class CalculationEntry {
       );
 }
 
+/// A named, user-defined function. Stored by AppState and inlined by
+/// [ExpressionPreprocessingUtils] when the calculator encounters
+/// `<name>(<arg>)` in an expression. Supports composition via
+/// successive expansion passes (`g(f(x))` works as long as both `f` and
+/// `g` are defined). One single-letter parameter per function — kept
+/// minimal to match the calculator-app norm and avoid having to ship a
+/// real argument-list parser.
+class UserFunction {
+  /// Identifier used in expressions. Must be a single letter so it can
+  /// never collide with built-in function names like `sin`, `gcd`,
+  /// `Matrix`. Lowercased on save; ASCII letters only.
+  final String name;
+
+  /// Parameter variable. Defaults to `x`.
+  final String paramVar;
+
+  /// Right-hand side of the definition. e.g. `x^2 + 1`.
+  final String body;
+
+  const UserFunction({
+    required this.name,
+    required this.paramVar,
+    required this.body,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'n': name,
+        'v': paramVar,
+        'b': body,
+      };
+
+  static UserFunction fromJson(Map<String, dynamic> j) => UserFunction(
+        name: (j['n'] as String? ?? '').toLowerCase(),
+        paramVar: j['v'] as String? ?? 'x',
+        body: j['b'] as String? ?? '',
+      );
+}
+
 class AppState extends ChangeNotifier {
   static final AppState _instance = AppState._internal();
   factory AppState() => _instance;
@@ -76,6 +114,7 @@ class AppState extends ChangeNotifier {
   static const _kParameters = 'crisp.parameters';
   static const _kExactIntegerMode = 'crisp.exactIntegerMode';
   static const _kOnboardingDismissed = 'crisp.onboardingDismissed';
+  static const _kUserFunctions = 'crisp.userFunctions';
 
   static const int _kGraphSlotCount = 10;
   static const int _kHistoryCap = 200;
@@ -123,6 +162,7 @@ class AppState extends ChangeNotifier {
     _onboardingDismissed = false;
     history.clear();
     userVariables.clear();
+    userFunctions.clear();
     functionParameters.clear();
     for (var i = 0; i < graphFunctions.length; i++) {
       graphFunctions[i] = '';
@@ -155,6 +195,18 @@ class AppState extends ChangeNotifier {
       if (exactMode != null) _exactIntegerMode = exactMode;
       final onboarded = _prefs!.getBool(_kOnboardingDismissed);
       if (onboarded != null) _onboardingDismissed = onboarded;
+      final udfJson = _prefs!.getString(_kUserFunctions);
+      if (udfJson != null) {
+        try {
+          final list = jsonDecode(udfJson) as List<dynamic>;
+          for (final raw in list) {
+            final f = UserFunction.fromJson(raw as Map<String, dynamic>);
+            if (f.name.isNotEmpty) userFunctions[f.name] = f;
+          }
+        } catch (e) {
+          debugPrint('STATE: failed to parse user functions: $e');
+        }
+      }
       _restoreList<CalculationEntry>(
         key: _kHistory,
         target: history,
@@ -259,11 +311,37 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setUserFunction(UserFunction fn) {
+    userFunctions[fn.name] = fn;
+    _persistUserFunctions();
+    notifyListeners();
+  }
+
+  void removeUserFunction(String name) {
+    if (userFunctions.remove(name) != null) {
+      _persistUserFunctions();
+      notifyListeners();
+    }
+  }
+
+  void _persistUserFunctions() {
+    _prefs?.setString(
+      _kUserFunctions,
+      jsonEncode(userFunctions.values.map((f) => f.toJson()).toList()),
+    );
+  }
+
   // --- Volatile (now also persisted) state --------------------------------
 
   final List<CalculationEntry> history = [];
   final Map<String, String> userVariables = {};
   late final List<String> graphFunctions;
+
+  /// Named user-defined functions keyed by `UserFunction.name` (always
+  /// lowercase). The calculator preprocessor inlines `<name>(arg)`
+  /// occurrences before sending the expression to SymEngine, with up to
+  /// `_kUdfExpansionDepth` passes so `g(f(x))` composes correctly.
+  final Map<String, UserFunction> userFunctions = {};
 
   /// Parameter values per graph slot. Keyed by slot index, then by
   /// parameter name. Used by the graphing screen's slider panel: any
@@ -440,6 +518,8 @@ class AppState extends ChangeNotifier {
       'numberFormat': _numberFormat.name,
       'themeMode': _themeMode.name,
       'exactIntegerMode': _exactIntegerMode,
+      'userFunctions':
+          userFunctions.values.map((f) => f.toJson()).toList(growable: false),
       'history': history.map((e) => e.toJson()).toList(),
       'variables': Map<String, String>.from(userVariables),
       'functions': List<String>.from(graphFunctions),

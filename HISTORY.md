@@ -2,6 +2,61 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 50) — User-defined function namespace
+
+Named, reusable functions live alongside the existing Y1..Y10 graph
+slots. `f(x) = x^2 + 1` defined once works in any expression:
+`f(3) + 1` evaluates to 11; `g(f(x))` composes when both sides are
+defined.
+
+### Mechanism
+
+- **`UserFunction(name, paramVar, body)`** value type in `app_state.dart`
+  with `toJson`/`fromJson`. Names are lowercased and constrained to
+  a single letter `a..z` at the dialog level so they can't shadow
+  built-ins like `sin`, `gcd`, `Matrix`.
+- **`AppState.userFunctions`** — keyed map, persisted as the
+  `crisp.userFunctions` shared-prefs entry, included in
+  `exportToJson` so backup/restore round-trips.
+- **Preprocessor** (`expression_preprocessing_utils.dart`) gains
+  `_expandUserFunctions`: a paren-balanced scanner that finds
+  `name(<arg>)` calls and rewrites them as `(<body-with-param-replaced>)`.
+  Parameter substitution uses identifier-bounded regex
+  (`(?<![a-zA-Z_])param(?![a-zA-Z_0-9])`) so `xx` in the body isn't
+  mistaken for `x`. The existing `preprocessExpression` loop is now
+  a convergence loop over both UDF and Y1..Y10 expansion, so `g(f(x))`
+  resolves in two passes.
+- **UI**: a `UserFunctionsDialog` reachable from Settings → "User-defined
+  functions". List + add + edit + delete; the editor uses a `Form`
+  with validators for name (single lowercase letter), param (non-empty),
+  and body (non-empty).
+
+### Coverage / scope
+
+- One single-letter name per function (`a..z`). Multi-letter names
+  would collide with built-ins and need a real keyword reservation
+  pass — skipped for V1.
+- One parameter variable per function. Multi-arg UDFs (`f(x, y) = …`)
+  are deferred — they'd need a real argument-list parser.
+- Composition depth defaults to 4 (`maxDepth: 4`), which covers
+  pedagogically realistic stacks without giving cyclic definitions
+  enough rope to hang the UI.
+
+### i18n
+
+15 new strings (`userFunctionsTitle`, `userFunctionsHelp`, …,
+`settingsUserFunctions*`) across en/de/fr/es. Same non-emptiness
+coverage check as every prior round.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **917/917** (13 new tests covering AppState
+  persistence, preprocessor inlining for the simple / composition /
+  built-in-shadow / cycle-guard / identifier-boundary / non-x param
+  cases, plus localization).
+- `dart format`: clean.
+
 ## 2026-05-24 (round 49) — Step engine integration V3
 
 Three new integration rules in `StepEngine.integrate()`, closing the

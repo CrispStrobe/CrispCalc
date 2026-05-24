@@ -183,14 +183,79 @@ class ExpressionPreprocessingUtils {
     return solveResult;
   }
 
-  /// Inlines user-defined `Y1`..`Y10` function references with a recursion
-  /// guard so cyclic definitions can't loop forever.
+  /// Inlines user-defined `Y1`..`Y10` graph slots and named user
+  /// functions (e.g. `f(x) = x^2 + 1` typed in the calculator). Both
+  /// share the same depth budget so compositions like `g(f(x))` work
+  /// up to four nested expansions before the guard kicks in.
   static String preprocessExpression(
     String expression,
     AppState appState, {
     int maxDepth = 4,
   }) {
-    return _expandFunctions(expression, appState, maxDepth);
+    var out = expression;
+    var remaining = maxDepth;
+    while (remaining > 0) {
+      final before = out;
+      out = _expandUserFunctions(out, appState);
+      out = _expandFunctions(out, appState, 1); // Y1..Y10
+      if (out == before) break;
+      remaining--;
+    }
+    return out;
+  }
+
+  /// Single-pass inline of named [UserFunction] references. Caller
+  /// loops until convergence or the depth budget runs out — see
+  /// [preprocessExpression]. Skips identifiers followed by `(` that
+  /// aren't actually user-function calls so built-ins (`sin`, `gcd`,
+  /// `Matrix`) stay intact.
+  static String _expandUserFunctions(String expression, AppState appState) {
+    if (appState.userFunctions.isEmpty) return expression;
+    // Build a per-pass regex of `name(` openers. Sorted longest-first
+    // for safety, though single-letter names mean there's no overlap.
+    final names = appState.userFunctions.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    final pattern = RegExp(
+      r'(?<![a-zA-Z_])(' + names.map(RegExp.escape).join('|') + r')\(',
+    );
+    final out = StringBuffer();
+    var i = 0;
+    while (i < expression.length) {
+      final match = pattern.matchAsPrefix(expression, i);
+      if (match == null) {
+        out.write(expression[i]);
+        i++;
+        continue;
+      }
+      final name = match.group(1)!;
+      // Walk the parens to find the matching close.
+      var depth = 1;
+      var j = match.end;
+      while (j < expression.length && depth > 0) {
+        final c = expression[j];
+        if (c == '(') depth++;
+        if (c == ')') depth--;
+        if (depth == 0) break;
+        j++;
+      }
+      if (j >= expression.length || depth != 0) {
+        // Unbalanced — leave the original text alone, advance one char.
+        out.write(expression[i]);
+        i++;
+        continue;
+      }
+      final arg = expression.substring(match.end, j);
+      final fn = appState.userFunctions[name]!;
+      final substituted = fn.body.replaceAll(
+        RegExp(r'(?<![a-zA-Z_])' +
+            RegExp.escape(fn.paramVar) +
+            r'(?![a-zA-Z_0-9])'),
+        '($arg)',
+      );
+      out.write('($substituted)');
+      i = j + 1;
+    }
+    return out.toString();
   }
 
   static String _expandFunctions(

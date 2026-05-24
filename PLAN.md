@@ -408,10 +408,17 @@ roughly double the perceived value of the app.
   Listed as a 5th `_ModuleCard` in the Analysis hub.
   **V2 deferred**: hidden-line removal, perspective projection,
   contour overlays, parametric 3D curves, intersection with planes.
-- [ ] **User-defined function namespace**. Today's graph slots
+- [x] ~~**User-defined function namespace**. Today's graph slots
   Y1..Y10 are a partial story. Allow named functions
   (`f(x) = x^2 + 1`), composition (`g(f(x))`), and a tab to browse /
-  edit / rename them.
+  edit / rename them.~~ Done 2026-05-24 — see HISTORY round 50.
+  New `UserFunction` model + persisted `AppState.userFunctions` map.
+  Preprocessor inlines `<name>(arg)` references with paren-balanced
+  argument capture and per-pass identifier-bounded parameter
+  substitution; up to four expansion passes so `g(f(x))` composes.
+  Settings tile opens a `UserFunctionsDialog` with add / edit /
+  delete. Single-letter lowercase names (a..z) to avoid collisions
+  with built-ins. Localized across en/de/fr/es.
 - [x] ~~**Built-in constants library**.~~ Done 2026-05-17 — see
   HISTORY round 29. 30 constants across mathematical, physical,
   chemistry, and astronomy categories. Settings → "Constants

@@ -271,6 +271,23 @@ abstract class AppLocalizations {
   String exactIntegerBadge(int digits);
   String get exactIntegerTapToCopy;
 
+  // -- User-defined functions --
+  String get userFunctionsTitle;
+  String get userFunctionsHelp;
+  String get userFunctionsEmpty;
+  String get userFunctionsAdd;
+  String get userFunctionsEdit;
+  String get userFunctionsDelete;
+  String get userFunctionsName;
+  String get userFunctionsNameHelp;
+  String get userFunctionsNameRequired;
+  String get userFunctionsNameInvalid;
+  String get userFunctionsParam;
+  String get userFunctionsBody;
+  String get userFunctionsBodyRequired;
+  String get settingsUserFunctions;
+  String get settingsUserFunctionsSubtitle;
+
   // -- Onboarding tour (first-launch overlay) --
   String get onboardingSkip;
   String get onboardingNext;
@@ -815,6 +832,45 @@ class EnLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exact integer · $digits digits';
   @override
   String get exactIntegerTapToCopy => 'Tap to copy';
+
+  @override
+  String get userFunctionsTitle => 'User-defined functions';
+  @override
+  String get userFunctionsHelp =>
+      'Define a function once, call it from any expression. e.g. '
+      '`f(x) = x^2 + 1`, then `f(3) + 1` evaluates to 11. Composition '
+      '`g(f(x))` works as long as both are defined.';
+  @override
+  String get userFunctionsEmpty =>
+      'No user-defined functions yet. Tap Add to create your first.';
+  @override
+  String get userFunctionsAdd => 'Add';
+  @override
+  String get userFunctionsEdit => 'Edit';
+  @override
+  String get userFunctionsDelete => 'Delete';
+  @override
+  String get userFunctionsName => 'Name';
+  @override
+  String get userFunctionsNameHelp =>
+      'Single lowercase letter (a..z) that won\'t collide with built-ins.';
+  @override
+  String get userFunctionsNameRequired => 'Required';
+  @override
+  String get userFunctionsNameInvalid =>
+      'Must be a single lowercase letter (a..z).';
+  @override
+  String get userFunctionsParam => 'Parameter';
+  @override
+  String get userFunctionsBody => 'Body';
+  @override
+  String get userFunctionsBodyRequired => 'Function body required';
+  @override
+  String get settingsUserFunctions => 'User-defined functions';
+  @override
+  String get settingsUserFunctionsSubtitle =>
+      'Define named functions like f(x) = x^2 + 1 and reuse them in any '
+      'expression.';
 
   @override
   String get onboardingSkip => 'Skip';
@@ -1530,6 +1586,47 @@ class DeLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exakte Ganzzahl · $digits Ziffern';
   @override
   String get exactIntegerTapToCopy => 'Tippen zum Kopieren';
+
+  @override
+  String get userFunctionsTitle => 'Benutzerdefinierte Funktionen';
+  @override
+  String get userFunctionsHelp =>
+      'Definiere eine Funktion einmal, rufe sie aus jedem Ausdruck auf. '
+      'Z. B. `f(x) = x^2 + 1`, dann ergibt `f(3) + 1` den Wert 11. Auch '
+      'die Komposition `g(f(x))` funktioniert, sofern beide definiert sind.';
+  @override
+  String get userFunctionsEmpty =>
+      'Noch keine benutzerdefinierten Funktionen. Tippe Hinzufügen, um '
+      'die erste anzulegen.';
+  @override
+  String get userFunctionsAdd => 'Hinzufügen';
+  @override
+  String get userFunctionsEdit => 'Bearbeiten';
+  @override
+  String get userFunctionsDelete => 'Löschen';
+  @override
+  String get userFunctionsName => 'Name';
+  @override
+  String get userFunctionsNameHelp =>
+      'Einzelner Kleinbuchstabe (a..z), der nicht mit eingebauten Namen '
+      'kollidiert.';
+  @override
+  String get userFunctionsNameRequired => 'Pflichtfeld';
+  @override
+  String get userFunctionsNameInvalid =>
+      'Muss ein einzelner Kleinbuchstabe (a..z) sein.';
+  @override
+  String get userFunctionsParam => 'Parameter';
+  @override
+  String get userFunctionsBody => 'Rumpf';
+  @override
+  String get userFunctionsBodyRequired => 'Funktionsrumpf erforderlich';
+  @override
+  String get settingsUserFunctions => 'Benutzerdefinierte Funktionen';
+  @override
+  String get settingsUserFunctionsSubtitle =>
+      'Definiere benannte Funktionen wie f(x) = x^2 + 1 und nutze sie '
+      'in jedem Ausdruck wieder.';
 
   @override
   String get onboardingSkip => 'Überspringen';
@@ -2257,6 +2354,47 @@ class FrLocalizations implements AppLocalizations {
   String get exactIntegerTapToCopy => 'Toucher pour copier';
 
   @override
+  String get userFunctionsTitle => 'Fonctions personnalisées';
+  @override
+  String get userFunctionsHelp =>
+      'Définis une fonction une fois, appelle-la depuis n\'importe quelle '
+      'expression. Par ex. `f(x) = x^2 + 1`, alors `f(3) + 1` vaut 11. '
+      'La composition `g(f(x))` fonctionne tant que les deux sont définies.';
+  @override
+  String get userFunctionsEmpty =>
+      'Pas encore de fonctions personnalisées. Appuie sur Ajouter pour en '
+      'créer une.';
+  @override
+  String get userFunctionsAdd => 'Ajouter';
+  @override
+  String get userFunctionsEdit => 'Modifier';
+  @override
+  String get userFunctionsDelete => 'Supprimer';
+  @override
+  String get userFunctionsName => 'Nom';
+  @override
+  String get userFunctionsNameHelp =>
+      'Une seule lettre minuscule (a..z) qui n\'entre pas en conflit '
+      'avec les noms intégrés.';
+  @override
+  String get userFunctionsNameRequired => 'Obligatoire';
+  @override
+  String get userFunctionsNameInvalid =>
+      'Doit être une seule lettre minuscule (a..z).';
+  @override
+  String get userFunctionsParam => 'Paramètre';
+  @override
+  String get userFunctionsBody => 'Corps';
+  @override
+  String get userFunctionsBodyRequired => 'Corps de fonction requis';
+  @override
+  String get settingsUserFunctions => 'Fonctions personnalisées';
+  @override
+  String get settingsUserFunctionsSubtitle =>
+      'Définis des fonctions nommées comme f(x) = x^2 + 1 et réutilise-les '
+      'dans toute expression.';
+
+  @override
   String get onboardingSkip => 'Passer';
   @override
   String get onboardingNext => 'Suivant';
@@ -2979,6 +3117,47 @@ class EsLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Entero exacto · $digits dígitos';
   @override
   String get exactIntegerTapToCopy => 'Toca para copiar';
+
+  @override
+  String get userFunctionsTitle => 'Funciones definidas por el usuario';
+  @override
+  String get userFunctionsHelp =>
+      'Define una función una vez, llámala desde cualquier expresión. '
+      'P. ej. `f(x) = x^2 + 1`, entonces `f(3) + 1` evalúa a 11. La '
+      'composición `g(f(x))` funciona mientras ambas estén definidas.';
+  @override
+  String get userFunctionsEmpty =>
+      'Aún no hay funciones definidas por el usuario. Pulsa Añadir para '
+      'crear la primera.';
+  @override
+  String get userFunctionsAdd => 'Añadir';
+  @override
+  String get userFunctionsEdit => 'Editar';
+  @override
+  String get userFunctionsDelete => 'Eliminar';
+  @override
+  String get userFunctionsName => 'Nombre';
+  @override
+  String get userFunctionsNameHelp =>
+      'Una sola letra minúscula (a..z) que no entre en conflicto con '
+      'nombres integrados.';
+  @override
+  String get userFunctionsNameRequired => 'Obligatorio';
+  @override
+  String get userFunctionsNameInvalid =>
+      'Debe ser una sola letra minúscula (a..z).';
+  @override
+  String get userFunctionsParam => 'Parámetro';
+  @override
+  String get userFunctionsBody => 'Cuerpo';
+  @override
+  String get userFunctionsBodyRequired => 'Cuerpo de la función requerido';
+  @override
+  String get settingsUserFunctions => 'Funciones definidas por el usuario';
+  @override
+  String get settingsUserFunctionsSubtitle =>
+      'Define funciones con nombre como f(x) = x^2 + 1 y reutilízalas en '
+      'cualquier expresión.';
 
   @override
   String get onboardingSkip => 'Omitir';
