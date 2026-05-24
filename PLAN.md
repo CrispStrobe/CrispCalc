@@ -532,12 +532,41 @@ Roadmap (ship one round at a time):
   deferred to V2 (would need a way to navigate into the
   Constraints screen rather than the calculator).
 
-- [ ] **CSP Round B — Sudoku module**.
-  New `lib/widgets/sudoku_grid.dart` with a tappable 9×9 input grid,
-  Solve button, Step-through visualization (uses dart_csp's
-  `setOptions(callback: ...)` hook). Solve, verify, optionally
-  enumerate alternates. Pre-filled puzzle library (easy/medium/hard).
-  Likely the most-visible feature this batch produces.
+- [x] ~~**CSP Round B — Sudoku module**.~~ Done 2026-05-24 — see
+  HISTORY round 60. Solver wraps dart_csp; new `SudokuGenerator`
+  uses `hasMultipleSolutions()` for uniqueness-preserving clue
+  peeling. Visualizer captures every search step into a list and
+  replays at user-controlled speed. UI: preset picker, generator
+  row (easy/med/hard chips + Generate), digit pad, Solve button,
+  play/pause/restart/speed/scrub controls. Round-trip test
+  (generate → solve → validate) covers both layouts × all
+  difficulties × multiple seeds.
+  - **V1 scope shipped**: 4×4 (2×2 boxes) and 9×9 (3×3 boxes).
+    Visualizer captures every step into a list and replays at
+    Slow / Med / Fast.
+  - **V2 deferred — variant roadmap**. Sudoku is a family, not one
+    puzzle. Standard sizes alone span 4..25 with mixed
+    aspect-ratio boxes:
+    - 6×6 (2×3 boxes), 8×8 (2×4), 10×10 (2×5), 12×12 (2×6 or 3×4),
+      15×15 (3×5), 16×16 (4×4), 25×25 (5×5). Each needs a clue
+      library and validated minimum-clue counts (the wiki ranges
+      from 4 clues for 4×4 to 55 for 16×16; 25×25 lower bound is
+      open).
+    - Irregular regions ("Du-sum-oh"/Geometry Number Place) —
+      boxes are arbitrary same-size polyomino tilings, not the
+      regular grid.
+    - Killer / Samunampure — boxes replaced by sum constraints
+      over irregular regions. Maps naturally to dart_csp's
+      `addLinearEquals` over per-cage cell sets.
+    - Other variants (Sudoku X / diagonals, Disjoint Groups,
+      Hypercube, NRC, 2-Quasi-Magic) all reduce to additional
+      `allDifferent` overlays — once the regular engine is in
+      place, each is a small per-variant constraint pack.
+  - **V3 deferred** — hint mode (pencil-marks per cell driven by
+    AC-3 domain reductions), uniqueness check exposed to the user
+    ("this puzzle has 3 solutions"), step-trace annotations
+    explaining each propagation (currently the visualizer shows
+    *what* changes, not *why*).
 
 - [ ] **CSP Round C — Generic constraint mini-DSL**.
   A free-text "Constraint problem" editor in the Analysis hub. Users

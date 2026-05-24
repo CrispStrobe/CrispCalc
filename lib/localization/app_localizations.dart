@@ -274,6 +274,26 @@ abstract class AppLocalizations {
   // -- Long-evaluation progress overlay (V2) --
   String get calculating;
 
+  // -- Sudoku module (Analysis hub / CSP Round B) --
+  String get moduleSudokuTitle;
+  String get moduleSudokuSubtitle;
+  String get sudokuSolveButton;
+  String get sudokuClearCell;
+  String get sudokuPresetLabelChooser;
+  String get sudokuPresetCustom;
+  String sudokuPresetLabel(String id);
+  String get sudokuVisualizerHeader;
+  String get sudokuPlay;
+  String get sudokuPause;
+  String get sudokuRestart;
+  String get sudokuSpeedSlow;
+  String get sudokuSpeedMed;
+  String get sudokuSpeedFast;
+  String get sudokuGenerateButton;
+  String get sudokuDifficultyEasy;
+  String get sudokuDifficultyMedium;
+  String get sudokuDifficultyHard;
+
   // -- Constraints module (Analysis hub / CSP Round A) --
   String get moduleConstraintsTitle;
   String get moduleConstraintsSubtitle;
@@ -901,6 +921,61 @@ class EnLocalizations implements AppLocalizations {
 
   @override
   String get calculating => 'Calculating…';
+
+  @override
+  String get moduleSudokuTitle => 'Sudoku';
+  @override
+  String get moduleSudokuSubtitle =>
+      'Solve 4×4 and 9×9 puzzles, watch the search step-by-step.';
+  @override
+  String get sudokuSolveButton => 'Solve';
+  @override
+  String get sudokuClearCell => 'Clear';
+  @override
+  String get sudokuPresetLabelChooser => 'Puzzle';
+  @override
+  String get sudokuPresetCustom => 'Custom';
+  @override
+  String sudokuPresetLabel(String id) {
+    switch (id) {
+      case 'small4x4Easy':
+        return '4×4 easy';
+      case 'small4x4Medium':
+        return '4×4 medium';
+      case 'small4x4Hard':
+        return '4×4 hard';
+      case 'standard9x9Easy':
+        return '9×9 easy';
+      case 'standard9x9Medium':
+        return '9×9 medium';
+      case 'standard9x9Hard':
+        return '9×9 hard (AI Escargot)';
+    }
+    return id;
+  }
+
+  @override
+  String get sudokuVisualizerHeader => 'Search visualizer';
+  @override
+  String get sudokuPlay => 'Play';
+  @override
+  String get sudokuPause => 'Pause';
+  @override
+  String get sudokuRestart => 'Restart';
+  @override
+  String get sudokuSpeedSlow => 'Slow';
+  @override
+  String get sudokuSpeedMed => 'Med';
+  @override
+  String get sudokuSpeedFast => 'Fast';
+  @override
+  String get sudokuGenerateButton => 'Generate';
+  @override
+  String get sudokuDifficultyEasy => 'Easy';
+  @override
+  String get sudokuDifficultyMedium => 'Medium';
+  @override
+  String get sudokuDifficultyHard => 'Hard';
 
   @override
   String get moduleConstraintsTitle => 'Constraint problems';
@@ -1799,6 +1874,61 @@ class DeLocalizations implements AppLocalizations {
 
   @override
   String get calculating => 'Berechne …';
+
+  @override
+  String get moduleSudokuTitle => 'Sudoku';
+  @override
+  String get moduleSudokuSubtitle =>
+      '4×4- und 9×9-Rätsel lösen, die Suche Schritt für Schritt mitverfolgen.';
+  @override
+  String get sudokuSolveButton => 'Lösen';
+  @override
+  String get sudokuClearCell => 'Leeren';
+  @override
+  String get sudokuPresetLabelChooser => 'Rätsel';
+  @override
+  String get sudokuPresetCustom => 'Eigen';
+  @override
+  String sudokuPresetLabel(String id) {
+    switch (id) {
+      case 'small4x4Easy':
+        return '4×4 leicht';
+      case 'small4x4Medium':
+        return '4×4 mittel';
+      case 'small4x4Hard':
+        return '4×4 schwer';
+      case 'standard9x9Easy':
+        return '9×9 leicht';
+      case 'standard9x9Medium':
+        return '9×9 mittel';
+      case 'standard9x9Hard':
+        return '9×9 schwer (AI Escargot)';
+    }
+    return id;
+  }
+
+  @override
+  String get sudokuVisualizerHeader => 'Such-Visualisierung';
+  @override
+  String get sudokuPlay => 'Start';
+  @override
+  String get sudokuPause => 'Pause';
+  @override
+  String get sudokuRestart => 'Neu';
+  @override
+  String get sudokuSpeedSlow => 'Langsam';
+  @override
+  String get sudokuSpeedMed => 'Mittel';
+  @override
+  String get sudokuSpeedFast => 'Schnell';
+  @override
+  String get sudokuGenerateButton => 'Erzeugen';
+  @override
+  String get sudokuDifficultyEasy => 'Leicht';
+  @override
+  String get sudokuDifficultyMedium => 'Mittel';
+  @override
+  String get sudokuDifficultyHard => 'Schwer';
 
   @override
   String get moduleConstraintsTitle => 'Bedingungsprobleme';
@@ -2801,6 +2931,61 @@ class FrLocalizations implements AppLocalizations {
   String get calculating => 'Calcul en cours …';
 
   @override
+  String get moduleSudokuTitle => 'Sudoku';
+  @override
+  String get moduleSudokuSubtitle =>
+      'Résoudre des grilles 4×4 et 9×9, suivre la recherche pas à pas.';
+  @override
+  String get sudokuSolveButton => 'Résoudre';
+  @override
+  String get sudokuClearCell => 'Effacer';
+  @override
+  String get sudokuPresetLabelChooser => 'Grille';
+  @override
+  String get sudokuPresetCustom => 'Personnalisée';
+  @override
+  String sudokuPresetLabel(String id) {
+    switch (id) {
+      case 'small4x4Easy':
+        return '4×4 facile';
+      case 'small4x4Medium':
+        return '4×4 moyen';
+      case 'small4x4Hard':
+        return '4×4 difficile';
+      case 'standard9x9Easy':
+        return '9×9 facile';
+      case 'standard9x9Medium':
+        return '9×9 moyen';
+      case 'standard9x9Hard':
+        return '9×9 difficile (AI Escargot)';
+    }
+    return id;
+  }
+
+  @override
+  String get sudokuVisualizerHeader => 'Visualiseur de recherche';
+  @override
+  String get sudokuPlay => 'Lecture';
+  @override
+  String get sudokuPause => 'Pause';
+  @override
+  String get sudokuRestart => 'Redémarrer';
+  @override
+  String get sudokuSpeedSlow => 'Lent';
+  @override
+  String get sudokuSpeedMed => 'Moyen';
+  @override
+  String get sudokuSpeedFast => 'Rapide';
+  @override
+  String get sudokuGenerateButton => 'Générer';
+  @override
+  String get sudokuDifficultyEasy => 'Facile';
+  @override
+  String get sudokuDifficultyMedium => 'Moyen';
+  @override
+  String get sudokuDifficultyHard => 'Difficile';
+
+  @override
   String get moduleConstraintsTitle => 'Problèmes de contraintes';
   @override
   String get moduleConstraintsSubtitle =>
@@ -3800,6 +3985,61 @@ class EsLocalizations implements AppLocalizations {
 
   @override
   String get calculating => 'Calculando…';
+
+  @override
+  String get moduleSudokuTitle => 'Sudoku';
+  @override
+  String get moduleSudokuSubtitle =>
+      'Resuelve cuadrículas 4×4 y 9×9, sigue la búsqueda paso a paso.';
+  @override
+  String get sudokuSolveButton => 'Resolver';
+  @override
+  String get sudokuClearCell => 'Borrar';
+  @override
+  String get sudokuPresetLabelChooser => 'Cuadrícula';
+  @override
+  String get sudokuPresetCustom => 'Personalizada';
+  @override
+  String sudokuPresetLabel(String id) {
+    switch (id) {
+      case 'small4x4Easy':
+        return '4×4 fácil';
+      case 'small4x4Medium':
+        return '4×4 medio';
+      case 'small4x4Hard':
+        return '4×4 difícil';
+      case 'standard9x9Easy':
+        return '9×9 fácil';
+      case 'standard9x9Medium':
+        return '9×9 medio';
+      case 'standard9x9Hard':
+        return '9×9 difícil (AI Escargot)';
+    }
+    return id;
+  }
+
+  @override
+  String get sudokuVisualizerHeader => 'Visualizador de búsqueda';
+  @override
+  String get sudokuPlay => 'Reproducir';
+  @override
+  String get sudokuPause => 'Pausa';
+  @override
+  String get sudokuRestart => 'Reiniciar';
+  @override
+  String get sudokuSpeedSlow => 'Lento';
+  @override
+  String get sudokuSpeedMed => 'Medio';
+  @override
+  String get sudokuSpeedFast => 'Rápido';
+  @override
+  String get sudokuGenerateButton => 'Generar';
+  @override
+  String get sudokuDifficultyEasy => 'Fácil';
+  @override
+  String get sudokuDifficultyMedium => 'Medio';
+  @override
+  String get sudokuDifficultyHard => 'Difícil';
 
   @override
   String get moduleConstraintsTitle => 'Problemas de restricciones';

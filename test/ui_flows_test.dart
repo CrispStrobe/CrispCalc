@@ -162,20 +162,31 @@ void main() {
       expect(find.text('Mean'), findsOneWidget);
     });
 
-    testWidgets('Analysis hub lists all seven modules', (tester) async {
+    testWidgets('Analysis hub lists all eight modules', (tester) async {
       await _pumpApp(tester);
       final analysis = find.text('Analysis');
       await tester.tap(analysis.first);
       await tester.pumpAndSettle();
 
-      // All seven module cards.
-      expect(find.text('Curve Sketching'), findsOneWidget);
-      expect(find.text('Planes'), findsOneWidget);
-      expect(find.text('Conic Sections'), findsOneWidget);
-      expect(find.text('Statistics'), findsOneWidget);
-      expect(find.text('3D Graphing'), findsOneWidget);
-      expect(find.text('Unit Converter'), findsOneWidget);
-      expect(find.text('Constraint problems'), findsOneWidget);
+      // The hub is a ListView; at 1280×800 not all 8 cards fit
+      // without scrolling. Scroll each off-screen card into view
+      // before asserting it exists.
+      final scrollable = find.byType(Scrollable).first;
+      for (final label in const [
+        'Curve Sketching',
+        'Planes',
+        'Conic Sections',
+        'Statistics',
+        '3D Graphing',
+        'Unit Converter',
+        'Constraint problems',
+        'Sudoku',
+      ]) {
+        await tester.scrollUntilVisible(find.text(label), 200,
+            scrollable: scrollable);
+        await tester.pumpAndSettle();
+        expect(find.text(label), findsOneWidget);
+      }
     });
   });
 }

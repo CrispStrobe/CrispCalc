@@ -268,6 +268,44 @@ void main() {
         expect(t.calculating.trim(), isNotEmpty);
       });
 
+      test('Sudoku module strings are present', () {
+        for (final s in [
+          t.moduleSudokuTitle,
+          t.moduleSudokuSubtitle,
+          t.sudokuSolveButton,
+          t.sudokuClearCell,
+          t.sudokuPresetLabelChooser,
+          t.sudokuPresetCustom,
+          t.sudokuVisualizerHeader,
+          t.sudokuPlay,
+          t.sudokuPause,
+          t.sudokuRestart,
+          t.sudokuSpeedSlow,
+          t.sudokuSpeedMed,
+          t.sudokuSpeedFast,
+          t.sudokuGenerateButton,
+          t.sudokuDifficultyEasy,
+          t.sudokuDifficultyMedium,
+          t.sudokuDifficultyHard,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+        // Preset-id dispatch should resolve every preset to a
+        // non-empty label.
+        for (final id in [
+          'small4x4Easy',
+          'small4x4Medium',
+          'small4x4Hard',
+          'standard9x9Easy',
+          'standard9x9Medium',
+          'standard9x9Hard',
+        ]) {
+          expect(t.sudokuPresetLabel(id).trim(), isNotEmpty);
+        }
+        // Unknown id falls back to the id itself (not null).
+        expect(t.sudokuPresetLabel('bogus'), 'bogus');
+      });
+
       test('CSP / Constraints module strings are present', () {
         for (final s in [
           t.moduleConstraintsTitle,

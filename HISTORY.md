@@ -2,6 +2,114 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 60) — CSP Round B: Sudoku module with step-by-step visualizer
+
+Second slice of the CSP integration plan and the most visible
+single feature in the app: a full Sudoku module with puzzle
+generation and an animated step-by-step solver. Sits as the 8th
+card on the Analysis hub.
+
+### Engine (`lib/engine/sudoku.dart`)
+
+- **`SudokuLayout(side, boxRows, boxCols)`** with an assert that
+  `boxRows * boxCols == side`. V1 ships constants for `small`
+  (4×4 with 2×2 boxes) and `standard` (9×9 with 3×3 boxes); the
+  PLAN.md variant roadmap covers 6×6 / 8×8 / 10×10 / 12×12 /
+  15×15 / 16×16 / 25×25, irregular regions, killer.
+- **`SudokuPuzzle(layout, cells)`** — flat length-N² int list,
+  0 = empty.
+- **`SudokuSolver.solve`** — wraps a `csp.Problem` with one
+  variable per cell (clued cells get a singleton domain),
+  `addAllDifferent` per row / column / box. Returns the filled
+  cell list.
+- **`SudokuSolver.solveWithTrace`** — same problem, but uses
+  `setOptions(callback: ...)` to capture every solver decision
+  as a `SudokuTraceFrame`. Each frame is a complete snapshot
+  plus the `justChangedIndex` of the cell that flipped, so the
+  visualizer can highlight what just happened.
+- **`SudokuGenerator.generate`** — two-stage: (1) ask the solver
+  to complete an all-empty board seeded with one random clue
+  (varies per call), (2) peel clues in shuffled order while
+  `hasMultipleSolutions()` returns false. Difficulty knob maps
+  to a target clue count (4×4: 10 / 7 / 4; 9×9: 40 / 30 / 22).
+
+### Widget (`lib/widgets/sudoku_grid.dart`)
+
+Pure layout: N×N grid via nested `Column`/`Row` + `AspectRatio`.
+Box boundaries get a heavier border than cell boundaries.
+Three visual states per cell: clue (bold), filled (primary
+color, normal weight), highlight (just-changed by the solver —
+brief primary tint). Selection tint at half alpha. Tappable.
+
+### Screen (`lib/screens/sudoku_screen.dart`)
+
+Three-section layout (responsive: side-by-side on ≥720 px wide):
+
+1. **Grid** — the SudokuGrid widget.
+2. **Controls** — preset picker dropdown (3 verified-feasible
+   4×4 + 3 standard 9×9 puzzles), Generator row (easy/med/hard
+   chips + Generate button), digit pad (1..N + Clear), Solve.
+3. **Visualizer** — appears after Solve. Header shows
+   `current / total` frame count; slider scrubs to any frame;
+   icons for Restart / Play-Pause; segmented Slow/Med/Fast
+   speed (800/250/50 ms per frame).
+
+### i18n
+
+20 new strings across en/de/fr/es (module title + subtitle,
+solve / clear / generate buttons, preset chooser, custom label,
+6 preset IDs via templated method, visualizer header, play /
+pause / restart, three speeds, three difficulties). The preset-
+label dispatcher returns the unknown id as-is so future preset
+additions don't crash before translations land.
+
+### Generator design — uniqueness-first
+
+The PLAN.md spec called for "peel clues until uniqueness fails."
+dart_csp's `hasMultipleSolutions()` is the load-bearing primitive:
+on every peel candidate we ask whether ≥ 2 distinct solutions
+exist; if yes, put the value back. Output is by construction a
+puzzle with exactly one solution.
+
+Difficulty calibration uses Wikipedia's minimum-clue table as the
+lower bound (4 clues for 4×4, 17 for 9×9 — though we sit at 22
+for "hard" 9×9 because puzzles below 25 clues tend to need
+deep search and the visualizer would emit thousands of frames).
+
+### Round-trip test
+
+The user explicitly asked for a generate → solve round-trip in
+addition to unit tests. Implemented as a parametrized helper
+running across (4×4, 9×9) × (easy, medium, hard) × varied seeds.
+For each combination, generate a puzzle, solve it, and verify:
+solution is non-null, every clue is preserved, solution
+satisfies row / column / box `allDifferent`. All five
+combinations pass.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **1141/1141**. New tests:
+  - 19 in `test/sudoku_test.dart` (layout invariants, solve +
+    trace + presets, 3 generator unit tests, 5 round-trip
+    parameterized).
+  - 7 new locale-coverage strings + Sudoku-preset-id dispatch.
+  - The "Analysis hub lists all eight modules" assertion now
+    scrolls each card into view before checking (necessary at
+    1280×800 with 8 cards).
+- `dart format`: clean.
+
+### Bugs caught + fixed during the round
+
+- The original 4×4 easy preset I wrote (`1 0 0 4 / 0 0 2 0 / ...`)
+  was actually infeasible: column-0 + row-1 + box constraints
+  force a contradiction. Replaced all three 4×4 presets with
+  cells peeled from the canonical valid grid
+  `1 2 3 4 / 3 4 1 2 / 2 1 4 3 / 4 3 2 1`.
+- The "8 modules" UI flow test couldn't find Sudoku because the
+  ListView scroll position hid it below 1280×800's fold; the
+  test now uses `scrollUntilVisible` for each card.
+
 ## 2026-05-24 (round 59) — CSP Round A: Constraints module (Diophantine + cryptarithm)
 
 First slice of the CSP integration plan. Wires the user's pure-Dart

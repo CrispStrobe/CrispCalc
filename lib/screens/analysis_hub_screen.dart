@@ -11,6 +11,7 @@ import 'curve_analysis_input_screen.dart';
 import 'graphing_3d_screen.dart';
 import 'plane_analysis_screen.dart';
 import 'statistics_screen.dart';
+import 'sudoku_screen.dart';
 
 class AnalysisHubScreen extends StatelessWidget {
   const AnalysisHubScreen({super.key});
@@ -94,6 +95,16 @@ class AnalysisHubScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => const ConstraintsScreen(),
+              ));
+            },
+          ),
+          _ModuleCard(
+            icon: Icons.grid_4x4,
+            title: t.moduleSudokuTitle,
+            subtitle: t.moduleSudokuSubtitle,
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const SudokuScreen(),
               ));
             },
           ),
