@@ -396,9 +396,21 @@ roughly double the perceived value of the app.
 
 #### Learning / pedagogy
 
-- [ ] **Worked-example library**. Curated catalogue of problem types
+- [~] **Worked-example library**. Curated catalogue of problem types
   (related rates, optimization, vector projection, eigenvalue) with
   click-to-try examples. Discoverability + learning.
+  - **V1 partial** (HISTORY round 54): 21 entries spanning calculus,
+    algebra, linear algebra, number theory, statistics, and inline
+    unit syntax. New `WorkedExamplesDialog` reachable from
+    Settings — category-chip + substring filter; tap row or copy
+    icon to push the expression to the clipboard. Dialog chrome is
+    fully localized; example titles + descriptions are
+    English-only for V1 (translating every example body across 4
+    locales is a separate i18n chunk).
+  - **V2 pending**: direct insertion into the calculator
+    (callback-driven push to the main screen rather than
+    clipboard-paste), localized example bodies for DE/FR/ES,
+    advanced topics (related rates, eigenvalue, multivariable).
 - [x] ~~**Plain-language step explanations**.~~ Done 2026-05-24 —
   see HISTORY round 45.
   - **V1** (HISTORY round 42): every common differentiation,

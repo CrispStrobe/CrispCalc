@@ -254,6 +254,27 @@ void main() {
         expect(t.exactIntegerBadge(158), contains('158'));
       });
 
+      test('worked examples strings are present', () {
+        for (final s in [
+          t.workedExamplesTitle,
+          t.workedExamplesSearchHint,
+          t.workedExamplesEmpty,
+          t.workedExamplesCopy,
+          t.workedExamplesCopied,
+          t.workedExamplesCatAll,
+          t.workedExamplesCatCalculus,
+          t.workedExamplesCatAlgebra,
+          t.workedExamplesCatLinearAlgebra,
+          t.workedExamplesCatNumberTheory,
+          t.workedExamplesCatStatistics,
+          t.workedExamplesCatUnits,
+          t.settingsWorkedExamples,
+          t.settingsWorkedExamplesSubtitle,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
+
       test('import data strings are present', () {
         for (final s in [
           t.importDataTitle,

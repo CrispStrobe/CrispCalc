@@ -2,6 +2,64 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 54) — Worked-example library
+
+Discoverability win: a curated catalog of 21 example problems
+covering the major topic areas. Settings → "Worked examples library"
+opens a searchable, category-filterable list; tap any row to copy
+the calculator expression to the clipboard ready to paste.
+
+### Catalog
+
+`lib/engine/worked_examples.dart` exposes a flat `WorkedExamples.all`
+list — each entry is `(category, title, description, expression)`.
+21 entries spread across the six categories:
+
+- **Calculus** (6): polynomial / chain-rule derivative, IBP integral,
+  definite integral, classic sin(x)/x limit, partial-fractions
+  integral.
+- **Algebra** (4): quadratic formula, factor x³−8, expand (x+2)⁵,
+  simplify a rational expression.
+- **Linear algebra** (3): 3×3 determinant, 2×2 inverse, rref of an
+  augmented system.
+- **Number theory** (4): 100! exact, fib(50), gcd via Euclid,
+  isprime trial division.
+- **Statistics** (2): compound interest, z-score textbook constant.
+- **Units** (2): inline unit conversion, composite-dimension
+  arithmetic.
+
+### Dialog
+
+`WorkedExamplesDialog` mirrors the existing ConstantsDialog UX:
+search field + horizontal scrollable category chips (All + 6
+categories) + scrollable `ListView.separated`. Each row shows the
+title, description, monospace expression preview, and a Copy icon.
+Whole row is tappable as a shortcut. Copy-to-clipboard pushes a
+"Paste into the calculator to try it" SnackBar.
+
+### Scope decisions
+
+- **Example bodies stay English-only for V1.** Translating 21
+  example titles + descriptions × 4 locales = 168 strings is its
+  own i18n chunk; the dialog chrome (header, search hint, empty
+  state, category labels, copy toast, Settings tile) is fully
+  localized so the surrounding navigation feels native.
+- **Click-to-copy rather than click-to-insert.** Direct insertion
+  would need a callback chain from Settings → MainScreen →
+  CalculatorScreen; clipboard + paste is one extra tap but works
+  identically across phone / tablet / desktop layouts.
+- **Catalog test** asserts ≥ 1 entry per category, all fields
+  non-empty, titles unique, total in [12..25] — a future refactor
+  that accidentally empties a category or duplicates an entry
+  fails CI rather than ships.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **956/956** (4 new catalog tests + 14 new
+  locale-coverage strings across 4 locales).
+- `dart format`: clean.
+
 ## 2026-05-24 (round 53) — Step engine integration V4
 
 Two more integration rule families: partial-fraction decomposition

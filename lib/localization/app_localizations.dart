@@ -271,6 +271,22 @@ abstract class AppLocalizations {
   String exactIntegerBadge(int digits);
   String get exactIntegerTapToCopy;
 
+  // -- Worked examples library --
+  String get workedExamplesTitle;
+  String get workedExamplesSearchHint;
+  String get workedExamplesEmpty;
+  String get workedExamplesCopy;
+  String get workedExamplesCopied;
+  String get workedExamplesCatAll;
+  String get workedExamplesCatCalculus;
+  String get workedExamplesCatAlgebra;
+  String get workedExamplesCatLinearAlgebra;
+  String get workedExamplesCatNumberTheory;
+  String get workedExamplesCatStatistics;
+  String get workedExamplesCatUnits;
+  String get settingsWorkedExamples;
+  String get settingsWorkedExamplesSubtitle;
+
   // -- Import data --
   String get importDataTitle;
   String get importDataSubtitle;
@@ -843,6 +859,38 @@ class EnLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exact integer · $digits digits';
   @override
   String get exactIntegerTapToCopy => 'Tap to copy';
+
+  @override
+  String get workedExamplesTitle => 'Worked examples';
+  @override
+  String get workedExamplesSearchHint => 'Search examples…';
+  @override
+  String get workedExamplesEmpty => 'No examples match this filter.';
+  @override
+  String get workedExamplesCopy => 'Copy expression';
+  @override
+  String get workedExamplesCopied =>
+      'Copied to clipboard. Paste into the calculator to try it.';
+  @override
+  String get workedExamplesCatAll => 'All';
+  @override
+  String get workedExamplesCatCalculus => 'Calculus';
+  @override
+  String get workedExamplesCatAlgebra => 'Algebra';
+  @override
+  String get workedExamplesCatLinearAlgebra => 'Linear algebra';
+  @override
+  String get workedExamplesCatNumberTheory => 'Number theory';
+  @override
+  String get workedExamplesCatStatistics => 'Statistics';
+  @override
+  String get workedExamplesCatUnits => 'Units';
+  @override
+  String get settingsWorkedExamples => 'Worked examples library';
+  @override
+  String get settingsWorkedExamplesSubtitle =>
+      'Browse and copy ready-to-paste calculator expressions covering '
+      'the major problem types.';
 
   @override
   String get importDataTitle => 'Import data';
@@ -1634,6 +1682,38 @@ class DeLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Exakte Ganzzahl · $digits Ziffern';
   @override
   String get exactIntegerTapToCopy => 'Tippen zum Kopieren';
+
+  @override
+  String get workedExamplesTitle => 'Beispielaufgaben';
+  @override
+  String get workedExamplesSearchHint => 'Beispiele suchen…';
+  @override
+  String get workedExamplesEmpty => 'Keine Beispiele passen zum Filter.';
+  @override
+  String get workedExamplesCopy => 'Ausdruck kopieren';
+  @override
+  String get workedExamplesCopied =>
+      'In Zwischenablage kopiert. Im Rechner einfügen zum Ausprobieren.';
+  @override
+  String get workedExamplesCatAll => 'Alle';
+  @override
+  String get workedExamplesCatCalculus => 'Analysis';
+  @override
+  String get workedExamplesCatAlgebra => 'Algebra';
+  @override
+  String get workedExamplesCatLinearAlgebra => 'Lineare Algebra';
+  @override
+  String get workedExamplesCatNumberTheory => 'Zahlentheorie';
+  @override
+  String get workedExamplesCatStatistics => 'Statistik';
+  @override
+  String get workedExamplesCatUnits => 'Einheiten';
+  @override
+  String get settingsWorkedExamples => 'Bibliothek mit Beispielaufgaben';
+  @override
+  String get settingsWorkedExamplesSubtitle =>
+      'Vorgefertigte Rechnerausdrücke zu den wichtigsten Aufgabentypen '
+      'durchsuchen und kopieren.';
 
   @override
   String get importDataTitle => 'Daten importieren';
@@ -2440,6 +2520,39 @@ class FrLocalizations implements AppLocalizations {
   String get exactIntegerTapToCopy => 'Toucher pour copier';
 
   @override
+  String get workedExamplesTitle => 'Exemples résolus';
+  @override
+  String get workedExamplesSearchHint => 'Rechercher des exemples…';
+  @override
+  String get workedExamplesEmpty => 'Aucun exemple ne correspond au filtre.';
+  @override
+  String get workedExamplesCopy => 'Copier l\'expression';
+  @override
+  String get workedExamplesCopied =>
+      'Copié dans le presse-papiers. Colle dans la calculatrice pour '
+      'l\'essayer.';
+  @override
+  String get workedExamplesCatAll => 'Tous';
+  @override
+  String get workedExamplesCatCalculus => 'Analyse';
+  @override
+  String get workedExamplesCatAlgebra => 'Algèbre';
+  @override
+  String get workedExamplesCatLinearAlgebra => 'Algèbre linéaire';
+  @override
+  String get workedExamplesCatNumberTheory => 'Théorie des nombres';
+  @override
+  String get workedExamplesCatStatistics => 'Statistiques';
+  @override
+  String get workedExamplesCatUnits => 'Unités';
+  @override
+  String get settingsWorkedExamples => 'Bibliothèque d\'exemples résolus';
+  @override
+  String get settingsWorkedExamplesSubtitle =>
+      'Parcourir et copier des expressions de calculatrice prêtes à '
+      'coller couvrant les grands types de problèmes.';
+
+  @override
   String get importDataTitle => 'Importer les données';
   @override
   String get importDataSubtitle =>
@@ -3241,6 +3354,38 @@ class EsLocalizations implements AppLocalizations {
   String exactIntegerBadge(int digits) => 'Entero exacto · $digits dígitos';
   @override
   String get exactIntegerTapToCopy => 'Toca para copiar';
+
+  @override
+  String get workedExamplesTitle => 'Ejemplos resueltos';
+  @override
+  String get workedExamplesSearchHint => 'Buscar ejemplos…';
+  @override
+  String get workedExamplesEmpty => 'Ningún ejemplo coincide con el filtro.';
+  @override
+  String get workedExamplesCopy => 'Copiar expresión';
+  @override
+  String get workedExamplesCopied =>
+      'Copiado al portapapeles. Pega en la calculadora para probarlo.';
+  @override
+  String get workedExamplesCatAll => 'Todos';
+  @override
+  String get workedExamplesCatCalculus => 'Cálculo';
+  @override
+  String get workedExamplesCatAlgebra => 'Álgebra';
+  @override
+  String get workedExamplesCatLinearAlgebra => 'Álgebra lineal';
+  @override
+  String get workedExamplesCatNumberTheory => 'Teoría de números';
+  @override
+  String get workedExamplesCatStatistics => 'Estadística';
+  @override
+  String get workedExamplesCatUnits => 'Unidades';
+  @override
+  String get settingsWorkedExamples => 'Biblioteca de ejemplos resueltos';
+  @override
+  String get settingsWorkedExamplesSubtitle =>
+      'Explora y copia expresiones de la calculadora listas para pegar '
+      'que cubren los principales tipos de problemas.';
 
   @override
   String get importDataTitle => 'Importar datos';
