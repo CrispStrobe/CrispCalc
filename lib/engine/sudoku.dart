@@ -22,9 +22,18 @@ import 'dart:math';
 
 import 'package:dart_csp/dart_csp.dart' as csp;
 
+/// Sudoku rule variants. `regular` is the classic row + column +
+/// box `allDifferent`; `x` adds the two diagonals as further
+/// `allDifferent` constraints (Sudoku-X). The PLAN.md variant
+/// roadmap tracks Killer, Disjoint Groups, etc. as further
+/// follow-ups — each is one more constraint pack on top of the
+/// regular engine.
+enum SudokuVariant { regular, x }
+
 /// A single Sudoku puzzle layout. Standard 9×9 has `side=9,
 /// boxRows=3, boxCols=3`; the V1 mini variant is `side=4,
-/// boxRows=2, boxCols=2`. The constructor asserts that
+/// boxRows=2, boxCols=2`. V2 adds 6×6 (2×3 boxes) and 16×16
+/// (4×4 boxes). The constructor asserts that
 /// `boxRows * boxCols == side` — required for the box-partition
 /// to cover the grid exactly.
 class SudokuLayout {
@@ -39,24 +48,36 @@ class SudokuLayout {
   }) : assert(boxRows * boxCols == side, 'boxRows*boxCols must equal side');
 
   static const small = SudokuLayout(side: 4, boxRows: 2, boxCols: 2);
+  static const medium = SudokuLayout(side: 6, boxRows: 2, boxCols: 3);
   static const standard = SudokuLayout(side: 9, boxRows: 3, boxCols: 3);
+  static const large = SudokuLayout(side: 16, boxRows: 4, boxCols: 4);
+
+  /// Every layout the V2 module exposes. Generator + UI iterate
+  /// over this rather than naming constants directly so adding a
+  /// new size (e.g. 8×8 with 2×4 boxes) is a one-line change.
+  static const all = <SudokuLayout>[small, medium, standard, large];
 }
 
-/// A Sudoku puzzle = layout + initial clues. `cells` is a flat
-/// length-`side²` int list where 0 = empty cell and 1..side = clue.
+/// A Sudoku puzzle = layout + variant + initial clues. `cells` is
+/// a flat length-`side²` int list where 0 = empty cell and 1..side
+/// = clue.
 class SudokuPuzzle {
   final SudokuLayout layout;
+  final SudokuVariant variant;
   final List<int> cells;
 
-  SudokuPuzzle({required this.layout, required this.cells})
-      : assert(cells.length == layout.side * layout.side);
+  SudokuPuzzle({
+    required this.layout,
+    required this.cells,
+    this.variant = SudokuVariant.regular,
+  }) : assert(cells.length == layout.side * layout.side);
 
   int get(int row, int col) => cells[row * layout.side + col];
 
   SudokuPuzzle withCell(int row, int col, int value) {
     final copy = List<int>.from(cells);
     copy[row * layout.side + col] = value;
-    return SudokuPuzzle(layout: layout, cells: copy);
+    return SudokuPuzzle(layout: layout, cells: copy, variant: variant);
   }
 }
 
@@ -204,6 +225,16 @@ class SudokuSolver {
     for (final box in _boxes(puzzle.layout)) {
       p.addAllDifferent(box);
     }
+    // V2: Sudoku-X overlay. Two more `allDifferent` constraints,
+    // one per diagonal. Composes with everything above —
+    // dart_csp's propagator handles the extra constraints with no
+    // engine-side changes.
+    if (puzzle.variant == SudokuVariant.x) {
+      p.addAllDifferent(
+          [for (var i = 0; i < n; i++) _key(i, i)]); // main diagonal
+      p.addAllDifferent(
+          [for (var i = 0; i < n; i++) _key(i, n - 1 - i)]); // anti-diagonal
+    }
     return p;
   }
 
@@ -268,6 +299,7 @@ class SudokuGenerator {
   static Future<SudokuPuzzle> generate({
     SudokuLayout layout = SudokuLayout.standard,
     SudokuDifficulty difficulty = SudokuDifficulty.medium,
+    SudokuVariant variant = SudokuVariant.regular,
     int? seed,
   }) async {
     final rng = Random(seed ?? DateTime.now().microsecondsSinceEpoch);
@@ -276,13 +308,16 @@ class SudokuGenerator {
     // === Stage 1: full grid ===============================================
     // Seed with one random clue so the solver doesn't always return
     // the same canonical grid. We pick an arbitrary cell and value;
-    // dart_csp completes the rest.
+    // dart_csp completes the rest under the same [variant] the
+    // user will solve under (matters for Sudoku-X — the diagonals
+    // already need to be consistent in the full grid).
     final seedRow = rng.nextInt(n);
     final seedCol = rng.nextInt(n);
     final seedVal = 1 + rng.nextInt(n);
     final seedPuzzle = SudokuPuzzle(
       layout: layout,
       cells: List<int>.filled(n * n, 0),
+      variant: variant,
     ).withCell(seedRow, seedCol, seedVal);
     final full = await SudokuSolver.solve(seedPuzzle);
     if (full == null) {
@@ -290,7 +325,10 @@ class SudokuGenerator {
       // anything), but degrade gracefully by retrying with a
       // different seed.
       return generate(
-          layout: layout, difficulty: difficulty, seed: rng.nextInt(1 << 31));
+          layout: layout,
+          difficulty: difficulty,
+          variant: variant,
+          seed: rng.nextInt(1 << 31));
     }
 
     // === Stage 2: peel while unique =======================================
@@ -306,7 +344,8 @@ class SudokuGenerator {
       if (remainingClues <= targetClues) break;
       final saved = cells[idx];
       cells[idx] = 0;
-      final candidate = SudokuPuzzle(layout: layout, cells: cells);
+      final candidate =
+          SudokuPuzzle(layout: layout, cells: cells, variant: variant);
       final ambiguous = await _hasMultipleSolutions(candidate);
       if (ambiguous) {
         cells[idx] = saved;
@@ -315,7 +354,7 @@ class SudokuGenerator {
       }
     }
 
-    return SudokuPuzzle(layout: layout, cells: cells);
+    return SudokuPuzzle(layout: layout, cells: cells, variant: variant);
   }
 
   /// Wraps the dart_csp `hasMultipleSolutions` call for a Sudoku
@@ -329,19 +368,41 @@ class SudokuGenerator {
   static int _targetClueCount(
       SudokuLayout layout, SudokuDifficulty difficulty) {
     // Per the Wikipedia minimum-clue table (and CrispCalc's
-    // PLAN.md notes): 4×4 minimum is 4 clues, 9×9 minimum is 17.
-    // We pad above the minimum for "easy" so the puzzle is
-    // approachable; sit near the minimum for "hard". Values
-    // chosen so easy < medium < hard always reduces the count.
-    if (layout.side == 4) {
-      switch (difficulty) {
-        case SudokuDifficulty.easy:
-          return 10;
-        case SudokuDifficulty.medium:
-          return 7;
-        case SudokuDifficulty.hard:
-          return 4;
-      }
+    // PLAN.md notes): 4×4 minimum is 4 clues, 6×6 minimum is 8,
+    // 9×9 minimum is 17, 16×16 known-low is 55. We pad above the
+    // minimum for "easy" so the puzzle is approachable; sit near
+    // (but not at) the minimum for "hard" because peeling to the
+    // exact minimum often blows the per-call time budget.
+    switch (layout.side) {
+      case 4:
+        switch (difficulty) {
+          case SudokuDifficulty.easy:
+            return 10;
+          case SudokuDifficulty.medium:
+            return 7;
+          case SudokuDifficulty.hard:
+            return 4;
+        }
+      case 6:
+        switch (difficulty) {
+          case SudokuDifficulty.easy:
+            return 18;
+          case SudokuDifficulty.medium:
+            return 13;
+          case SudokuDifficulty.hard:
+            return 9;
+        }
+      case 16:
+        // 16×16 generation is heavy — keep the target high so the
+        // peel loop terminates within a reasonable per-call time.
+        switch (difficulty) {
+          case SudokuDifficulty.easy:
+            return 180;
+          case SudokuDifficulty.medium:
+            return 140;
+          case SudokuDifficulty.hard:
+            return 100;
+        }
     }
     // 9×9 (the standard case) and any other size fall back here.
     switch (difficulty) {
@@ -703,11 +764,64 @@ class SudokuPresets {
     ],
   );
 
+  // V2: 6×6 medium peeled from the canonical full grid
+  //   1 2 3 4 5 6 / 4 5 6 1 2 3 / 2 3 1 5 6 4 /
+  //   5 6 4 2 3 1 / 3 1 2 6 4 5 / 6 4 5 3 1 2
+  // 18 clues — exercises some search but solves in milliseconds.
+  static final SudokuPuzzle medium6x6 = SudokuPuzzle(
+    layout: SudokuLayout.medium,
+    cells: [
+      1,
+      0,
+      3,
+      0,
+      5,
+      0,
+      0,
+      5,
+      0,
+      1,
+      0,
+      3,
+      2,
+      0,
+      1,
+      0,
+      6,
+      0,
+      0,
+      6,
+      0,
+      2,
+      0,
+      1,
+      3,
+      0,
+      2,
+      0,
+      4,
+      0,
+      0,
+      4,
+      0,
+      3,
+      0,
+      2,
+    ],
+  );
+
+  // Note: no Sudoku-X preset ships. Off-the-shelf 9×9 puzzles
+  // tend to have completions whose main / anti-diagonals contain
+  // duplicate digits — fine under regular rules, infeasible
+  // under the X overlay. Users get X-variant puzzles via the
+  // variant toggle + Generate.
+
   /// Friendly preset list with (id, layout) pairs the picker uses.
   static final List<({String id, SudokuPuzzle puzzle})> all = [
     (id: 'small4x4Easy', puzzle: small4x4Easy),
     (id: 'small4x4Medium', puzzle: small4x4Medium),
     (id: 'small4x4Hard', puzzle: small4x4Hard),
+    (id: 'medium6x6', puzzle: medium6x6),
     (id: 'standard9x9Easy', puzzle: standard9x9Easy),
     (id: 'standard9x9Medium', puzzle: standard9x9Medium),
     (id: 'standard9x9Hard', puzzle: standard9x9Hard),

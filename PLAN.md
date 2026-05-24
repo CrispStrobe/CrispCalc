@@ -544,7 +544,17 @@ Roadmap (ship one round at a time):
   - **V1 scope shipped**: 4×4 (2×2 boxes) and 9×9 (3×3 boxes).
     Visualizer captures every step into a list and replays at
     Slow / Med / Fast.
-  - **V2 deferred — variant roadmap**. Sudoku is a family, not one
+  - **V2 shipped** (HISTORY round 61): 6×6 (2×3 boxes) and 16×16
+    (4×4 boxes) layouts added, plus a **Sudoku-X variant**
+    (allDifferent overlay on both diagonals). Screen gains a
+    Size chip-row (4×4 / 6×6 / 9×9 / 16×16) and a
+    Regular / Sudoku-X segmented picker; switching either wipes
+    the grid so the user can re-enter or hit Generate. New 6×6
+    preset peeled from a verified canonical grid; no X preset
+    ships (standard off-the-shelf puzzles fail the X constraint
+    — users get X puzzles via Generate). Round-trip test covers
+    6×6 + Sudoku-X.
+  - **V3 deferred — variant roadmap**. Sudoku is a family, not one
     puzzle. Standard sizes alone span 4..25 with mixed
     aspect-ratio boxes:
     - 6×6 (2×3 boxes), 8×8 (2×4), 10×10 (2×5), 12×12 (2×6 or 3×4),

@@ -253,6 +253,55 @@ void main() {
       await runRoundtrip(SudokuLayout.standard, SudokuDifficulty.medium, 55);
     }, timeout: const Timeout(Duration(seconds: 180)));
   });
+
+  group('Sudoku V2 — 6×6 layout', () {
+    test('SudokuLayout.medium invariants', () {
+      const l = SudokuLayout.medium;
+      expect(l.side, 6);
+      expect(l.boxRows, 2);
+      expect(l.boxCols, 3);
+      expect(l.boxRows * l.boxCols, l.side);
+    });
+
+    test('6×6 medium preset solves', () async {
+      final out = await SudokuSolver.solve(SudokuPresets.medium6x6);
+      expect(out, isNotNull);
+      _expectValidSudoku(SudokuLayout.medium, out!);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('generator round-trip: 6×6 medium', () async {
+      final puzzle = await SudokuGenerator.generate(
+        layout: SudokuLayout.medium,
+        difficulty: SudokuDifficulty.medium,
+        seed: 6,
+      );
+      expect(puzzle.cells.length, 36);
+      final sol = await SudokuSolver.solve(puzzle);
+      expect(sol, isNotNull);
+      _expectValidSudoku(SudokuLayout.medium, sol!);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+  });
+
+  group('Sudoku V2 — Sudoku-X variant', () {
+    test('generator round-trip: 9×9 X variant easy', () async {
+      final puzzle = await SudokuGenerator.generate(
+        layout: SudokuLayout.standard,
+        difficulty: SudokuDifficulty.easy,
+        variant: SudokuVariant.x,
+        seed: 99,
+      );
+      expect(puzzle.variant, SudokuVariant.x);
+      final sol = await SudokuSolver.solve(puzzle);
+      expect(sol, isNotNull);
+      _expectValidSudoku(SudokuLayout.standard, sol!);
+      // Diagonals respect the X variant.
+      const n = 9;
+      final mainDiag = [for (var i = 0; i < n; i++) sol[i * n + i]];
+      final antiDiag = [for (var i = 0; i < n; i++) sol[i * n + (n - 1 - i)]];
+      expect(mainDiag.toSet().length, n);
+      expect(antiDiag.toSet().length, n);
+    }, timeout: const Timeout(Duration(seconds: 180)));
+  });
 }
 
 void _expectValidSudoku(SudokuLayout layout, List<int> cells) {

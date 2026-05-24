@@ -293,6 +293,8 @@ abstract class AppLocalizations {
   String get sudokuDifficultyEasy;
   String get sudokuDifficultyMedium;
   String get sudokuDifficultyHard;
+  String get sudokuVariantRegular;
+  String get sudokuVariantX;
 
   // -- Constraints module (Analysis hub / CSP Round A) --
   String get moduleConstraintsTitle;
@@ -944,12 +946,16 @@ class EnLocalizations implements AppLocalizations {
         return '4×4 medium';
       case 'small4x4Hard':
         return '4×4 hard';
+      case 'medium6x6':
+        return '6×6 medium';
       case 'standard9x9Easy':
         return '9×9 easy';
       case 'standard9x9Medium':
         return '9×9 medium';
       case 'standard9x9Hard':
         return '9×9 hard (AI Escargot)';
+      case 'standard9x9XEasy':
+        return '9×9 Sudoku-X easy';
     }
     return id;
   }
@@ -976,6 +982,10 @@ class EnLocalizations implements AppLocalizations {
   String get sudokuDifficultyMedium => 'Medium';
   @override
   String get sudokuDifficultyHard => 'Hard';
+  @override
+  String get sudokuVariantRegular => 'Regular';
+  @override
+  String get sudokuVariantX => 'Sudoku-X';
 
   @override
   String get moduleConstraintsTitle => 'Constraint problems';
@@ -1897,12 +1907,16 @@ class DeLocalizations implements AppLocalizations {
         return '4×4 mittel';
       case 'small4x4Hard':
         return '4×4 schwer';
+      case 'medium6x6':
+        return '6×6 mittel';
       case 'standard9x9Easy':
         return '9×9 leicht';
       case 'standard9x9Medium':
         return '9×9 mittel';
       case 'standard9x9Hard':
         return '9×9 schwer (AI Escargot)';
+      case 'standard9x9XEasy':
+        return '9×9 Sudoku-X leicht';
     }
     return id;
   }
@@ -1929,6 +1943,10 @@ class DeLocalizations implements AppLocalizations {
   String get sudokuDifficultyMedium => 'Mittel';
   @override
   String get sudokuDifficultyHard => 'Schwer';
+  @override
+  String get sudokuVariantRegular => 'Klassisch';
+  @override
+  String get sudokuVariantX => 'Sudoku-X';
 
   @override
   String get moduleConstraintsTitle => 'Bedingungsprobleme';
@@ -2952,12 +2970,16 @@ class FrLocalizations implements AppLocalizations {
         return '4×4 moyen';
       case 'small4x4Hard':
         return '4×4 difficile';
+      case 'medium6x6':
+        return '6×6 moyen';
       case 'standard9x9Easy':
         return '9×9 facile';
       case 'standard9x9Medium':
         return '9×9 moyen';
       case 'standard9x9Hard':
         return '9×9 difficile (AI Escargot)';
+      case 'standard9x9XEasy':
+        return '9×9 Sudoku-X facile';
     }
     return id;
   }
@@ -2984,6 +3006,10 @@ class FrLocalizations implements AppLocalizations {
   String get sudokuDifficultyMedium => 'Moyen';
   @override
   String get sudokuDifficultyHard => 'Difficile';
+  @override
+  String get sudokuVariantRegular => 'Classique';
+  @override
+  String get sudokuVariantX => 'Sudoku-X';
 
   @override
   String get moduleConstraintsTitle => 'Problèmes de contraintes';
@@ -4008,12 +4034,16 @@ class EsLocalizations implements AppLocalizations {
         return '4×4 medio';
       case 'small4x4Hard':
         return '4×4 difícil';
+      case 'medium6x6':
+        return '6×6 medio';
       case 'standard9x9Easy':
         return '9×9 fácil';
       case 'standard9x9Medium':
         return '9×9 medio';
       case 'standard9x9Hard':
         return '9×9 difícil (AI Escargot)';
+      case 'standard9x9XEasy':
+        return '9×9 Sudoku-X fácil';
     }
     return id;
   }
@@ -4040,6 +4070,10 @@ class EsLocalizations implements AppLocalizations {
   String get sudokuDifficultyMedium => 'Medio';
   @override
   String get sudokuDifficultyHard => 'Difícil';
+  @override
+  String get sudokuVariantRegular => 'Clásico';
+  @override
+  String get sudokuVariantX => 'Sudoku-X';
 
   @override
   String get moduleConstraintsTitle => 'Problemas de restricciones';

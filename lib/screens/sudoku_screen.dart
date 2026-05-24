@@ -49,6 +49,30 @@ class _SudokuScreenState extends State<SudokuScreen> {
   SudokuDifficulty _genDifficulty = SudokuDifficulty.medium;
   _Speed _speed = _Speed.medium;
 
+  /// V2: when the user picks a different size or variant via the
+  /// top selectors (not via a preset), we wipe the grid to empty
+  /// so the user can fill in fresh clues OR hit Generate / pick a
+  /// matching preset. Doing this also resets the trace.
+  void _switchLayoutOrVariant(
+      SudokuLayout? newLayout, SudokuVariant? newVariant) {
+    _stopVisualizer();
+    final layout = newLayout ?? _puzzle.layout;
+    final variant = newVariant ?? _puzzle.variant;
+    final empty = SudokuPuzzle(
+      layout: layout,
+      cells: List<int>.filled(layout.side * layout.side, 0),
+      variant: variant,
+    );
+    setState(() {
+      _puzzle = empty;
+      _clueIndexes = {};
+      _displayed = List<int>.from(empty.cells);
+      _selected = null;
+      _trace = null;
+      _frameIndex = 0;
+    });
+  }
+
   @override
   void dispose() {
     _ticker?.cancel();
@@ -100,6 +124,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
     final puzzle = await SudokuGenerator.generate(
       layout: _puzzle.layout,
       difficulty: _genDifficulty,
+      variant: _puzzle.variant,
     );
     if (!mounted) return;
     setState(() {
@@ -203,6 +228,14 @@ class _SudokuScreenState extends State<SudokuScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _SizeVariantPickers(
+            layout: _puzzle.layout,
+            variant: _puzzle.variant,
+            onLayoutChanged: (l) => _switchLayoutOrVariant(l, null),
+            onVariantChanged: (v) => _switchLayoutOrVariant(null, v),
+            labels: t,
+          ),
+          const SizedBox(height: 12),
           _PresetPicker(
             current: _puzzle,
             onPick: _loadPreset,
@@ -453,6 +486,60 @@ class _VisualizerControls extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SizeVariantPickers extends StatelessWidget {
+  final SudokuLayout layout;
+  final SudokuVariant variant;
+  final ValueChanged<SudokuLayout> onLayoutChanged;
+  final ValueChanged<SudokuVariant> onVariantChanged;
+  final AppLocalizations labels;
+
+  const _SizeVariantPickers({
+    required this.layout,
+    required this.variant,
+    required this.onLayoutChanged,
+    required this.onVariantChanged,
+    required this.labels,
+  });
+
+  String _sizeLabel(SudokuLayout l) => '${l.side}×${l.side}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Size picker — wrap so 4 segments fit on narrow phones.
+        Wrap(
+          spacing: 4,
+          children: [
+            for (final l in SudokuLayout.all)
+              ChoiceChip(
+                label: Text(_sizeLabel(l)),
+                selected: l.side == layout.side,
+                onSelected: (_) => onLayoutChanged(l),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<SudokuVariant>(
+          segments: [
+            ButtonSegment(
+              value: SudokuVariant.regular,
+              label: Text(labels.sudokuVariantRegular),
+            ),
+            ButtonSegment(
+              value: SudokuVariant.x,
+              label: Text(labels.sudokuVariantX),
+            ),
+          ],
+          selected: {variant},
+          onSelectionChanged: (s) => onVariantChanged(s.first),
+        ),
+      ],
     );
   }
 }

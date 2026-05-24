@@ -2,6 +2,90 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 61) — Sudoku V2: 6×6 + 16×16 layouts + Sudoku-X variant
+
+Round 60 (Sudoku V1) parameterized the layout but only exposed 4×4
+and 9×9. V2 fills in the natural next sizes (6×6, 16×16) and adds
+the first non-regular variant (Sudoku-X — `allDifferent` on both
+diagonals). All three additions are one-line engine changes thanks
+to the V1 parameterization.
+
+### Engine
+
+- **`SudokuVariant.regular` / `.x`**: new enum on
+  `SudokuPuzzle`. `_buildProblem` adds two more `allDifferent`
+  constraints when the variant is `x` (one per diagonal). Composes
+  with everything else.
+- **`SudokuLayout.medium`** (6×6, 2×3 boxes) and
+  **`SudokuLayout.large`** (16×16, 4×4 boxes). The box-partition
+  walker handles non-square boxes (`boxRows × boxCols`) correctly
+  since V1 — no code change there.
+- **`SudokuLayout.all`** list so the picker iterates rather than
+  naming constants. Adding 8×8 / 25×25 in a follow-up will be a
+  one-line change to this constant.
+- **Generator** preserves the `variant` flag through both stages
+  (full-grid seed AND clue-peeling uniqueness check). Without
+  this, the X variant generator would peel against regular
+  rules and ship a non-X solvable puzzle to a user expecting X.
+- **Target clue counts** extended for 6×6 (18 / 13 / 9 for
+  easy / med / hard, against Wikipedia's stated minimum of 8) and
+  16×16 (180 / 140 / 100, against the known-low of 55 — kept high
+  because peeling to the absolute minimum on 16×16 frequently
+  blows the per-call time budget).
+
+### UI
+
+`SudokuScreen` gains a **`_SizeVariantPickers`** widget above the
+preset dropdown:
+- Size chip-row with one ChoiceChip per layout in
+  `SudokuLayout.all` (4×4 / 6×6 / 9×9 / 16×16).
+- Regular / Sudoku-X SegmentedButton.
+
+Switching either selector wipes the grid to an empty puzzle of
+the chosen layout+variant — the user can then enter clues
+manually, hit Generate for a fresh random puzzle, or pick a
+matching preset.
+
+### Presets
+
+- **6×6 medium** added (peeled from canonical valid 6×6 grid).
+- **No 16×16 preset** ships — generation is the right path there
+  (the V1 hand-picked-clue approach would need verified
+  16×16 puzzles which are rare in the public domain).
+- **No Sudoku-X preset** ships either — off-the-shelf 9×9
+  puzzles tend to have completions whose diagonals contain
+  duplicate digits, making them infeasible under the X overlay.
+  Users get X-variant puzzles via Generate + the variant toggle.
+
+### i18n
+
+7 new strings (regular/X variant labels × 4 locales, plus 6×6
+preset label, plus updated existing-preset switch). All four
+locales (en/de/fr/es) updated with localized "Sudoku-X" /
+"Klassisch" / "Classique" / "Clásico" labels.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **1145/1145**. New test cases:
+  - `SudokuLayout.medium invariants` (6×6 dims).
+  - 6×6 preset solves + generator round-trip.
+  - Sudoku-X generator round-trip on 9×9 (verifies main +
+    anti-diagonals each contain 1..9 exactly once in the
+    final solution).
+- `dart format`: clean.
+
+### Lessons learned
+
+The "use the standard9x9Easy preset as a Sudoku-X preset" instinct
+I had in my first pass was wrong: that puzzle's known unique
+solution has the digit 5 (and the digit 7) twice on the main
+diagonal — fine under regular rules, infeasible under X. The
+generator was the right path. Future variant rounds (Killer,
+Disjoint Groups, Hypercube) should also lean on `Generator` rather
+than hand-curated presets unless the variant's clue dynamics are
+well-understood.
+
 ## 2026-05-24 (round 60) — CSP Round B: Sudoku module with step-by-step visualizer
 
 Second slice of the CSP integration plan and the most visible

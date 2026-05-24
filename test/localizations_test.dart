@@ -287,6 +287,8 @@ void main() {
           t.sudokuDifficultyEasy,
           t.sudokuDifficultyMedium,
           t.sudokuDifficultyHard,
+          t.sudokuVariantRegular,
+          t.sudokuVariantX,
         ]) {
           expect(s.trim(), isNotEmpty);
         }
@@ -296,6 +298,7 @@ void main() {
           'small4x4Easy',
           'small4x4Medium',
           'small4x4Hard',
+          'medium6x6',
           'standard9x9Easy',
           'standard9x9Medium',
           'standard9x9Hard',
