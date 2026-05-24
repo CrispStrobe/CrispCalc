@@ -2,6 +2,78 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 47) — Unit V5: composite-dimension arithmetic + derived units
+
+Quantity × quantity and quantity / quantity now extend the running
+dimension vector instead of bailing — `100 m / 10 s = 10 m/s`,
+`5 m * 3 m = 15 m^2`, `36 km / 1 h = 10 m/s`, `1 J / 1 s = 1 W`. The
+derived SI units (N, J, W, Pa, Hz) plus their SI-prefixed variants
+(kN, MJ, mW, …) join the inline parser's longest-match list.
+
+### Design
+
+The single-dim `Unit` carries one `UnitDimension` enum value (length,
+time, mass, …); that's not enough to represent `m²`, `kg·m/s²`, or
+`m/s²`. V5 adds a `Dimensions` value type: an integer 4-vector over
+the SI base dims (length, mass, time, temperature) with
+element-wise multiplication and division as operators. Each
+`UnitDimension` maps to a Dimensions vector via `Dimensions.of(d)`
+— `velocity` → `(length: 1, time: -1)`, `angle` → all zeros
+(dimensionless ratio), etc.
+
+`DerivedUnit` is a sibling of `Unit` that carries a Dimensions
+vector directly (no enum needed, since N, J, W, Pa, Hz have no
+sensible enum slot). `DerivedUnits.bySymbolWithPrefixes` is the
+derived-side equivalent of `UnitCatalog.bySymbolWithPrefixes`, so
+`kN`, `MJ`, `mW`, `GPa`, `MHz` all parse with no extra catalog
+entries.
+
+The evaluator tracks the running quantity as
+`(double valueInCoherentSI, Dimensions dim)`. The first term sets
+the anchor unit (preserved across `+`/`-` chains for display, same
+as V1). Multiplication / division of two quantities adds / subtracts
+the dim vectors. Result formatting prefers:
+
+1. The anchor unit (if the result dim still matches it — keeps
+   `5 km + 3 m` showing as `5.003 km`).
+2. The single-dim catalog's coherent SI base (so `100 m / 10 s`
+   formats as `10 m/s`, picking up the existing velocity entry).
+3. The derived-unit table (`5 N`, `60 Hz`, `1 W`).
+4. A synthesized base-units string (`15 m^2`, `0.5 m/s^2`) when
+   nothing else matches.
+
+### Restrictions kept from V4
+
+- No precedence parser yet, so `5 m + 2 m * 3 s` is still ambiguous.
+  Mixing composite-dim mul/div after a sum op returns null; mixing a
+  sum op after a composite-dim mul/div returns a clear error message
+  ("cannot add or subtract after a composite-dimension
+  multiplication / division").
+- Temperature arithmetic still refused — offset units don't survive
+  unit multiplication (273.15 K + non-temperature value would be
+  nonsense), so we keep refusing both inline temp arithmetic and
+  composite ops involving °C/°F.
+- Conversion via `in <unit>` still requires a *single-dim* target —
+  `100 m / 10 s in km/h` works (km/h is in the catalog), but
+  arbitrary derived-unit conversion (`100 N in kgf`) waits for the
+  derived catalog to grow.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **878/878** (10 new tests for composite-dim and
+  derived-unit shapes — including the `36 km / 1 h → 10 m/s`
+  cancellation check, the `5 m / 5 m → 1` dimensionless case, and
+  the "mixing composite × with sum after is refused" guardrail).
+- `dart format`: clean.
+
+### V6 deferred
+
+Parentheses (needs a real Shunting-yard pass), variables (needs to
+plumb AppState into the unit-expression evaluator so
+`v = 10; v m / 5 s` works), and unit exponents (`5 m^2` as a
+literal, vs. the current `5 m * m` workaround).
+
 ## 2026-05-24 (round 46) — Statistics V9: paired sign + Wilcoxon rank-sum
 
 Two more nonparametric tests in the Statistics screen's Tests tab,

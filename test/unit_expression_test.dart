@@ -292,10 +292,10 @@ void main() {
       expect(r, startsWith('Error'));
       expect(r, contains('zero'));
     });
-    test('quantity × quantity (RHS has unit) → null — V5 territory', () {
-      // `5 km * 2 s` would be a composite-dimension multiplication.
-      // We bail until V5 implements that properly.
-      expect(UnitExpressionEvaluator.tryEvaluate('5 km * 2 s'), isNull);
+    test('quantity × quantity now produces a composite dimension (V5)', () {
+      // `5 km * 2 s` = 5000 m * 2 s = 10000 m·s. V5 enables this.
+      final r = UnitExpressionEvaluator.tryEvaluate('5 km * 2 s');
+      expect(r, '10000 m·s');
     });
     test('1 mile / 2 in km — combine scalar div with conversion', () {
       // 1 mile / 2 = 0.5 mile = 0.804672 km.
@@ -303,6 +303,77 @@ void main() {
           _numericResultMatches(_eval('1 mile / 2 in km'), 0.804672,
               unit: 'km'),
           isTrue);
+    });
+  });
+
+  group('composite-dimension arithmetic (V5)', () {
+    test('100 m / 10 s → 10 m/s (length / time = velocity)', () {
+      // Result dim = (length=1, time=-1), which is the velocity dim and
+      // formats as the coherent SI base unit `m/s`.
+      expect(_eval('100 m / 10 s'), '10 m/s');
+    });
+
+    test('km / h dim cancels to the velocity dim and converts cleanly', () {
+      // 36 km / 1 h = 36000 m / 3600 s = 10 m/s.
+      expect(_eval('36 km / 1 h'), '10 m/s');
+    });
+
+    test('5 m * 3 m → 15 m^2 (length × length)', () {
+      // No catalog match for area; falls through to base-units format.
+      expect(_eval('5 m * 3 m'), '15 m^2');
+    });
+
+    test('quantity / quantity to convert via in', () {
+      // 100 m / 10 s in km/h. 10 m/s = 36 km/h.
+      expect(
+          _numericResultMatches(_eval('100 m / 10 s in km/h'), 36.0,
+              unit: 'km/h'),
+          isTrue);
+    });
+
+    test('dimensionless when same-dim cancel', () {
+      // 5 m / 5 m = 1 (dimensionless).
+      expect(_eval('5 m / 5 m'), startsWith('1'));
+    });
+
+    test('mixing composite-dim multiplication and sum is refused', () {
+      // 5 m + 2 m * 3 s is ambiguous (precedence). Returns null so the
+      // scalar fallback can try; SymEngine will choke on the unit
+      // symbols and the user will see a parse error.
+      // Actually: the current code path treats `+` as setting hadSumOp
+      // first, then `*` finds a quantity RHS and would normally bail.
+      // The "sum after composite" message fires the other direction:
+      // 5 m * 2 s + … — verify that.
+      final r = _eval('5 m * 2 s + 1 m');
+      expect(r, isNotNull);
+      expect(r, startsWith('Error'));
+      expect(r, contains('composite'));
+    });
+  });
+
+  group('derived SI units (V5)', () {
+    test('5 N as a standalone quantity', () {
+      // Carries (mass=1, length=1, time=-2). With no further math, the
+      // output keeps the N symbol via the derived-unit catalog match.
+      final r = _eval('5 N');
+      expect(r, isNotNull);
+      // Single quantity uses curated `singleDim` formatter — but `N` is
+      // derived, so the anchorSingleDim is null and we go through
+      // matchingBaseDim which returns 'N'.
+      expect(r, '5 N');
+    });
+
+    test('1 kN — SI prefix on derived unit', () {
+      // 1 kN = 1000 N. Output picks derived `N` (closest matching base).
+      expect(_eval('1 kN'), '1000 N');
+    });
+
+    test('1 J / 1 s → 1 W (joule per second = watt)', () {
+      expect(_eval('1 J / 1 s'), '1 W');
+    });
+
+    test('60 Hz exposes the inverse-time dimension', () {
+      expect(_eval('60 Hz'), '60 Hz');
     });
   });
 }

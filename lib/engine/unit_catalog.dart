@@ -16,6 +16,224 @@
 
 enum UnitDimension { length, time, mass, temperature, velocity, angle }
 
+/// Vector of integer exponents over the SI base dimensions we track
+/// (length, mass, time, temperature). V5 composite-dimension arithmetic
+/// adds/subtracts these element-wise when quantities multiply / divide.
+///
+/// `dimensionless` is the all-zero vector — falls out naturally from
+/// `m / m`, the result of dividing same-dimension quantities, angle
+/// units (treated as dimensionless ratios), etc.
+///
+/// Restricted to the four base dims that cover everything in our
+/// curated catalog plus the V5 derived units (N, J, W, Pa, Hz).
+/// Current/amount/luminosity can join later if we ever add a derived
+/// unit that needs them.
+class Dimensions {
+  final int length;
+  final int mass;
+  final int time;
+  final int temperature;
+
+  const Dimensions({
+    this.length = 0,
+    this.mass = 0,
+    this.time = 0,
+    this.temperature = 0,
+  });
+
+  static const dimensionless = Dimensions();
+
+  bool get isZero => length == 0 && mass == 0 && time == 0 && temperature == 0;
+
+  Dimensions operator *(Dimensions o) => Dimensions(
+        length: length + o.length,
+        mass: mass + o.mass,
+        time: time + o.time,
+        temperature: temperature + o.temperature,
+      );
+
+  Dimensions operator /(Dimensions o) => Dimensions(
+        length: length - o.length,
+        mass: mass - o.mass,
+        time: time - o.time,
+        temperature: temperature - o.temperature,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is Dimensions &&
+      length == other.length &&
+      mass == other.mass &&
+      time == other.time &&
+      temperature == other.temperature;
+
+  @override
+  int get hashCode => Object.hash(length, mass, time, temperature);
+
+  /// Compact human-readable form: `m·kg/s²`, `kg·m²·s⁻²`, etc. Falls
+  /// back to base-unit symbols (m, kg, s, K) when the dimension vector
+  /// doesn't match any catalog entry. Used by the formatter when no
+  /// derived-unit symbol matches the result.
+  String toBaseUnitsString() {
+    final parts = <String>[];
+    final negs = <String>[];
+    void addPart(String sym, int exp) {
+      if (exp == 0) return;
+      final body = exp.abs() == 1 ? sym : '$sym^${exp.abs()}';
+      (exp > 0 ? parts : negs).add(body);
+    }
+
+    addPart('m', length);
+    addPart('kg', mass);
+    addPart('s', time);
+    addPart('K', temperature);
+
+    if (parts.isEmpty && negs.isEmpty) return ''; // dimensionless
+    final num = parts.isEmpty ? '1' : parts.join('·');
+    if (negs.isEmpty) return num;
+    return '$num/${negs.join('·')}';
+  }
+
+  /// Maps a single-dimension [UnitDimension] to its [Dimensions] vector.
+  static Dimensions of(UnitDimension d) {
+    switch (d) {
+      case UnitDimension.length:
+        return const Dimensions(length: 1);
+      case UnitDimension.mass:
+        return const Dimensions(mass: 1);
+      case UnitDimension.time:
+        return const Dimensions(time: 1);
+      case UnitDimension.temperature:
+        return const Dimensions(temperature: 1);
+      case UnitDimension.velocity:
+        return const Dimensions(length: 1, time: -1);
+      case UnitDimension.angle:
+        // Angles are dimensionless ratios. Conversion factors between
+        // radian/degree/etc. are kept on the Unit's `scale`; arithmetic
+        // treats them as plain numbers.
+        return const Dimensions();
+    }
+  }
+}
+
+/// Derived SI units with composite dimensions — Newton, Joule, Watt,
+/// Pascal, Hertz. Not part of the single-dimension [UnitCatalog] picker
+/// because they have no `UnitDimension` enum value, but the inline
+/// expression parser knows about them via [DerivedUnits.bySymbol] so a
+/// user can type `100 N`, `5 J`, `60 Hz` etc.
+///
+/// Each entry maps a symbol to its (coherent SI) scale factor and the
+/// [Dimensions] vector it carries. Scale is always 1.0 for the base
+/// derived forms; for prefixed versions (kN, MJ, mW) we synthesize the
+/// scale on demand via [DerivedUnits.bySymbolWithPrefixes].
+class DerivedUnit {
+  final String symbol;
+  final String name;
+  final Dimensions dim;
+
+  /// Factor that converts a value in this unit to its coherent SI form.
+  /// `1 N` → 1 kg·m/s², so scale = 1. `1 kN` → 1000 kg·m/s², scale = 1000.
+  final double scale;
+
+  const DerivedUnit({
+    required this.symbol,
+    required this.name,
+    required this.dim,
+    required this.scale,
+  });
+
+  double toSi(double value) => value * scale;
+  double fromSi(double siValue) => siValue / scale;
+}
+
+class DerivedUnits {
+  static const Map<String, DerivedUnit> _byName = {
+    'N': DerivedUnit(
+      symbol: 'N',
+      name: 'newton',
+      dim: Dimensions(mass: 1, length: 1, time: -2),
+      scale: 1.0,
+    ),
+    'J': DerivedUnit(
+      symbol: 'J',
+      name: 'joule',
+      dim: Dimensions(mass: 1, length: 2, time: -2),
+      scale: 1.0,
+    ),
+    'W': DerivedUnit(
+      symbol: 'W',
+      name: 'watt',
+      dim: Dimensions(mass: 1, length: 2, time: -3),
+      scale: 1.0,
+    ),
+    'Pa': DerivedUnit(
+      symbol: 'Pa',
+      name: 'pascal',
+      dim: Dimensions(mass: 1, length: -1, time: -2),
+      scale: 1.0,
+    ),
+    'Hz': DerivedUnit(
+      symbol: 'Hz',
+      name: 'hertz',
+      dim: Dimensions(time: -1),
+      scale: 1.0,
+    ),
+  };
+
+  /// Curated symbols (no prefixes).
+  static Iterable<String> allSymbols() => _byName.keys;
+
+  /// Direct lookup; null if the symbol isn't a known derived unit.
+  static DerivedUnit? bySymbol(String s) => _byName[s];
+
+  /// Like [bySymbol] but also tries SI prefixes (kN, MJ, mW, etc.).
+  /// Longest-prefix-first so `da` beats `d`.
+  static DerivedUnit? bySymbolWithPrefixes(String s) {
+    final direct = _byName[s];
+    if (direct != null) return direct;
+    final prefixesByLength = UnitCatalog.siPrefixes.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final prefix in prefixesByLength) {
+      if (!s.startsWith(prefix)) continue;
+      final rest = s.substring(prefix.length);
+      final base = _byName[rest];
+      if (base == null) continue;
+      return DerivedUnit(
+        symbol: s,
+        name: '$prefix${base.name}',
+        dim: base.dim,
+        scale: UnitCatalog.siPrefixes[prefix]! * base.scale,
+      );
+    }
+    return null;
+  }
+
+  /// Find the canonical derived unit whose dimensions match [dim]
+  /// exactly (no scaling). Used by the formatter to pick `5 N` over
+  /// `5 m·kg/s²` when both describe the same thing. Returns null when
+  /// no derived unit matches.
+  static DerivedUnit? matchingBaseDim(Dimensions dim) {
+    for (final u in _byName.values) {
+      if (u.dim == dim && u.scale == 1.0) return u;
+    }
+    return null;
+  }
+
+  /// All derived-unit symbols including prefixed forms — extends the
+  /// inline parser's longest-match list.
+  static List<String> prefixedSymbols() {
+    final out = <String>[];
+    for (final base in _byName.keys) {
+      for (final prefix in UnitCatalog.siPrefixes.keys) {
+        final combined = '$prefix$base';
+        if (_byName.containsKey(combined)) continue;
+        out.add(combined);
+      }
+    }
+    return out;
+  }
+}
+
 class Unit {
   /// Short symbol the user picks from a dropdown. e.g. "km", "°C".
   final String symbol;

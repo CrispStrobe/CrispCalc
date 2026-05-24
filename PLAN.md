@@ -339,9 +339,19 @@ roughly double the perceived value of the app.
     appeared, because mixing without a Shunting-yard parser would
     give wrong precedence (`5 km + 3 m * 2` is ambiguous). Quantity-
     × -quantity still falls through to V5.
-  - **V5 pending**: composite-dimension arithmetic
-    (`100 m / 10 s = 10 m/s`, `m/s² * 2 s = m/s`),
-    derived-unit catalog entries (N, J, W, Pa, Hz), parens, variables.
+  - **V5 partial** (HISTORY round 47): composite-dimension arithmetic.
+    New `Dimensions` 4-vector (length / mass / time / temperature
+    exponents); quantity × quantity and quantity / quantity now
+    extend the running dimension vector (`100 m / 10 s = 10 m/s`,
+    `5 m * 3 m = 15 m^2`). New `DerivedUnits` catalog (N, J, W, Pa,
+    Hz) with SI-prefix support (kN, MJ, mW, …). The formatter prefers
+    a curated single-dim unit, falls through to derived units, and
+    only emits a base-units string (`15 m^2`) when no catalog match
+    exists. Mixing composite-dim multiplication with `+`/`-` is
+    refused with a clear error.
+    **V6 deferred**: parentheses (need a real Shunting-yard pass),
+    variables (need to plumb AppState into the unit-expression
+    evaluator), exponentiation on units (`5 m^2`).
 
 ### Other meaningful gaps
 

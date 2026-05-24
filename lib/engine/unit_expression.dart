@@ -21,8 +21,12 @@
 // appeared, because we don't run a real precedence parser and silent
 // mixing would surprise users (`5 km + 2 m * 3` is ambiguous).
 //
-// V5 territory (still deferred): derived units (`m/s² * 2 s`), composite
-// dimensions for division (`100 m / 10 s = 10 m/s`), parens, variables.
+// V5 adds composite-dimension arithmetic — `100 m / 10 s = 10 m/s`,
+// `5 m * 3 m = 15 m^2`, derived SI units (N, J, W, Pa, Hz with SI
+// prefixes), and quantity × quantity inside the same expression. The
+// evaluator tracks the running quantity as `(value_in_coherent_SI,
+// Dimensions)` so multiplication / division extend the dimension
+// vector naturally. Parens and variables are still deferred.
 
 import 'unit_catalog.dart';
 import 'unit_converter.dart';
@@ -76,83 +80,194 @@ class UnitExpressionEvaluator {
     final first = _consumeQuantity(workingTokens, 0);
     if (first == null) return null;
 
-    // Initialize the running quantity in the dimension's base unit.
-    var basePos = first.value.unit.toBase(first.value.value);
-    final dim = first.value.unit.dimension;
+    // Running quantity tracked in coherent-SI value + Dimensions vector.
+    // We carry an Anchor unit (the first term's display unit) so the
+    // output formatter can default to it when no composite-dim result
+    // shows up and no explicit `in` target is set.
+    var siValue = first.value.toCoherentSi();
+    var dim = first.value.dim;
+    final anchorSingleDim = first.value.singleDimUnit;
     var hadSumOp = false;
+    var sawCompositeOp = false;
 
-    // Walk the rest: a mix of (+/-) <quantity> and (*/÷) <scalar>.
+    // Walk the rest: a mix of (+/-) <quantity> and (*/÷) (<scalar> or <quantity>).
     var i = first.nextIndex;
     while (i < workingTokens.length) {
       final op = workingTokens[i];
       if (op is! _BinaryOp) return null;
 
       if (op.symbol == '*' || op.symbol == '/') {
-        // V4: scalar multiply/divide on the running accumulator. Refuse
-        // when a `+`/`-` has already happened, since precedence becomes
-        // ambiguous (the user probably wanted (term * scalar) + other).
-        if (hadSumOp) return null;
         if (i + 1 >= workingTokens.length) return null;
         final rhs = workingTokens[i + 1];
         if (rhs is! _NumberToken) return null;
-        // If the scalar is followed by a unit, this would be a true
-        // quantity × quantity multiplication (composite dimensions),
-        // which is V5 territory — bail.
-        if (i + 2 < workingTokens.length &&
-            workingTokens[i + 2] is _UnitToken) {
-          return null;
+        // Distinguish scalar (`* 2`) from quantity (`* 2 m`).
+        final rhsIsQuantity =
+            i + 2 < workingTokens.length && workingTokens[i + 2] is _UnitToken;
+        if (rhsIsQuantity) {
+          // V5: composite-dimension arithmetic. Refuse after a sum op
+          // — precedence is ambiguous in `5 m + 2 m * 3 s` without a
+          // proper expression parser.
+          if (hadSumOp) return null;
+          // Reject if either side carries an offset (temperature) —
+          // would mean adding 273.15 K to a non-temperature value.
+          if (_hasNonZeroOffset(anchorSingleDim) ||
+              _hasNonZeroOffset(
+                  (workingTokens[i + 2] as _UnitToken).singleDim)) {
+            return 'Error: temperature arithmetic is ambiguous with '
+                'offset units. Use the Unit converter dialog for °C ↔ °F ↔ K.';
+          }
+          final rhsQty = _Quantity.fromNumberUnit(
+              rhs.value, workingTokens[i + 2] as _UnitToken);
+          if (op.symbol == '*') {
+            siValue *= rhsQty.toCoherentSi();
+            dim = dim * rhsQty.dim;
+          } else {
+            final rhsSi = rhsQty.toCoherentSi();
+            if (rhsSi == 0) {
+              return 'Error: division by zero in unit expression';
+            }
+            siValue /= rhsSi;
+            dim = dim / rhsQty.dim;
+          }
+          sawCompositeOp = true;
+          i += 3;
+          continue;
         }
+        // V4 scalar multiply/divide.
+        if (hadSumOp) return null;
         if (op.symbol == '*') {
-          basePos *= rhs.value;
+          siValue *= rhs.value;
         } else {
           if (rhs.value == 0) {
             return 'Error: division by zero in unit expression';
           }
-          basePos /= rhs.value;
+          siValue /= rhs.value;
         }
         i += 2;
         continue;
       }
 
       if (op.symbol != '+' && op.symbol != '-') return null;
+      // Composite-dim accumulator can't take a sum op — what would
+      // `10 m/s + 5 m` even mean. Bail with a clear error.
+      if (sawCompositeOp) {
+        return 'Error: cannot add or subtract after a composite-dimension '
+            'multiplication / division.';
+      }
       hadSumOp = true;
       final next = _consumeQuantity(workingTokens, i + 1);
       if (next == null) return null;
-      if (next.value.unit.dimension != dim) {
+      if (next.value.dim != dim) {
         return 'Error: cannot ${op.symbol == '+' ? 'add' : 'subtract'} '
-            '${next.value.unit.symbol} (${next.value.unit.dimension.name}) '
-            'to ${first.value.unit.symbol} '
-            '(${first.value.unit.dimension.name})';
+            '${next.value.label} '
+            'to ${first.value.label}';
       }
       // Temperature inline arithmetic is ambiguous (offset units), so
       // we refuse it. Conversion via `in` is fine.
-      if (dim == UnitDimension.temperature) {
+      if (_hasNonZeroOffset(anchorSingleDim)) {
         return 'Error: temperature arithmetic is ambiguous with offset '
             'units. Use the Unit converter dialog for °C ↔ °F ↔ K.';
       }
-      final delta = next.value.unit.toBase(next.value.value);
-      basePos += op.symbol == '+' ? delta : -delta;
+      final delta = next.value.toCoherentSi();
+      siValue += op.symbol == '+' ? delta : -delta;
       i = next.nextIndex;
     }
 
     // Apply the leading scalar prefix (V4).
-    basePos *= scalarPrefix;
+    siValue *= scalarPrefix;
 
     // Decide output unit.
     if (targetUnit != null) {
-      if (targetUnit.dimension != dim) {
-        return 'Error: cannot convert ${first.value.unit.symbol} '
-            '(${dim.name}) to ${targetUnit.symbol} '
-            '(${targetUnit.dimension.name})';
+      if (Dimensions.of(targetUnit.dimension) != dim) {
+        return 'Error: cannot convert result (${_dimLabel(dim)}) to '
+            '${targetUnit.symbol} (${targetUnit.dimension.name})';
       }
-      final out = targetUnit.fromBase(basePos);
+      // The target unit's `toBase` understands offset (for temperature
+      // back-conversion if we ever loosen the rejection above). Coherent
+      // SI for the supported single-dim catalog matches the target's
+      // base, so direct fromBase works.
+      final out = targetUnit.fromBase(siValue);
       return UnitConverter.format(out, targetUnit);
     }
-    // Default output unit = the unit of the first term. Keeps `5 km + 3 m`
-    // showing in km, `1 mile - 200 yd` showing in miles. Avoids surprise
-    // base-unit results for the user.
-    final out = first.value.unit.fromBase(basePos);
-    return UnitConverter.format(out, first.value.unit);
+
+    // No explicit target. For pure single-dim results, keep the
+    // first-term display unit (`5 km + 3 m` shows in km). For composite
+    // results, pick the best derived unit (`100 m / 10 s` → m/s) or
+    // synthesize a base-units string (`5 m * 3 m` → 15 m^2).
+    return _formatResult(siValue, dim, anchorSingleDim);
+  }
+
+  /// Picks the cleanest display for a (value, dimensions) pair.
+  ///   1. If dim matches the anchor single-dim unit, use that
+  ///      (preserves first-term unit choice across `+`/`-` chains).
+  ///   2. Otherwise, search the single-dim catalog for an exact dim
+  ///      match (`100 m / 10 s` → m/s via the velocity dim entry).
+  ///   3. Otherwise, search the derived-unit table (`5 N`, `60 Hz`).
+  ///   4. Otherwise, format as base-unit string (`15 m^2`, `2 m/s^2`).
+  static String _formatResult(
+      double siValue, Dimensions dim, Unit? anchorSingleDim) {
+    if (dim.isZero) {
+      // Dimensionless — return the bare number (e.g. `5 m / 5 m`).
+      return UnitConverter.format(siValue, _dimensionlessUnit);
+    }
+    if (anchorSingleDim != null &&
+        Dimensions.of(anchorSingleDim.dimension) == dim) {
+      final out = anchorSingleDim.fromBase(siValue);
+      return UnitConverter.format(out, anchorSingleDim);
+    }
+    // Search single-dim catalog for a coherent-SI exact match.
+    for (final d in UnitCatalog.allDimensions()) {
+      if (Dimensions.of(d) != dim) continue;
+      // Use the dimension's coherent-SI base (first list entry whose
+      // scale == 1 and offset == 0).
+      for (final u in UnitCatalog.unitsFor(d)) {
+        if (u.scale == 1.0 && u.offset == 0.0) {
+          return UnitConverter.format(u.fromBase(siValue), u);
+        }
+      }
+    }
+    // Derived-unit table.
+    final derived = DerivedUnits.matchingBaseDim(dim);
+    if (derived != null) {
+      return '${_formatNumber(derived.fromSi(siValue))} ${derived.symbol}';
+    }
+    // Base-unit string fallback.
+    return '${_formatNumber(siValue)} ${dim.toBaseUnitsString()}';
+  }
+
+  static bool _hasNonZeroOffset(Unit? u) => u != null && u.offset != 0.0;
+
+  /// Human label for an arbitrary Dimensions vector — used in error
+  /// messages so the user sees `m/s` rather than `(length=1, time=-1)`.
+  static String _dimLabel(Dimensions d) {
+    final base = d.toBaseUnitsString();
+    return base.isEmpty ? 'dimensionless' : base;
+  }
+
+  /// A synthetic dimensionless unit for `5 m / 5 m`-style results. Just
+  /// reuses radian's symbol-free behavior — we don't want to show "rad".
+  static const _dimensionlessUnit = Unit(
+    symbol: '',
+    name: '(dimensionless)',
+    dimension: UnitDimension.angle,
+    scale: 1.0,
+  );
+
+  /// Display a double cleanly — drops trailing zeros, keeps integer
+  /// results as integers. Mirrors what `UnitConverter.format` does
+  /// internally, but we need it standalone for the derived-unit and
+  /// base-units paths since those bypass the curated formatter.
+  static String _formatNumber(double v) {
+    if (!v.isFinite) return v.toString();
+    if (v == v.roundToDouble() && v.abs() < 1e15) {
+      return v.toInt().toString();
+    }
+    var s = v.toStringAsFixed(6);
+    if (s.contains('.')) {
+      s = s.replaceAll(RegExp(r'0+$'), '');
+      if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+    }
+    return s;
   }
 
   /// Tokenize [s]. Returns null on any unrecognized token — the caller
@@ -175,6 +290,10 @@ class UnitExpressionEvaluator {
       // (pm, fm, am, dm, hm, dam, Mm, Gm, Tm, Pm, Em, Zm, Ym, etc., and
       // the analogous time / mass / kelvin / radian variants).
       ...UnitCatalog.prefixedSymbols(),
+      // V5: derived SI units (N, J, W, Pa, Hz) and their prefixed
+      // variants (kN, MJ, mW, …).
+      ...DerivedUnits.allSymbols(),
+      ...DerivedUnits.prefixedSymbols(),
     ];
     symbols.sort((a, b) => b.length.compareTo(a.length));
 
@@ -244,7 +363,9 @@ class UnitExpressionEvaluator {
       // Unit symbol (longest match wins).
       final matched = _tryMatchUnitAt(s, i, symbols);
       if (matched != null) {
-        out.add(_UnitToken(matched.unit));
+        out.add(matched.unit != null
+            ? _UnitToken.single(matched.unit!)
+            : _UnitToken.derived(matched.derived!));
         i = matched.endIndex;
         continue;
       }
@@ -269,8 +390,14 @@ class UnitExpressionEvaluator {
       // forms like `pm`, `Tm`, `μs` that aren't in the curated list).
       final canonical = _aliases[sym] ?? sym;
       final u = UnitCatalog.bySymbolWithPrefixes(canonical);
-      if (u == null) continue;
-      return _UnitMatch(u, start + sym.length);
+      if (u != null) {
+        return _UnitMatch.single(u, start + sym.length);
+      }
+      // V5: try the derived-unit catalog (N, J, W, Pa, Hz + SI prefixes).
+      final d = DerivedUnits.bySymbolWithPrefixes(canonical);
+      if (d != null) {
+        return _UnitMatch.derived(d, start + sym.length);
+      }
     }
     return null;
   }
@@ -325,7 +452,7 @@ class UnitExpressionEvaluator {
     final unit = toks[i + 1];
     if (num is! _NumberToken || unit is! _UnitToken) return null;
     return _Consumed(
-      _Quantity(num.value, unit.unit),
+      _Quantity.fromNumberUnit(num.value, unit),
       i + 2,
     );
   }
@@ -348,8 +475,29 @@ class _NumberToken extends _Token {
 }
 
 class _UnitToken extends _Token {
-  final Unit unit;
-  _UnitToken(this.unit);
+  /// Single-dim catalog unit. Null when [derived] is set.
+  final Unit? unit;
+
+  /// Composite-dim derived unit (N, J, W, Pa, Hz). Null when [unit] is set.
+  final DerivedUnit? derived;
+
+  _UnitToken._(this.unit, this.derived);
+
+  factory _UnitToken.single(Unit u) => _UnitToken._(u, null);
+  factory _UnitToken.derived(DerivedUnit d) => _UnitToken._(null, d);
+
+  /// Returns the underlying single-dim Unit, or null if this is a
+  /// derived unit. Used by the evaluator's "anchor" tracking so chains
+  /// of `+`/`-` can preserve the first-term display unit.
+  Unit? get singleDim => unit;
+
+  Dimensions get dim =>
+      unit != null ? Dimensions.of(unit!.dimension) : derived!.dim;
+
+  String get symbol => unit?.symbol ?? derived!.symbol;
+
+  /// Convert a value expressed in this unit into the coherent SI form.
+  double toSi(double v) => unit != null ? unit!.toBase(v) : derived!.toSi(v);
 }
 
 class _BinaryOp extends _Token {
@@ -361,16 +509,33 @@ class _InKeyword extends _Token {
   const _InKeyword();
 }
 
+/// Running-value wrapper for the evaluator. Holds the coherent-SI value,
+/// its [Dimensions], the underlying single-dim Unit (when one applies —
+/// used for display preservation across `+`/`-` chains), and a label
+/// for error messages.
 class _Quantity {
-  final double value;
-  final Unit unit;
-  const _Quantity(this.value, this.unit);
+  final double siValue;
+  final Dimensions dim;
+  final Unit? singleDimUnit;
+  final String label;
+
+  const _Quantity._(this.siValue, this.dim, this.singleDimUnit, this.label);
+
+  factory _Quantity.fromNumberUnit(double v, _UnitToken t) {
+    return _Quantity._(t.toSi(v), t.dim, t.singleDim, '$v ${t.symbol}');
+  }
+
+  double toCoherentSi() => siValue;
 }
 
 class _UnitMatch {
-  final Unit unit;
+  final Unit? unit;
+  final DerivedUnit? derived;
   final int endIndex;
-  const _UnitMatch(this.unit, this.endIndex);
+  const _UnitMatch._(this.unit, this.derived, this.endIndex);
+  factory _UnitMatch.single(Unit u, int end) => _UnitMatch._(u, null, end);
+  factory _UnitMatch.derived(DerivedUnit d, int end) =>
+      _UnitMatch._(null, d, end);
 }
 
 class _Consumed {
