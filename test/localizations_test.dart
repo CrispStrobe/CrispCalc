@@ -241,6 +241,19 @@ void main() {
         }
       });
 
+      test('exact integer mode strings are present', () {
+        for (final s in [
+          t.settingsExactIntegerMode,
+          t.settingsExactIntegerModeSubtitle,
+          t.exactIntegerTapToCopy,
+          t.exactIntegerBadge(158),
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+        // Templated badge interpolates the digit count.
+        expect(t.exactIntegerBadge(158), contains('158'));
+      });
+
       test('picker / step dialog titles are present', () {
         for (final s in [
           t.integralTitle,

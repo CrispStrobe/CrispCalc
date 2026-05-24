@@ -20,6 +20,7 @@ import '../engine/step_engine.dart';
 import '../engine/unit_expression.dart';
 
 // Utils imports
+import '../utils/exact_integer.dart';
 import '../utils/keyboard_input_handler.dart';
 import '../utils/latex_conversion_utils.dart';
 import '../utils/error_formatter.dart';
@@ -1481,6 +1482,14 @@ class CalculatorScreenState extends State<CalculatorScreen>
     );
   }
 
+  Future<void> _copyBigIntegerToClipboard(
+      BuildContext context, String fullValue) async {
+    final t = AppLocalizations.of(context);
+    await Clipboard.setData(ClipboardData(text: fullValue));
+    if (!context.mounted) return;
+    _toast(context, t.historyEntryCopied);
+  }
+
   void _confirmClearHistory() {
     final t = AppLocalizations.of(context);
     showDialog<void>(
@@ -1687,7 +1696,25 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                       entry.result, tt);
                                   final isError = EngineErrorFormatter.isError(
                                       entry.result);
+                                  // Arbitrary-precision integer results (e.g.
+                                  // 100! = 158 digits) get a digit-count
+                                  // badge and tap-to-copy. We abbreviate the
+                                  // middle for display past ~60 digits to
+                                  // keep the row from dominating the screen,
+                                  // but the clipboard always gets the full
+                                  // value from entry.result.
+                                  final digitCount = isError
+                                      ? 0
+                                      : ExactInteger.digitCount(entry.result);
+                                  final isBigInt = digitCount > 20;
+                                  final shownResult = isBigInt
+                                      ? ExactInteger.abbreviate(entry.result)
+                                      : display;
                                   return GestureDetector(
+                                    onTap: isBigInt
+                                        ? () => _copyBigIntegerToClipboard(
+                                            context, entry.result)
+                                        : null,
                                     onLongPress: () =>
                                         _showHistoryEntryMenu(context, entry),
                                     onSecondaryTap: () =>
@@ -1701,9 +1728,11 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                             entry.expression),
                                         const SizedBox(height: 4),
                                         Text(
-                                          isError ? display : '= $display',
+                                          isError ? display : '= $shownResult',
                                           style: TextStyle(
-                                            fontSize: isError ? 16 : 28,
+                                            fontSize: isError
+                                                ? 16
+                                                : (isBigInt ? 18 : 28),
                                             color: isError
                                                 ? Theme.of(context)
                                                     .colorScheme
@@ -1714,7 +1743,25 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                                 : FontStyle.normal,
                                           ),
                                           textAlign: TextAlign.right,
+                                          softWrap: true,
                                         ),
+                                        if (isBigInt)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              '${tt.exactIntegerBadge(digitCount)} · ${tt.exactIntegerTapToCopy}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                              textAlign: TextAlign.right,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   );

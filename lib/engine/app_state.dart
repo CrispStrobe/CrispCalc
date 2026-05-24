@@ -18,6 +18,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/exact_integer.dart';
+
 enum HistoryEntryType { calculation, solve }
 
 enum NumberDisplayFormat {
@@ -72,6 +74,7 @@ class AppState extends ChangeNotifier {
   static const _kVariables = 'crisp.variables';
   static const _kFunctions = 'crisp.functions';
   static const _kParameters = 'crisp.parameters';
+  static const _kExactIntegerMode = 'crisp.exactIntegerMode';
 
   static const int _kGraphSlotCount = 10;
   static const int _kHistoryCap = 200;
@@ -89,6 +92,15 @@ class AppState extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
   ThemeMode get themeMode => _themeMode;
 
+  /// When true (default), integer-shaped engine results like `100!` are
+  /// kept verbatim — full digit string preserved through the display
+  /// pipeline rather than going through a lossy double round-trip.
+  /// Toggle off to fall back to the old `numberFormat`-driven behavior
+  /// (handy if someone wants compact scientific-notation displays even
+  /// for big factorials).
+  bool _exactIntegerMode = true;
+  bool get exactIntegerMode => _exactIntegerMode;
+
   /// Read persisted settings into memory. Must be awaited before runApp.
   /// Pass `force: true` (from tests) to re-read prefs after they've been
   /// mocked with new values — production callers should leave this alone.
@@ -99,6 +111,7 @@ class AppState extends ChangeNotifier {
     _locale = const Locale('en');
     _numberFormat = NumberDisplayFormat.auto;
     _themeMode = ThemeMode.dark;
+    _exactIntegerMode = true;
     history.clear();
     userVariables.clear();
     functionParameters.clear();
@@ -129,6 +142,8 @@ class AppState extends ChangeNotifier {
           orElse: () => ThemeMode.dark,
         );
       }
+      final exactMode = _prefs!.getBool(_kExactIntegerMode);
+      if (exactMode != null) _exactIntegerMode = exactMode;
       _restoreList<CalculationEntry>(
         key: _kHistory,
         target: history,
@@ -219,6 +234,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setExactIntegerMode(bool enabled) {
+    if (_exactIntegerMode == enabled) return;
+    _exactIntegerMode = enabled;
+    _prefs?.setBool(_kExactIntegerMode, enabled);
+    notifyListeners();
+  }
+
   // --- Volatile (now also persisted) state --------------------------------
 
   final List<CalculationEntry> history = [];
@@ -233,6 +255,17 @@ class AppState extends ChangeNotifier {
   final Map<int, Map<String, double>> functionParameters = {};
 
   String formatNumber(String numberString) {
+    // Preserve full precision for arbitrary-precision integer results
+    // (e.g. 100! = 158 digits) — `double.tryParse` would silently round
+    // them to ~15 significant digits. Only kicks in when the integer is
+    // actually past double precision; small ints like "129" still flow
+    // through the user's chosen NumberDisplayFormat. Off-switch via
+    // Settings for users who want compact formatting at the cost of
+    // precision.
+    if (_exactIntegerMode && ExactInteger.digitCount(numberString) > 15) {
+      return numberString.trim();
+    }
+
     final number = double.tryParse(numberString);
     if (number == null) return numberString;
 
@@ -388,6 +421,7 @@ class AppState extends ChangeNotifier {
       'locale': _locale.languageCode,
       'numberFormat': _numberFormat.name,
       'themeMode': _themeMode.name,
+      'exactIntegerMode': _exactIntegerMode,
       'history': history.map((e) => e.toJson()).toList(),
       'variables': Map<String, String>.from(userVariables),
       'functions': List<String>.from(graphFunctions),

@@ -432,6 +432,16 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Card(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.pin_outlined),
+                  title: Text(t.settingsExactIntegerMode),
+                  subtitle: Text(t.settingsExactIntegerModeSubtitle),
+                  value: appState.exactIntegerMode,
+                  onChanged: appState.setExactIntegerMode,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(

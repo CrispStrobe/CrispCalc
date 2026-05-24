@@ -400,16 +400,17 @@ dependency."
 
 Group A (recommended first — ship together as one round):
 
-- [ ] **Arbitrary-precision integer mode** (GMP / SymEngine integer).
-  A toggle in Settings (`Exact integer mode`) that says: when both
-  operands of `+/-/*/^/!/mod/gcd/lcm/factor` are integers and the
-  result fits no double, return the exact arbitrary-precision answer
-  rendered as the full digit string. Already kinda works inside
-  SymEngine — but today the bridge stringifies via SymEngine's
-  default which gives the exact form. Real work: a status banner
-  ("Exact integer result — 158 digits") and a tap-to-copy on results
-  longer than the line width. Use cases: `100!` (158 digits),
-  `2^200`, `fib(500)`, `gcd(10^50, …)`.
+- [x] ~~**Arbitrary-precision integer mode** (GMP / SymEngine integer).~~
+  Done 2026-05-24 — see HISTORY round 44. Settings toggle "Exact
+  integer mode" (on by default) guards `AppState.formatNumber` so
+  results past double precision (digit count > 15) are passed
+  through verbatim instead of being silently truncated. Calculator
+  history renders any integer with >20 digits with an italic
+  "Exact integer · N digits · tap to copy" badge underneath, and
+  tapping the row copies the full untruncated value to the
+  clipboard. Mid-row ellipsis abbreviates the display past 60
+  digits so a single 158-digit `100!` doesn't dominate the screen,
+  but the clipboard always sees the full string.
 
 - [ ] **Arbitrary-precision real constants on demand** (MPFR).
   Templated calls: `pi(50)`, `e(100)`, `EulerGamma(200)`,

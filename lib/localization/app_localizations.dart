@@ -263,6 +263,12 @@ abstract class AppLocalizations {
   String get settingsHelp;
   String get settingsHelpSubtitle;
 
+  // -- Exact integer mode (arbitrary-precision results) --
+  String get settingsExactIntegerMode;
+  String get settingsExactIntegerModeSubtitle;
+  String exactIntegerBadge(int digits);
+  String get exactIntegerTapToCopy;
+
   // -- Help screen --
   String get helpTitle;
   String get helpFunctionsHeading;
@@ -773,6 +779,17 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get settingsHelpSubtitle =>
       'Supported functions, matrix syntax, and step-by-step triggers.';
+
+  @override
+  String get settingsExactIntegerMode => 'Exact integer mode';
+  @override
+  String get settingsExactIntegerModeSubtitle =>
+      'Show full digit string for arbitrary-precision integer results '
+      '(e.g. 100! = 158 digits). Off: round to double precision.';
+  @override
+  String exactIntegerBadge(int digits) => 'Exact integer · $digits digits';
+  @override
+  String get exactIntegerTapToCopy => 'Tap to copy';
 
   @override
   String get helpTitle => 'Help';
@@ -1317,6 +1334,17 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get settingsHelpSubtitle =>
       'Unterstützte Funktionen, Matrix-Syntax und Schritt-für-Schritt-Auslöser.';
+
+  @override
+  String get settingsExactIntegerMode => 'Exakter Ganzzahl-Modus';
+  @override
+  String get settingsExactIntegerModeSubtitle =>
+      'Vollständige Ziffernfolge für beliebig genaue Ganzzahlergebnisse '
+      'anzeigen (z. B. 100! = 158 Ziffern). Aus: auf double-Genauigkeit runden.';
+  @override
+  String exactIntegerBadge(int digits) => 'Exakte Ganzzahl · $digits Ziffern';
+  @override
+  String get exactIntegerTapToCopy => 'Tippen zum Kopieren';
 
   @override
   String get helpTitle => 'Hilfe';
@@ -1866,6 +1894,18 @@ class FrLocalizations implements AppLocalizations {
       'Fonctions prises en charge, syntaxe matricielle et déclencheurs pas-à-pas.';
 
   @override
+  String get settingsExactIntegerMode => 'Mode entier exact';
+  @override
+  String get settingsExactIntegerModeSubtitle =>
+      'Afficher la chaîne complète de chiffres pour les résultats entiers '
+      'en précision arbitraire (par ex. 100! = 158 chiffres). Désactivé : '
+      'arrondi à la précision double.';
+  @override
+  String exactIntegerBadge(int digits) => 'Entier exact · $digits chiffres';
+  @override
+  String get exactIntegerTapToCopy => 'Toucher pour copier';
+
+  @override
   String get helpTitle => 'Aide';
   @override
   String get helpFunctionsHeading => 'Fonctions prises en charge';
@@ -2411,6 +2451,18 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get settingsHelpSubtitle =>
       'Funciones soportadas, sintaxis de matrices y disparadores paso a paso.';
+
+  @override
+  String get settingsExactIntegerMode => 'Modo entero exacto';
+  @override
+  String get settingsExactIntegerModeSubtitle =>
+      'Mostrar la cadena completa de dígitos para resultados enteros de '
+      'precisión arbitraria (p. ej. 100! = 158 dígitos). Desactivado: '
+      'redondear a precisión double.';
+  @override
+  String exactIntegerBadge(int digits) => 'Entero exacto · $digits dígitos';
+  @override
+  String get exactIntegerTapToCopy => 'Toca para copiar';
 
   @override
   String get helpTitle => 'Ayuda';

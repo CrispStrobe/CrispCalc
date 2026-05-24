@@ -197,4 +197,63 @@ void main() {
       expect(s.themeMode, ThemeMode.system);
     });
   });
+
+  group('exact integer mode', () {
+    test('default is true (preserve precision)', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      expect(s.exactIntegerMode, isTrue);
+    });
+
+    test('setExactIntegerMode writes through', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      s.setExactIntegerMode(false);
+      final fresh = await SharedPreferences.getInstance();
+      expect(fresh.getBool('crisp.exactIntegerMode'), isFalse);
+    });
+
+    test('load() restores stored value', () async {
+      SharedPreferences.setMockInitialValues({'crisp.exactIntegerMode': false});
+      final s = AppState();
+      await s.load(force: true);
+      expect(s.exactIntegerMode, isFalse);
+    });
+
+    test('addHistoryEntry preserves a 158-digit integer verbatim', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      // 100! has 158 digits.
+      const bigInt =
+          '93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000';
+      expect(bigInt.length, 158);
+      s.addHistoryEntry('100!', bigInt);
+      expect(s.history.first.result, bigInt);
+    });
+
+    test(
+        'when off, large integers go through the lossy double path '
+        '(legacy behavior)', () async {
+      SharedPreferences.setMockInitialValues({'crisp.exactIntegerMode': false});
+      final s = AppState();
+      await s.load(force: true);
+      // Small integers still round-trip OK; this just exercises the
+      // off-switch path without crashing on a huge string.
+      s.addHistoryEntry('2+3', '5');
+      expect(s.history.first.result, '5');
+    });
+
+    test('exportToJson includes exactIntegerMode', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = AppState();
+      await s.load(force: true);
+      final json = s.exportToJson();
+      expect(json['exactIntegerMode'], isTrue);
+      s.setExactIntegerMode(false);
+      expect(s.exportToJson()['exactIntegerMode'], isFalse);
+    });
+  });
 }

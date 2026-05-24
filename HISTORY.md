@@ -2,6 +2,80 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 44) — Exact integer mode (arbitrary-precision results)
+
+First slice of the **P5 Precision & number theory** section: actually
+honour the arbitrary-precision integers SymEngine already returns,
+instead of silently rounding them through a `double.tryParse`
+round-trip in the display pipeline.
+
+The native bridge has been returning exact digit strings all along
+(SymEngine evaluates `factorial(100)` against GMP and emits all 158
+digits as a string). What was broken: `AppState.formatNumber` ran
+every result through `double.tryParse(numberString)` so it could apply
+the user's `NumberDisplayFormat` — and any integer past ~2^53 became
+`1e158`-ish on the way out, with the trailing digits gone.
+
+### What shipped
+
+1. **Detector helper** (`lib/utils/exact_integer.dart`). Pure-Dart,
+   no Flutter import — testable in isolation. `ExactInteger.matches`
+   classifies a string as `^-?\d+$`; `digitCount` returns the digit
+   count (excluding the leading minus); `abbreviate` truncates with
+   a middle ellipsis past `maxLen` digits (`head…tail`) for display
+   while leaving the clipboard value untouched.
+
+2. **AppState short-circuit**. New `bool exactIntegerMode` (default
+   true, persisted as `crisp.exactIntegerMode`). `formatNumber` now
+   bails before the `double.tryParse` path when the result's digit
+   count exceeds 15 — the boundary past which doubles start losing
+   integer precision. The user's chosen `NumberDisplayFormat`
+   (`auto` / `oneDecimal` / `twoDecimal`) still governs everything
+   that *does* fit in a double, so the existing
+   `formatNumber("129")` → `"129.0"` behaviour for one-decimal mode
+   is preserved.
+
+3. **Settings UI**. New `SwitchListTile` in the Settings screen
+   between the Theme card and the Layout card. Subtitle spells out
+   the trade-off: full digit string vs. compact double-precision
+   display.
+
+4. **Calculator-screen badge + tap-to-copy**. History entries whose
+   result is an exact integer with >20 digits now render with:
+   - A smaller (18 pt vs. 28 pt) result line that wraps and uses
+     mid-string abbreviation past 60 digits.
+   - An italic caption below — "Exact integer · N digits · tap to
+     copy" — in `onSurface.withValues(alpha: 0.6)`.
+   - A plain `onTap` on the row that copies the *full* (not
+     abbreviated) value to the clipboard, with the same
+     `historyEntryCopied` toast the long-press menu uses.
+   The existing long-press / right-click context menu is unchanged.
+
+5. **Localization**. Four new keys (`settingsExactIntegerMode`,
+   `settingsExactIntegerModeSubtitle`, `exactIntegerBadge(int)`,
+   `exactIntegerTapToCopy`) implemented in en/de/fr/es with a
+   non-emptiness test covering all four locales and verifying the
+   templated badge interpolates the digit count.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **718/718** (4 new locale strings × 4 locales, 21
+  new `ExactInteger` unit tests, 5 new `AppState` persistence /
+  preservation tests including a full 158-digit `100!` round-trip
+  through `addHistoryEntry`).
+- `dart format --output=none --set-exit-if-changed lib/ test/`:
+  clean.
+
+### What this *doesn't* do
+
+The toggle is a display-layer fix, not new symbolic capability —
+the underlying GMP arithmetic was already happening inside SymEngine.
+The next items in Group A (arbitrary-precision real constants via
+MPFR templated calls like `pi(50)`, and the FLINT number-theory toy
+set: `isprime`, `factorint`, `totient`, etc.) need actual bridge
+work in the C++ wrapper before they can ship.
+
 ## 2026-05-17 (round 43) — i18n sweep + function context menu
 
 Two coordinated UX improvements driven by user feedback during the
