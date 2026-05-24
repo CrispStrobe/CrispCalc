@@ -71,6 +71,10 @@ void main() {
       'ratio': '1',
       'var': 'x',
     }),
+    const StepNote('partialFractions', {'roots': '-1, 1'}),
+    const StepNote('partialFractionsIntegrate'),
+    const StepNote('trigArctanForm', {'aSq': '4', 'a': '2', 'var': 'x'}),
+    const StepNote('trigArcsinForm', {'aSq': '9', 'a': '3', 'var': 'x'}),
     const StepNote('integralFallthroughSymbolic'),
     const StepNote('diffIdentity', {'var': 'x'}),
     const StepNote('diffSumDifference'),
@@ -84,9 +88,9 @@ void main() {
     const StepNote('diffFallthrough'),
   ];
 
-  test('there are exactly 37 distinct keys to translate', () {
-    expect(samples.length, 37);
-    expect(samples.map((n) => n.key).toSet().length, 37);
+  test('there are exactly 41 distinct keys to translate', () {
+    expect(samples.length, 41);
+    expect(samples.map((n) => n.key).toSet().length, 41);
   });
 
   for (final entry in locales.entries) {

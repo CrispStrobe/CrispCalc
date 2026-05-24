@@ -278,8 +278,16 @@ roughly double the perceived value of the app.
     (∫(c·f'(x)/f(x))dx → c·ln|f(x)|). Three new `StepNote` keys
     (`ibpRepeated`, `uSubNonlinear`, `integralLogDerivative`) across
     en/de/fr/es.
-    **V4 deferred**: partial fractions (∫P(x)/Q(x)dx with general Q),
-    trig substitution (∫√(a²−x²)dx etc.).
+  - **V4 partial** (HISTORY round 53): partial-fraction decomposition
+    for ∫P(x)/Q(x)dx when Q has distinct integer roots in [-20..20];
+    cover-up method (A_i = P(r_i)/Q'(r_i)) emits one ln-term per
+    root. Plus two textbook trig-shaped closed forms: ∫1/(x²+a²)dx
+    → (1/a)arctan(x/a) and ∫1/√(a²−x²)dx → arcsin(x/a). Four new
+    `StepNote` keys across en/de/fr/es.
+    **V5 deferred**: partial fractions for repeated roots / quadratic
+    factors (need symbolic system-solve), full trig substitution
+    (∫√(a²−x²)dx, ∫√(a²+x²)dx, ∫√(x²−a²)dx — needs an inverse-sub
+    pass).
 - [x] ~~**Interactive parameter sliders** on the graphing screen.~~
   Done 2026-05-17 — see HISTORY round 23. Identifiers in a function
   string that aren't the plot variable or a reserved name become

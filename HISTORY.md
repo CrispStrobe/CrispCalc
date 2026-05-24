@@ -2,6 +2,74 @@
 
 Completed work, newest first.
 
+## 2026-05-24 (round 53) — Step engine integration V4
+
+Two more integration rule families: partial-fraction decomposition
+(for rational integrands with distinct integer roots in the
+denominator) and two textbook trig-shaped closed forms.
+
+### Partial fractions (cover-up method)
+
+`_partialFractionsStep` fires when the integrand is `num / den` and
+the denominator is a polynomial of degree ≥ 2 in `variable`. It
+brute-forces integer roots in `[-20..20]` via
+`engine.evaluate(substitute(den, var, r))`; for each root `r` with
+`Q'(r) ≠ 0` (simple root only), the residue formula gives
+`A_r = P(r) / Q'(r)`. The rule then emits two steps:
+
+1. "Partial-fraction decomposition" — shows the sum
+   `Σ A_i / (x − r_i)`.
+2. "Integrate each term" — each piece becomes `A_i · ln|x − r_i|`,
+   joined into the final string.
+
+Restricted to **distinct integer roots** to keep the algorithm tight
+(repeated roots would need higher-order numerators in the
+decomposition; irreducible quadratic factors would need a real
+system-solve). The native bridge does the per-root arithmetic, so
+the rule simply doesn't fire without the bridge — preserving the
+"falls through to Symbolic integration" headless behavior.
+
+### Trig-shaped closed forms
+
+`_trigShapedAntiderivative` matches two patterns:
+
+- **`1 / (x² + a²)`** → `(1/a)·arctan(x/a)`. Detects a top-level
+  sum where one term is `x²` (sign +) and the other is a
+  variable-free constant (sign +). Computes `a = √aSq` via
+  `engine.simplify`.
+- **`1 / √(a² − x²)`** → `arcsin(x/a)`. Detects `sqrt(c − x²)` in
+  the denominator via `_matchFunctionCall` + sum-split with the
+  required `-x²` and `+c` signs.
+
+These sit BEFORE the partial-fractions block in the rule walker —
+`x² + a²` has no real roots, so partial fractions wouldn't fire, but
+without these shortcuts the calculator would fall through to the
+symbolic integrator and miss the clean closed form.
+
+### i18n
+
+Four new `StepNote` keys (`partialFractions`,
+`partialFractionsIntegrate`, `trigArctanForm`, `trigArcsinForm`)
+implemented across en/de/fr/es. The exhaustive-coverage test grows
+from 37 to 41 keys.
+
+### Verification
+
+- `flutter analyze`: 0 issues.
+- `flutter test`: **948/948** (16 new locale-coverage tests for the
+  4 new keys × 4 locales).
+- `dart format`: clean.
+
+### What's still pending
+
+- Partial fractions for repeated roots and irreducible quadratic
+  factors. Both need symbolic system-solve which the bridge
+  doesn't yet expose cleanly.
+- Trig substitution proper (∫√(a²−x²)dx, ∫√(a²+x²)dx, ∫√(x²−a²)dx)
+  needs an inverse-substitution pass that converts the integrand
+  through `x = a·sin(θ)` (etc.), integrates in θ, then back-
+  substitutes. Deferred to V5.
+
 ## 2026-05-24 (round 52) — Import-from-JSON pairs the existing Export
 
 Round 14 shipped Export → JSON-to-clipboard. This round closes the

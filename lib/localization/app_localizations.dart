@@ -1089,6 +1089,17 @@ class EnLocalizations implements AppLocalizations {
       case 'integralLogDerivative':
         return 'The numerator is (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
             'so the integral is ${p['ratio']}·ln|${p['den']}|.';
+      case 'partialFractions':
+        return 'The denominator has distinct integer roots ${p['roots']}. '
+            'Cover-up gives A_i = P(r_i) / Q\'(r_i) for each root.';
+      case 'partialFractionsIntegrate':
+        return 'Each `A/(x-r)` piece integrates to A·ln|x-r|.';
+      case 'trigArctanForm':
+        return 'Match a² = ${p['aSq']}, so a = ${p['a']}. The standard '
+            'form gives (1/a)·arctan(${p['var']}/a).';
+      case 'trigArcsinForm':
+        return 'Match a² = ${p['aSq']}, so a = ${p['a']}. The standard '
+            'form gives arcsin(${p['var']}/a).';
       case 'integralFallthroughSymbolic':
         return 'No standard textbook rule matched this shape — handing off '
             'to the symbolic integrator.';
@@ -1876,6 +1887,18 @@ class DeLocalizations implements AppLocalizations {
       case 'integralLogDerivative':
         return 'Der Zähler ist (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
             'also ist das Integral ${p['ratio']}·ln|${p['den']}|.';
+      case 'partialFractions':
+        return 'Der Nenner hat unterschiedliche ganzzahlige Nullstellen '
+            '${p['roots']}. Die Cover-up-Methode liefert '
+            'A_i = P(r_i) / Q\'(r_i) für jede Nullstelle.';
+      case 'partialFractionsIntegrate':
+        return 'Jedes Stück `A/(x-r)` integriert sich zu A·ln|x-r|.';
+      case 'trigArctanForm':
+        return 'Setze a² = ${p['aSq']}, also a = ${p['a']}. Die '
+            'Standardform liefert (1/a)·arctan(${p['var']}/a).';
+      case 'trigArcsinForm':
+        return 'Setze a² = ${p['aSq']}, also a = ${p['a']}. Die '
+            'Standardform liefert arcsin(${p['var']}/a).';
       case 'integralFallthroughSymbolic':
         return 'Keine standardmäßige Lehrbuchregel passt zu dieser Form '
             '— die Antwort übernimmt der symbolische Integrator.';
@@ -2669,6 +2692,18 @@ class FrLocalizations implements AppLocalizations {
       case 'integralLogDerivative':
         return 'Le numérateur vaut (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
             'donc l\'intégrale est ${p['ratio']}·ln|${p['den']}|.';
+      case 'partialFractions':
+        return 'Le dénominateur a des racines entières distinctes '
+            '${p['roots']}. La méthode du masque donne '
+            'A_i = P(r_i) / Q\'(r_i) pour chaque racine.';
+      case 'partialFractionsIntegrate':
+        return 'Chaque terme `A/(x-r)` s\'intègre en A·ln|x-r|.';
+      case 'trigArctanForm':
+        return 'Pose a² = ${p['aSq']}, donc a = ${p['a']}. La forme '
+            'standard donne (1/a)·arctan(${p['var']}/a).';
+      case 'trigArcsinForm':
+        return 'Pose a² = ${p['aSq']}, donc a = ${p['a']}. La forme '
+            'standard donne arcsin(${p['var']}/a).';
       case 'integralFallthroughSymbolic':
         return 'Aucune règle classique ne correspond à cette forme — la '
             'réponse est confiée à l\'intégrateur symbolique.';
@@ -3461,6 +3496,18 @@ class EsLocalizations implements AppLocalizations {
       case 'integralLogDerivative':
         return 'El numerador es (${p['ratio']})·(d/d${p['var']}[${p['den']}]), '
             'así que la integral es ${p['ratio']}·ln|${p['den']}|.';
+      case 'partialFractions':
+        return 'El denominador tiene raíces enteras distintas '
+            '${p['roots']}. El método de cobertura da '
+            'A_i = P(r_i) / Q\'(r_i) para cada raíz.';
+      case 'partialFractionsIntegrate':
+        return 'Cada término `A/(x-r)` se integra a A·ln|x-r|.';
+      case 'trigArctanForm':
+        return 'Iguala a² = ${p['aSq']}, así a = ${p['a']}. La forma '
+            'estándar da (1/a)·arctan(${p['var']}/a).';
+      case 'trigArcsinForm':
+        return 'Iguala a² = ${p['aSq']}, así a = ${p['a']}. La forma '
+            'estándar da arcsin(${p['var']}/a).';
       case 'integralFallthroughSymbolic':
         return 'Ninguna regla de libro de texto encaja con esta forma — '
             'la respuesta la calcula el integrador simbólico.';

@@ -700,6 +700,32 @@ class StepEngine {
       }
     }
 
+    // V4: two textbook trig-shaped antiderivatives. Match BEFORE the
+    // partial-fractions rule below because ∫1/(x²+a²)dx has no real
+    // roots (partial fractions would silently decline) but we want
+    // the clean closed form `(1/a)·atan(x/a)` rather than dropping
+    // through to the bridge.
+    final trigSplit = _splitTopLevelOnce(s, '/');
+    if (trigSplit != null) {
+      final trigResult = _trigShapedAntiderivative(
+          trigSplit.lhs, trigSplit.rhs, variable, engine, steps, s);
+      if (trigResult != null) return trigResult;
+    }
+
+    // V4: partial fractions for ∫ P(x) / Q(x) dx when Q has distinct
+    // small-integer roots. We don't try to factor general polynomials —
+    // the cover-up method works as long as the roots are simple, and a
+    // quick brute-force scan over [-20..20] finds the rational roots
+    // that show up in textbook problems. For each integer root r_i,
+    // A_i = P(r_i) / Q'(r_i) (the residue formula). Result is
+    // Σ A_i · ln|x − r_i|.
+    final pfSplit = _splitTopLevelOnce(s, '/');
+    if (pfSplit != null) {
+      final pfResult = _partialFractionsStep(
+          pfSplit.lhs, pfSplit.rhs, variable, engine, steps, s);
+      if (pfResult != null) return pfResult;
+    }
+
     // Integration by parts: ∫ln(x) dx = x·ln(x) − x.
     if (fc != null &&
         (fc.name == 'ln' || fc.name == 'log') &&
@@ -811,6 +837,199 @@ class StepEngine {
   /// Used by the repeated-IBP rule to detect `x^n · f(x)` patterns
   /// without firing on `x^2.5`, `x^x`, or symbolic powers — for which
   /// IBP wouldn't terminate cleanly anyway.
+  /// Two V4 textbook closed-form antiderivatives:
+  ///   ∫ 1 / (x² + a²) dx = (1/a) · arctan(x/a)
+  ///   ∫ 1 / √(a² − x²) dx = arcsin(x/a)
+  /// Returns the symbolic antiderivative when one of these patterns
+  /// matches, or null otherwise (caller continues with the rule walker).
+  static String? _trigShapedAntiderivative(
+    String num,
+    String den,
+    String variable,
+    CalculatorEngine engine,
+    List<MathStep> steps,
+    String originalIntegrand,
+  ) {
+    if (_stripOuterParens(num.trim()) != '1') return null;
+    final denStripped = _stripOuterParens(den.trim());
+
+    // Pattern A: 1 / (x² + a²) where the `a²` term is a positive
+    // constant. Split den on +; one term must be `x^2`, the other
+    // must be variable-free with a `+` sign.
+    final sumTerms = _splitTopLevelSum(denStripped);
+    if (sumTerms != null && sumTerms.length == 2) {
+      var idxX2 = -1;
+      var idxConst = -1;
+      for (var i = 0; i < 2; i++) {
+        final body = _stripOuterParens(sumTerms[i].body).trim();
+        if (body == '$variable^2' && sumTerms[i].sign == '+') {
+          idxX2 = i;
+        } else if (!_containsVar(body, variable) && sumTerms[i].sign == '+') {
+          idxConst = i;
+        }
+      }
+      if (idxX2 >= 0 && idxConst >= 0) {
+        final aSq = _stripOuterParens(sumTerms[idxConst].body).trim();
+        final a = engine.simplify('sqrt($aSq)');
+        if (!a.startsWith('Error')) {
+          final result = 'atan($variable/($a))/($a)';
+          steps.add(MathStep(
+            rule: 'Standard form: 1/(x²+a²)',
+            formula:
+                r"\int \frac{1}{x^2 + a^2} \, dx = \frac{1}{a}\arctan\!\left(\frac{x}{a}\right)",
+            before: '∫ $originalIntegrand d$variable',
+            after: result,
+            note: 'Match a² = $aSq, so a = $a. The standard form gives '
+                '(1/a)·arctan(x/a).',
+            noteI18n: StepNote(
+                'trigArctanForm', {'aSq': aSq, 'a': a, 'var': variable}),
+          ));
+          return result;
+        }
+      }
+    }
+
+    // Pattern B: 1 / √(a² − x²). Detect den = sqrt(…) where the
+    // arg is a sum with `-x^2` and a positive constant.
+    final fcDen = _matchFunctionCall(denStripped);
+    if (fcDen != null && fcDen.name == 'sqrt') {
+      final inner = _stripOuterParens(fcDen.arg.trim());
+      final innerTerms = _splitTopLevelSum(inner);
+      if (innerTerms != null && innerTerms.length == 2) {
+        var idxX2 = -1;
+        var idxConst = -1;
+        for (var i = 0; i < 2; i++) {
+          final body = _stripOuterParens(innerTerms[i].body).trim();
+          if (body == '$variable^2' && innerTerms[i].sign == '-') {
+            idxX2 = i;
+          } else if (!_containsVar(body, variable) &&
+              innerTerms[i].sign == '+') {
+            idxConst = i;
+          }
+        }
+        if (idxX2 >= 0 && idxConst >= 0) {
+          final aSq = _stripOuterParens(innerTerms[idxConst].body).trim();
+          final a = engine.simplify('sqrt($aSq)');
+          if (!a.startsWith('Error')) {
+            final result = 'asin($variable/($a))';
+            steps.add(MathStep(
+              rule: 'Standard form: 1/√(a²−x²)',
+              formula:
+                  r"\int \frac{1}{\sqrt{a^2 - x^2}} \, dx = \arcsin\!\left(\frac{x}{a}\right)",
+              before: '∫ $originalIntegrand d$variable',
+              after: result,
+              note: 'Match a² = $aSq, so a = $a. The standard form '
+                  'gives arcsin(x/a).',
+              noteI18n: StepNote(
+                  'trigArcsinForm', {'aSq': aSq, 'a': a, 'var': variable}),
+            ));
+            return result;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Attempts the V4 partial-fractions integration rule. Returns the
+  /// final symbolic antiderivative string when it fires, or null when
+  /// the integrand isn't a rational function with distinct small-
+  /// integer denominator roots. Bridge-dependent (uses [engine]
+  /// substitution / differentiation / evaluation) so it silently
+  /// declines when the native bridge isn't available — keeping the
+  /// "falls through to Symbolic integration" behavior consistent in
+  /// headless tests.
+  static String? _partialFractionsStep(
+    String num,
+    String den,
+    String variable,
+    CalculatorEngine engine,
+    List<MathStep> steps,
+    String originalIntegrand,
+  ) {
+    final numStripped = _stripOuterParens(num.trim());
+    final denStripped = _stripOuterParens(den.trim());
+    // Both sides must depend on the variable for partial fractions to
+    // apply. (Constant numerator over polynomial is fine; constant
+    // denominator is the constant-multiple rule.)
+    if (!_containsVar(denStripped, variable)) return null;
+    // Linear-denominator and 1/x cases are already handled by earlier
+    // rules. Quick out: require Q to have degree ≥ 2, which we proxy
+    // by checking that d²Q/dx² isn't zero.
+    final dDen = engine.differentiate(denStripped, variable);
+    if (dDen.startsWith('Error')) return null;
+    final d2Den = engine.differentiate(dDen, variable);
+    if (d2Den.startsWith('Error')) return null;
+    if (_looksLikeZero(d2Den)) return null;
+
+    // Brute-force integer-root scan in [-20..20]. Real homework
+    // problems live in this range; anything wider would need
+    // SymEngine's roots() which the bridge doesn't expose yet.
+    final roots = <int>{};
+    for (var r = -20; r <= 20; r++) {
+      final value = engine.evaluate(_substitute(denStripped, variable, '$r'));
+      if (_looksLikeZero(value)) roots.add(r);
+    }
+    // Need at least two distinct roots to be worth the decomposition.
+    if (roots.length < 2) return null;
+    // For each root r, compute A = P(r) / Q'(r) (residue formula).
+    // Each A_i must be finite (Q'(r) ≠ 0 — confirms simple root).
+    final coefs = <int, String>{};
+    for (final r in roots) {
+      final dDenAtR = engine.evaluate(_substitute(dDen, variable, '$r'));
+      if (_looksLikeZero(dDenAtR)) return null; // repeated root
+      final numAtR = engine.evaluate(_substitute(numStripped, variable, '$r'));
+      if (numAtR.startsWith('Error') || dDenAtR.startsWith('Error')) {
+        return null;
+      }
+      final a = engine.simplify('($numAtR) / ($dDenAtR)');
+      if (a.startsWith('Error')) return null;
+      coefs[r] = a;
+    }
+
+    // Build the decomposition + result strings.
+    final decompositionParts = <String>[];
+    final resultParts = <String>[];
+    for (final r in roots) {
+      final a = coefs[r]!;
+      final sign = r >= 0 ? '-' : '+';
+      final absR = r.abs();
+      decompositionParts.add('($a)/($variable $sign $absR)');
+      if (a == '1') {
+        resultParts.add('ln|$variable $sign $absR|');
+      } else if (a == '-1') {
+        resultParts.add('-ln|$variable $sign $absR|');
+      } else {
+        resultParts.add('($a)·ln|$variable $sign $absR|');
+      }
+    }
+    final decomposition = decompositionParts.join(' + ');
+    final result = resultParts.join(' + ');
+
+    steps.add(MathStep(
+      rule: 'Partial-fraction decomposition',
+      formula: r"\frac{P(x)}{(x-r_1)\dots(x-r_n)} = \sum \frac{A_i}{x-r_i}",
+      before: '∫ $originalIntegrand d$variable',
+      after: '∫ ($decomposition) d$variable',
+      note: 'The denominator has distinct integer roots '
+          '${roots.toList()..sort()}. Cover-up gives '
+          'A_i = P(r_i) / Q\'(r_i) for each root.',
+      noteI18n: StepNote('partialFractions', {
+        'roots': (roots.toList()..sort()).join(', '),
+      }),
+    ));
+    steps.add(MathStep(
+      rule: 'Integrate each term',
+      formula: r"\int \frac{A}{x-r} \, dx = A \ln|x-r|",
+      before: '∫ ($decomposition) d$variable',
+      after: result,
+      note: 'Each `A/(x-r)` piece integrates to A·ln|x-r|.',
+      noteI18n: const StepNote('partialFractionsIntegrate'),
+    ));
+    return result;
+  }
+
   static int? _smallIntegerPowerOfVar(String expr, String variable) {
     final s = _stripOuterParens(expr.trim());
     if (s == variable) return 1;
