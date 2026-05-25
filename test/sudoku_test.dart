@@ -518,6 +518,15 @@ void main() {
       }
     }, timeout: const Timeout(Duration(seconds: 180)));
 
+    test('killer9x9 preset has a UNIQUE solution', () async {
+      // Round 66: the killer9x9 preset is now a real Killer puzzle
+      // with a single solution. The cage system (47 cages, 13
+      // singleton clues + pair cages) was constructed to be
+      // provably unique.
+      expect(await SudokuSolver.hasUniqueSolution(SudokuPresets.killer9x9),
+          isTrue);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
     test(
         'regression: horizontal-only cage (subset of one row) does not '
         'over-constrain the solver', () async {

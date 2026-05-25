@@ -2,6 +2,43 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 66) — Sudoku: killer9x9 is now actually unique
+
+The killer9x9 preset shipped in round 64 was feasible but not
+unique (horizontal-only cages don't disambiguate). Round 65's
+uniqueness chip surfaced this honestly to the user, but the
+puzzle still wasn't a "real" Killer — clicking Solve would
+return one of many valid grids, and re-solving could give a
+different one.
+
+This round replaces the cage layout with one that admits
+exactly one solution.
+
+### Layout design
+
+The probe loop (driven by `hasUniqueSolution`) tried several
+cage families:
+- Horizontal pairs/triples (sums only): not unique.
+- Vertical pairs across row blocks: not unique.
+- L-tromino tilings: not unique even with 3 singleton clues
+  (and took 24s to confirm).
+- 11 singleton "clue" cages + greedy 2-cell pair fill: UNIQUE
+  in 17ms.
+
+The greedy fill walks the grid row-major and pairs each
+unclaimed cell with its right neighbour (else below, else
+left), leaving 13 effective singletons (the original 11 plus
+two that got stranded next to other singletons). 47 cages
+total. The high singleton count is what buys uniqueness on
+this 9×9 — generating a Killer with fewer singletons requires
+search over cage shapes, deferred to V2.
+
+### Test
+
+`killer9x9 preset has a UNIQUE solution` asserts
+`SudokuSolver.hasUniqueSolution(killer9x9)` is true. The
+existing feasibility + cage-sum tests still apply.
+
 ## 2026-05-25 (round 65) — Sudoku: uniqueness indicator
 
 Adds a "Check uniqueness" button to the Sudoku screen and a

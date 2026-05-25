@@ -1000,63 +1000,68 @@ class SudokuPresets {
   );
 
   /// 9×9 Killer derived from a canonical solved grid. The cage
-  /// partition uses horizontal 2/3-cell groups (4 cages per row,
-  /// 36 cages total). Each row's cage sums total 45 (= 1+2+…+9).
-  /// Ships with no givens — solving relies entirely on the cage
-  /// sum + all-different constraints + Sudoku rules. Note: this
-  /// preset is FEASIBLE rather than provably unique under cages
-  /// alone — proper uniqueness for 9×9 Killer requires irregular
-  /// cage shapes that cut across rows, deferred to V2.
+  /// partition mixes 13 singleton cages (acting as pinned clues)
+  /// with horizontal- and vertical-pair cages produced by greedy
+  /// pairing of the remaining cells. 47 cages total, partitioning
+  /// all 81 cells. Verified UNIQUE via `hasUniqueSolution`
+  /// (round 66) — solving from scratch yields exactly one grid.
+  /// Note: the high singleton count is what buys uniqueness;
+  /// generating a 9×9 Killer with fewer singletons would need
+  /// a search loop over cage shapes (V2 work, see PLAN).
   static final SudokuPuzzle killer9x9 = SudokuPuzzle(
     layout: SudokuLayout.standard,
     variant: SudokuVariant.killer,
     cells: List<int>.filled(81, 0),
     cages: const [
-      // Row 0: 5 3 4 6 7 8 9 1 2 — sum 45 = 8+17+17+3
-      KillerCage(cellIndexes: [0, 1], targetSum: 8),
-      KillerCage(cellIndexes: [2, 3, 4], targetSum: 17),
+      // Singleton "clues" — pinned cell values.
+      KillerCage(cellIndexes: [0], targetSum: 5),
+      KillerCage(cellIndexes: [11], targetSum: 2),
+      KillerCage(cellIndexes: [22], targetSum: 4),
+      KillerCage(cellIndexes: [35], targetSum: 3),
+      KillerCage(cellIndexes: [40], targetSum: 5),
+      KillerCage(cellIndexes: [41], targetSum: 3),
+      KillerCage(cellIndexes: [44], targetSum: 1),
+      KillerCage(cellIndexes: [49], targetSum: 2),
+      KillerCage(cellIndexes: [55], targetSum: 6),
+      KillerCage(cellIndexes: [65], targetSum: 7),
+      KillerCage(cellIndexes: [72], targetSum: 3),
+      KillerCage(cellIndexes: [76], targetSum: 8),
+      KillerCage(cellIndexes: [80], targetSum: 9),
+      // Horizontal + vertical pair cages over remaining cells.
+      KillerCage(cellIndexes: [1, 2], targetSum: 7),
+      KillerCage(cellIndexes: [3, 4], targetSum: 13),
       KillerCage(cellIndexes: [5, 6], targetSum: 17),
       KillerCage(cellIndexes: [7, 8], targetSum: 3),
-      // Row 1: 6 7 2 1 9 5 3 4 8 — sum 45 = 13+3+17+12
       KillerCage(cellIndexes: [9, 10], targetSum: 13),
-      KillerCage(cellIndexes: [11, 12], targetSum: 3),
-      KillerCage(cellIndexes: [13, 14, 15], targetSum: 17),
+      KillerCage(cellIndexes: [12, 13], targetSum: 10),
+      KillerCage(cellIndexes: [14, 15], targetSum: 8),
       KillerCage(cellIndexes: [16, 17], targetSum: 12),
-      // Row 2: 1 9 8 3 4 2 5 6 7 — sum 45 = 18+7+7+13
-      KillerCage(cellIndexes: [18, 19, 20], targetSum: 18),
-      KillerCage(cellIndexes: [21, 22], targetSum: 7),
+      KillerCage(cellIndexes: [18, 19], targetSum: 10),
+      KillerCage(cellIndexes: [20, 21], targetSum: 11),
       KillerCage(cellIndexes: [23, 24], targetSum: 7),
       KillerCage(cellIndexes: [25, 26], targetSum: 13),
-      // Row 3: 8 5 9 7 6 1 4 2 3 — sum 45 = 13+16+7+9
       KillerCage(cellIndexes: [27, 28], targetSum: 13),
       KillerCage(cellIndexes: [29, 30], targetSum: 16),
       KillerCage(cellIndexes: [31, 32], targetSum: 7),
-      KillerCage(cellIndexes: [33, 34, 35], targetSum: 9),
-      // Row 4: 4 2 6 8 5 3 7 9 1 — sum 45 = 12+13+10+10
-      KillerCage(cellIndexes: [36, 37, 38], targetSum: 12),
-      KillerCage(cellIndexes: [39, 40], targetSum: 13),
-      KillerCage(cellIndexes: [41, 42], targetSum: 10),
-      KillerCage(cellIndexes: [43, 44], targetSum: 10),
-      // Row 5: 7 1 3 9 2 4 8 5 6 — sum 45 = 8+14+12+11
+      KillerCage(cellIndexes: [33, 34], targetSum: 6),
+      KillerCage(cellIndexes: [36, 37], targetSum: 6),
+      KillerCage(cellIndexes: [38, 39], targetSum: 14),
+      KillerCage(cellIndexes: [42, 43], targetSum: 16),
       KillerCage(cellIndexes: [45, 46], targetSum: 8),
-      KillerCage(cellIndexes: [47, 48, 49], targetSum: 14),
+      KillerCage(cellIndexes: [47, 48], targetSum: 12),
       KillerCage(cellIndexes: [50, 51], targetSum: 12),
       KillerCage(cellIndexes: [52, 53], targetSum: 11),
-      // Row 6: 9 6 1 5 3 7 2 8 4 — sum 45 = 15+6+12+12
-      KillerCage(cellIndexes: [54, 55], targetSum: 15),
+      KillerCage(cellIndexes: [54, 63], targetSum: 11), // vertical pair
       KillerCage(cellIndexes: [56, 57], targetSum: 6),
-      KillerCage(cellIndexes: [58, 59, 60], targetSum: 12),
-      KillerCage(cellIndexes: [61, 62], targetSum: 12),
-      // Row 7: 2 8 7 4 1 9 6 3 5 — sum 45 = 17+5+15+8
-      KillerCage(cellIndexes: [63, 64, 65], targetSum: 17),
+      KillerCage(cellIndexes: [58, 59], targetSum: 10),
+      KillerCage(cellIndexes: [60, 61], targetSum: 10),
+      KillerCage(cellIndexes: [62, 71], targetSum: 9), // vertical pair
+      KillerCage(cellIndexes: [64, 73], targetSum: 12), // vertical pair
       KillerCage(cellIndexes: [66, 67], targetSum: 5),
       KillerCage(cellIndexes: [68, 69], targetSum: 15),
-      KillerCage(cellIndexes: [70, 71], targetSum: 8),
-      // Row 8: 3 4 5 2 8 6 1 7 9 — sum 45 = 7+7+14+17
-      KillerCage(cellIndexes: [72, 73], targetSum: 7),
+      KillerCage(cellIndexes: [70, 79], targetSum: 10), // vertical pair
       KillerCage(cellIndexes: [74, 75], targetSum: 7),
-      KillerCage(cellIndexes: [76, 77], targetSum: 14),
-      KillerCage(cellIndexes: [78, 79, 80], targetSum: 17),
+      KillerCage(cellIndexes: [77, 78], targetSum: 7),
     ],
   );
 
