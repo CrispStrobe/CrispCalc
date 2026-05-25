@@ -33,6 +33,7 @@ import '../localization/app_localizations.dart';
 import '../services/engine_service.dart';
 import '../utils/error_formatter.dart';
 import '../utils/expression_preprocessing_utils.dart';
+import '../utils/latex_conversion_utils.dart';
 import '../utils/math_display_utils.dart';
 import '../widgets/notepad_manager_dialog.dart';
 
@@ -102,6 +103,14 @@ class _NotepadScreenState extends State<NotepadScreen> {
   /// in flight, no concurrent kill races.
   Future<void>? _activeRecalc;
 
+  /// Snapshot of the global NumberDisplayFormat we last evaluated
+  /// against. When `_onAppStateChanged` sees this drift, it kicks
+  /// a full recalc so previously-cached `cachedResult` strings get
+  /// re-formatted under the new setting (the cache stores the
+  /// already-formatted string, so a settings change otherwise has
+  /// no visible effect until the user edits a line).
+  NumberDisplayFormat? _lastNumberFormat;
+
   /// Evaluator is rebuilt per recalc so the `externalScope` reflects
   /// the doc's current `use` directive resolved against
   /// `AppState.userVariables` (Phase 6).
@@ -109,6 +118,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
   @override
   void initState() {
     super.initState();
+    _lastNumberFormat = _appState.numberFormat;
     _appState.addListener(_onAppStateChanged);
   }
 
@@ -130,6 +140,17 @@ class _NotepadScreenState extends State<NotepadScreen> {
 
   void _onAppStateChanged() {
     if (!mounted) return;
+    // Detect a NumberDisplayFormat change and recompute so cached
+    // result strings reflect the new setting. Other AppState
+    // notifications (variable edits, doc updates we triggered
+    // ourselves) just trigger a repaint via setState.
+    if (_lastNumberFormat != _appState.numberFormat) {
+      _lastNumberFormat = _appState.numberFormat;
+      final doc = _currentDoc;
+      if (doc != null) {
+        _runRecalc(doc, startIndex: null);
+      }
+    }
     setState(() {});
   }
 
@@ -411,7 +432,14 @@ class _NotepadScreenState extends State<NotepadScreen> {
   Future<String> _dispatcher(String preprocessed) async {
     if (preprocessed.trim().isEmpty) return '';
 
-    // Try the unit evaluator first against the raw preprocessed
+    // LaTeX-friendly input — convert `x^{3}`, `\cdot`, `\frac{a}{b}`,
+    // etc. into engine syntax. The calculator screen runs the same
+    // pass before evaluating; without it, anyone pasting or typing
+    // LaTeX (e.g. `diff(x^{3} - 4\cdot x + 7, x)`) gets a parse
+    // failure that SymEngine can't recover from.
+    final preNative = LatexConversionUtils.fromLatex(preprocessed);
+
+    // Try the unit evaluator first against the LaTeX-stripped
     // body and again with all parens stripped — Phase 2's Ans
     // substitution wraps the previous-line result in parens (so
     // `Ans + 1` binds correctly for arithmetic), but the unit
@@ -419,20 +447,33 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // `(8 km) in miles` would otherwise fail. Stripping all parens
     // is safe for the unit fallback since unit expressions don't
     // use parens for grouping in V1.
-    var unitResult = UnitExpressionEvaluator.tryEvaluate(preprocessed);
-    if (unitResult == null && preprocessed.contains('(')) {
-      final stripped = preprocessed.replaceAll('(', '').replaceAll(')', '');
+    var unitResult = UnitExpressionEvaluator.tryEvaluate(preNative);
+    if (unitResult == null && preNative.contains('(')) {
+      final stripped = preNative.replaceAll('(', '').replaceAll(')', '');
       unitResult = UnitExpressionEvaluator.tryEvaluate(stripped);
     }
     if (unitResult != null) return _appState.formatNumber(unitResult);
 
     final native =
-        ExpressionPreprocessingUtils.preprocessNativeExpression(preprocessed);
+        ExpressionPreprocessingUtils.preprocessNativeExpression(preNative);
     try {
       final raw = await EngineService.evaluateAsync(native);
       if (raw.startsWith('Error')) return raw;
-      final normalized =
+      var normalized =
           ExpressionPreprocessingUtils.normalizeComplexResult(raw);
+      // normalizeComplexResult inserts spaces around `-` for binary
+      // operands, but for a unary-minus result like `-5` that turns
+      // it into `- 5` which `double.tryParse` can't read — and
+      // `formatNumber` then silently bails, so the NumberDisplayFormat
+      // setting goes ignored on negative results. Compact a leading
+      // "- " back into "-" before formatting.
+      if (normalized.startsWith('- ') &&
+          normalized.length > 2 &&
+          (normalized[2] == '.' ||
+              (normalized.codeUnitAt(2) >= 0x30 &&
+                  normalized.codeUnitAt(2) <= 0x39))) {
+        normalized = '-${normalized.substring(2)}';
+      }
       return _appState.formatNumber(normalized);
     } on EngineCancelled {
       return 'Error: cancelled';

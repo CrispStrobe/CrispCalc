@@ -395,10 +395,24 @@ class ExpressionPreprocessingUtils {
         .replaceAll(RegExp(r'\bI\b'), 'i');
 
     // Normalize spacing.
+    //
+    // For `-` we only space when both sides have a non-whitespace
+    // character — i.e. the `-` is a binary operator. The previous
+    // unconditional `\s*-\s*` → ` - ` turned a unary minus at the
+    // start of a result (`-5`, `-5.0`) into `- 5`, which then broke
+    // every consumer that called `double.tryParse` on the value
+    // (most importantly `AppState.formatNumber`, so the
+    // `NumberDisplayFormat` setting was silently ignored on
+    // negative results). The bounded-context replace keeps `x - 1`
+    // and `1 - 2` formatted with spaces while leaving the leading
+    // unary `-` glued to its operand.
     normalized = normalized
         .replaceAll(RegExp(r'\s+'), ' ')
         .replaceAll(RegExp(r'\s*\+\s*'), ' + ')
-        .replaceAll(RegExp(r'\s*-\s*'), ' - ')
+        .replaceAllMapped(
+          RegExp(r'(\S)\s*-\s*(\S)'),
+          (m) => '${m[1]} - ${m[2]}',
+        )
         .replaceAll(RegExp(r'\s*\*\s*'), '*')
         .trim();
 
