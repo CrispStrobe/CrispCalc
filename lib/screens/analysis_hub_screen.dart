@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../localization/app_localizations.dart';
+import '../widgets/constants_dialog.dart';
 import '../widgets/unit_converter_dialog.dart';
 import 'conic_section_screen.dart';
 import 'constraints_screen.dart';
@@ -85,6 +86,20 @@ class AnalysisHubScreen extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (_) => const UnitConverterDialog(),
+              );
+            },
+          ),
+          // Round 71: Constants reference was previously buried in
+          // Settings — surface it here in the Analysis hub alongside
+          // its peers.
+          _ModuleCard(
+            icon: Icons.science_outlined,
+            title: t.settingsConstants,
+            subtitle: t.settingsConstantsSubtitle,
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => const ConstantsDialog(),
               );
             },
           ),

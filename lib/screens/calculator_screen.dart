@@ -32,6 +32,7 @@ import '../utils/math_display_utils.dart';
 // Other imports
 import '../controllers/latex_controller.dart';
 import '../localization/app_localizations.dart';
+import '../main.dart' show appRouteObserver;
 import '../screens/curve_analysis_input_screen.dart';
 import '../screens/matrix_editor_screen.dart';
 
@@ -50,7 +51,7 @@ class CalculatorScreen extends StatefulWidget {
 }
 
 class CalculatorScreenState extends State<CalculatorScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RouteAware {
   final AppState _appState = AppState();
   final CalculatorEngine _engine = CalculatorEngine();
   final Map<String, String> _memory = {};
@@ -95,6 +96,28 @@ class CalculatorScreenState extends State<CalculatorScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Round 71: subscribe to the app-wide RouteObserver so we get a
+    // didPopNext callback whenever a pushed route (dialog, module
+    // screen, anything that puts a ModalRoute on top of us) pops
+    // back. This is what restores hardware-keyboard focus to the
+    // calculator without requiring the user to click a keypad
+    // button or hit the "reset focus" recovery action.
+    final route = ModalRoute.of(context);
+    if (route != null) appRouteObserver.subscribe(this, route);
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    if (!mounted) return;
+    // The route that was on top of us just popped — re-grab focus
+    // for the hardware-keyboard listener.
+    _calculatorFocusNode.requestFocus();
+  }
+
   void _consumePendingInsert() {
     final expr = _appState.consumePendingInsert();
     if (expr == null || !mounted) return;
@@ -105,6 +128,7 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _appState.removeListener(_consumePendingInsert);
     _tabController.dispose();
     _latexController.removeListener(_onInputChanged);

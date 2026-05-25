@@ -56,11 +56,18 @@ Future<void> _scrollAndTap(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
-/// Find an Analysis hub module by title and tap into it.
+/// Find an Analysis hub module by title and tap into it. Scrolls
+/// the hub's ListView until the target card is in view — there are
+/// now 9 modules, several of which sit below the fold on a
+/// 1280×800 surface.
 Future<void> _gotoAnalysisModule(WidgetTester tester, String title) async {
   final analysis = find.text('Analysis');
   expect(analysis, findsWidgets);
   await tester.tap(analysis.first);
+  await tester.pumpAndSettle();
+  final scrollable = find.byType(Scrollable).first;
+  await tester.scrollUntilVisible(find.text(title), 200,
+      scrollable: scrollable);
   await tester.pumpAndSettle();
   await tester.tap(find.text(title));
   await tester.pumpAndSettle();
@@ -81,8 +88,8 @@ void main() {
 
     testWidgets('Constants dialog filters by category', (tester) async {
       await _pumpApp(tester);
-      await _gotoSettings(tester);
-      await _scrollAndTap(tester, 'Constants reference');
+      // Round 71: Constants lives in the Analysis hub, not Settings.
+      await _gotoAnalysisModule(tester, 'Constants reference');
 
       // All four category chips visible.
       expect(find.text('All'), findsWidgets);
@@ -104,8 +111,8 @@ void main() {
 
     testWidgets('Unit converter switches dimensions', (tester) async {
       await _pumpApp(tester);
-      await _gotoSettings(tester);
-      await _scrollAndTap(tester, 'Unit converter');
+      // Round 71: Unit Converter lives in the Analysis hub only.
+      await _gotoAnalysisModule(tester, 'Unit Converter');
 
       // Category chip row visible.
       expect(find.text('Length'), findsOneWidget);
@@ -162,13 +169,13 @@ void main() {
       expect(find.text('Mean'), findsOneWidget);
     });
 
-    testWidgets('Analysis hub lists all eight modules', (tester) async {
+    testWidgets('Analysis hub lists all nine modules', (tester) async {
       await _pumpApp(tester);
       final analysis = find.text('Analysis');
       await tester.tap(analysis.first);
       await tester.pumpAndSettle();
 
-      // The hub is a ListView; at 1280×800 not all 8 cards fit
+      // The hub is a ListView; at 1280×800 not all 9 cards fit
       // without scrolling. Scroll each off-screen card into view
       // before asserting it exists.
       final scrollable = find.byType(Scrollable).first;
@@ -179,6 +186,7 @@ void main() {
         'Statistics',
         '3D Graphing',
         'Unit Converter',
+        'Constants reference', // Round 71: moved from Settings
         'Constraint problems',
         'Sudoku',
       ]) {

@@ -25,13 +25,23 @@ import 'screens/function_editor_screen.dart';
 import 'screens/graphing_screen.dart';
 import 'screens/help_screen.dart';
 import 'services/native_licenses.dart';
-import 'widgets/constants_dialog.dart';
 import 'widgets/export_data_dialog.dart';
 import 'widgets/import_data_dialog.dart';
 import 'widgets/onboarding_tour.dart';
-import 'widgets/unit_converter_dialog.dart';
 import 'widgets/user_functions_dialog.dart';
 import 'widgets/worked_examples_dialog.dart';
+
+/// Round 71: a single app-wide [RouteObserver] so screens / dialogs
+/// pushed onto the root navigator can subscribe via [RouteAware] and
+/// react when the user navigates back. The calculator uses this to
+/// reclaim hardware-keyboard focus on every `didPopNext` — without
+/// it, dismissing a dialog (Unit Converter, Constants, etc.) or
+/// returning from a module screen (Sudoku, Constraints, …) leaves
+/// focus stranded on whichever widget the dialog/screen last held,
+/// and the user can't type into the calculator until they click a
+/// keypad button or hit the "reset focus" recovery action.
+final RouteObserver<ModalRoute<void>> appRouteObserver =
+    RouteObserver<ModalRoute<void>>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -137,6 +147,7 @@ class CrispCalcApp extends StatelessWidget {
           themeMode: appState.themeMode,
           theme: _buildLightTheme(),
           darkTheme: _buildDarkTheme(),
+          navigatorObservers: [appRouteObserver],
           home: const MainScreen(),
         );
       },
@@ -498,32 +509,10 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.straighten),
-                  title: Text(t.unitConverterTitle),
-                  subtitle: Text(t.unitConverterSubtitle),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (_) => const UnitConverterDialog(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.science_outlined),
-                  title: Text(t.settingsConstants),
-                  subtitle: Text(t.settingsConstantsSubtitle),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (_) => const ConstantsDialog(),
-                  ),
-                ),
-              ),
+              // Round 71: Unit Converter + Constants live in the
+              // Analysis hub only — duplicated entry-points here
+              // made Settings noisy and confused new users about
+              // which surface owned what.
               const SizedBox(height: 16),
               Card(
                 child: ListTile(

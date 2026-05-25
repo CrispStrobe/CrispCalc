@@ -4768,6 +4768,20 @@ extension AppLocalizationsExtensions on AppLocalizations {
   /// like "No inflection points found" doesn't get partially clobbered
   /// by the short labels.
   String translateClassification(String raw) {
+    // Round 71: the analysis engine sometimes emits
+    // "No inflection points (f''(x) = <value> ≠ 0)" — the
+    // parenthetical value is dynamic, so a literal map entry
+    // can't catch it. Reduce the whole sentence to the
+    // translated "no inflection points" before falling through
+    // to the literal-replacement table below.
+    if (raw.startsWith("No inflection points (f''(x)") ||
+        raw.startsWith('No inflection points (f\'\'(x)')) {
+      return curveResultNoInflection;
+    }
+    if (raw.startsWith(
+        'Error: Cannot find inflection points without second derivative')) {
+      return curveResultNoInflection;
+    }
     final replacements = <String, String>{
       'Function has constant concavity (f\'\'(x) = 0 everywhere)':
           extremumConstantConcavity,
