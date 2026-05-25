@@ -9,6 +9,136 @@ Always cross-check this file's claims against the current repo
 state before recommending action — file names, APIs, and pins
 rot fast. Where this file says "see X", actually open X.
 
+---
+
+## 0. State at end of 2026-05-25 session
+
+A long session that shipped rounds 80-91 (10 rounds + the
+matrix-gate follow-up + the four PLAN docs sections P6/P7/P8 +
+follow-up). Bring this into context before doing anything.
+
+**Main heads (verify with `git fetch && git log -1`):**
+
+| Repo                       | Branch | Last shipped |
+| -------------------------- | ------ | ------------ |
+| CrispCalc                  | main   | `f1d084d` matrix self-test debug gate |
+| symbolic_math_bridge       | main   | `505074d` round-90 factorint binding |
+| math-stack-ios-builder     | master | `34ec0fdf` round-90 fmpz_factor wrapper |
+| dart_csp (pinned via pubspec) | main | `e3cce21` (unchanged this session) |
+
+**What shipped this session (newest first):**
+
+- **Round 91 follow-up** (matrix gate, f1d084d) — `if
+  (kDebugMode)` around the Matrix self-test tile in
+  `main.dart:597`. Five-line fix.
+- **PLAN.md P6/P7/P8** (a4e2b64) — 565 lines added across
+  four planning sections (see §3 below).
+- **Round 90** (b97041f) — `factorint(n)` via FLINT's
+  `fmpz_factor`. First FLINT-backed wrapper. **9 new fmpz_*
+  externs added to the +load keepalive.**
+- **Round 89** (3be50ee) — `isprime` + `nextprime` +
+  `prevprime`. GMP-direct for isprime/prevprime (cwrapper.h
+  only exposes nextprime).
+- **Round 88** (8aac872) — Sudoku `computeConflicts` + 8×8
+  X/Disjoint uniqueness audit.
+- **Round 87b** (d3396a6) — Sudoku win-celebration overlay.
+- **Round 87** (5405df1) — Sudoku UI overhaul: 8 fixes
+  (drag-and-drop, keyboard, win chip, clear-to-start, …).
+- **Round 86** (29532af) — MPFR `e(N)` + `EulerGamma(N)` +
+  `sqrt(2,N)`.
+- **Round 85** (d827ec6) — MPFR `pi(N)` — first precision-arc
+  round; established the three-repo pipeline.
+- **Rounds 80-84** — CSP `cumulative` + RCPSP + Sudoku
+  step-trace captions + 8×8 variant presets + 10×10/12×12/15×15
+  layouts. (Pre-precision-arc CrispCalc-only rounds.)
+
+**The user pushed in parallel** (don't be surprised if main is
+ahead of where you expect): notepad Phase 1-8 plus several
+documentation commits. The notepad work is the **user's active
+arc** — they're iterating on it; don't compete.
+
+**Worktrees still on disk (delete if not needed):**
+
+| Path                                                       | Branch | Status |
+| ---------------------------------------------------------- | ------ | ------ |
+| `/Volumes/backups/code/CrispCalc-precision`                | `feat/precision-pi-N` (merged) | reusable for future precision rounds |
+| `/Volumes/backups/code/CrispCalc-sudoku-ui`                | various (latest: matrix gate) | reusable for any CrispCalc round |
+| `/Volumes/backups/code/symbolic_math_bridge-precision`     | various | reusable for bridge changes |
+| `/Users/christianstrobele/code/math-stack-ios-builder-precision` | various | reusable for wrapper changes |
+
+**Symlink in place** at `/Volumes/backups/code/math-stack-ios-builder`
+→ `/Users/christianstrobele/code/math-stack-ios-builder-precision`
+so the bridge's `copy_xcframeworks.sh` (which expects `../math-stack-ios-builder`)
+finds the precision worktree's xcframework outputs. If you
+switch worktrees for math-stack, **repoint the symlink**.
+
+**Tests at session end**: 1465 in this branch (more if the
+user's parallel work added some). CI 6-job matrix on every
+main push.
+
+---
+
+## 0a. Worktree discipline (load-bearing — read this first)
+
+**All edits go through feature-branch worktrees, never on
+main/master directly.** The convention was established when
+the precision arc started directly on main in all three repos
+(round 85) and caused a near-miss when I misread the main
+worktree's truncated diff state. Saved as a memory entry
+under `~/.claude/projects/-Volumes-backups-code-CrispCalc/memory/`.
+
+### The pattern
+
+For every round, in every repo touched by the round:
+
+```bash
+cd <repo>
+git worktree add ../<repo>-<arc-name> -b feat/<arc-name>
+# … edit in the new worktree …
+cd ../<repo>-<arc-name>
+git add … && git commit -m "..."
+git push -u origin feat/<arc-name>
+# When CI is green and tests pass, merge:
+cd ../<repo>
+git fetch origin
+git merge --ff-only feat/<arc-name>   # rebase first if main moved
+git push origin main
+```
+
+### Why this matters here
+
+The user works in parallel — main moves under you. When you
+come back to merge, you'll often find:
+
+- `git status` in the main worktree shows uncommitted changes
+  the user is working on. **Don't push from main.**
+- `git log origin/main..main` shows the user pushed commits
+  you didn't make. **Rebase the feature branch onto current
+  main before merging.**
+- The user has the same main checked out (via the main
+  worktree); your edits don't show up there until you push.
+
+### Quick reference
+
+| Action | Where |
+| ------ | ----- |
+| Read code, run tests, plan rounds | any worktree |
+| Edit code for a new round | new feature-branch worktree |
+| Commit + push | the feature-branch worktree |
+| `flutter analyze` / `flutter test` / `flutter build` | the feature-branch worktree |
+| `git merge --ff-only` + `git push origin main` | the main worktree |
+| Delete an obsolete worktree | `git worktree remove <path>` |
+
+### Don't push from main
+
+Main worktree often has the user's uncommitted work-in-progress.
+Pushing from main would either drag their uncommitted state into
+the commit or silently lose it. Always commit + push from a
+feature-branch worktree; only do `git merge --ff-only +
+git push origin main` from main, and check `git status` first.
+
+---
+
 ## 1. What the app is
 
 CrispCalc — Flutter CAS calculator, multi-platform (macOS / iOS /
@@ -174,6 +304,17 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   format `"p1^e1*p2^e2*..."` parsed Dart-side to structured
   `(prime, exponent)` records. 90-bit input cap. Nine new
   FLINT externs added to the +load keepalive.
+- **Round 91 follow-up** — Matrix self-test tile gated behind
+  `kDebugMode` in `main.dart:597`. Developer diagnostic; not
+  for end users. CI / scripted runs still reach the same
+  battery via the `CRISPCALC_DIAGNOSTIC=matrix` env-var hook
+  at startup.
+- **Docs P6 / P7 / P8 (no round numbers)** — 565 lines of
+  PLAN.md added: discoverability + help-system overhaul (P6,
+  rounds 91-105), boolean type + relational/logical operators
+  (P7, rounds 110-114), Calculator history performance hot
+  spots (P8, rounds 120-124). Read §6 here + PLAN.md before
+  picking the next round.
 
 ## 4. Land mines we have already hit
 
@@ -475,49 +616,101 @@ before handing back to the caller — see `solveOptimization` in
 
 ## 6. Open arcs, ranked by lift vs. cost
 
-### Chosen next arc — MPFR/FLINT precision
+### Top of queue (from May-25-EOD session)
 
-`HANDOFF_PRECISION.md` is the load-bearing doc for the next
-session. It covers the three-repo pipeline (math-stack-ios-
-builder → symbolic_math_bridge → CrispCalc), a 5-round
-breakdown, the smallest first slice, and arc-specific land
-mines. Read it before opening a file.
+The most recent session captured four concrete asks from the
+user into PLAN.md. They have explicit round numbers ready to
+ship; the smallest-first ordering recommended at EOD was:
 
-The arc strengthens the CAS-grade moat that PLAN.md's
-Strategic Context (May 2026) calls out, builds on infra that
-already ships (SymEngine + GMP/MPFR/FLINT compiled into
-xcframeworks + +load keepalive in place), and ships discrete
-completable rounds without blocking on UI/AI design. The C
-wrapper source lives in `math-stack-ios-builder/src/` and
-already uses SymEngine's `basic_evalf` / `ntheory_*` API — so
-adding a precision function is "edit one .c, rebuild, copy
-into bridge, repin."
+1. **Round 120 — Calculator history performance.** User
+   reports "very very long" ASCII↔LaTeX toggle and slow
+   history search. Diagnosis: `_buildExpressionDisplay` runs
+   `Math.tex()` on every history row on every rebuild. Fix:
+   per-entry render cache (a `Map<String, Widget>` keyed by
+   entry id, populated lazily, reused on toggle). Cheapest +
+   highest-impact perf round in the project right now. See
+   **PLAN P8**, rounds 120-124.
+2. **Round 91 — Right-click "store as variable / function".**
+   Today's history context menu offers reuse/copy/show-on-
+   graph/analyze/differentiate/integrate/solve. The user
+   wants two more: **store result as variable** (persists via
+   `AppState.setVariable`) and **store as function**
+   (`AppState.setUserFunction`). Same menu pattern in Notepad
+   (where it needs to be created from scratch — Notepad lines
+   don't have a context menu yet). See **PLAN P6 add-on**,
+   rounds 91-91b.
+3. **Round 110+ — Boolean type + relational/logical
+   operators.** User wants `==` `!=` `<` `<=` `>` `>=` `and`
+   `or` `xor` `not` `if`. Routes through SymEngine's
+   `Eq`/`And`/`Or`/`Xor`/`Not`/`Piecewise` parser (which
+   already exists). Calculator preprocessor rewrites natural
+   syntax into named-function form. New Logic keypad section
+   + worked-example entries + Notepad integration. See
+   **PLAN P7**, rounds 110-114.
+
+### Bigger strategic next: discoverability + help (P6, rounds 91-105)
+
+PLAN P6 lays out a 15-round roadmap to fix CrispCalc's
+information architecture:
+
+- Move Worked Examples out of Settings into a `(?)` icon on
+  Calculator + Notepad.
+- New Function Reference dialog (operator dictionary: ~50
+  entries × 4 locales).
+- App-wide help-mode `(?)` overlay system; tap any button /
+  cell / history row / notepad line for an inline explanation
+  of "how was this computed?"
+- Precision-arc + ntheory surfacing in the parsers + Adv
+  keypad (rounds 91-92 of P6 specifically).
+
+This is the strategic mid-term direction. Each round is
+single-session, shippable independently, testable in CI.
+
+### Continuing the precision arc (HANDOFF_PRECISION.md)
+
+`HANDOFF_PRECISION.md` is the load-bearing doc for the
+precision-arc work. After rounds 85/86/89/90 it covers
+4 MPFR constants + 3 ntheory primitives + factorint. Still
+on the menu: `modpow` / `modinv` / `totient` / `jacobi`
+(round 4 of HANDOFF_PRECISION). Smaller and well-trodden
+now — the three-repo pipeline + +load keepalive + 9-extern
+FLINT extension are all proven.
 
 ### Other arcs (multi-session, deferred)
 
 1. **dart_csp propagation-callback identity** — round 81
    shipped constraint-*context* captions; the next tightening
    would expose **which** propagator actually fired through
-   dart_csp's `CspCallback`. Multi-repo: dart_csp signature
-   extension + CrispCalc consumer.
-2. **Irregular-region Sudoku (Du-sum-oh)** — boxes become
-   arbitrary same-size polyomino tilings. Engine replaces the
-   `_boxes` walker with a per-puzzle region list; allDifferent
-   overlay + hint elimination reuse the existing path.
-   Generator (sampling valid tilings) is its own problem.
+   dart_csp's `CspCallback`. Multi-repo.
+2. **Irregular-region Sudoku (Du-sum-oh)** — polyomino
+   tilings instead of rectangular boxes.
 3. **Killer generator V2** — programmatic cage-layout
-   generation with uniqueness guarantee. Search over shapes;
-   the round-66 probe loop is the starting point.
-4. **Worked-examples V3** — advanced topics (related rates,
-   eigenvalue, multivariable, parametric) + a "view this
-   step-by-step" jump from a worked example to its trace
-   dialog. Listed as V3 pending in PLAN.
+   generation with uniqueness guarantee.
+4. **Worked-examples V3** — related rates, eigenvalue,
+   multivariable, parametric + step-by-step jump.
 
 The two strategic adds from PLAN.md's May-2026 Strategic
 Context (notepad/document input paradigm + AI as
-verifier-frontend) are bigger lifts and don't have an obvious
-"first round" yet. They sit above this menu strategically but
-below it operationally.
+verifier-frontend) sit above the menu strategically. The
+**notepad work is actively in flight by the user** (Phase 1-8
+landed this session); don't compete on that arc.
+
+### Format-fix recurring debt
+
+**Four CI format-check failures this session** — every
+notepad push has dragged dart-format issues into main, each
+requiring a follow-up CI: dart format commit. There's now an
+opt-in pre-commit hook at `tools/hooks/pre-commit` that runs
+`dart format --set-exit-if-changed lib/ test/` and
+`flutter analyze` locally. Enable with:
+
+```
+git config core.hooksPath tools/hooks
+```
+
+If a future session sees a fifth+ format-fix follow-up,
+consider proactively suggesting the hook again, or making it
+opt-out (auto-enable from a one-time `flutter pub get` hook).
 
 ## 7. Critical commands
 
