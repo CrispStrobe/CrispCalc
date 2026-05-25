@@ -499,7 +499,7 @@ but become *moat-building* rather than *positioning*, since the moat
       **Done when**: tests cover topo order, cycle detection,
       downstream-only invalidation, blocked-by propagation, and
       free-var tracking.
-    - **Phase 4 — NotepadScreen UI skeleton.** New
+    - **Phase 4 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/screens/notepad_screen.dart`. `ReorderableListView` per
       **#16** of `_NotepadLineRow` widgets with drag handles on
       each row; each row = left plain `TextField` (no

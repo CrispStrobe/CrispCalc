@@ -24,6 +24,7 @@ import 'screens/calculator_screen.dart';
 import 'screens/function_editor_screen.dart';
 import 'screens/graphing_screen.dart';
 import 'screens/help_screen.dart';
+import 'screens/notepad_screen.dart';
 import 'services/native_licenses.dart';
 import 'widgets/export_data_dialog.dart';
 import 'widgets/import_data_dialog.dart';
@@ -189,9 +190,19 @@ ThemeData _buildLightTheme() {
 const double _railBreakpoint = 720;
 const double _extendedRailBreakpoint = 1100;
 
+// Index constants for the tab order in [_screens] / [_destinations].
+// Only a subset is referenced by name today (the cross-tab nav callbacks);
+// the rest are kept as documentation so the next person inserting a tab
+// can renumber without spelunking through the IndexedStack indices.
 const int _kCalculator = 0;
-const int _kGraphing = 1;
-const int _kAnalysis = 3;
+// ignore: unused_element
+const int _kNotepad = 1;
+const int _kGraphing = 2;
+// ignore: unused_element
+const int _kFunctionEditor = 3;
+const int _kAnalysis = 4;
+// ignore: unused_element
+const int _kSettings = 5;
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -217,6 +228,7 @@ class _MainScreenState extends State<MainScreen> {
         onGoToGraphing: () => _select(_kGraphing),
         onGoToAnalysis: () => _select(_kAnalysis),
       ),
+      const NotepadScreen(),
       GraphingScreen(key: _graphingKey),
       FunctionEditorScreen(
         onSwitchToGraphing: (_) => _select(_kGraphing),
@@ -285,6 +297,8 @@ class _MainScreenState extends State<MainScreen> {
   List<({IconData icon, String label})> _destinations(AppLocalizations t) {
     return [
       (icon: Icons.calculate, label: t.navCalculator),
+      // TODO(phase-8): localize via t.navNotepad once the i18n keys land.
+      (icon: Icons.notes, label: 'Notepad'),
       (icon: Icons.show_chart, label: t.navGraphing),
       (icon: Icons.functions, label: t.navFunctions),
       (icon: Icons.donut_large, label: t.navAnalysis),
