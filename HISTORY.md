@@ -2,6 +2,61 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 78) — DSL linear parser: expression-on-both-sides
+
+Round 77 had to write `makespan - sN >= dN` because the
+linear-expression parser required the RHS to be a numeric
+literal — `sN + dN <= makespan` failed to parse and fell
+through to dart_csp's string-constraint parser, which rejected
+it. This round closes that loop.
+
+### Parser
+
+`_parseLinearTerms(expr, knownVars)` now returns
+`(vars, coeffs, constant)` — a per-term split where each term is
+either a coef×var contribution or a bare integer constant.
+Empty expression returns null; otherwise the result is always
+well-formed (even with all-constant input).
+
+`_tryParseLinear` switches from "LHS terms op number" to
+"expression op expression". A non-greedy LHS-side match plus
+the same op set; each side is parsed with
+`_parseLinearTerms`; then the RHS is moved to the LHS:
+
+```
+lhs op rhs   ⇔   (lhs.vars + rhs.vars; lhs.coeffs + -rhs.coeffs)
+               op (rhs.constant - lhs.constant)
+```
+
+Constant-only constraints (`5 == 5`) still return null and
+fall through to the string parser — `addLinearEquals` requires
+a non-empty variable list.
+
+### Objective parser
+
+`solveOptimization` also picks up constant-bearing objectives:
+`minimize x + 100` now reports a shifted optimum
+(objective value includes the +100 offset). The synthetic
+`__obj__` binding constraint is rewritten to
+`Σ coef_i·var_i - __obj__ == -constant` so the constant
+folds into the bound rather than the variable list.
+
+### Gallery + tests
+
+The `schedulingMakespan` gallery entry reverts to the natural
+form `s + d <= makespan` — round 77's HISTORY noted the
+workaround; this round removes it.
+
+Five new tests in `csp_solver_test.dart`:
+- `x + 1 == y` over 0..5 enumerates the 5 solutions
+- mixed-side inequality `x + y <= z + 1`
+- objective with constant offset reports the shifted optimum
+- scheduling round-trip in the natural form
+- regression: constant-only constraint falls through cleanly
+  rather than crashing on an empty `addLinearEquals` call
+
+Suite total: 1236 tests.
+
 ## 2026-05-25 (round 77) — CSP Round E: noOverlap (single-machine scheduling)
 
 Round 74 added optimization (`minimize` / `maximize`) to the

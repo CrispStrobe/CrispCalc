@@ -319,12 +319,20 @@ class CspSolver {
     return r;
   }
 
-  /// Detects linear constraints of the form
-  /// `c1*v1 +/- c2*v2 +/- … op N` where each `ci` is an optional
-  /// integer literal, each `vi` is a known variable name, `op` ∈
-  /// `{==, !=, <, <=, >, >=}`, and `N` is an integer. Returns the
-  /// extracted (vars, coeffs, op, bound) or null when the shape
-  /// doesn't match — caller falls back to the dart_csp string parser.
+  /// Detects linear constraints of the form `<expr> op <expr>` where
+  /// each side is a sum of `coef*var` terms and bare integer
+  /// constants, and `op` ∈ `{==, <, <=, >, >=}`. Returns the
+  /// canonicalized `(vars, coeffs, op, bound)` with everything moved
+  /// to the LHS (RHS becomes a numeric bound) so the result is
+  /// ready for dart_csp's `addLinear*` family. Returns null when the
+  /// shape doesn't match — caller falls back to the dart_csp string
+  /// parser.
+  ///
+  /// Round 78: extended from "LHS must be linear, RHS must be a
+  /// numeric literal" to expression-on-both-sides. `s1 + 4 <=
+  /// makespan` now parses natively (and is rewritten internally to
+  /// `s1 - makespan <= -4`), which is the natural shape for
+  /// scheduling makespan and similar mixed-variable inequalities.
   ///
   /// Only `==`/`<=`/`>=`/`<`/`>` round-trip cleanly into the linear
   /// API; we deliberately decline `!=` here so it stays on the
@@ -336,31 +344,53 @@ class CspSolver {
     num bound,
   })? _tryParseLinear(String constraint, Set<String> knownVars) {
     final stripped = constraint.replaceAll(' ', '');
-    // Match `<LHS><op><number>` where op is one of the comparators.
-    final opMatch =
-        RegExp(r'^(.+?)(==|<=|>=|<|>)(-?\d+(?:\.\d+)?)$').firstMatch(stripped);
+    // Match `<LHS><op><RHS>`. Non-greedy LHS so multi-char ops
+    // (`==`/`<=`/`>=`) win over their `=`/`<`/`>` prefixes.
+    final opMatch = RegExp(r'^(.+?)(==|<=|>=|<|>)(.+)$').firstMatch(stripped);
     if (opMatch == null) return null;
-    final lhs = opMatch.group(1)!;
+    final lhsText = opMatch.group(1)!;
     final op = opMatch.group(2)!;
-    final bound = num.parse(opMatch.group(3)!);
+    final rhsText = opMatch.group(3)!;
 
-    final parsed = _parseLinearTerms(lhs, knownVars);
-    if (parsed == null) return null;
-    return (vars: parsed.vars, coeffs: parsed.coeffs, op: op, bound: bound);
+    final lhs = _parseLinearTerms(lhsText, knownVars);
+    final rhs = _parseLinearTerms(rhsText, knownVars);
+    if (lhs == null || rhs == null) return null;
+
+    // Move every RHS term to the LHS (negate coefficient + constant).
+    // `lhs op rhs` ⇔ `lhs - rhs op 0` ⇔ `(lhs.vars + rhs.vars) op
+    // (rhs.constant - lhs.constant)`.
+    final vars = <String>[...lhs.vars, ...rhs.vars];
+    final coeffs = <num>[
+      ...lhs.coeffs,
+      for (final c in rhs.coeffs) -c,
+    ];
+    final bound = rhs.constant - lhs.constant;
+    // Constant-only constraints (`5 == 5`, `3 < 4`) have no
+    // variables to constrain — fall back to the string parser so
+    // dart_csp can validate / reject them.
+    if (vars.isEmpty) return null;
+    return (vars: vars, coeffs: coeffs, op: op, bound: bound);
   }
 
-  /// Round 74: split a sum-of-terms expression like `2*x + y - 3*z`
-  /// into matched `(vars, coeffs)` lists. Whitespace tolerant. Each
-  /// term must reference a known variable (returns null otherwise so
-  /// callers can decline-and-fallback). Coefficients default to 1
-  /// when omitted; an optional leading sign is folded into the
-  /// coefficient.
+  /// Round 78: split a sum-of-terms expression like `2*x + y - 3*z + 5`
+  /// into matched `(vars, coeffs)` lists plus a running `constant`.
+  /// Whitespace tolerant. Each term is either:
   ///
-  /// Used by both [_tryParseLinear] (constraint LHS parsing) and
-  /// the `minimize` / `maximize` directives in [solveDsl].
-  static ({List<String> vars, List<num> coeffs})? _parseLinearTerms(
-      String expr, Set<String> knownVars) {
+  ///   - `[+-]?coef? \*? name` — a coef×var term (coef defaults to 1)
+  ///   - `[+-]? integer` — a pure constant term
+  ///
+  /// Returns null when a term doesn't match either shape, or any
+  /// variable name isn't in [knownVars]. Returns `(vars: [], coeffs: [],
+  /// constant: 0)` for an empty input, which callers can treat as
+  /// "no usable expression".
+  ///
+  /// Used by [_tryParseLinear] (constraint parsing on both sides of
+  /// the comparator) and the `minimize` / `maximize` directives in
+  /// [solveDsl].
+  static ({List<String> vars, List<num> coeffs, num constant})?
+      _parseLinearTerms(String expr, Set<String> knownVars) {
     final stripped = expr.replaceAll(' ', '');
+    if (stripped.isEmpty) return null;
     final terms = <String>[];
     var current = StringBuffer();
     for (var i = 0; i < stripped.length; i++) {
@@ -375,20 +405,30 @@ class CspSolver {
 
     final vars = <String>[];
     final coeffs = <num>[];
+    num constant = 0;
     for (final raw in terms) {
       final term = raw.trim();
-      final m = RegExp(r'^([+-]?)(\d+(?:\.\d+)?)?\*?([A-Za-z_][A-Za-z0-9_]*)$')
-          .firstMatch(term);
-      if (m == null) return null;
-      final sign = m.group(1) == '-' ? -1 : 1;
-      final mag = m.group(2) == null ? 1 : num.parse(m.group(2)!);
-      final name = m.group(3)!;
-      if (!knownVars.contains(name)) return null;
-      vars.add(name);
-      coeffs.add(sign * mag);
+      // Variable term first; falls back to pure-constant term.
+      final mVar =
+          RegExp(r'^([+-]?)(\d+(?:\.\d+)?)?\*?([A-Za-z_][A-Za-z0-9_]*)$')
+              .firstMatch(term);
+      if (mVar != null) {
+        final sign = mVar.group(1) == '-' ? -1 : 1;
+        final mag = mVar.group(2) == null ? 1 : num.parse(mVar.group(2)!);
+        final name = mVar.group(3)!;
+        if (!knownVars.contains(name)) return null;
+        vars.add(name);
+        coeffs.add(sign * mag);
+        continue;
+      }
+      final mConst = RegExp(r'^([+-]?\d+(?:\.\d+)?)$').firstMatch(term);
+      if (mConst != null) {
+        constant += num.parse(mConst.group(1)!);
+        continue;
+      }
+      return null;
     }
-    if (vars.isEmpty) return null;
-    return (vars: vars, coeffs: coeffs);
+    return (vars: vars, coeffs: coeffs, constant: constant);
   }
 
   /// Strip the `Exception:` prefix and any stack-trace noise so the
@@ -617,17 +657,20 @@ class CspSolver {
     }
     final knownVars = variables.keys.toSet();
     final parsed = _parseLinearTerms(objectiveExpr, knownVars);
-    if (parsed == null) {
+    if (parsed == null || parsed.vars.isEmpty) {
       return DiophantineResult.failure(
           'Could not parse ${minimize ? 'minimize' : 'maximize'} '
           'expression "$objectiveExpr" — only linear expressions in '
           'the declared variables are supported.');
     }
-    // Tight bounds on Σ coef_i · var_i. For each term, the min
-    // contribution is coef * varLo when coef ≥ 0 else coef * varHi
-    // (symmetric for max). Sum independently.
-    var objLo = 0;
-    var objHi = 0;
+    final objConst = parsed.constant.toInt();
+    // Tight bounds on Σ coef_i · var_i + constant. For each term, the
+    // min contribution is coef * varLo when coef ≥ 0 else coef * varHi
+    // (symmetric for max). Sum independently, then fold in the
+    // constant offset so __obj__'s domain matches the user-visible
+    // objective value.
+    var objLo = objConst;
+    var objHi = objConst;
     for (var i = 0; i < parsed.vars.length; i++) {
       final coef = parsed.coeffs[i].toInt();
       final range = variables[parsed.vars[i]]!;
@@ -658,11 +701,13 @@ class CspSolver {
         problem.addRangeVariable(entry.key, lo, hi);
       }
       problem.addRangeVariable(objVar, objLo, objHi);
-      // Bind __obj__ = Σ coef_i · var_i  ⇔  Σ coef_i · var_i − __obj__ == 0.
+      // Bind __obj__ = Σ coef_i · var_i + constant.
+      // Move __obj__ to the LHS as `-1·__obj__` and the constant to
+      // the RHS bound: Σ coef_i·var_i − __obj__ == −constant.
       problem.addLinearEquals(
         [...parsed.vars, objVar],
         [...parsed.coeffs, -1],
-        0,
+        -objConst,
       );
       for (final c in constraints) {
         final linear = _tryParseLinear(c, knownVars);

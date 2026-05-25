@@ -287,16 +287,16 @@ noOverlap(s1=4, s2=3, s3=2)
         '(sum of durations on a single machine)', () async {
       // Total work = 4+3+2 = 9. With a single machine and no idle,
       // the makespan optimum is exactly 9.
-      // Constraint form `makespan - sN >= dN` (the linear-parser
-      // currently requires the RHS to be a numeric literal; a
-      // future round can extend it to expression-on-both-sides).
+      // Round 78: the linear-parser now accepts expressions on both
+      // sides of the comparator, so `s + d <= makespan` is the
+      // natural form (rewritten internally to `s - makespan <= -d`).
       const dsl = '''
 vars: s1, s2, s3 in 0..9
 vars: makespan in 0..9
 noOverlap(s1=4, s2=3, s3=2)
-makespan - s1 >= 4
-makespan - s2 >= 3
-makespan - s3 >= 2
+s1 + 4 <= makespan
+s2 + 3 <= makespan
+s3 + 2 <= makespan
 minimize makespan
 ''';
       final r = await CspSolver.solveDsl(dsl);
@@ -342,6 +342,86 @@ noOverlap(s1=2, s2=-1)
       final r = await CspSolver.solveDsl(dsl);
       expect(r.ok, isFalse);
       expect(r.error, contains('non-negative'));
+    });
+  });
+
+  group('CspSolver.solveDsl — Round 78 linear parser (both sides)', () {
+    test(
+        'x + 1 == y is rewritten to (x - y == -1) and finds the right '
+        'solutions', () async {
+      const dsl = '''
+vars: x, y in 0..5
+x + 1 == y
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      // Solutions: (0,1), (1,2), (2,3), (3,4), (4,5)
+      expect(r.solutions, hasLength(5));
+      for (final s in r.solutions) {
+        expect(s['x']! + 1, s['y']);
+      }
+    });
+
+    test('mixed-side linear inequality: x + y <= z + 1', () async {
+      const dsl = '''
+vars: x, y, z in 0..3
+x + y <= z + 1
+''';
+      final r = await CspSolver.solveDsl(dsl, maxSolutions: 200);
+      expect(r.ok, isTrue, reason: r.error);
+      for (final s in r.solutions) {
+        expect(s['x']! + s['y']! <= s['z']! + 1, isTrue);
+      }
+    });
+
+    test(
+        'objective with a constant offset: minimize x + 100 reports '
+        'the shifted optimum', () async {
+      const dsl = '''
+vars: x in 0..10
+x >= 3
+minimize x + 100
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      // Optimum: x=3, objective = 3+100 = 103.
+      expect(r.objective, 103);
+      expect(r.solutions.first['x'], 3);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test(
+        'scheduling: natural form `s + d <= makespan` round-trips to '
+        'optimum makespan', () async {
+      // Same problem as round 77 but written in the natural shape
+      // that round-77 couldn't parse before this round landed.
+      const dsl = '''
+vars: s1, s2, s3 in 0..9
+vars: makespan in 0..9
+noOverlap(s1=4, s2=3, s3=2)
+s1 + 4 <= makespan
+s2 + 3 <= makespan
+s3 + 2 <= makespan
+minimize makespan
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 9);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('constant-only constraints still fall through to the string parser',
+        () async {
+      // `5 == 5` has no variables — _tryParseLinear returns null,
+      // dart_csp's string parser handles it (or rejects). What we
+      // care about: solveDsl shouldn't crash trying to call
+      // addLinearEquals with empty vars.
+      const dsl = '''
+vars: x in 0..3
+5 == 5
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      // Either ok with all 4 solutions OR a clean failure — but not
+      // an uncaught crash.
+      expect(r.solutions.isEmpty || r.solutions.length == 4, isTrue);
     });
   });
 

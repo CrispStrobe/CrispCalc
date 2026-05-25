@@ -441,18 +441,13 @@ minimize pennies + nickels + dimes + quarters''',
       // makespan variable bounds each task's end and is what we
       // minimize. Optimal makespan = 4+3+2 = 9; in this instance
       // the solver returns one of the equally-good orderings.
-      //
-      // Note: constraints are written as `makespan - sN >= dN`
-      // rather than `sN + dN <= makespan` because the linear-
-      // expression parser currently requires the RHS to be a
-      // numeric literal.
       id: 'schedulingMakespan',
       program: '''vars: s1, s2, s3 in 0..9
 vars: makespan in 0..9
 noOverlap(s1=4, s2=3, s3=2)
-makespan - s1 >= 4
-makespan - s2 >= 3
-makespan - s3 >= 2
+s1 + 4 <= makespan
+s2 + 3 <= makespan
+s3 + 2 <= makespan
 minimize makespan''',
     ),
   ];

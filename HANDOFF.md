@@ -110,7 +110,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1231 tests total)
+  ... (~50 test files, ~1236 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -283,10 +283,11 @@ fresh feature arcs.
 5. ~~**CSP Round D — minimize / maximize in the DSL**~~ shipped
    round 74. ~~**CSP Round E — `addNoOverlap`**~~ shipped round 77
    (`noOverlap(s1=4, s2=3, ...)` syntax, composes with minimize
-   for makespan problems). Still open from the round-E bundle:
-   `addCumulative` (capacity + heights), plus extending the
-   linear-expression parser to accept expressions on both sides
-   so `s1 + 4 <= makespan` becomes the natural form.
+   for makespan problems). ~~**Linear parser: expression-on-both-
+   sides**~~ shipped round 78 (`s + d <= makespan` is the natural
+   form now). Still open from the round-E bundle:
+   `addCumulative` (capacity + heights, single resource with
+   variable demands).
 6. **Killer generator V2** — programmatic cage-layout generation
    with uniqueness guarantee. Requires search over shapes; the
    round-66 probe loop is a starting point.
