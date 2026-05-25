@@ -2,6 +2,56 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 90) — Precision arc round 4 — `factorint(n)` via FLINT
+
+First FLINT-backed wrapper in the precision arc. Integer
+factorization using `fmpz_factor` (Pollard rho + trial division).
+
+### math-stack-ios-builder (feat/precision-factorint)
+
+`flutter_symengine_factorint(const char* n)` parses the input
+via `fmpz_set_str`, factorizes via FLINT's `fmpz_factor`, and
+formats the result as `"p1^e1*p2^e2*..."` with `^1` omitted.
+Special cases: `"0"` for n=0, `"1"`/`"-1"` for ±1, negatives
+prefix `"-1*"`. Bit-size cap at 90 (~27 decimal digits) keeps
+each call under a second.
+
+New `#include <flint/fmpz.h>` + `<flint/fmpz_factor.h>`. The
+output string is built with manual `realloc` because the
+length depends on the number + size of prime factors.
+
+### symbolic_math_bridge (feat/precision-factorint)
+
+New `_factorint: _UnaryFuncDart?` field + lookup;
+`ntheoryFactorint(String n) → String` returns the raw wrapper
+output. iOS + macOS `SymEngineBridge.m` get the new
+`flutter_symengine_factorint` extern + +load entries plus
+**nine new FLINT externs**: `fmpz_set_str`, `fmpz_sizeinbase`,
+`fmpz_is_zero`, `fmpz_is_one`, `fmpz_sgn`, `fmpz_neg`,
+`fmpz_factor_init`, `fmpz_factor_clear`, `fmpz_factor`. Round
+12's original FLINT block only kept the basic arithmetic alive;
+without these the release linker would dead-strip them and
+factorint dlsym would fail at runtime.
+
+### CrispCalc
+
+`CalculatorEngine.factorint(String n)` parses the wrapper's
+string output into `List<({int prime, int exponent})>`. The
+parser strips a leading `"-1*"` (factorint is defined on `|n|`
+in classroom usage, matching SymPy). Throws `StateError` when
+the native bridge isn't loaded — no pure-Dart fallback for
+arbitrary-precision factoring.
+
+### Tests
+
+Six new tests in `precision_test.dart`: trivial 0/1 → empty;
+small primes 2/7/101 → `[(p, 1)]`; 360 → 2³·3²·5;
+1000000 → 2⁶·5⁶; Mersenne M31 → single record; input above
+the 90-bit cap surfaces "too large".
+
+All factorint tests skip silently without the native bridge
+(no headless fallback). Suite 1459 → 1465.
+
 ## 2026-05-25 (round 89) — Precision arc round 3 — `isprime` + `nextprime` + `prevprime`
 
 First number-theory slice on top of the round-85/86 MPFR

@@ -175,4 +175,58 @@ void main() {
       expect(engine.prevprime('1'), startsWith('Error'));
     });
   });
+
+  group('CalculatorEngine.factorint (round 90)', () {
+    test('trivial values: 0, 1 return empty list', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.factorint('0'), isEmpty);
+      expect(engine.factorint('1'), isEmpty);
+    });
+
+    test('small primes return single (p, 1)', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.factorint('2'), equals([(prime: 2, exponent: 1)]));
+      expect(engine.factorint('7'), equals([(prime: 7, exponent: 1)]));
+      expect(engine.factorint('101'), equals([(prime: 101, exponent: 1)]));
+    });
+
+    test('360 = 2^3 * 3^2 * 5', () {
+      if (!engine.isNativeAvailable) return;
+      expect(
+          engine.factorint('360'),
+          equals([
+            (prime: 2, exponent: 3),
+            (prime: 3, exponent: 2),
+            (prime: 5, exponent: 1),
+          ]));
+    });
+
+    test('1000000 = 2^6 * 5^6', () {
+      if (!engine.isNativeAvailable) return;
+      expect(
+          engine.factorint('1000000'),
+          equals([
+            (prime: 2, exponent: 6),
+            (prime: 5, exponent: 6),
+          ]));
+    });
+
+    test('repunit 11 (a Mersenne-like prime) returns single factor', () {
+      if (!engine.isNativeAvailable) return;
+      // 2^31 - 1 = 2147483647 is the Mersenne prime M31.
+      expect(engine.factorint('2147483647'),
+          equals([(prime: 2147483647, exponent: 1)]));
+    });
+
+    test('input above the 90-bit cap surfaces "too large" via bridge', () {
+      if (!engine.isNativeAvailable) return;
+      // 2^120 = ~36 digits, well above the cap.
+      const big = '1329227995784915872903807060280344576';
+      expect(
+          () => engine.factorint(big),
+          throwsA(predicate((e) =>
+              e.toString().toLowerCase().contains('too large') ||
+              e.toString().toLowerCase().contains('factorint'))));
+    });
+  });
 }

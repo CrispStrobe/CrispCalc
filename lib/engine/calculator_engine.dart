@@ -234,6 +234,49 @@ class CalculatorEngine {
   String prevprime(String n) =>
       _bridgeCall('prevprime', (b) => b.ntheoryPrevprime(n));
 
+  /// Round 90: integer factorization via FLINT's `fmpz_factor`.
+  /// Returns a structured list of `(prime, exponent)` pairs sorted
+  /// by prime. Throws `StateError` when the native bridge isn't
+  /// loaded (the headless CI doesn't get a pure-Dart fallback for
+  /// arbitrary-precision factoring). The raw wrapper string format
+  /// is `p1^e1*p2^e2*...` with `^1` omitted; this method parses
+  /// it into the structured form.
+  ///
+  /// Special cases: `factorint(0) = []` (empty),
+  /// `factorint(1) = []`, `factorint(-1)` errors (no positive prime
+  /// factor). Negative composites lose their sign and return the
+  /// factors of `|n|` — same convention as SymPy.
+  ///
+  /// The wrapper rejects inputs over ~90 bits (27 digits) to keep
+  /// each call under a second. For larger numbers, raw wrapper
+  /// usage via `_bridge!.ntheoryFactorint(...)` still surfaces
+  /// the "input too large" error string.
+  List<({int prime, int exponent})> factorint(String n) {
+    if (!_nativeAvailable || _bridge == null) {
+      throw StateError('factorint requires native library');
+    }
+    final raw = _bridge!.ntheoryFactorint(n);
+    // Bridge swallowed an "Error in ..." prefix already — check
+    // for "0" / "1" / "-1" trivial cases. The wrapper-side string
+    // for negatives prefixes "-1*" but we strip it (factorint is
+    // defined on |n| in classroom usage).
+    if (raw == '0' || raw == '1' || raw == '-1') return const [];
+    final body = raw.startsWith('-1*') ? raw.substring(3) : raw;
+    final out = <({int prime, int exponent})>[];
+    for (final token in body.split('*')) {
+      final caret = token.indexOf('^');
+      if (caret < 0) {
+        out.add((prime: int.parse(token), exponent: 1));
+      } else {
+        out.add((
+          prime: int.parse(token.substring(0, caret)),
+          exponent: int.parse(token.substring(caret + 1)),
+        ));
+      }
+    }
+    return out;
+  }
+
   /// Headless-CI fallback for `isprime`. Only correct for inputs
   /// that parse as a regular `int` (≤ 2^31 - 1 on this engine);
   /// large bigints fall back to false, which is wrong but at least

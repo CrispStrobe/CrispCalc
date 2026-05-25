@@ -112,7 +112,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1457 tests total)
+  ... (~50 test files, ~1465 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -169,6 +169,11 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   use GMP's `mpz_probab_prime_p` directly (SymEngine's cwrapper
   only exposes nextprime); nextprime goes through
   `ntheory_nextprime`. Same three-repo pipeline.
+- **Round 90** — Precision arc round 4: `factorint(n)` via
+  FLINT's `fmpz_factor`. First FLINT-backed wrapper. Output
+  format `"p1^e1*p2^e2*..."` parsed Dart-side to structured
+  `(prime, exponent)` records. 90-bit input cap. Nine new
+  FLINT externs added to the +load keepalive.
 
 ## 4. Land mines we have already hit
 
@@ -520,7 +525,7 @@ below it operationally.
 # Run-and-iterate
 flutter run -d macos              # dev build (debug, hot reload)
 flutter analyze                   # must be clean before commit
-flutter test                      # full suite; expect ~1457 tests, ~1 min
+flutter test                      # full suite; expect ~1465 tests, ~1 min
 dart format <files>               # CI runs format check on pinned Dart toolchain
 
 # CI
@@ -542,8 +547,8 @@ If something in this file is wrong by the time you read it,
 work around it. Stale handover docs cause future regressions.
 
 Specifically:
-- Test count drifts as features land — update §3's "~1457 tests"
-  and §7's "expect ~1457 tests". Adding a WorkedExample entry
+- Test count drifts as features land — update §3's "~1465 tests"
+  and §7's "expect ~1465 tests". Adding a WorkedExample entry
   auto-generates 6 tests (3 non-EN locales × title + description)
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.

@@ -293,25 +293,26 @@ directly for the two missing functions; future rounds doing
 number-theory should check `cwrapper.h` first and skip
 straight to GMP / FLINT direct calls for anything missing.
 
-### Round 3 — Factorint + divisors via FLINT through ntheory
+### Round 3 — Factorint — **SHIPPED in CrispCalc round 90**
 
-- **Wrapper**: `flutter_symengine_factor(const char* n)` →
-  string in the form `"2^3 * 3^2 * 5"` or similar parsable
-  format. SymEngine's `cwrapper.h` has `basic_factor` for
-  symbolic factorization but for integer factorization the
-  cleanest route is FLINT's `fmpz_factor` called directly from
-  the wrapper. If `fmpz_factor` isn't already linked into
-  SymEngine's wrapper toolbelt, add it via the
-  `-lflint` link flag in `build_symengine.sh` (FLINT is
-  already linked for SymEngine's internals).
-- **Bridge**: `factorint(int n)` returns
-  `List<({int prime, int exponent})>` by parsing the wrapper's
-  string output.
-- **Divisors**: pure-Dart derivation from factorint by
-  enumerating subsets of the prime exponents. No new wrapper.
-- **Tests**: `factorint(360) == [(2,3), (3,2), (5,1)]`;
-  textbook + edge cases (n=1 empty; n prime returns single
-  pair; n=0 errors).
+`flutter_symengine_factorint` lands via FLINT's `fmpz_factor`
+directly. Output format `"p1^e1*p2^e2*..."` (no spaces, `^1`
+omitted) parsed Dart-side into
+`List<({int prime, int exponent})>`. 90-bit input cap to keep
+per-call time bounded.
+
+**Land mine added**: the original FLINT keepalive block in
+`SymEngineBridge.m` (round 12) only covered basic arithmetic.
+Round 90 added 9 more `fmpz_*` externs
+(`fmpz_set_str`, `fmpz_sizeinbase`, `fmpz_is_zero`,
+`fmpz_is_one`, `fmpz_sgn`, `fmpz_neg`,
+`fmpz_factor_init`, `fmpz_factor_clear`, `fmpz_factor`).
+Future FLINT-backed wrappers should check the keepalive list
+first; release-build dead-strip is unforgiving.
+
+**Divisors** (not yet shipped): pure-Dart derivation from
+factorint by enumerating subsets of the prime exponents. No
+new wrapper. Trivial follow-up once a UI surface needs it.
 
 ### Round 4 — Modular arithmetic + totient + jacobi
 
