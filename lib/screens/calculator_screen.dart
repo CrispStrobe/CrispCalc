@@ -1056,12 +1056,57 @@ class CalculatorScreenState extends State<CalculatorScreen>
               ExpressionPreprocessingUtils.preprocessExpression(
                   equation, _appState));
 
-      return _runEngineOpMaybeAsync('solve', preprocessed,
+      final result = await _runEngineOpMaybeAsync('solve', preprocessed,
           arg2: variable,
           fallback: () => _engine.solve(preprocessed, variable));
+
+      // Auto-bind (opt-in via Settings, default off): if the
+      // solver returned exactly one numeric value, stash it into
+      // the global userVariables under [variable] so subsequent
+      // expressions can reference it without an explicit `x = Ans`.
+      // Multi-solution / symbolic results are skipped — picking
+      // one arbitrarily would be misleading.
+      if (_appState.autoBindSolve && !result.startsWith('Error')) {
+        final bound = _extractSingleSolveValue(result);
+        if (bound != null) _appState.setVariable(variable, bound);
+      }
+      return result;
     } catch (e) {
       return 'Error: Invalid solve() syntax';
     }
+  }
+
+  /// Pull a single scalar value out of a solve() result string.
+  /// SymEngine returns `{1}` or `[1]` for a single solution; this
+  /// returns `"1"`. Returns null for multi-solution / symbolic /
+  /// unparseable results so the caller skips the auto-bind.
+  String? _extractSingleSolveValue(String raw) {
+    var s = raw.trim();
+    // Strip one layer of set/list brackets.
+    if ((s.startsWith('{') && s.endsWith('}')) ||
+        (s.startsWith('[') && s.endsWith(']'))) {
+      s = s.substring(1, s.length - 1).trim();
+    }
+    if (s.isEmpty) return null;
+    // Comma-split (depth 0) — anything more than one element bails.
+    var depth = 0;
+    var parts = 0;
+    for (var i = 0; i < s.length; i++) {
+      final ch = s[i];
+      if (ch == '(' || ch == '[' || ch == '{') {
+        depth++;
+      } else if (ch == ')' || ch == ']' || ch == '}') {
+        depth--;
+      } else if (ch == ',' && depth == 0) {
+        parts++;
+      }
+    }
+    if (parts > 0) return null;
+    // Accept either a bare numeric or `<var> = <numeric>`.
+    final eq = s.indexOf('=');
+    if (eq >= 0) s = s.substring(eq + 1).trim();
+    if (double.tryParse(s) == null) return null;
+    return s;
   }
 
   Future<String> _handleDifferentiateFunction(String expression) async {
