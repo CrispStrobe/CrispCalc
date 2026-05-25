@@ -390,6 +390,33 @@ void main() {
     }, timeout: const Timeout(Duration(seconds: 180)));
   });
 
+  group('Sudoku — uniqueness check', () {
+    test('a generated puzzle has a unique solution', () async {
+      final puzzle = await SudokuGenerator.generate(
+        layout: SudokuLayout.small,
+        difficulty: SudokuDifficulty.easy,
+        seed: 42,
+      );
+      expect(await SudokuSolver.hasUniqueSolution(puzzle), isTrue);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('an empty puzzle has many solutions (not unique)', () async {
+      final empty = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: List<int>.filled(16, 0),
+      );
+      expect(await SudokuSolver.hasUniqueSolution(empty), isFalse);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('an infeasible puzzle has no solutions (also not unique)', () async {
+      final bad = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      );
+      expect(await SudokuSolver.hasUniqueSolution(bad), isFalse);
+    }, timeout: const Timeout(Duration(seconds: 10)));
+  });
+
   group('Sudoku — Killer variant', () {
     test('killer4x4 preset partitions every cell into exactly one cage', () {
       final puzzle = SudokuPresets.killer4x4;
@@ -501,7 +528,7 @@ void main() {
       // allDifferent when the cage is entirely within one row,
       // one column, or one box. This test asserts a tiny 4×4
       // Killer with all horizontal cages still solves.
-      final cages = const [
+      const cages = [
         // Row 0: pairs (3+1=4) and (4+2=6)
         KillerCage(cellIndexes: [0, 1], targetSum: 4),
         KillerCage(cellIndexes: [2, 3], targetSum: 6),

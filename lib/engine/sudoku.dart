@@ -215,6 +215,20 @@ class SudokuSolver {
     return SudokuTrace(frames: frames, solution: solution, error: null);
   }
 
+  /// Round 65: uniqueness check. Returns true iff the puzzle has
+  /// exactly one solution. Returns false when the puzzle has
+  /// either zero solutions or two-or-more. The cost is roughly
+  /// `solve` + the dart_csp effort to find a SECOND solution —
+  /// fast when one exists (next leaf in the search tree), slow
+  /// when none does (full tree exhaustion). Callers driving this
+  /// from a UI should put it behind a button or a timeout.
+  static Future<bool> hasUniqueSolution(SudokuPuzzle puzzle) async {
+    final first = await solve(puzzle);
+    if (first == null) return false;
+    final problem = _buildProblem(puzzle);
+    return !(await problem.hasMultipleSolutions());
+  }
+
   /// V3: per-cell candidate sets. For each empty cell, returns the
   /// digits 1..N that don't already appear in the same row,
   /// column, box, or — for Sudoku-X — diagonals. Pre-filled (clue)

@@ -296,6 +296,9 @@ abstract class AppLocalizations {
   String get sudokuVariantRegular;
   String get sudokuVariantX;
   String get sudokuVariantKiller;
+  String get sudokuCheckUnique;
+  String get sudokuUniqueSolution;
+  String get sudokuMultipleSolutions;
   String get sudokuShowHints;
   String get sudokuShowHintsSubtitle;
 
@@ -995,6 +998,12 @@ class EnLocalizations implements AppLocalizations {
   String get sudokuVariantX => 'Sudoku-X';
   @override
   String get sudokuVariantKiller => 'Killer';
+  @override
+  String get sudokuCheckUnique => 'Check uniqueness';
+  @override
+  String get sudokuUniqueSolution => 'Unique solution';
+  @override
+  String get sudokuMultipleSolutions => 'Multiple solutions';
   @override
   String get sudokuShowHints => 'Show hints';
   @override
@@ -1968,6 +1977,12 @@ class DeLocalizations implements AppLocalizations {
   String get sudokuVariantX => 'Sudoku-X';
   @override
   String get sudokuVariantKiller => 'Killer';
+  @override
+  String get sudokuCheckUnique => 'Eindeutigkeit prüfen';
+  @override
+  String get sudokuUniqueSolution => 'Eindeutige Lösung';
+  @override
+  String get sudokuMultipleSolutions => 'Mehrere Lösungen';
   @override
   String get sudokuShowHints => 'Hinweise anzeigen';
   @override
@@ -3045,6 +3060,12 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get sudokuVariantKiller => 'Killer';
   @override
+  String get sudokuCheckUnique => "Vérifier l'unicité";
+  @override
+  String get sudokuUniqueSolution => 'Solution unique';
+  @override
+  String get sudokuMultipleSolutions => 'Plusieurs solutions';
+  @override
   String get sudokuShowHints => 'Afficher les indices';
   @override
   String get sudokuShowHintsSubtitle =>
@@ -4121,6 +4142,12 @@ class EsLocalizations implements AppLocalizations {
   String get sudokuVariantX => 'Sudoku-X';
   @override
   String get sudokuVariantKiller => 'Killer';
+  @override
+  String get sudokuCheckUnique => 'Comprobar unicidad';
+  @override
+  String get sudokuUniqueSolution => 'Solución única';
+  @override
+  String get sudokuMultipleSolutions => 'Varias soluciones';
   @override
   String get sudokuShowHints => 'Mostrar pistas';
   @override

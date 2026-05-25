@@ -50,6 +50,15 @@ class _SudokuScreenState extends State<SudokuScreen> {
   SudokuDifficulty _genDifficulty = SudokuDifficulty.medium;
   _Speed _speed = _Speed.medium;
 
+  /// Round 65: uniqueness check result for the *currently displayed*
+  /// puzzle. Null when not yet computed (or cleared on any edit /
+  /// preset switch). True = exactly one solution; false = zero or
+  /// many. The check is opt-in via a "Check uniqueness" button
+  /// because for non-unique 9×9 (e.g. killer9x9) it can take
+  /// seconds to confirm.
+  bool? _unique;
+  bool _checkingUnique = false;
+
   /// V2: when the user picks a different size or variant via the
   /// top selectors (not via a preset), we wipe the grid to empty
   /// so the user can fill in fresh clues OR hit Generate / pick a
@@ -90,6 +99,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _selected = null;
       _trace = null;
       _frameIndex = 0;
+      _unique = null;
     });
   }
 
@@ -113,6 +123,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _selected = null;
       _trace = null;
       _frameIndex = 0;
+      _unique = null;
     });
   }
 
@@ -133,6 +144,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _clueIndexes = _captureClueIndexes(_puzzle);
       _trace = null;
       _frameIndex = 0;
+      _unique = null;
     });
   }
 
@@ -155,6 +167,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _selected = null;
       _trace = null;
       _frameIndex = 0;
+      _unique = null;
     });
   }
 
@@ -170,6 +183,25 @@ class _SudokuScreenState extends State<SudokuScreen> {
       if (trace.frames.isNotEmpty) {
         _displayed = List<int>.from(trace.frames.first.assigned);
       }
+    });
+  }
+
+  Future<void> _checkUnique() async {
+    setState(() => _checkingUnique = true);
+    // Capture the puzzle snapshot at click time so a later edit
+    // doesn't attribute the result to a different state.
+    final snapshot = _puzzle;
+    final result = await SudokuSolver.hasUniqueSolution(snapshot);
+    if (!mounted) return;
+    // Only commit the result if the puzzle hasn't changed in the
+    // meantime — otherwise the indicator would be misleading.
+    if (!identical(_puzzle, snapshot)) {
+      setState(() => _checkingUnique = false);
+      return;
+    }
+    setState(() {
+      _checkingUnique = false;
+      _unique = result;
     });
   }
 
@@ -317,6 +349,40 @@ class _SudokuScreenState extends State<SudokuScreen> {
                   )
                 : const Icon(Icons.play_arrow),
             label: Text(t.sudokuSolveButton),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _checkingUnique ? null : _checkUnique,
+                icon: _checkingUnique
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.fingerprint, size: 18),
+                label: Text(t.sudokuCheckUnique),
+              ),
+              const SizedBox(width: 12),
+              if (_unique != null)
+                Chip(
+                  visualDensity: VisualDensity.compact,
+                  backgroundColor: _unique!
+                      ? Theme.of(context).colorScheme.secondaryContainer
+                      : Theme.of(context).colorScheme.errorContainer,
+                  label: Text(
+                    _unique!
+                        ? t.sudokuUniqueSolution
+                        : t.sudokuMultipleSolutions,
+                    style: TextStyle(
+                      color: _unique!
+                          ? Theme.of(context).colorScheme.onSecondaryContainer
+                          : Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+            ],
           ),
           if (_trace != null) ...[
             const SizedBox(height: 16),

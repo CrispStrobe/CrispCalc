@@ -2,6 +2,46 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 65) — Sudoku: uniqueness indicator
+
+Adds a "Check uniqueness" button to the Sudoku screen and a
+chip that surfaces the result inline. Internally exposes
+`SudokuSolver.hasUniqueSolution(puzzle)`, which is `solve` +
+dart_csp's `hasMultipleSolutions` on the same constraint set —
+runs in milliseconds for a typical 4×4 / 6×6 / 9×9 with one
+solution, slower (full tree exhaustion) for puzzles with many.
+
+### Why
+
+The killer9x9 preset shipped in round 64 has multiple
+solutions (horizontal-only cages don't disambiguate), so users
+fairly asked "is this actually a real puzzle?". The uniqueness
+chip answers that question directly — and is generally useful
+anywhere a user has hand-entered clues and wants to know if
+they've over-constrained or under-constrained.
+
+### Engine
+
+- `SudokuSolver.hasUniqueSolution(puzzle)` — public Future<bool>.
+  Returns true iff exactly one solution exists. Internally:
+  one `solve` to confirm feasibility, then dart_csp's
+  `hasMultipleSolutions` which short-circuits on the first
+  second-solution leaf.
+- Three tests cover the three cases: generated puzzle (unique),
+  empty puzzle (many), infeasible puzzle (none).
+
+### Screen
+
+- Local state `_unique` (nullable bool) + `_checkingUnique`.
+  Cleared on every edit / preset switch / variant change /
+  layout switch — same code path as the trace, so an inline
+  Chip never lies about which puzzle it describes.
+- Button captures the puzzle by identity at click time so a
+  race against an edit discards the stale result.
+- Three new i18n strings (`sudokuCheckUnique`,
+  `sudokuUniqueSolution`, `sudokuMultipleSolutions`) across
+  en/de/fr/es with the locale-coverage test extended.
+
 ## 2026-05-25 (round 64) — Sudoku V4.1: Killer 9×9 preset + propagation fix
 
 Ships a 9×9 Killer preset (derived from a canonical solved grid,

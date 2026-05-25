@@ -290,6 +290,9 @@ void main() {
           t.sudokuVariantRegular,
           t.sudokuVariantX,
           t.sudokuVariantKiller,
+          t.sudokuCheckUnique,
+          t.sudokuUniqueSolution,
+          t.sudokuMultipleSolutions,
           t.sudokuShowHints,
           t.sudokuShowHintsSubtitle,
         ]) {
