@@ -1463,6 +1463,268 @@ feature (e.g. Sudoku-X with hints, t-test on a small dataset,
 factorint of a 20-digit number) within 5 minutes of opening
 the app — without reading any external documentation.
 
+### Add-on: result-handling ergonomics (interleaved with P6)
+
+The Calculator's history context menu and the Notepad's line
+context menu both already exist (calculator already has
+"Show on Graph / Analyze / Differentiate / Integrate / Solve /
+Copy / Reuse"), but neither lets the user **capture** what
+they just computed into a named slot. Promote the right-click
+menu so common follow-ups are one tap away.
+
+##### Round 91 — Right-click "store as variable / function"
+
+Add two new items to both the Calculator history-row menu
+(`_showHistoryEntryMenu`) and the Notepad line menu (which
+needs to be created if it doesn't exist):
+
+- **Store result as variable.** Prompts for a name; persists
+  via `AppState.setVariable(name, result)`. Available on every
+  row (every result is a value).
+- **Store as function.** Prompts for `name(arg) = expression`.
+  Persists via `AppState.setUserFunction(UserFunction(...))`.
+  Available only when the expression contains free variables
+  the user could parameterise on. We default the arg name to
+  the first free variable detected; the user can rename.
+
+The variable name picker reuses the existing variable-naming
+dialog (or creates a small one). Name validation: identifier
+syntax, no shadowing of built-ins (`pi`, `e`, `i`, …).
+
+Surfaces:
+- Calculator history rows (extend `_showHistoryEntryMenu`).
+- Notepad lines (add a `_showLineContextMenu` mirror; bind to
+  `onLongPress` / `onSecondaryTap` like the calculator does).
+- Variable Viewer rows (already has secondary-tap menu via
+  `lib/widgets/variable_viewer.dart`; extend with "Promote
+  this variable's value to a function" if it makes sense).
+
+i18n: 4-5 new strings × 4 locales.
+
+##### Round 91b — Naming-dialog UX polish
+
+The naming dialog needs to surface conflicts ("a variable
+named `x` already exists — overwrite?") and to suggest a
+default name (e.g. the next unused single-letter name, or
+`fnN()` for functions). One-screen modal with validation;
+nothing fancy. ~30 min after round 91 lands.
+
+---
+
+## P7 — Boolean type + relational / logical operators
+
+Round-89 surfaced the first piece of "boolean output" in
+CrispCalc (`isprime(n)` returns `true`/`false` as a string).
+That's a one-off; users will reach for richer boolean syntax
+the moment they start composing predicates. P7 lifts boolean
+to a first-class type with the standard relational and
+logical operator suite.
+
+### What's missing today
+
+Today's calculator handles:
+- Arithmetic + symbolic expressions (numbers in, numbers /
+  expressions out).
+- One boolean function: `isprime`.
+
+What it doesn't handle:
+- **Relational ops** that return booleans: `==`, `!=`, `<`,
+  `<=`, `>`, `>=`. Today these are reserved for the CSP DSL
+  (constraints).
+- **Logical ops**: `and`, `or`, `xor`, `not`. Today none.
+- **Conditional**: `if(cond, thenExpr, elseExpr)`.
+
+### What SymEngine already gives us
+
+SymEngine's `cwrapper.h` exposes:
+- `bool_set_true(basic s)` / `bool_set_false(basic s)` — boolean
+  literals.
+- `basic_eq(const basic a, const basic b)` — equality predicate
+  (returns int, not basic — but we can wrap it).
+
+What it doesn't expose (would need new wrappers OR direct
+construction via `basic_parse("And(...)")`):
+- `basic_set_lt`, `basic_set_leq`, `basic_set_gt`, `basic_set_geq`
+  for relationals.
+- `basic_set_and`, `basic_set_or`, `basic_set_not`,
+  `basic_set_xor` for logicals.
+
+Practical option: SymEngine's text parser DOES handle
+`Eq(a, b)`, `Ne(a, b)`, `Lt(a, b)`, `Le(a, b)`, `Gt(a, b)`,
+`Ge(a, b)`, `And(a, b)`, `Or(a, b)`, `Not(a)`, `Xor(a, b)`
+as named functions. So one cheap path is: have the calculator
+preprocess `a == b` → `Eq(a, b)`, `a and b` → `And(a, b)`,
+etc., then evaluate through the existing `basic_parse` +
+`basic_evalf` path.
+
+### Rounds 110+ — Boolean roadmap
+
+##### Round 110 — Relational operators
+
+Calculator preprocessor learns to rewrite:
+- `a == b` → `Eq(a, b)`
+- `a != b` → `Ne(a, b)`
+- `a < b` → `Lt(a, b)` (and `<=` / `>` / `>=` similarly)
+
+Each evaluates to `true` / `false` when both sides are
+constants; stays symbolic otherwise. SymEngine handles the
+symbolic case (`x == y` stays unresolved).
+
+Output formatting: `true` and `false` render as colored chips
+in the history (green / red) — same visual pattern as the
+round-87b Sudoku win chip.
+
+##### Round 111 — Logical operators + connectives
+
+- `a and b` / `a or b` / `a xor b` / `not a` → `And(a, b)`,
+  `Or(a, b)`, `Xor(a, b)`, `Not(a)`.
+- Short-circuit semantics where SymEngine permits.
+- `if(cond, thenExpr, elseExpr)` → `Piecewise((thenExpr, cond),
+  (elseExpr, true))` (SymEngine's native conditional).
+
+##### Round 112 — Boolean keypad + worked examples
+
+- New keypad tab section "Logic" with: `==`, `!=`, `<`, `>`,
+  `and`, `or`, `not`, `xor`, `if`. Adv tab integration.
+- Worked-example entries: "Is 17 prime AND less than 20?"
+  → `isprime(17) and 17 < 20` → `true`. Plus 3-4 more
+  classroom-flavored examples.
+
+##### Round 113 — Notepad integration
+
+Notepad lines can now contain predicates. A line like
+`isOK = isprime(2^31 - 1) and (2^31 - 1) < 10^10` resolves
+to `false` (M31 > 10^10), and the result chip renders red.
+Downstream lines referencing `isOK` see a boolean value;
+arithmetic with a boolean coerces to 0/1 (or errors —
+decision for round 113).
+
+##### Round 114 — Reference + help-mode wiring
+
+Round-97 Function Reference gets a new "Logic" category with
+entries for every relational + logical operator. Help mode
+(round 102) on a logic button shows a quick truth-table popover
+for the operator.
+
+### Why P7 is its own thing
+
+Booleans cross-cut the type system, the parser, the result
+formatter, and the keypad. It's not a "wrap a SymEngine
+function" round like the precision arc — it's a small but
+real type extension. Worth designing once and shipping in
+sequence rather than smuggling pieces into other rounds.
+
+---
+
+## P8 — Calculator history performance hot spots
+
+User-reported (May 2026, end of session): toggling the
+Calculator's ASCII ↔ LaTeX history view is "very very long"
+on `flutter run -d macos`. History search is also slow. Both
+likely share the same root cause: the history list rebuilds
+every entry synchronously on every state change, and each
+LaTeX-mode entry runs `flutter_math_fork`'s `Math.tex()` on
+every rebuild.
+
+### Diagnosis (best-current-understanding)
+
+`calculator_screen.dart::_buildExpressionDisplay`:
+
+```dart
+Widget _buildExpressionDisplay(String expression) {
+  if (_showLatexHistory && expression.isNotEmpty) {
+    return Math.tex(_toLatex(expression), ...);
+  }
+  return Text(expression, ...);
+}
+```
+
+Called for every history row on every rebuild. `Math.tex` is
+not free — it parses the LaTeX source, builds an AST, and lays
+out math glyphs. With 100+ history entries (typical for a
+session), toggling `_showLatexHistory` rebuilds the entire list
+which means 100+ fresh LaTeX layouts on the main thread.
+
+History search has the same shape: re-filter + re-render.
+
+### Round 120 — Cache rendered LaTeX per entry
+
+Cheapest, highest-impact fix. Store the rendered `Math.tex`
+widget per `CalculationEntry`:
+
+```dart
+class _CachedEntryRender {
+  final Widget latex;
+  final Widget plain;
+}
+```
+
+Build once at entry creation; reuse on every rebuild. Toggle
+just swaps which one is shown. Estimated 50-100× speedup on
+the toggle for long histories.
+
+Trade-off: memory grows linearly in history length. For
+~1000 entries × ~10 KB per cached Math.tex tree = ~10 MB —
+acceptable. Cap at the most-recent 500; older entries render
+lazily on demand.
+
+### Round 121 — `RepaintBoundary` + `ListView.builder` virtualization
+
+If the history isn't already using `ListView.builder` (lazy
+itemBuilder), wrap it in one so off-screen rows don't render.
+Wrap each row in `RepaintBoundary` so a partial state change
+(e.g. selection highlight) doesn't invalidate adjacent rows.
+
+### Round 122 — Async LaTeX precomputation
+
+For NEW entries: precompute the LaTeX source on a microtask
+(`scheduleMicrotask`) right after history-write; render the
+plain-text view first, swap to LaTeX once ready. Round 120's
+cache populates from this path so the first render of a fresh
+entry is the only place where the Math.tex layout cost shows.
+
+### Round 123 — Search debounce + index
+
+If the user is typing a search query, the current code probably
+re-filters on every keystroke. Add a 200ms debounce on the
+search input. For a more aggressive fix: build a token-index
+(`Map<String, Set<int>>` of expression-tokens → row ids) on
+history-load and use it for O(1) prefix lookups. Likely
+unnecessary if 120 + 121 already make the rebuild fast
+enough — measure first.
+
+### Round 124 — Profile-guided pass
+
+After 120-123 land, run a `flutter run -d macos --profile`
+session and use the DevTools timeline to confirm the toggle +
+search drop below 16ms / frame at 60fps. Fix whatever still
+shows up red.
+
+### Open question
+
+Is the `Math.tex` cost on the LaTeX path or on the AST → glyph
+layout? If layout, there's nothing we can do in CrispCalc
+short of caching. If parsing, we might precompute the AST and
+hand it directly. Round 124's profiling will answer.
+
+---
+
+## Small follow-ups (debt items, ship anytime)
+
+##### "Matrix self-test" should be debug-only
+
+`main.dart:597` shows the Matrix self-test tile in Settings
+unconditionally. It's a developer diagnostic — it runs
+`SymbolicMathBridge` calls and prints a pass/fail report.
+End users will never need it; a release-build user who taps
+it sees raw bridge output. Wrap in
+`if (kDebugMode) ...` (or the environment-variable check
+already used: `String.fromEnvironment('CRISPCALC_DIAGNOSTIC')
+== 'matrix'`). Five-line fix.
+
+Same audit pass should look for other internal-only entries
+that leaked into Settings.
+
 ---
 
 ## Out of scope this round
