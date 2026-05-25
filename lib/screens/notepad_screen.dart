@@ -1,15 +1,25 @@
 // lib/screens/notepad_screen.dart
 //
-// Phase 4 of the Notepad V1 plan: UI skeleton over the data model
-// (Phase 1), parser/scope (Phase 2), and dependency-graph evaluator
-// (Phase 3). This screen renders whatever is cached on each
-// `NotepadLine` — live recompute on edit lands in Phase 5; until
-// then, editing a line clears its cached result/error so the row
-// stops showing a stale value.
+// Phases 4 + 5 of the Notepad V1 plan: UI skeleton (Phase 4) +
+// live recalc pipeline (Phase 5) over the data model (Phase 1),
+// parser/scope (Phase 2), and dependency-graph evaluator (Phase 3).
+//
+// Phase 5: every edit schedules a 300 ms-debounced
+// `evaluateFrom(doc, lineIndex)`. New edits cancel any in-flight
+// engine call via `EngineService.cancelInFlight()` so the worker
+// isolate's monotonic run-id drops the stale result. Per-row
+// state surfaces a pending indicator while the dispatcher is mid-
+// flight. The dispatcher itself wraps `EngineService.evaluateAsync`
+// after passing the notepad-preprocessed body through the same
+// native-format step the calculator uses
+// (`preprocessNativeExpression`) — no global-AppState reach-in
+// (those imports land in Phase 6 via the `use` directive).
 //
 // Strings are intentionally hardcoded English. Phase 8 will pull
 // them into `AppLocalizations` across en/de/fr/es with the locale
 // non-emptiness test as the guardrail.
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +29,9 @@ import '../engine/app_state.dart';
 import '../engine/notepad.dart';
 import '../engine/notepad_evaluator.dart';
 import '../localization/app_localizations.dart';
+import '../services/engine_service.dart';
 import '../utils/error_formatter.dart';
+import '../utils/expression_preprocessing_utils.dart';
 import '../utils/math_display_utils.dart';
 
 /// Layout breakpoint matching the app shell's nav-rail switch
@@ -69,6 +81,30 @@ class _NotepadScreenState extends State<NotepadScreen> {
   /// scroll the upstream line into view on tap.
   final ScrollController _listScrollController = ScrollController();
 
+  // --- Phase 5: live recalc ------------------------------------------------
+
+  /// Debounce timer for per-edit recalc (decision #9, 300 ms).
+  Timer? _recalcTimer;
+
+  /// Line ids currently being (re-)evaluated — drives the per-row
+  /// "pending" visual.
+  final Set<String> _pendingLineIds = {};
+
+  /// Tail of the active-recalc chain — new requests `await` this so
+  /// at most one `_runRecalc` runs at a time. Pre-Phase-5 we tried
+  /// to cancel the in-flight engine call with `cancelInFlight()`;
+  /// the kill was async and the next `send()` raced against it,
+  /// leaving the worker dead but `_commandPort` still pointing at
+  /// the dead isolate's port — every dispatcher call then hung
+  /// forever. Serialization side-steps that entirely: one request
+  /// in flight, no concurrent kill races.
+  Future<void>? _activeRecalc;
+
+  /// Shared evaluator instance bound to [_dispatcher]. Pure-Dart
+  /// orchestrator; the engine calls go through `EngineService`.
+  late final NotepadEvaluator _evaluator =
+      NotepadEvaluator(dispatcher: _dispatcher);
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +114,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
   @override
   void dispose() {
     _appState.removeListener(_onAppStateChanged);
+    _recalcTimer?.cancel();
     for (final c in _controllers.values) {
       c.dispose();
     }
@@ -115,6 +152,10 @@ class _NotepadScreenState extends State<NotepadScreen> {
       _controllers.clear();
       _focusNodes.clear();
       _activeControllerDocId = docId;
+      // Phase 5: drop any in-flight recalc tied to the old doc, and
+      // re-arm the "initial full-eval on open" trigger for the new doc.
+      _recalcTimer?.cancel();
+      _pendingLineIds.clear();
     }
     if (doc == null) return;
 
@@ -192,12 +233,14 @@ class _NotepadScreenState extends State<NotepadScreen> {
   void _onLineEdited(NotepadDocument doc, NotepadLine line, String value) {
     if (line.source == value) return;
     line.source = value;
-    // Phase 5 will recompute on edit. Until then, drop the stale
-    // cache so the row doesn't keep showing a wrong result.
+    // Drop stale cache immediately so the row stops showing a wrong
+    // value during the 300 ms debounce window. The recalc below
+    // re-populates it.
     line.cachedResult = null;
     line.cachedError = null;
     line.cachedFreeVars = [];
     _persistDoc(doc);
+    _scheduleRecalc(doc, doc.lines.indexOf(line));
   }
 
   void _appendLine(NotepadDocument doc) {
@@ -217,6 +260,13 @@ class _NotepadScreenState extends State<NotepadScreen> {
     _persistDoc(doc);
     _pendingDeletion =
         _PendingDeletion.line(doc: doc, line: removed, index: index);
+    // Deleting a line that other lines reference invalidates those
+    // downstream — recompute from the spot where the line used to live.
+    // No-op when the doc is now empty (no recalc target).
+    if (doc.lines.isNotEmpty) {
+      final clamped = index < doc.lines.length ? index : doc.lines.length - 1;
+      _scheduleRecalc(doc, clamped);
+    }
     _showUndoSnackbar(
       label: 'Line deleted',
       onUndo: () {
@@ -227,6 +277,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
         final lineIdx = pending.lineIndex!.clamp(0, pending.doc.lines.length);
         pending.doc.lines.insert(lineIdx, pending.line!);
         _persistDoc(pending.doc);
+        _scheduleRecalc(pending.doc, lineIdx);
         _pendingDeletion = null;
       },
     );
@@ -237,6 +288,10 @@ class _NotepadScreenState extends State<NotepadScreen> {
     final moved = doc.lines.removeAt(oldIndex);
     doc.lines.insert(newIndex, moved);
     _persistDoc(doc);
+    // Positional aliases (`lineN`) shift on reorder; assignment names
+    // follow the line. Either way, the safe thing is a full recompute
+    // from the lowest affected index.
+    _scheduleRecalc(doc, oldIndex < newIndex ? oldIndex : newIndex);
   }
 
   void _newDocument() {
@@ -328,6 +383,132 @@ class _NotepadScreenState extends State<NotepadScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase 5: dispatcher + recalc scheduling
+  // ---------------------------------------------------------------------------
+
+  /// Engine dispatcher injected into [NotepadEvaluator]. Receives a
+  /// notepad-preprocessed body (scope names + Ans already
+  /// substituted by Phase 2) and returns either a normalized result
+  /// string or an `Error: ...` string the evaluator wraps with
+  /// [NotepadErrorPrefix.fromEngine]. No `AppState.userVariables` /
+  /// `userFunctions` reach-in here — those land in Phase 6 via the
+  /// `use` directive.
+  Future<String> _dispatcher(String preprocessed) async {
+    if (preprocessed.trim().isEmpty) return '';
+    final native =
+        ExpressionPreprocessingUtils.preprocessNativeExpression(preprocessed);
+    try {
+      final raw = await EngineService.evaluateAsync(native);
+      if (raw.startsWith('Error')) return raw;
+      return ExpressionPreprocessingUtils.normalizeComplexResult(raw);
+    } on EngineCancelled {
+      return 'Error: cancelled';
+    } catch (e) {
+      return 'Error: $e';
+    }
+  }
+
+  /// Debounce a recalc starting from [startIndex]. Each fresh
+  /// keystroke pushes the firing 300 ms further out.
+  void _scheduleRecalc(NotepadDocument doc, int startIndex) {
+    if (startIndex < 0) return;
+    _recalcTimer?.cancel();
+    _recalcTimer = Timer(const Duration(milliseconds: 300), () {
+      _runRecalc(doc, startIndex: startIndex);
+    });
+  }
+
+  /// Run the evaluator for the given starting line (or the whole doc
+  /// when [startIndex] is null). Cancels any in-flight engine call,
+  /// marks downstream lines as pending so the UI greys their
+  /// previous results, then awaits the evaluator. Stale completions
+  /// (seq mismatch) get discarded.
+  Future<void> _runRecalc(
+    NotepadDocument doc, {
+    int? startIndex,
+  }) async {
+    if (!mounted) return;
+    // Chain after any previous run so we never have two evaluators
+    // (and two engine dispatchers) racing on the same doc.
+    final previous = _activeRecalc;
+    final completer = Completer<void>();
+    _activeRecalc = completer.future;
+    if (previous != null) {
+      try {
+        await previous;
+      } catch (_) {/* previous run swallowed its own errors */}
+      if (!mounted) {
+        completer.complete();
+        return;
+      }
+    }
+
+    try {
+      await _runRecalcBody(doc, startIndex: startIndex);
+    } finally {
+      completer.complete();
+      if (identical(_activeRecalc, completer.future)) {
+        _activeRecalc = null;
+      }
+    }
+  }
+
+  Future<void> _runRecalcBody(
+    NotepadDocument doc, {
+    required int? startIndex,
+  }) async {
+    if (!mounted) return;
+
+    final indices = <int>{};
+    if (startIndex == null) {
+      for (var i = 0; i < doc.lines.length; i++) {
+        indices.add(i);
+      }
+    } else if (startIndex >= 0 && startIndex < doc.lines.length) {
+      final graph = buildDependencyGraph(doc);
+      indices.addAll(downstreamFrom(startIndex, graph));
+    }
+    setState(() {
+      _pendingLineIds.clear();
+      for (final i in indices) {
+        if (i < doc.lines.length) {
+          _pendingLineIds.add(doc.lines[i].id);
+        }
+      }
+    });
+
+    try {
+      if (startIndex == null) {
+        await _evaluator.evaluateAll(doc);
+      } else if (startIndex >= 0 && startIndex < doc.lines.length) {
+        await _evaluator.evaluateFrom(doc, startIndex);
+      }
+    } catch (_) {/* dispatcher swallows errors into the cache */}
+
+    if (!mounted) return;
+
+    setState(() {
+      _pendingLineIds.clear();
+    });
+    _persistDoc(doc);
+  }
+
+  /// Manual "Recalculate all" entry point from the ⋮ menu — runs a
+  /// full evaluateAll() over the current doc. Useful when the user
+  /// has just opened a doc shipped without cached values (the
+  /// built-in Welcome sample is the main case) or wants to force a
+  /// re-eval after toggling a global setting that the dispatcher
+  /// reads. Edits during normal use already trigger debounced
+  /// per-line recalc via [_scheduleRecalc]; this is the one-shot
+  /// catch-all.
+  void _recalculateAll() {
+    final doc = _currentDoc;
+    if (doc == null) return;
+    _recalcTimer?.cancel();
+    _runRecalc(doc, startIndex: null);
   }
 
   void _showUndoSnackbar(
@@ -480,6 +661,10 @@ class _NotepadScreenState extends State<NotepadScreen> {
           if (doc != null) {
             items.add(const PopupMenuDivider());
             items.add(const PopupMenuItem(
+              value: 'recalc',
+              child: Text('Recalculate all'),
+            ));
+            items.add(const PopupMenuItem(
               value: 'rename',
               child: Text('Rename'),
             ));
@@ -509,6 +694,8 @@ class _NotepadScreenState extends State<NotepadScreen> {
       _openWelcomeSample();
     } else if (value.startsWith('open:')) {
       _openDocument(value.substring('open:'.length));
+    } else if (value == 'recalc') {
+      _recalculateAll();
     } else if (value == 'rename') {
       _startRename();
     } else if (value == 'duplicate') {
@@ -577,6 +764,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
             line: line,
             index: index,
             sideBySide: sideBySide,
+            isPending: _pendingLineIds.contains(line.id),
             controller: _controllers[line.id]!,
             focusNode: _focusNodes[line.id]!,
             onChanged: (v) => _onLineEdited(doc, line, v),
@@ -597,6 +785,7 @@ class _NotepadLineRow extends StatelessWidget {
   final NotepadLine line;
   final int index;
   final bool sideBySide;
+  final bool isPending;
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
@@ -608,6 +797,7 @@ class _NotepadLineRow extends StatelessWidget {
     required this.line,
     required this.index,
     required this.sideBySide,
+    required this.isPending,
     required this.controller,
     required this.focusNode,
     required this.onChanged,
@@ -654,6 +844,7 @@ class _NotepadLineRow extends StatelessWidget {
               flex: 2,
               child: _NotepadResultColumn(
                 line: line,
+                isPending: isPending,
                 onScrollToLineId: onScrollToLineId,
               ),
             ),
@@ -680,6 +871,7 @@ class _NotepadLineRow extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4, left: 4, bottom: 4),
                   child: _NotepadResultColumn(
                     line: line,
+                    isPending: isPending,
                     onScrollToLineId: onScrollToLineId,
                     alignStart: true,
                   ),
@@ -759,11 +951,13 @@ class _DeleteButton extends StatelessWidget {
 
 class _NotepadResultColumn extends StatelessWidget {
   final NotepadLine line;
+  final bool isPending;
   final void Function(String lineId) onScrollToLineId;
   final bool alignStart;
 
   const _NotepadResultColumn({
     required this.line,
+    required this.isPending,
     required this.onScrollToLineId,
     this.alignStart = false,
   });
@@ -773,6 +967,15 @@ class _NotepadResultColumn extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final align = alignStart ? Alignment.centerLeft : Alignment.centerRight;
     final textAlign = alignStart ? TextAlign.left : TextAlign.right;
+
+    // Phase 5 pending state: greyed-out previous value (or a small
+    // spinner if no previous value to grey) + progress dot.
+    if (isPending) {
+      return Align(
+        alignment: align,
+        child: _buildPendingWidget(context, textAlign),
+      );
+    }
 
     if (line.cachedError != null) {
       return Align(
@@ -814,18 +1017,89 @@ class _NotepadResultColumn extends StatelessWidget {
     );
   }
 
+  Widget _buildPendingWidget(BuildContext context, TextAlign textAlign) {
+    final cs = Theme.of(context).colorScheme;
+    final res = line.cachedResult;
+    final style =
+        TextStyle(fontSize: 16, color: cs.onSurface.withValues(alpha: 0.4));
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (res != null && res.isNotEmpty)
+          Flexible(child: Text(res, style: style, textAlign: textAlign)),
+        if (res != null && res.isNotEmpty) const SizedBox(width: 6),
+        SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            color: cs.primary.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildResult(BuildContext context, String res, TextAlign textAlign) {
     final color = Theme.of(context).colorScheme.primary;
     final style = TextStyle(fontSize: 16, color: color);
+    final latex = MathDisplayUtils.toHistoryDisplayLatex(res);
+    Widget body;
     try {
-      return Math.tex(
-        MathDisplayUtils.toHistoryDisplayLatex(res),
+      body = Math.tex(
+        latex,
         textStyle: style,
         onErrorFallback: (_) => Text(res, style: style, textAlign: textAlign),
       );
     } catch (_) {
-      return Text(res, style: style, textAlign: textAlign);
+      body = Text(res, style: style, textAlign: textAlign);
     }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => _showResultActions(context, res, latex),
+      child: body,
+    );
+  }
+
+  void _showResultActions(BuildContext context, String plain, String latex) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('Copy result'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: plain));
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copied result'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('Copy as LaTeX'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: latex));
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copied as LaTeX'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildErrorWidget(
