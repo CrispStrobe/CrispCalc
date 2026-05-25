@@ -2,6 +2,39 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 67) — Sudoku: Killer-aware hint mode
+
+The pencil-marks (Show Hints) currently filter by row, column,
+box, and Sudoku-X diagonals — but not by cage. In Killer mode
+that misses two large eliminations:
+
+- **Cage all-different**: a digit already placed in the same
+  cage can't appear in any other cell of that cage.
+- **Cage sum residue**: if the cage targets sum S, K cells are
+  empty, and the placed cells sum to P, then each empty cell's
+  value v must satisfy `residue - (K-1)·n ≤ v ≤ residue - (K-1)`
+  where residue = S - P. (Each of the other K-1 cells takes a
+  value between 1 and n.)
+
+### Implementation
+
+`computeCandidates` now precomputes per-cage state (which
+values are placed, which cells are still empty) and applies
+both filters before returning the candidate set. The bound is
+**loose** (uses 1..n for each other cell's range) rather than
+tight (would enumerate which digits are actually still
+available). Tight bounds are V2 — the loose bound already
+catches most "this digit can't possibly fit" cases without
+needing combinatorial enumeration.
+
+### Tests
+
+- 4×4 Killer with a 2-cell cage summing to 3: every other cell
+  in that cage gets candidates ⊆ {1, 2}.
+- Cage summing to 7 in 4×4: candidates ⊆ {3, 4} (since 1..4
+  range caps at 4, and 7 - 4 = 3 is the lower bound).
+- Filled cage cells return empty candidate sets (they're clues).
+
 ## 2026-05-25 (round 66) — Sudoku: killer9x9 is now actually unique
 
 The killer9x9 preset shipped in round 64 was feasible but not

@@ -355,6 +355,66 @@ void main() {
           reason: 'anti-diagonal cell (8,0) should exclude 7');
     });
 
+    test(
+        'Killer variant: cage sum residue removes too-large + too-small digits',
+        () {
+      // 4×4 Killer with a 2-cell cage [0,1] summing to 3.
+      // Possible pairs: (1,2),(2,1). After placing 1 in cell 0,
+      // cell 1 must be 2 — and cage all-different already excluded 1.
+      // We test the residue bound: if cell 0 is empty and cell 1 is
+      // empty, candidates for both must be ≤ 2 (else exceed sum).
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: List<int>.filled(16, 0),
+        variant: SudokuVariant.killer,
+        cages: [
+          const KillerCage(cellIndexes: [0, 1], targetSum: 3),
+          const KillerCage(cellIndexes: [2, 3], targetSum: 7),
+          const KillerCage(cellIndexes: [4, 5], targetSum: 6),
+          const KillerCage(cellIndexes: [6, 7], targetSum: 4),
+          const KillerCage(cellIndexes: [8, 9], targetSum: 4),
+          const KillerCage(cellIndexes: [10, 11], targetSum: 6),
+          const KillerCage(cellIndexes: [12, 13], targetSum: 7),
+          const KillerCage(cellIndexes: [14, 15], targetSum: 3),
+        ],
+      );
+      final cands = SudokuSolver.computeCandidates(puzzle);
+      // Cell 0 (cage sum 3, 2 cells): residue=3, upperBound=3-1=2,
+      //   lowerBound=3-1*4=-1. So candidates ⊆ {1,2}.
+      expect(cands[0], equals({1, 2}));
+      expect(cands[1], equals({1, 2}));
+      // Cell 2 (cage sum 7, 2 cells): residue=7, upperBound=7-1=6
+      //   but cells take values 1..4, so candidates ⊆ {3,4}.
+      expect(cands[2], equals({3, 4}));
+    });
+
+    test('Killer variant: filled cage cells return empty candidates', () {
+      final cells = [1, 2, 0, 0, ...List<int>.filled(12, 0)];
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: cells,
+        variant: SudokuVariant.killer,
+        cages: [
+          const KillerCage(cellIndexes: [0, 1], targetSum: 3),
+          const KillerCage(cellIndexes: [2, 3], targetSum: 7),
+          const KillerCage(cellIndexes: [4, 5], targetSum: 6),
+          const KillerCage(cellIndexes: [6, 7], targetSum: 4),
+          const KillerCage(cellIndexes: [8, 9], targetSum: 4),
+          const KillerCage(cellIndexes: [10, 11], targetSum: 6),
+          const KillerCage(cellIndexes: [12, 13], targetSum: 7),
+          const KillerCage(cellIndexes: [14, 15], targetSum: 3),
+        ],
+      );
+      final cands = SudokuSolver.computeCandidates(puzzle);
+      // Cells 0, 1 are filled.
+      expect(cands[0], isEmpty);
+      expect(cands[1], isEmpty);
+      // Cell 2 (cage sum 7): empty; candidates ⊆ {3,4} from residue.
+      // Row 0 already has 1,2 placed (cell 0, 1) → exclude.
+      // → {3,4}.
+      expect(cands[2], equals({3, 4}));
+    });
+
     test('regular variant ignores diagonal occupants', () {
       // Same setup as above, but variant=regular: 5 at (0,0)
       // should NOT prevent 5 at (4,4) (no shared row/col/box).

@@ -242,6 +242,13 @@ class SudokuSolver {
   /// the bridge for every keystroke isn't free; the V4 follow-up
   /// could expose the AC-3-pruned version as an opt-in
   /// "advanced hints" level.
+  ///
+  /// Round 67 (Killer): when the puzzle has cages, also filter by
+  /// (a) cage all-different (digits already placed in the same
+  /// cage are excluded), and (b) a loose cage-sum bound (each
+  /// candidate v must leave room for the remaining cells to sum
+  /// to the residue, i.e. residue - (r-1)*n ≤ v ≤ residue - (r-1)).
+  /// The tight sum bound from available digits is V2.
   static List<Set<int>> computeCandidates(SudokuPuzzle puzzle) {
     final layout = puzzle.layout;
     final n = layout.side;
@@ -276,6 +283,30 @@ class SudokuSolver {
       }
     }
 
+    // Per-cage bookkeeping (Killer): for each cage, collect the
+    // values already placed in it, the count of still-empty cells,
+    // and which cage each cell belongs to.
+    final cellCage = <int, int>{};
+    final cagePlaced = <int, Set<int>>{};
+    final cageEmptyCount = <int, int>{};
+    if (puzzle.cages != null) {
+      for (var ci = 0; ci < puzzle.cages!.length; ci++) {
+        final cage = puzzle.cages![ci];
+        cagePlaced[ci] = <int>{};
+        var empty = 0;
+        for (final idx in cage.cellIndexes) {
+          cellCage[idx] = ci;
+          final v = puzzle.cells[idx];
+          if (v == 0) {
+            empty++;
+          } else {
+            cagePlaced[ci]!.add(v);
+          }
+        }
+        cageEmptyCount[ci] = empty;
+      }
+    }
+
     for (var r = 0; r < n; r++) {
       for (var c = 0; c < n; c++) {
         if (puzzle.cells[r * n + c] != 0) continue;
@@ -287,7 +318,26 @@ class SudokuSolver {
           if (puzzle.variant == SudokuVariant.x && r + c == n - 1)
             ...antiDiagUsed,
         };
-        out[r * n + c] = all.difference(excluded);
+        var candidates = all.difference(excluded);
+        // Cage-aware filtering.
+        final idx = r * n + c;
+        final ci = cellCage[idx];
+        if (ci != null) {
+          final cage = puzzle.cages![ci];
+          // Cage all-different.
+          candidates = candidates.difference(cagePlaced[ci]!);
+          // Cage sum residue + loose remaining-cell bound.
+          final placedSum = cagePlaced[ci]!.fold<int>(0, (a, b) => a + b);
+          final residue = cage.targetSum - placedSum;
+          final empty = cageEmptyCount[ci]!;
+          final upperBound = residue - (empty - 1); // others ≥ 1 each
+          final lowerBound = residue - (empty - 1) * n; // others ≤ n each
+          candidates = {
+            for (final v in candidates)
+              if (v >= lowerBound && v <= upperBound) v
+          };
+        }
+        out[idx] = candidates;
       }
     }
     return out;
