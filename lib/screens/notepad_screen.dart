@@ -420,8 +420,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // use parens for grouping in V1.
     var unitResult = UnitExpressionEvaluator.tryEvaluate(preprocessed);
     if (unitResult == null && preprocessed.contains('(')) {
-      final stripped =
-          preprocessed.replaceAll('(', '').replaceAll(')', '');
+      final stripped = preprocessed.replaceAll('(', '').replaceAll(')', '');
       unitResult = UnitExpressionEvaluator.tryEvaluate(stripped);
     }
     if (unitResult != null) return _appState.formatNumber(unitResult);
@@ -833,8 +832,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
             const SizedBox(height: 16),
             Text(
               t.notepadEmptyTitle,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(t.notepadEmptyBody, textAlign: TextAlign.center),

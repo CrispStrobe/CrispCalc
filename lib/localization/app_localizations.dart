@@ -2900,8 +2900,7 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get notepadLineDeleted => 'Ligne supprimée';
   @override
-  String notepadDocumentDeleted(String name) =>
-      'Document « $name » supprimé';
+  String notepadDocumentDeleted(String name) => 'Document « $name » supprimé';
   @override
   String get notepadCopiedAsMarkdown => 'Copié en Markdown';
   @override
@@ -4164,8 +4163,7 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get notepadLineDeleted => 'Línea eliminada';
   @override
-  String notepadDocumentDeleted(String name) =>
-      'Documento «$name» eliminado';
+  String notepadDocumentDeleted(String name) => 'Documento «$name» eliminado';
   @override
   String get notepadCopiedAsMarkdown => 'Copiado como Markdown';
   @override
