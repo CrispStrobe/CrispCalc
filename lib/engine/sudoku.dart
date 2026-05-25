@@ -105,6 +105,51 @@ class SudokuPuzzle {
 
   int get(int row, int col) => cells[row * layout.side + col];
 
+  /// Round 81: return the constraint context the cell at [cellIndex]
+  /// sits in — every `allDifferent` overlay the puzzle's rules
+  /// register for that cell. Pure data; no solver call. See
+  /// [SudokuStepContext] for the structure.
+  SudokuStepContext contextAt(int cellIndex) {
+    final n = layout.side;
+    final r = cellIndex ~/ n;
+    final c = cellIndex % n;
+    final br = r ~/ layout.boxRows;
+    final bc = c ~/ layout.boxCols;
+    final boxIdx = br * (n ~/ layout.boxCols) + bc;
+
+    int? cageIndex;
+    int? cageSum;
+    if (variant == SudokuVariant.killer && cages != null) {
+      for (var i = 0; i < cages!.length; i++) {
+        if (cages![i].cellIndexes.contains(cellIndex)) {
+          cageIndex = i + 1;
+          cageSum = cages![i].targetSum;
+          break;
+        }
+      }
+    }
+
+    final onMain = variant == SudokuVariant.x && r == c;
+    final onAnti = variant == SudokuVariant.x && r + c == n - 1;
+
+    int? disjoint;
+    if (variant == SudokuVariant.disjoint) {
+      disjoint =
+          (r % layout.boxRows) * layout.boxCols + (c % layout.boxCols) + 1;
+    }
+
+    return SudokuStepContext(
+      row: r + 1,
+      col: c + 1,
+      box: boxIdx + 1,
+      cageIndex: cageIndex,
+      cageSum: cageSum,
+      onMainDiagonal: onMain,
+      onAntiDiagonal: onAnti,
+      disjointGroup: disjoint,
+    );
+  }
+
   SudokuPuzzle withCell(int row, int col, int value) {
     final copy = List<int>.from(cells);
     copy[row * layout.side + col] = value;
@@ -135,6 +180,61 @@ class SudokuTraceFrame {
   final int? justChangedIndex;
 
   const SudokuTraceFrame({required this.assigned, this.justChangedIndex});
+}
+
+/// Round 81: the constraint context a Sudoku cell sits in — every
+/// row / column / box / cage / diagonal / disjoint-group
+/// `allDifferent` overlay that touches the cell. The visualizer
+/// uses this to caption each replay frame with the constraints the
+/// just-assigned cell participates in. Row / column / box are
+/// always populated (every Sudoku cell sits in exactly one of each);
+/// variant-specific fields are nullable and only filled when the
+/// puzzle's variant uses them.
+///
+/// All numeric fields are 1-indexed for direct user display. The
+/// labels are deliberately structured rather than pre-formatted
+/// strings so the widget layer can render them through
+/// `AppLocalizations` for the active locale.
+class SudokuStepContext {
+  /// 1..side. The row the cell sits in.
+  final int row;
+
+  /// 1..side. The column the cell sits in.
+  final int col;
+
+  /// 1..(boxes count). The box index, numbered left-to-right then
+  /// top-to-bottom in box-grid order.
+  final int box;
+
+  /// 1..(cage count). The cage the cell belongs to, or null when
+  /// the variant isn't `killer`.
+  final int? cageIndex;
+
+  /// Target sum of the cage at [cageIndex], or null when not killer.
+  final int? cageSum;
+
+  /// True iff the cell sits on the main (top-left → bottom-right)
+  /// diagonal AND the variant is `x`.
+  final bool onMainDiagonal;
+
+  /// True iff the cell sits on the anti (top-right → bottom-left)
+  /// diagonal AND the variant is `x`.
+  final bool onAntiDiagonal;
+
+  /// 1..(boxRows * boxCols). The disjoint-group index (in-box
+  /// position key), or null when the variant isn't `disjoint`.
+  final int? disjointGroup;
+
+  const SudokuStepContext({
+    required this.row,
+    required this.col,
+    required this.box,
+    this.cageIndex,
+    this.cageSum,
+    this.onMainDiagonal = false,
+    this.onAntiDiagonal = false,
+    this.disjointGroup,
+  });
 }
 
 /// The recorded trace plus the final solution (if any).

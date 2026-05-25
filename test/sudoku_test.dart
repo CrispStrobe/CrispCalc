@@ -123,6 +123,142 @@ void main() {
     }, timeout: const Timeout(Duration(seconds: 10)));
   });
 
+  group('SudokuPuzzle.contextAt (round 81)', () {
+    test('9×9 regular: row / col / box are 1-indexed; no variant overlays', () {
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.standard,
+        cells: List<int>.filled(81, 0),
+      );
+      // cellIndex 0 → (row 1, col 1, box 1)
+      final c0 = puzzle.contextAt(0);
+      expect(c0.row, 1);
+      expect(c0.col, 1);
+      expect(c0.box, 1);
+      expect(c0.cageIndex, isNull);
+      expect(c0.onMainDiagonal, isFalse);
+      expect(c0.onAntiDiagonal, isFalse);
+      expect(c0.disjointGroup, isNull);
+
+      // cellIndex 40 (row 5, col 5) → middle of grid → box 5
+      final c40 = puzzle.contextAt(40);
+      expect(c40.row, 5);
+      expect(c40.col, 5);
+      expect(c40.box, 5);
+
+      // cellIndex 80 (row 9, col 9) → bottom-right → box 9
+      final c80 = puzzle.contextAt(80);
+      expect(c80.row, 9);
+      expect(c80.col, 9);
+      expect(c80.box, 9);
+    });
+
+    test('8×8 (2×4 boxes): box index numbers boxes 1..8 with gaps closed', () {
+      // For 2×4 boxes on an 8×8 grid: 4 box-rows, 2 box-cols.
+      // Boxes should number left-to-right then top-to-bottom: 1..8.
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.eight,
+        cells: List<int>.filled(64, 0),
+      );
+      // (row 0, col 0) → box 1
+      expect(puzzle.contextAt(0).box, 1);
+      // (row 0, col 7) → top-right of grid → box 2
+      expect(puzzle.contextAt(7).box, 2);
+      // (row 2, col 0) → second box-row, left → box 3
+      expect(puzzle.contextAt(16).box, 3);
+      // (row 7, col 7) → bottom-right → box 8
+      expect(puzzle.contextAt(63).box, 8);
+    });
+
+    test('Sudoku-X: main + anti diagonal cells flagged', () {
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.standard,
+        variant: SudokuVariant.x,
+        cells: List<int>.filled(81, 0),
+      );
+      // Center (4,4) sits on both diagonals.
+      final center = puzzle.contextAt(4 * 9 + 4);
+      expect(center.onMainDiagonal, isTrue);
+      expect(center.onAntiDiagonal, isTrue);
+      // (0,8) sits on the anti-diagonal only.
+      final tr = puzzle.contextAt(0 * 9 + 8);
+      expect(tr.onMainDiagonal, isFalse);
+      expect(tr.onAntiDiagonal, isTrue);
+      // (0,0) sits on the main diagonal only.
+      final tl = puzzle.contextAt(0);
+      expect(tl.onMainDiagonal, isTrue);
+      expect(tl.onAntiDiagonal, isFalse);
+      // (3,6) sits on neither diagonal: 3≠6 (off main) and
+      // 3+6=9≠8=n−1 (off anti).
+      final off = puzzle.contextAt(3 * 9 + 6);
+      expect(off.onMainDiagonal, isFalse);
+      expect(off.onAntiDiagonal, isFalse);
+    });
+
+    test('Killer: cageIndex + cageSum populated for cells inside a cage', () {
+      // Three small cages covering a 4×4 grid (no real validity —
+      // just to exercise the lookup path).
+      final cages = [
+        const KillerCage(cellIndexes: [0, 1, 4, 5], targetSum: 10),
+        const KillerCage(cellIndexes: [2, 3, 6, 7], targetSum: 20),
+        const KillerCage(
+            cellIndexes: [8, 9, 10, 11, 12, 13, 14, 15], targetSum: 36),
+      ];
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        variant: SudokuVariant.killer,
+        cells: List<int>.filled(16, 0),
+        cages: cages,
+      );
+      // Cell 0 in cage 1 (sum 10).
+      final c0 = puzzle.contextAt(0);
+      expect(c0.cageIndex, 1);
+      expect(c0.cageSum, 10);
+      // Cell 7 in cage 2 (sum 20).
+      final c7 = puzzle.contextAt(7);
+      expect(c7.cageIndex, 2);
+      expect(c7.cageSum, 20);
+      // Cell 12 in cage 3 (sum 36).
+      final c12 = puzzle.contextAt(12);
+      expect(c12.cageIndex, 3);
+      expect(c12.cageSum, 36);
+    });
+
+    test('Disjoint: disjointGroup is the in-box position 1..side', () {
+      // 9×9 (3×3 boxes): the 9 disjoint groups correspond to the 9
+      // intra-box positions (top-left, top-middle, ..., bottom-right).
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.standard,
+        variant: SudokuVariant.disjoint,
+        cells: List<int>.filled(81, 0),
+      );
+      // (0,0) — top-left of every box → group 1.
+      expect(puzzle.contextAt(0).disjointGroup, 1);
+      // (0,1) — second-from-left of every box → group 2.
+      expect(puzzle.contextAt(1).disjointGroup, 2);
+      // (1,0) — middle-left of every box → group 4 (3*1 + 0 + 1).
+      expect(puzzle.contextAt(9).disjointGroup, 4);
+      // (2,2) — bottom-right of every box → group 9.
+      expect(puzzle.contextAt(2 * 9 + 2).disjointGroup, 9);
+      // Variant-specific overlays only on disjoint puzzles —
+      // diagonals stay false.
+      expect(puzzle.contextAt(0).onMainDiagonal, isFalse);
+    });
+
+    test('Regular variant on a killer-shaped layout still has no overlays', () {
+      // Sanity: the variant flag, not the layout, gates which
+      // overlays appear. A regular puzzle with no cages list never
+      // surfaces cageIndex.
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.standard,
+        cells: List<int>.filled(81, 0),
+      );
+      final c = puzzle.contextAt(40);
+      expect(c.cageIndex, isNull);
+      expect(c.disjointGroup, isNull);
+      expect(c.onMainDiagonal, isFalse);
+    });
+  });
+
   group('SudokuPresets catalog', () {
     test('all presets have the right cell count', () {
       for (final p in SudokuPresets.all) {

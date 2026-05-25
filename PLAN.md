@@ -598,10 +598,17 @@ Roadmap (ship one round at a time):
     medium preset; `SudokuVariant.disjoint` with the in-box-position
     `_disjointGroups` walker. Both pick up the parameterized
     engine cleanly.
-    **V7 pending**: **step-trace "why" annotations** — currently
-    the visualizer shows *what* changes per frame, not *which
-    constraint* fired. Would hook into dart_csp's propagation
-    events to annotate each frame.
+    **V7 SHIPPED** in HISTORY round 81: step-trace
+    *constraint-context* annotations. Each visualizer frame now
+    names the row / column / box / cage / diagonal /
+    disjoint-group `allDifferent` overlays the just-assigned cell
+    sits in (Killer also names the cage sum). The original
+    framing — "which constraint *fired*" — requires constraint
+    identity on the dart_csp propagation callback wire, which
+    isn't there today; the context approach gives users
+    deterministic per-frame narration without a dart_csp change.
+    Future tightening: expose firing-constraint identity through
+    dart_csp and wire it into the same caption surface.
 
 - ~~**CSP Round C — Generic constraint mini-DSL**.~~ **V1 SHIPPED**
   in HISTORY round 68. A "Free-form" tab in the Constraints module

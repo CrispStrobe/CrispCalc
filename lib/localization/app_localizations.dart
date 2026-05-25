@@ -308,6 +308,23 @@ abstract class AppLocalizations {
   String get sudokuHintLevelAdvancedHelp;
   String get sudokuHintLevelComputing;
 
+  // Round 81: step-trace constraint-context captions. Each
+  // visualizer frame can name the row / column / box / cage /
+  // diagonal / disjoint-group `allDifferent` overlays the
+  // just-assigned cell sits in. Variant-specific overlays only
+  // appear when the puzzle's variant uses them.
+  String sudokuConstraintRow(int row);
+  String sudokuConstraintCol(int col);
+  String sudokuConstraintBox(int box);
+  String sudokuConstraintCage(int cage, int sum);
+  String get sudokuConstraintMainDiagonal;
+  String get sudokuConstraintAntiDiagonal;
+  String sudokuConstraintDisjointGroup(int group);
+
+  /// Caption shown on the very first visualizer frame (no cell has
+  /// changed yet — the displayed grid is the user's starting input).
+  String get sudokuConstraintStartingPosition;
+
   // -- Constraints module (Analysis hub / CSP Round A) --
   String get moduleConstraintsTitle;
   String get moduleConstraintsSubtitle;
@@ -1041,6 +1058,23 @@ class EnLocalizations implements AppLocalizations {
       'a few seconds on hard 9×9 puzzles.';
   @override
   String get sudokuHintLevelComputing => 'Computing advanced hints…';
+
+  @override
+  String sudokuConstraintRow(int row) => 'Row $row';
+  @override
+  String sudokuConstraintCol(int col) => 'Column $col';
+  @override
+  String sudokuConstraintBox(int box) => 'Box $box';
+  @override
+  String sudokuConstraintCage(int cage, int sum) => 'Cage $cage (sum $sum)';
+  @override
+  String get sudokuConstraintMainDiagonal => 'Main diagonal';
+  @override
+  String get sudokuConstraintAntiDiagonal => 'Anti diagonal';
+  @override
+  String sudokuConstraintDisjointGroup(int group) => 'Disjoint group $group';
+  @override
+  String get sudokuConstraintStartingPosition => 'Starting position';
 
   @override
   String get moduleConstraintsTitle => 'Constraint problems';
@@ -2079,6 +2113,23 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get sudokuHintLevelComputing =>
       'Erweiterte Hinweise werden berechnet…';
+
+  @override
+  String sudokuConstraintRow(int row) => 'Zeile $row';
+  @override
+  String sudokuConstraintCol(int col) => 'Spalte $col';
+  @override
+  String sudokuConstraintBox(int box) => 'Block $box';
+  @override
+  String sudokuConstraintCage(int cage, int sum) => 'Käfig $cage (Summe $sum)';
+  @override
+  String get sudokuConstraintMainDiagonal => 'Hauptdiagonale';
+  @override
+  String get sudokuConstraintAntiDiagonal => 'Antidiagonale';
+  @override
+  String sudokuConstraintDisjointGroup(int group) => 'Disjunkte Gruppe $group';
+  @override
+  String get sudokuConstraintStartingPosition => 'Ausgangsstellung';
 
   @override
   String get moduleConstraintsTitle => 'Bedingungsprobleme';
@@ -3252,6 +3303,23 @@ class FrLocalizations implements AppLocalizations {
   String get sudokuHintLevelComputing => 'Calcul des indices avancés…';
 
   @override
+  String sudokuConstraintRow(int row) => 'Ligne $row';
+  @override
+  String sudokuConstraintCol(int col) => 'Colonne $col';
+  @override
+  String sudokuConstraintBox(int box) => 'Bloc $box';
+  @override
+  String sudokuConstraintCage(int cage, int sum) => 'Cage $cage (somme $sum)';
+  @override
+  String get sudokuConstraintMainDiagonal => 'Diagonale principale';
+  @override
+  String get sudokuConstraintAntiDiagonal => 'Anti-diagonale';
+  @override
+  String sudokuConstraintDisjointGroup(int group) => 'Groupe disjoint $group';
+  @override
+  String get sudokuConstraintStartingPosition => 'Position de départ';
+
+  @override
   String get moduleConstraintsTitle => 'Problèmes de contraintes';
   @override
   String get moduleConstraintsSubtitle =>
@@ -4423,6 +4491,23 @@ class EsLocalizations implements AppLocalizations {
       'difíciles.';
   @override
   String get sudokuHintLevelComputing => 'Calculando pistas avanzadas…';
+
+  @override
+  String sudokuConstraintRow(int row) => 'Fila $row';
+  @override
+  String sudokuConstraintCol(int col) => 'Columna $col';
+  @override
+  String sudokuConstraintBox(int box) => 'Bloque $box';
+  @override
+  String sudokuConstraintCage(int cage, int sum) => 'Jaula $cage (suma $sum)';
+  @override
+  String get sudokuConstraintMainDiagonal => 'Diagonal principal';
+  @override
+  String get sudokuConstraintAntiDiagonal => 'Antidiagonal';
+  @override
+  String sudokuConstraintDisjointGroup(int group) => 'Grupo disjunto $group';
+  @override
+  String get sudokuConstraintStartingPosition => 'Posición inicial';
 
   @override
   String get moduleConstraintsTitle => 'Problemas de restricciones';

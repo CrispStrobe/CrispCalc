@@ -464,6 +464,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
               current: _frameIndex,
               playing: _playing,
               speed: _speed,
+              caption: _captionForFrame(t, _trace!, _frameIndex),
               onPlayPause: _playPause,
               onRestart: _restart,
               onScrub: (i) => setState(() {
@@ -512,6 +513,34 @@ class _SudokuScreenState extends State<SudokuScreen> {
     }
     // Custom (user-entered) — call it "custom".
     return t.sudokuPresetCustom;
+  }
+
+  /// Round 81: format the constraint-context caption for the
+  /// visualizer's current frame. Joins every overlay the just-
+  /// assigned cell sits in into a " · "-separated string. Returns
+  /// the localized "starting position" caption for the very first
+  /// frame (no cell has changed yet).
+  String _captionForFrame(
+    AppLocalizations t,
+    SudokuTrace trace,
+    int frameIndex,
+  ) {
+    final frame = trace.frames[frameIndex];
+    final idx = frame.justChangedIndex;
+    if (idx == null) return t.sudokuConstraintStartingPosition;
+    final ctx = _puzzle.contextAt(idx);
+    final parts = <String>[
+      t.sudokuConstraintRow(ctx.row),
+      t.sudokuConstraintCol(ctx.col),
+      t.sudokuConstraintBox(ctx.box),
+      if (ctx.cageIndex != null && ctx.cageSum != null)
+        t.sudokuConstraintCage(ctx.cageIndex!, ctx.cageSum!),
+      if (ctx.onMainDiagonal) t.sudokuConstraintMainDiagonal,
+      if (ctx.onAntiDiagonal) t.sudokuConstraintAntiDiagonal,
+      if (ctx.disjointGroup != null)
+        t.sudokuConstraintDisjointGroup(ctx.disjointGroup!),
+    ];
+    return parts.join(' · ');
   }
 }
 
@@ -628,6 +657,7 @@ class _VisualizerControls extends StatelessWidget {
   final int current;
   final bool playing;
   final _Speed speed;
+  final String caption;
   final VoidCallback onPlayPause;
   final VoidCallback onRestart;
   final ValueChanged<int> onScrub;
@@ -639,6 +669,7 @@ class _VisualizerControls extends StatelessWidget {
     required this.current,
     required this.playing,
     required this.speed,
+    required this.caption,
     required this.onPlayPause,
     required this.onRestart,
     required this.onScrub,
@@ -666,6 +697,18 @@ class _VisualizerControls extends StatelessWidget {
               Text('${current + 1} / $total',
                   style: const TextStyle(fontFamily: 'monospace')),
             ],
+          ),
+          // Round 81: constraint-context caption — names the row /
+          // column / box / cage / diagonal / disjoint-group overlays
+          // the just-assigned cell sits in.
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              caption,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
           ),
           Slider(
             min: 0,

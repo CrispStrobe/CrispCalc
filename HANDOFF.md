@@ -112,7 +112,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1263 tests total)
+  ... (~50 test files, ~1269 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -135,6 +135,8 @@ project depends on it via a git ref pin in `pubspec.yaml`.
 - **Round 80** — CSP DSL `cumulative(s1=2@2, ...; capacity=N)`
   — renewable-resource generalization of round 77's `noOverlap`;
   closes the round-E bundle
+- **Round 81** — Sudoku visualizer step-trace constraint-context
+  captions (row / col / box / cage / diagonal / disjoint group)
 
 ## 4. Land mines we have already hit
 
@@ -317,6 +319,27 @@ fallback to `name=duration` silently treat the demand as 1 —
 that overloads what `noOverlap(...)` is for and makes the parser
 ambiguous. Keep `cumulative` strict.
 
+### 4.12 dart_csp's `CspCallback` doesn't carry constraint identity
+
+`Problem.setOptions(callback: ...)` (dart_csp/lib/src/problem.dart:205)
+takes a `CspCallback(assigned, unassigned)` and fires on every
+decision. It does NOT include which constraint propagated — the
+propagators don't emit names. Anything that claims "dart_csp's
+propagation callback fires per decision with constraint
+identity" is wrong (HANDOFF.md §6 made this mistake before
+round 81 shipped).
+
+Two options if you need firing-constraint identity:
+1. Extend dart_csp's callback signature (multi-repo change +
+   repin)
+2. Infer post-hoc from the pre/post-state diff (lossy — many
+   constraints can produce the same prune)
+
+Round 81 sidestepped this entirely by showing constraint
+*context* (which overlays the assigned cell participates in)
+rather than constraint *identity* (which propagator fired). See
+`SudokuPuzzle.contextAt`.
+
 ## 5. Cross-screen + cross-feature patterns worth knowing
 
 ### 5.1 AppState pending slots
@@ -420,22 +443,16 @@ fresh feature arcs.
 
 ### Small / medium (1 session each)
 
-1. **Step-trace "why" annotations** (~1–2 hours) — the Sudoku
-   visualizer currently shows *what* cell was assigned, not
-   *which constraint* fired. dart_csp's propagation callback
-   already fires per decision; surface the firing-constraint
-   name as a per-frame caption. Touches engine, widget, and
-   i18n.
-2. **8×8 Sudoku-X / 8×8 Killer / 8×8 Disjoint presets** (~30 min
+1. **8×8 Sudoku-X / 8×8 Killer / 8×8 Disjoint presets** (~30 min
    each) — round 75 added the layout but only a Regular preset.
    Each variant works on the layout automatically; just need
    curated puzzles + the preset id + locale labels.
-3. **10×10 / 12×12 / 15×15 Sudoku layouts** (~30 min each) —
+2. **10×10 / 12×12 / 15×15 Sudoku layouts** (~30 min each) —
    pure surface-area growth, mirrors the round-75 pattern (one
    layout constant + one preset + one clue-count branch +
    locale labels). Wikipedia's minimum-clue table provides
    target counts.
-4. **Multi-resource cumulative + RCPSP gallery** (~1 hour) —
+3. **Multi-resource cumulative + RCPSP gallery** (~1 hour) —
    round 80 ships single-resource `cumulative`. The natural
    extension is the classical RCPSP (multiple parallel
    `cumulative` overlays representing distinct resource types);
@@ -443,6 +460,14 @@ fresh feature arcs.
    nothing else has to change in the engine. The lift is one
    curated multi-resource gallery example plus the discovery
    wiring.
+4. **dart_csp propagation-callback identity** — round 81
+   shipped constraint-*context* captions; the next tightening
+   is to expose **which** constraint actually propagated each
+   pruning step through dart_csp's `CspCallback` so the
+   visualizer can name the firing propagator rather than the
+   passive overlays the cell sits in. Multi-repo: a dart_csp
+   change (extend the callback signature with a constraint
+   tag) plus a CrispCalc-side consumer.
 
 ### Fresh feature arcs (multi-session)
 
@@ -473,7 +498,7 @@ fresh feature arcs.
 # Run-and-iterate
 flutter run -d macos              # dev build (debug, hot reload)
 flutter analyze                   # must be clean before commit
-flutter test                      # full suite; expect ~1263 tests, ~1 min
+flutter test                      # full suite; expect ~1269 tests, ~1 min
 dart format <files>               # CI runs format check on pinned Dart toolchain
 
 # CI
@@ -495,8 +520,8 @@ If something in this file is wrong by the time you read it,
 work around it. Stale handover docs cause future regressions.
 
 Specifically:
-- Test count drifts as features land — update §3's "~1263 tests"
-  and §7's "expect ~1263 tests". Adding a WorkedExample entry
+- Test count drifts as features land — update §3's "~1269 tests"
+  and §7's "expect ~1269 tests". Adding a WorkedExample entry
   auto-generates 6 tests (3 non-EN locales × title + description)
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.

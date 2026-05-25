@@ -2,6 +2,74 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 81) — Sudoku step-trace constraint-context annotations
+
+HANDOFF.md §6 listed step-trace "why" annotations as the next
+1-session pick. The original framing assumed dart_csp's
+propagation callback fires per decision and carries the firing
+constraint's identity — that's wrong. Per the explore pass:
+`CspCallback(assigned, unassigned)` in dart_csp/lib/src/types.dart
+only emits post-assignment state; constraint identity isn't on
+the wire. Inferring "the propagating constraint" from the diff
+alone is a multi-day project. The shipping scope: name the
+constraint *context* the just-assigned cell sits in — every
+`allDifferent` overlay (row, column, box, cage, diagonal,
+disjoint group) the puzzle's rules register for that cell.
+Useful enough as playback narration; deterministic per frame; no
+dart_csp change required.
+
+### Engine: SudokuStepContext + SudokuPuzzle.contextAt
+
+New `SudokuStepContext` class in `lib/engine/sudoku.dart` carries
+row (1..side), col (1..side), box (1..side, numbered
+left-to-right then top-to-bottom — closes the gaps the existing
+`boxKey` helper leaves on non-square box partitions like the
+round-75 8×8), and variant-specific nullable fields:
+`cageIndex` + `cageSum` for Killer, `onMainDiagonal` /
+`onAntiDiagonal` flags for Sudoku-X, `disjointGroup` for
+Disjoint Groups. Pure data; the widget layer formats through
+`AppLocalizations`.
+
+`SudokuPuzzle.contextAt(int cellIndex)` returns the context for
+a given cell. The lookup is O(cages) for killer (scan to find
+the containing cage) and O(1) otherwise.
+
+### Visualizer caption
+
+`_VisualizerControls` gains a `caption` string field rendered
+under the frame counter in `Theme.bodySmall` (muted color). The
+caption is computed by the parent screen via
+`_captionForFrame(t, trace, frameIndex)` which calls into the
+puzzle's `contextAt` and joins the formatted overlay names with
+" · ". The very first frame (no cell has changed) shows the
+localized "Starting position" string.
+
+### Localization
+
+8 new strings × 4 locales × 1 entry = 32 new translations:
+`sudokuConstraintRow(int)`, `Col`, `Box`, `Cage(int, int)`,
+`MainDiagonal`, `AntiDiagonal`, `DisjointGroup(int)`,
+`StartingPosition`. EN/DE/FR/ES coverage; the existing
+locale-test harness in `localizations_test.dart` enforces
+non-emptiness automatically.
+
+### Tests
+
+Six new `SudokuPuzzle.contextAt` tests in `sudoku_test.dart`:
+- 9×9 regular: row/col/box 1-indexed; no variant overlays
+- 8×8 (2×4 boxes): box index numbers 1..8 with the gaps from
+  `boxKey`'s sparse numbering closed
+- Sudoku-X: main + anti diagonal flags on center, corners, and
+  an off-diagonal cell
+- Killer: cageIndex + cageSum populated when the cell sits in a
+  cage; cageIndex is 1-indexed
+- Disjoint: disjointGroup is the 1-indexed in-box position
+- Regular variant doesn't surface cage / diagonal / disjoint
+  fields even if the layout could host them
+
+Suite grows 1263 → 1269. No engine behavior change for non-
+visualizer flows; existing trace + solver tests pass unchanged.
+
 ## 2026-05-25 (round 80) — CSP Round E — cumulative (renewable-resource scheduling)
 
 Closes out the round-E scheduling bundle that HANDOFF.md §6 listed
