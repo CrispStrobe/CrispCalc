@@ -141,8 +141,7 @@ void main() {
       );
     });
 
-    testWidgets('edit clears stale cached result immediately',
-        (tester) async {
+    testWidgets('edit clears stale cached result immediately', (tester) async {
       await _bootApp(tester, size: const Size(1280, 800));
       await _gotoNotepad(tester);
       final doc = AppState().notepadDocuments[AppState().currentNotepadDocId!]!;
@@ -166,7 +165,8 @@ void main() {
       final edited = after.lines.firstWhere((l) => l.id == 'fixed-id');
       expect(edited.source, '2+2');
       expect(edited.cachedResult, isNull,
-          reason: 'edit drops stale cache synchronously; recalc runs after debounce');
+          reason:
+              'edit drops stale cache synchronously; recalc runs after debounce');
     });
   });
 
@@ -307,8 +307,7 @@ void main() {
         (tester) async {
       await _bootApp(tester, size: const Size(1280, 800));
       await _gotoNotepad(tester);
-      final doc =
-          AppState().notepadDocuments[AppState().currentNotepadDocId!]!;
+      final doc = AppState().notepadDocuments[AppState().currentNotepadDocId!]!;
       doc.lines.add(NotepadLine(
         id: 'p5-eval',
         source: '',
@@ -340,8 +339,7 @@ void main() {
         (tester) async {
       await _bootApp(tester, size: const Size(1280, 800));
       await _gotoNotepad(tester);
-      final doc =
-          AppState().notepadDocuments[AppState().currentNotepadDocId!]!;
+      final doc = AppState().notepadDocuments[AppState().currentNotepadDocId!]!;
       doc.lines.add(NotepadLine(id: 'p5-recalc-all', source: '1 + 1'));
       AppState().setNotepadDocument(doc);
       await tester.pumpAndSettle();
@@ -360,8 +358,7 @@ void main() {
   });
 
   group('NotepadScreen — Phase 6 use directive', () {
-    testWidgets('unknown import flags the use line as errored',
-        (tester) async {
+    testWidgets('unknown import flags the use line as errored', (tester) async {
       await _bootApp(tester, size: const Size(1280, 800));
       await _gotoNotepad(tester);
 
@@ -392,8 +389,7 @@ void main() {
       expect(useLine.cachedError, contains('unknownImport:foo'));
     });
 
-    testWidgets('known import populates the document scope',
-        (tester) async {
+    testWidgets('known import populates the document scope', (tester) async {
       await _bootApp(tester, size: const Size(1280, 800));
       AppState().setVariable('mytax', '0.085');
       final doc = NotepadDocument.fresh(name: 'P6 known');

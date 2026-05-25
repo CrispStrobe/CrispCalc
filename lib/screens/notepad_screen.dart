@@ -579,8 +579,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
             '${NotepadErrorPrefix.useDirective}unknownImport:${useResolution.unknownImports.first}';
         useLine.cachedFreeVars = [];
       } else if (useLine.cachedError != null &&
-          useLine.cachedError!
-              .startsWith(NotepadErrorPrefix.useDirective)) {
+          useLine.cachedError!.startsWith(NotepadErrorPrefix.useDirective)) {
         // Stale unknown-import from a previous resolution: clear it
         // now since the imports resolve cleanly this time.
         useLine.cachedError = null;
