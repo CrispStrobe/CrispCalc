@@ -437,7 +437,12 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // pass before evaluating; without it, anyone pasting or typing
     // LaTeX (e.g. `diff(x^{3} - 4\cdot x + 7, x)`) gets a parse
     // failure that SymEngine can't recover from.
-    final preNative = LatexConversionUtils.fromLatex(preprocessed);
+    // Also collapse whitespace between a function name and its
+    // `(` so `solve (x, y)` matches the CAS dispatch the same as
+    // `solve(x, y)`.
+    final preNative = LatexConversionUtils.fromLatex(preprocessed)
+        .replaceAllMapped(
+            RegExp(r'\b([a-zA-Z/]+)\s+\('), (m) => '${m[1]}(');
 
     // Try the unit evaluator first against the LaTeX-stripped
     // body and again with all parens stripped — Phase 2's Ans
@@ -518,8 +523,25 @@ class _NotepadScreenState extends State<NotepadScreen> {
       );
     } else if (_isCasCall(trimmed, 'solve')) {
       final args = _splitCasArgs(trimmed);
-      if (args.length != 2) return null;
-      op = EngineOp('solve', _native(args[0]), args[1].trim());
+      if (args.isEmpty || args.length > 2) return null;
+      var equation = args[0].trim();
+      final variable = args.length == 2
+          ? args[1].trim()
+          : ExpressionPreprocessingUtils.detectVariable(equation);
+      // `solve(x^2 = 4, x)` — fold the `=` into a standard
+      // `LHS - (RHS)` form before sending to the engine. Mirrors
+      // calculator_screen.dart:1014-1023.
+      if (equation.contains('=')) {
+        final eqParts = equation.split('=');
+        if (eqParts.length == 2) {
+          final leftSide = eqParts[0].trim();
+          final rightSide = eqParts[1].trim();
+          equation = rightSide == '0' || rightSide.isEmpty
+              ? leftSide
+              : '$leftSide - ($rightSide)';
+        }
+      }
+      op = EngineOp('solve', _native(equation), variable);
     } else if (_isCasCall(trimmed, 'limit')) {
       final args = _splitCasArgs(trimmed);
       if (args.length != 3) return null;

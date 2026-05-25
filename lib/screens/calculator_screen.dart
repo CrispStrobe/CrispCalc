@@ -737,7 +737,15 @@ class CalculatorScreenState extends State<CalculatorScreen>
       }
 
       final convertedExpression = LatexConversionUtils.fromLatex(expression);
-      final converted = convertedExpression.trim();
+      // Collapse whitespace between a function-name identifier and
+      // its opening paren so `solve (x, y)` / `diff (x^3, x)` route
+      // to the same handler as `solve(...)` / `diff(...)`. SymEngine
+      // itself doesn't care, but our dispatch table prefix-matches
+      // on `name(` and would otherwise fall through to the generic
+      // evaluate path on the space-padded form.
+      final converted = convertedExpression
+          .trim()
+          .replaceAllMapped(RegExp(r'\b([a-zA-Z/]+)\s+\('), (m) => '${m[1]}(');
 
       // Inline unit arithmetic: `5 km + 3 m`, `100 km in mph`, etc.
       // Runs before the normal dispatcher so SymEngine never sees raw
