@@ -16,6 +16,7 @@ enum WorkedExampleCategory {
   numberTheory,
   statistics,
   units,
+  constraints,
 }
 
 class WorkedExample {
@@ -197,6 +198,29 @@ class WorkedExamples {
       title: 'Composite-dimension arithmetic',
       description: '100 m / 10 s yields a velocity in m/s — V5 parser.',
       expression: '100 m / 10 s',
+    ),
+    // === Constraints (round 69) =============================================
+    // These entries don't insert into the calculator — their
+    // `expression` is a sentinel of the form `open:<module>` that
+    // the dialog detects and dispatches to a Navigator push of the
+    // appropriate module screen. Surfaces our CSP / Killer Sudoku
+    // capabilities in the same place users go for math examples.
+    WorkedExample(
+      id: 'killerSudoku',
+      category: WorkedExampleCategory.constraints,
+      title: 'Killer Sudoku (9×9)',
+      description:
+          'Opens the Sudoku module — pick "9×9 Killer" from the puzzle list.',
+      expression: 'open:sudoku',
+    ),
+    WorkedExample(
+      id: 'constraintEditor',
+      category: WorkedExampleCategory.constraints,
+      title: 'Free-form constraint editor',
+      description:
+          'Opens the Constraints module — declare variables, add constraints, '
+          'solve.',
+      expression: 'open:constraints',
     ),
   ];
 }

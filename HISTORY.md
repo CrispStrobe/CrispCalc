@@ -2,6 +2,50 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 69) — Worked-examples library surfaces Killer + CSP DSL
+
+Before this round the worked-examples library was 100% CAS /
+calculator entries — so a user browsing for examples had no
+way to discover that CrispCalc also does Killer Sudoku or
+free-form constraint programming.
+
+This round adds a new `constraints` category with two entries
+that navigate to the relevant module screens instead of
+inserting an expression into the calculator.
+
+### Pattern
+
+A worked example whose `expression` starts with `open:` is a
+**module navigation sentinel** rather than a calculator
+expression. The dialog's tap handler detects the prefix and
+pushes the corresponding screen onto the navigator:
+
+- `open:sudoku` → `SudokuScreen`
+- `open:constraints` → `ConstraintsScreen`
+
+Plain expressions still go through `AppState.requestInsert
+Expression` as before. The sentinel keeps the catalog data
+model unchanged (no breaking schema migration) — just
+new behavior for a new prefix.
+
+### Catalog entries
+
+- **Killer Sudoku (9×9)** — opens the Sudoku module so the
+  user can pick `9×9 Killer` from the preset list.
+- **Free-form constraint editor** — opens the Constraints
+  module on the Diophantine tab; user switches to Free-form
+  to type a DSL program.
+
+### i18n + tests
+
+`workedExamplesCatConstraints` + en/de/fr/es translations.
+Translated titles + descriptions for the two new entries.
+Two new tests in `worked_examples_test.dart`: the constraints
+category surfaces both entries with correct sentinels, and
+every `open:` sentinel targets a known module — so a typo in
+a future entry fails CI rather than silently dead-ends the
+navigation.
+
 ## 2026-05-25 (round 68) — CSP Round C: free-form constraint mini-DSL
 
 A third tab in the Constraints module lets the user write a

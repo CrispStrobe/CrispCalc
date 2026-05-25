@@ -354,6 +354,7 @@ abstract class AppLocalizations {
   String get workedExamplesCatNumberTheory;
   String get workedExamplesCatStatistics;
   String get workedExamplesCatUnits;
+  String get workedExamplesCatConstraints;
   String get settingsWorkedExamples;
   String get settingsWorkedExamplesSubtitle;
 
@@ -1110,6 +1111,8 @@ class EnLocalizations implements AppLocalizations {
   String get workedExamplesCatStatistics => 'Statistics';
   @override
   String get workedExamplesCatUnits => 'Units';
+  @override
+  String get workedExamplesCatConstraints => 'Constraints';
   @override
   String? workedExampleTitle(String id) {
     // The English catalog has the canonical titles; the
@@ -2100,8 +2103,14 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get workedExamplesCatUnits => 'Einheiten';
   @override
+  String get workedExamplesCatConstraints => 'Bedingungen';
+  @override
   String? workedExampleTitle(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Killer-Sudoku (9×9)';
+      case 'constraintEditor':
+        return 'Freitext-Bedingungseditor';
       case 'derivPoly':
         return 'Ableitung eines Polynoms';
       case 'chainRule':
@@ -2151,6 +2160,10 @@ class DeLocalizations implements AppLocalizations {
   @override
   String? workedExampleDescription(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Öffnet das Sudoku-Modul — "9×9 Killer" aus der Rätselliste wählen.';
+      case 'constraintEditor':
+        return 'Öffnet das Bedingungsmodul — Variablen deklarieren, Bedingungen hinzufügen, lösen.';
       case 'derivPoly':
         return 'd/dx von x³ − 4x + 7 an beliebigem x.';
       case 'chainRule':
@@ -3194,8 +3207,14 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get workedExamplesCatUnits => 'Unités';
   @override
+  String get workedExamplesCatConstraints => 'Contraintes';
+  @override
   String? workedExampleTitle(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Killer Sudoku (9×9)';
+      case 'constraintEditor':
+        return 'Éditeur de contraintes libres';
       case 'derivPoly':
         return 'Dérivée d\'un polynôme';
       case 'chainRule':
@@ -3245,6 +3264,10 @@ class FrLocalizations implements AppLocalizations {
   @override
   String? workedExampleDescription(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Ouvre le module Sudoku — choisir « 9×9 Killer » dans la liste.';
+      case 'constraintEditor':
+        return 'Ouvre le module Contraintes — déclarer des variables, ajouter des contraintes, résoudre.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en tout x.';
       case 'chainRule':
@@ -4286,8 +4309,14 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get workedExamplesCatUnits => 'Unidades';
   @override
+  String get workedExamplesCatConstraints => 'Restricciones';
+  @override
   String? workedExampleTitle(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Killer Sudoku (9×9)';
+      case 'constraintEditor':
+        return 'Editor de restricciones libres';
       case 'derivPoly':
         return 'Derivada de un polinomio';
       case 'chainRule':
@@ -4337,6 +4366,10 @@ class EsLocalizations implements AppLocalizations {
   @override
   String? workedExampleDescription(String id) {
     switch (id) {
+      case 'killerSudoku':
+        return 'Abre el módulo Sudoku — elige «9×9 Killer» en la lista.';
+      case 'constraintEditor':
+        return 'Abre el módulo Restricciones — declara variables, agrega restricciones, resuelve.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en cualquier x.';
       case 'chainRule':

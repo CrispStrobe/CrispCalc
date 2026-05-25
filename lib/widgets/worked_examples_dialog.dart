@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import '../engine/app_state.dart';
 import '../engine/worked_examples.dart';
 import '../localization/app_localizations.dart';
+import '../screens/constraints_screen.dart';
+import '../screens/sudoku_screen.dart';
 
 class WorkedExamplesDialog extends StatefulWidget {
   const WorkedExamplesDialog({super.key});
@@ -44,6 +46,8 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
         return t.workedExamplesCatStatistics;
       case WorkedExampleCategory.units:
         return t.workedExamplesCatUnits;
+      case WorkedExampleCategory.constraints:
+        return t.workedExamplesCatConstraints;
     }
   }
 
@@ -196,7 +200,29 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
   /// close the dialog. MainScreen routes to the Calculator tab via
   /// its listener; the calculator screen drains the slot and fills
   /// the input field.
+  ///
+  /// Round 69: entries whose expression starts with `open:` are not
+  /// calculator expressions but module-navigation requests. Close
+  /// the dialog and push the requested module screen instead of
+  /// touching the AppState insert slot.
   void _insert(BuildContext context, String expression) {
+    if (expression.startsWith('open:')) {
+      final module = expression.substring('open:'.length);
+      Navigator.of(context).pop();
+      switch (module) {
+        case 'sudoku':
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => const SudokuScreen(),
+          ));
+          break;
+        case 'constraints':
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => const ConstraintsScreen(),
+          ));
+          break;
+      }
+      return;
+    }
     AppState().requestInsertExpression(expression);
     Navigator.of(context).pop();
   }

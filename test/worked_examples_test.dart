@@ -50,5 +50,24 @@ void main() {
       expect(WorkedExamples.all.length, greaterThanOrEqualTo(12));
       expect(WorkedExamples.all.length, lessThanOrEqualTo(25));
     });
+
+    test('round 69: constraints category surfaces Killer + DSL entries', () {
+      final byId = {for (final e in WorkedExamples.all) e.id: e};
+      expect(byId['killerSudoku']?.category, WorkedExampleCategory.constraints);
+      expect(byId['killerSudoku']?.expression, 'open:sudoku');
+      expect(byId['constraintEditor']?.category,
+          WorkedExampleCategory.constraints);
+      expect(byId['constraintEditor']?.expression, 'open:constraints');
+    });
+
+    test('round 69: every open: sentinel targets a known module', () {
+      const knownModules = {'sudoku', 'constraints'};
+      for (final e in WorkedExamples.all) {
+        if (!e.expression.startsWith('open:')) continue;
+        final module = e.expression.substring('open:'.length);
+        expect(knownModules, contains(module),
+            reason: '${e.id} targets unknown module "$module"');
+      }
+    });
   });
 }

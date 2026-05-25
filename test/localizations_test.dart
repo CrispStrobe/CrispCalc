@@ -365,6 +365,7 @@ void main() {
           t.workedExamplesCatNumberTheory,
           t.workedExamplesCatStatistics,
           t.workedExamplesCatUnits,
+          t.workedExamplesCatConstraints,
           t.settingsWorkedExamples,
           t.settingsWorkedExamplesSubtitle,
         ]) {
