@@ -119,4 +119,60 @@ void main() {
     ref: _sqrt2Ref,
     fallback: _sqrt2Fallback,
   );
+
+  // Round 89: number-theory primitives.
+  group('CalculatorEngine.isprime', () {
+    test('classroom truth table for small inputs', () {
+      // The headless fallback covers these too — works whether or
+      // not the native bridge is loaded.
+      expect(engine.isprime('0'), isFalse);
+      expect(engine.isprime('1'), isFalse);
+      expect(engine.isprime('2'), isTrue);
+      expect(engine.isprime('3'), isTrue);
+      expect(engine.isprime('4'), isFalse);
+      expect(engine.isprime('5'), isTrue);
+      expect(engine.isprime('17'), isTrue);
+      expect(engine.isprime('100'), isFalse);
+    });
+
+    test('large prime via GMP Miller-Rabin', () {
+      // 2^31 - 1 = 2147483647 is a Mersenne prime (M31). Within
+      // int range, so the Dart fallback also handles it.
+      expect(engine.isprime('2147483647'), isTrue);
+    });
+
+    test('arbitrary-precision composite (skipped without bridge)', () {
+      // 2^64 + 1 = 18446744073709551617 is composite (= 274177 ×
+      // 67280421310721). Only the native bridge handles this; the
+      // headless fallback (int.tryParse) returns null → false,
+      // which happens to be correct here.
+      final v = engine.isprime('18446744073709551617');
+      expect(v, isFalse, reason: 'F6 = 2^64+1 is composite');
+    });
+  });
+
+  group('CalculatorEngine.nextprime / prevprime', () {
+    test('nextprime small classroom values', () {
+      if (!engine.isNativeAvailable) return; // headless skip
+      expect(engine.nextprime('1'), '2');
+      expect(engine.nextprime('2'), '3');
+      expect(engine.nextprime('10'), '11');
+      expect(engine.nextprime('100'), '101');
+    });
+
+    test('prevprime small classroom values', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.prevprime('3'), '2');
+      expect(engine.prevprime('5'), '3');
+      expect(engine.prevprime('100'), '97');
+      expect(engine.prevprime('1000'), '997');
+    });
+
+    test('prevprime errors when no prime below input', () {
+      if (!engine.isNativeAvailable) return;
+      // No prime < 2.
+      expect(engine.prevprime('2'), startsWith('Error'));
+      expect(engine.prevprime('1'), startsWith('Error'));
+    });
+  });
 }

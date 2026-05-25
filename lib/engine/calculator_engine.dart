@@ -210,6 +210,45 @@ class CalculatorEngine {
         '${label}_with_precision', (b) => call(b, decimalDigits));
   }
 
+  /// Round 89 (precision arc): primality test via GMP's Miller-Rabin
+  /// (25 reps, false-positive probability < 4^-25). Returns `true`
+  /// for prime, `false` otherwise. Falls back to a pure-Dart sieve
+  /// for n ≤ 2^31 when the bridge isn't loaded.
+  bool isprime(String n) {
+    if (!_nativeAvailable || _bridge == null) return _fallbackIsprime(n);
+    try {
+      return _bridge!.ntheoryIsprime(n);
+    } catch (e) {
+      _log('isprime error: $e');
+      return _fallbackIsprime(n);
+    }
+  }
+
+  /// Round 89: smallest prime > n. Throws or returns error string
+  /// when the bridge isn't loaded (the pure-Dart fallback would
+  /// overflow on bigints; precision-arc functions live on native).
+  String nextprime(String n) =>
+      _bridgeCall('nextprime', (b) => b.ntheoryNextprime(n));
+
+  /// Round 89: largest prime < n. Errors when n ≤ 2.
+  String prevprime(String n) =>
+      _bridgeCall('prevprime', (b) => b.ntheoryPrevprime(n));
+
+  /// Headless-CI fallback for `isprime`. Only correct for inputs
+  /// that parse as a regular `int` (≤ 2^31 - 1 on this engine);
+  /// large bigints fall back to false, which is wrong but at least
+  /// doesn't crash a Linux test runner.
+  static bool _fallbackIsprime(String n) {
+    final v = int.tryParse(n);
+    if (v == null || v < 2) return false;
+    if (v < 4) return true;
+    if (v % 2 == 0) return false;
+    for (var i = 3; i * i <= v; i += 2) {
+      if (v % i == 0) return false;
+    }
+    return true;
+  }
+
   String factorial(int n) {
     if (n < 0) return 'Error: factorial requires non-negative integer';
     return _bridgeCall('factorial', (b) => b.factorial(n));

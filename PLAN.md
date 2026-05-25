@@ -106,12 +106,15 @@ TestFlight / App Store the rest compounds at zero.
 
 ## P2 — Engine + native bridge
 
-- [~] **High-precision evaluation.** `mpfrHighPrecisionPi` wired
-  2026-05-25 — see HISTORY round 85; `evaluateWithPrecision` and
-  `gmpPower` still throw. Subsequent precision-arc rounds
-  (`e(N)` / `EulerGamma(N)` / `sqrt(2,N)` / number-theory set)
-  follow the same three-repo pipeline documented in
-  `HANDOFF_PRECISION.md`.
+- [~] **High-precision evaluation.** Four MPFR constants
+  shipped:
+  `pi(N)` (round 85), `e(N)` + `EulerGamma(N)` + `sqrt(2,N)`
+  (round 86). Three number-theory primitives shipped:
+  `isprime(n)` + `nextprime(n)` + `prevprime(n)` (round 89 —
+  GMP direct for isprime/prevprime; SymEngine ntheory for
+  nextprime). `evaluateWithPrecision` and `gmpPower` still
+  throw — future arc work. `HANDOFF_PRECISION.md` documents
+  the three-repo pipeline shared across all precision rounds.
 - [x] ~~**Matrix arithmetic end-to-end.** Confirm `det(Matrix([[…]]))`,
   `inv(...)`, `transpose(...)` round-trip cleanly through the engine
   with a release SymEngine build.~~ Done 2026-05-17 — see HISTORY

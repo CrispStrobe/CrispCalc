@@ -2,6 +2,79 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 89) — Precision arc round 3 — `isprime` + `nextprime` + `prevprime`
+
+First number-theory slice on top of the round-85/86 MPFR
+constants. Same three-repo pipeline (math-stack-ios-builder →
+symbolic_math_bridge → CrispCalc); the wrapper layer goes
+through SymEngine's `ntheory_nextprime` for nextprime and
+straight to GMP (`mpz_probab_prime_p` + manual decrement) for
+isprime / prevprime because SymEngine's `cwrapper.h` only
+exposes nextprime.
+
+### math-stack-ios-builder (feat/precision-isprime-nextprime)
+
+Three new C wrappers in `src/flutter_symengine_wrapper.c`:
+
+- `flutter_symengine_isprime(const char* n)` — `mpz_init_set_str`
+  + `mpz_probab_prime_p(x, 25)`. 25 Miller-Rabin reps;
+  false-positive probability < 4^-25 ≈ 10^-15. Returns the
+  literal string `"true"` or `"false"`.
+- `flutter_symengine_nextprime(const char* n)` — goes through
+  `basic_parse` + `ntheory_nextprime` so the result inherits
+  SymEngine's bigint formatting.
+- `flutter_symengine_prevprime(const char* n)` — no GMP function
+  exists for this. Implemented by decrementing `x` and
+  Miller-Rabin-checking each candidate. Average gap ≈ ln(N) so
+  the loop runs a few times for typical inputs. Errors when
+  input < 3.
+
+New `#include <gmp.h>` in the precision section; the
+underlying `__gmpz_*` symbols are already keepalive'd since
+round 13.
+
+### symbolic_math_bridge (feat/precision-isprime-nextprime)
+
+Three new optional `_UnaryFuncDart?` fields (string-in /
+string-out shape matches the existing unary-function table);
+three lookup-with-try-catch in `_initializeSymEngine`. New
+`_callStringInOut` helper extracts the bridge-side validation +
+free pattern. Public methods:
+
+- `ntheoryIsprime(String n) → bool` — parses the wrapper's
+  "true"/"false" return.
+- `ntheoryNextprime(String n) → String` — returns the next prime
+  as a decimal string.
+- `ntheoryPrevprime(String n) → String` — returns the previous
+  prime; throws when input has no smaller prime.
+
+iOS + macOS `SymEngineBridge.m` get three new extern + +load
+entries each.
+
+### CrispCalc (feat/precision-isprime-nextprime)
+
+`CalculatorEngine.isprime(String)`, `.nextprime(String)`,
+`.prevprime(String)`. A pure-Dart `_fallbackIsprime` runs a
+sqrt-bounded trial-division sieve when the native bridge isn't
+loaded — correct for inputs ≤ 2^31 - 1, returns false for
+bigger inputs (a lie, but doesn't crash the Linux CI).
+Nextprime + prevprime don't have a fallback; they error when
+the bridge isn't loaded.
+
+### Tests
+
+Six new tests in `precision_test.dart`:
+- Classroom truth table for `isprime` (0..100 sweep).
+- 2^31 - 1 (Mersenne M31) returns true via Miller-Rabin.
+- F6 = 2^64 + 1 returns false (composite); validates the
+  arbitrary-precision path under the native bridge.
+- `nextprime` small values: 1→2, 2→3, 10→11, 100→101.
+- `prevprime` small values: 3→2, 5→3, 100→97, 1000→997.
+- `prevprime` errors when input ≤ 2.
+
+`nextprime`/`prevprime` tests skip silently when
+`isNativeAvailable` is false (Linux CI headless).
+
 ## 2026-05-25 (round 88) — Sudoku conflict highlighting + 8×8 uniqueness audit
 
 Two tightly-coupled Sudoku polishes after the round-87 UX

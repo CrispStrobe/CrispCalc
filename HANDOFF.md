@@ -112,7 +112,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1305 tests total)
+  ... (~50 test files, ~1457 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -155,6 +155,20 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   the visualizer, visualizer-overflow → `Wrap`, drag-and-drop
   digits, cell-keyboard input + arrow nav, clear-to-start
   button, win-check chip.
+- **Round 87b** — Sudoku win-celebration overlay (animated
+  scale-in card with check icon + tap-to-dismiss) replaces the
+  tiny win chip as the primary "you won" signal.
+- **Round 88** — Sudoku conflict highlighting: pure-Dart
+  `computeConflicts` flags every cell participating in a
+  row/col/box/diagonal/disjoint-group/cage duplicate or a
+  fully-filled cage with mismatched sum. Cells render with a
+  22% red wash. Plus 8×8 X/Disjoint uniqueness audit (both
+  pass — no regen needed).
+- **Round 89** — Precision arc round 3: `isprime` + `nextprime`
+  + `prevprime` via three new C wrappers. isprime/prevprime
+  use GMP's `mpz_probab_prime_p` directly (SymEngine's cwrapper
+  only exposes nextprime); nextprime goes through
+  `ntheory_nextprime`. Same three-repo pipeline.
 
 ## 4. Land mines we have already hit
 
@@ -506,7 +520,7 @@ below it operationally.
 # Run-and-iterate
 flutter run -d macos              # dev build (debug, hot reload)
 flutter analyze                   # must be clean before commit
-flutter test                      # full suite; expect ~1305 tests, ~1 min
+flutter test                      # full suite; expect ~1457 tests, ~1 min
 dart format <files>               # CI runs format check on pinned Dart toolchain
 
 # CI
@@ -528,8 +542,8 @@ If something in this file is wrong by the time you read it,
 work around it. Stale handover docs cause future regressions.
 
 Specifically:
-- Test count drifts as features land — update §3's "~1305 tests"
-  and §7's "expect ~1305 tests". Adding a WorkedExample entry
+- Test count drifts as features land — update §3's "~1457 tests"
+  and §7's "expect ~1457 tests". Adding a WorkedExample entry
   auto-generates 6 tests (3 non-EN locales × title + description)
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.

@@ -262,19 +262,36 @@ Path A's wrapper — Path A IS this approach, wrapped properly.
   control surfaces. Round 1 can ship without UI — just the
   CAS expressions.
 
-### Round 2 — Number-theory primitives via SymEngine ntheory
+### Round 2 — Number-theory primitives — **SHIPPED in CrispCalc round 89**
 
-- **Wrapper**: add `flutter_symengine_isprime(const char* n)`,
-  `flutter_symengine_nextprime(const char* n)`,
-  `flutter_symengine_prevprime(const char* n)`. SymEngine's
-  cwrapper exposes `ntheory_nextprime` (already in the wrapper's
-  toolbelt) and `ntheory_probab_prime_p` for Miller-Rabin.
-  `prevprime` may need a small loop in C if no direct ntheory
-  function exists — check cwrapper.h before designing.
-- **Bridge + CrispCalc**: bindings + calculator-engine parser
-  bindings + tests.
-- **Tests**: `isprime(2^31 - 1) == true`, `isprime(2^32) ==
-  false`, `nextprime(100) == 101`.
+Three new wrappers landed:
+- `flutter_symengine_isprime(const char* n)` — straight GMP
+  `mpz_probab_prime_p(x, 25)`. SymEngine's cwrapper.h does NOT
+  expose `ntheory_isprime` (only `ntheory_nextprime`); using
+  GMP directly is fine because `__gmpz_*` symbols are already
+  keepalive'd since round 13.
+- `flutter_symengine_nextprime(const char* n)` — via
+  `basic_parse` + `ntheory_nextprime`; result inherits
+  SymEngine's bigint formatting.
+- `flutter_symengine_prevprime(const char* n)` — no GMP
+  function exists. Decrements `x` and Miller-Rabin-checks each
+  candidate. Average gap ≈ ln(N), so the loop runs few
+  iterations on typical inputs. Errors when input < 3.
+
+Bridge bindings use the existing `_UnaryFuncDart` shape
+(string-in/string-out). `CalculatorEngine` adds `isprime`,
+`nextprime`, `prevprime`; `isprime` has a sqrt-bounded
+trial-division fallback for headless CI on Linux.
+
+6 new tests in `precision_test.dart`. Suite size at the merge:
+1457 tests.
+
+**Land mine averted**: my original design draft assumed
+`ntheory_probab_prime_p` was on the cwrapper. It isn't — only
+`ntheory_nextprime` is. The Round 89 implementation uses GMP
+directly for the two missing functions; future rounds doing
+number-theory should check `cwrapper.h` first and skip
+straight to GMP / FLINT direct calls for anything missing.
 
 ### Round 3 — Factorint + divisors via FLINT through ntheory
 
