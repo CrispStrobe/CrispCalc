@@ -441,8 +441,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // `(` so `solve (x, y)` matches the CAS dispatch the same as
     // `solve(x, y)`.
     final preNative = LatexConversionUtils.fromLatex(preprocessed)
-        .replaceAllMapped(
-            RegExp(r'\b([a-zA-Z/]+)\s+\('), (m) => '${m[1]}(');
+        .replaceAllMapped(RegExp(r'\b([a-zA-Z/]+)\s+\('), (m) => '${m[1]}(');
 
     // Try the unit evaluator first against the LaTeX-stripped
     // body and again with all parens stripped — Phase 2's Ans
@@ -474,8 +473,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
     try {
       final raw = await EngineService.evaluateAsync(native);
       if (raw.startsWith('Error')) return raw;
-      var normalized =
-          ExpressionPreprocessingUtils.normalizeComplexResult(raw);
+      var normalized = ExpressionPreprocessingUtils.normalizeComplexResult(raw);
       // normalizeComplexResult inserts spaces around `-` for binary
       // operands, but for a unary-minus result like `-5` that turns
       // it into `- 5` which `double.tryParse` can't read — and

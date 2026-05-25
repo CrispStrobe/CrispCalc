@@ -276,8 +276,7 @@ class GraphingScreenState extends State<GraphingScreen>
 
     // Trailing binary operator (`x +`, `x -`, `x *`, `x /`, `x ^`).
     final lastTok = src.replaceAll(RegExp(r'\s+$'), '');
-    if (lastTok.isNotEmpty &&
-        '+-*/^'.contains(lastTok[lastTok.length - 1])) {
+    if (lastTok.isNotEmpty && '+-*/^'.contains(lastTok[lastTok.length - 1])) {
       return t.graphErrorTrailingOperator;
     }
 
