@@ -311,3 +311,457 @@ final RegExp _assignmentRegex = RegExp(
 );
 final RegExp _identifierRegex = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$');
 final RegExp _importListStartRegex = RegExp(r'[A-Za-z_0-9,]');
+final RegExp _identifierWordRegex = RegExp(r'[A-Za-z_][A-Za-z0-9_]*');
+
+// ---------------------------------------------------------------------------
+// Phase 3: dependency graph + topological evaluation.
+// ---------------------------------------------------------------------------
+
+/// Every identifier-like word in [source]. Stable ordering of first
+/// appearance; duplicates collapsed. Used by both the dependency
+/// graph (filter against scope keys) and the free-var tag (filter
+/// against scope keys + reserved CAS names).
+Set<String> identifierWordsIn(String source) {
+  final out = <String>{};
+  for (final m in _identifierWordRegex.allMatches(source)) {
+    out.add(m.group(0)!);
+  }
+  return out;
+}
+
+/// In-document dependencies for a parsed line: the subset of
+/// [scopeKeys] that appears as an identifier in [parsed]'s body.
+/// `Ans` is handled separately by the evaluator and isn't a scope
+/// key, so it doesn't show up here.
+Set<String> dependenciesOfLine(
+  ParsedNotepadLine parsed,
+  Set<String> scopeKeys,
+) {
+  final body = parsed.body;
+  if (body == null) return const {};
+  final words = identifierWordsIn(body);
+  return words.where(scopeKeys.contains).toSet();
+}
+
+/// Identifiers in [parsed]'s body that don't resolve to anything —
+/// neither a scope name nor a reserved CAS function / constant.
+/// Surfaced by the UI as the `free: x, y` tag (decision #15).
+///
+/// Note: unit symbols (`km`, `mph`, etc.) currently slip through
+/// as "free" since the unit catalog isn't consulted at this layer.
+/// Phase 6 wires units; if needed, a future refinement subtracts
+/// known unit symbols here.
+Set<String> freeVariablesOfLine(
+  ParsedNotepadLine parsed,
+  Set<String> scopeKeys,
+) {
+  final body = parsed.body;
+  if (body == null) return const {};
+  final words = identifierWordsIn(body);
+  return words
+      .where((id) =>
+          !scopeKeys.contains(id) &&
+          !kReservedNotepadNames.contains(id) &&
+          id != 'Ans')
+      .toSet();
+}
+
+/// Per-document dependency graph keyed by line index.
+/// `graph[i]` = set of line indices that line `i` depends on.
+///
+/// Built by mapping each in-scope name back to the line that
+/// produced it (assignment name → its line; `lineN` alias → line
+/// at index N-1). External-scope names (from `use` imports) are
+/// not in the graph since they aren't doc-internal nodes.
+///
+/// Blank, comment, and `useDirective` lines have empty dependency
+/// sets and never appear as targets of another line's edge.
+class NotepadDependencyGraph {
+  /// Edges keyed by source: `dependsOn[i]` = lines `i` depends on.
+  final Map<int, Set<int>> dependsOn;
+
+  /// Reverse edges keyed by target: `dependents[i]` = lines that
+  /// depend on `i`. Used for downstream-only invalidation.
+  final Map<int, Set<int>> dependents;
+
+  const NotepadDependencyGraph({
+    required this.dependsOn,
+    required this.dependents,
+  });
+}
+
+NotepadDependencyGraph buildDependencyGraph(
+  NotepadDocument doc, {
+  Map<String, String> externalScope = const {},
+}) {
+  // Map each in-doc scope name to the line index that produced it.
+  // Both the auto-alias and the explicit name (for assignments)
+  // point at the same line, so a reference to either flows the
+  // same edge.
+  final nameToLine = <String, int>{};
+  final firstCode = firstCodeLineIndexOf(doc);
+  final parsedLines = <int, ParsedNotepadLine>{};
+  for (var i = 0; i < doc.lines.length; i++) {
+    final parsed = classifyNotepadLine(doc.lines[i].source,
+        lineIndex: i, firstCodeLineIndex: firstCode);
+    parsedLines[i] = parsed;
+    switch (parsed.kind) {
+      case NotepadLineKind.assignment:
+        nameToLine[parsed.name!] = i;
+        nameToLine['line${i + 1}'] = i;
+        break;
+      case NotepadLineKind.expression:
+        nameToLine['line${i + 1}'] = i;
+        break;
+      case NotepadLineKind.blank:
+      case NotepadLineKind.comment:
+      case NotepadLineKind.useDirective:
+        break;
+    }
+  }
+
+  // External-scope names take precedence on lookup, but they aren't
+  // in-doc nodes — references to them produce no graph edges.
+  final inDocScopeKeys = nameToLine.keys.toSet();
+
+  final dependsOn = <int, Set<int>>{
+    for (var i = 0; i < doc.lines.length; i++) i: <int>{},
+  };
+  final dependents = <int, Set<int>>{
+    for (var i = 0; i < doc.lines.length; i++) i: <int>{},
+  };
+
+  for (var i = 0; i < doc.lines.length; i++) {
+    final parsed = parsedLines[i]!;
+    final refs = dependenciesOfLine(parsed, inDocScopeKeys);
+    for (final name in refs) {
+      // Ignore external-scope names (they have no in-doc node).
+      if (externalScope.containsKey(name) && !inDocScopeKeys.contains(name)) {
+        continue;
+      }
+      final target = nameToLine[name];
+      if (target == null) continue;
+      // A line referencing itself by its own auto-alias / name is
+      // a self-loop. Surface it as a one-element cycle.
+      dependsOn[i]!.add(target);
+      dependents[target]!.add(i);
+    }
+  }
+
+  return NotepadDependencyGraph(
+    dependsOn: dependsOn,
+    dependents: dependents,
+  );
+}
+
+/// Kahn's algorithm in pure functional form. Returns the line
+/// indices in dependency order (every line appears after all the
+/// lines it depends on). Lines that are part of a cycle are
+/// excluded from the result — the caller pairs this with
+/// [findCycleParticipants] to error those lines instead.
+List<int> kahnTopologicalOrder(NotepadDependencyGraph graph) {
+  final remainingDeps = {
+    for (final entry in graph.dependsOn.entries)
+      entry.key: Set<int>.from(entry.value),
+  };
+  final queue = <int>[
+    for (final entry in remainingDeps.entries)
+      if (entry.value.isEmpty) entry.key,
+  ]..sort();
+  final order = <int>[];
+  while (queue.isNotEmpty) {
+    final node = queue.removeAt(0);
+    order.add(node);
+    final children = graph.dependents[node] ?? const <int>{};
+    final newlyReady = <int>[];
+    for (final child in children) {
+      remainingDeps[child]!.remove(node);
+      if (remainingDeps[child]!.isEmpty) newlyReady.add(child);
+    }
+    newlyReady.sort();
+    queue.addAll(newlyReady);
+  }
+  return order;
+}
+
+/// Indices of every line that is part of any cycle (including
+/// self-loops). Computed as the complement of [kahnTopologicalOrder]:
+/// anything Kahn can't drain is on a cycle.
+Set<int> findCycleParticipants(NotepadDependencyGraph graph) {
+  final ordered = kahnTopologicalOrder(graph).toSet();
+  return {
+    for (final i in graph.dependsOn.keys)
+      if (!ordered.contains(i)) i,
+  };
+}
+
+/// Transitive closure of [start]'s dependents in [graph], inclusive.
+/// Used by `evaluateFrom` to limit recompute work to the subgraph
+/// rooted at the edited line.
+Set<int> downstreamFrom(int start, NotepadDependencyGraph graph) {
+  final out = <int>{start};
+  final stack = <int>[start];
+  while (stack.isNotEmpty) {
+    final node = stack.removeLast();
+    for (final child in graph.dependents[node] ?? const <int>{}) {
+      if (out.add(child)) stack.add(child);
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: error encoding.
+// ---------------------------------------------------------------------------
+
+/// String prefixes used on `NotepadLine.cachedError` so the UI can
+/// pattern-match on the error kind without a separate structured
+/// type. Format is `<prefix>:<payload>`; payload format is per-kind.
+class NotepadErrorPrefix {
+  static const String blockedBy = 'blockedBy:';
+  static const String circularReference = 'circularReference:';
+  static const String evaluation = 'evaluation:';
+  static const String useDirective = 'useDirective:';
+
+  /// `blockedBy:<lineId>:<alias>` — dependent of an errored line.
+  /// The UI parses alias (e.g. `line3`) for the chip label and
+  /// uses lineId to scroll-to-line on tap.
+  static String blocked(String lineId, String alias) =>
+      '$blockedBy$lineId:$alias';
+
+  /// `circularReference:a→b→a` — cycle participants. Body is the
+  /// cycle's name path joined with `→`; the UI renders verbatim.
+  static String circular(List<String> namePath) =>
+      '$circularReference${namePath.join('→')}';
+
+  /// `evaluation:<engine error string>` — engine returned a raw
+  /// error. The existing `EngineErrorFormatter` handles the
+  /// payload presentation.
+  static String fromEngine(String engineError) => '$evaluation$engineError';
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: orchestrator.
+// ---------------------------------------------------------------------------
+
+/// Signature of the engine-dispatch callback the evaluator calls
+/// for each non-blocked line. Tests inject a stub; production
+/// wiring uses `EngineService.evaluateAsync`.
+typedef NotepadEngineDispatcher = Future<String> Function(
+    String preprocessedExpression);
+
+/// Orchestrates per-line evaluation across a `NotepadDocument`:
+/// builds the dependency graph, processes lines in topological
+/// order, propagates blocked-by errors downstream, flags cycle
+/// participants, and updates each line's cached fields in place.
+///
+/// Engine calls are funnelled through [dispatcher] so the
+/// evaluator stays testable without a real `SymEngine` bridge.
+class NotepadEvaluator {
+  final NotepadEngineDispatcher dispatcher;
+
+  /// Optional [externalScope] — populated by Phase 6 from the doc's
+  /// `use` directive resolved against `AppState.userVariables` /
+  /// `userFunctions`. Phase 3 just sees the map and uses it for
+  /// scope lookup; the `use` directive line itself never gets
+  /// dispatched.
+  final Map<String, String> externalScope;
+
+  const NotepadEvaluator({
+    required this.dispatcher,
+    this.externalScope = const {},
+  });
+
+  /// Recompute every line in [doc] in topological order. Mutates
+  /// the lines' cache fields in place and returns the same doc.
+  Future<NotepadDocument> evaluateAll(NotepadDocument doc) async {
+    return _evaluateSubset(doc, indices: null);
+  }
+
+  /// Recompute the line at [startLineIndex] and every line
+  /// transitively downstream of it. Lines outside that subgraph
+  /// keep their current cache values.
+  Future<NotepadDocument> evaluateFrom(
+    NotepadDocument doc,
+    int startLineIndex,
+  ) async {
+    final graph = buildDependencyGraph(doc, externalScope: externalScope);
+    final subset = downstreamFrom(startLineIndex, graph);
+    return _evaluateSubset(doc, indices: subset);
+  }
+
+  /// Core driver. If [indices] is null, every line is in scope;
+  /// otherwise only the listed indices get re-evaluated (cache
+  /// for the rest is reused as-is for blocked-by lookups).
+  Future<NotepadDocument> _evaluateSubset(
+    NotepadDocument doc, {
+    required Set<int>? indices,
+  }) async {
+    final graph = buildDependencyGraph(doc, externalScope: externalScope);
+    final cycleNodes = findCycleParticipants(graph);
+    final order = kahnTopologicalOrder(graph);
+
+    final firstCode = firstCodeLineIndexOf(doc);
+
+    // Cycle nodes first — they never get an engine call. Their
+    // downstream gets blockedBy via the standard path below.
+    for (final i in cycleNodes) {
+      if (indices != null && !indices.contains(i)) continue;
+      final cyclePath = _cycleNamePath(i, graph, doc, firstCode);
+      doc.lines[i].cachedResult = null;
+      doc.lines[i].cachedError = NotepadErrorPrefix.circular(cyclePath);
+      doc.lines[i].cachedFreeVars = [];
+    }
+
+    // Process the Kahn-acyclic part in dependency order.
+    for (final i in order) {
+      if (indices != null && !indices.contains(i)) continue;
+      await _evaluateLine(doc, i, graph, firstCode);
+    }
+    return doc;
+  }
+
+  /// Evaluate (or skip + error) a single line. Mutates the line.
+  Future<void> _evaluateLine(
+    NotepadDocument doc,
+    int lineIndex,
+    NotepadDependencyGraph graph,
+    int firstCode,
+  ) async {
+    final line = doc.lines[lineIndex];
+    final parsed = classifyNotepadLine(line.source,
+        lineIndex: lineIndex, firstCodeLineIndex: firstCode);
+
+    // Skip non-evaluable kinds.
+    switch (parsed.kind) {
+      case NotepadLineKind.blank:
+      case NotepadLineKind.comment:
+        line.cachedResult = null;
+        line.cachedError = null;
+        line.cachedFreeVars = [];
+        return;
+      case NotepadLineKind.useDirective:
+        line.cachedResult = null;
+        line.cachedError = parsed.directiveError == null
+            ? null
+            : '${NotepadErrorPrefix.useDirective}${parsed.directiveError}';
+        line.cachedFreeVars = [];
+        return;
+      case NotepadLineKind.assignment:
+      case NotepadLineKind.expression:
+        break;
+    }
+
+    // Blocked-by upstream propagation. Pick the lowest-index
+    // errored dependency as the canonical "blame" line — UI shows
+    // its alias on the chip.
+    final upstreamErrored = (graph.dependsOn[lineIndex] ?? const <int>{})
+        .where((idx) => doc.lines[idx].cachedError != null)
+        .toList()
+      ..sort();
+    if (upstreamErrored.isNotEmpty) {
+      final blameIdx = upstreamErrored.first;
+      final blame = doc.lines[blameIdx];
+      line.cachedResult = null;
+      line.cachedError =
+          NotepadErrorPrefix.blocked(blame.id, 'line${blameIdx + 1}');
+      // Free-var tracking is still useful even when blocked — the
+      // user might be debugging via the tag.
+      line.cachedFreeVars = freeVariablesOfLine(
+        parsed,
+        _scopeKeysFor(doc, firstCode),
+      ).toList();
+      return;
+    }
+
+    // Build the line's scope view + free vars.
+    final scope = buildNotepadScope(doc, externalScope: externalScope);
+    final scopeKeys = scope.keys.toSet();
+    final freeVars = freeVariablesOfLine(parsed, scopeKeys).toList()..sort();
+
+    // Strip this line's own contributions to avoid self-substitution
+    // (`x = x + 1` shouldn't see its own previous result). Cycle
+    // detection above already errored true cycles; this guards the
+    // single-step self-reference case where the line writes its
+    // own alias.
+    scope.remove('line${lineIndex + 1}');
+    if (parsed.kind == NotepadLineKind.assignment) {
+      scope.remove(parsed.name!);
+    }
+
+    final preprocessed = preprocessNotepadLine(parsed,
+        doc: doc, lineIndex: lineIndex, scope: scope);
+    if (preprocessed == null) {
+      // Shouldn't happen for assignment/expression, but be defensive.
+      line.cachedResult = null;
+      line.cachedError = null;
+      line.cachedFreeVars = freeVars;
+      return;
+    }
+
+    String result;
+    try {
+      result = await dispatcher(preprocessed);
+    } catch (e) {
+      result = 'Error: dispatcher threw: $e';
+    }
+
+    if (result.startsWith('Error')) {
+      line.cachedResult = null;
+      line.cachedError = NotepadErrorPrefix.fromEngine(result);
+      line.cachedFreeVars = freeVars;
+    } else {
+      line.cachedResult = result;
+      line.cachedError = null;
+      line.cachedFreeVars = freeVars;
+    }
+  }
+
+  /// Build a name path through a cycle for display. Picks the line
+  /// names along one back-edge walk; if no name exists for a node
+  /// (a plain expression with no assignment), falls back to its
+  /// `lineN` alias.
+  List<String> _cycleNamePath(
+    int start,
+    NotepadDependencyGraph graph,
+    NotepadDocument doc,
+    int firstCode,
+  ) {
+    final path = <String>[];
+    final visited = <int>{};
+    var current = start;
+    while (true) {
+      path.add(_displayNameFor(current, doc, firstCode));
+      if (visited.contains(current)) break;
+      visited.add(current);
+      final deps = graph.dependsOn[current] ?? const <int>{};
+      // Walk into the first dependency that's also a cycle node;
+      // if none, break (shouldn't happen for cycle participants
+      // but guards against malformed input).
+      final cycleDeps = deps.where((idx) => visited.contains(idx) || idx == start).toList();
+      if (cycleDeps.isEmpty) {
+        // Fall back to any dependency to surface SOMETHING in the
+        // error path — this branch is mostly defensive.
+        if (deps.isEmpty) break;
+        current = deps.first;
+      } else {
+        current = cycleDeps.first;
+      }
+      if (path.length > doc.lines.length + 2) break; // safety bound
+    }
+    return path;
+  }
+
+  String _displayNameFor(int index, NotepadDocument doc, int firstCode) {
+    final parsed = classifyNotepadLine(doc.lines[index].source,
+        lineIndex: index, firstCodeLineIndex: firstCode);
+    if (parsed.kind == NotepadLineKind.assignment) return parsed.name!;
+    return 'line${index + 1}';
+  }
+
+  Set<String> _scopeKeysFor(NotepadDocument doc, int firstCode) {
+    final scope = buildNotepadScope(doc, externalScope: externalScope);
+    return scope.keys.toSet();
+  }
+}
+

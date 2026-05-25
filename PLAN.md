@@ -478,7 +478,7 @@ but become *moat-building* rather than *positioning*, since the moat
       each line kind, the `use` first-line-only constraint, the
       assignment heuristic, scope substitution, and `Ans`
       resolution.
-    - **Phase 3 — Dependency graph + topological evaluator.** Same
+    - **Phase 3 done 2026-05-25 (`feature/notepad-phase-1`).** Same
       file. `Set<String> referencedNames(String preprocessed,
       Set<String> scopeKeys)` — regex `\b[A-Za-z_][A-Za-z0-9_]*\b`
       filtered against scope keys. Build a per-document DAG;

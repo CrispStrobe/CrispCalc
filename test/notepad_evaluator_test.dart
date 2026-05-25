@@ -491,4 +491,475 @@ void main() {
       ]);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Phase 3 — dependency graph + evaluator.
+  // -------------------------------------------------------------------------
+
+  group('identifierWordsIn', () {
+    test('plain identifiers', () {
+      expect(identifierWordsIn('a + b * c'), {'a', 'b', 'c'});
+    });
+
+    test('ignores numbers', () {
+      expect(identifierWordsIn('2 * 3 + 4'), isEmpty);
+    });
+
+    test('underscore allowed', () {
+      expect(identifierWordsIn('my_var + foo_bar2'),
+          {'my_var', 'foo_bar2'});
+    });
+
+    test('digit-leading words are not identifiers', () {
+      // `5km` extracts `km` only — leading digit doesn't start an id.
+      expect(identifierWordsIn('5km + 3m'), {'km', 'm'});
+    });
+
+    test('reserved CAS names show up too', () {
+      // identifierWordsIn doesn't filter; callers decide.
+      expect(identifierWordsIn('sin(x) + pi'), {'sin', 'x', 'pi'});
+    });
+
+    test('duplicate words collapsed', () {
+      expect(identifierWordsIn('x + x * x'), {'x'});
+    });
+  });
+
+  group('dependenciesOfLine + freeVariablesOfLine', () {
+    test('expression with one in-scope ref', () {
+      final parsed = classify('tax * 2',
+          lineIndex: 1, firstCodeLineIndex: 0);
+      expect(dependenciesOfLine(parsed, {'tax'}), {'tax'});
+      expect(freeVariablesOfLine(parsed, {'tax'}), isEmpty);
+    });
+
+    test('expression with one out-of-scope ref → free var', () {
+      final parsed = classify('foo + 1',
+          lineIndex: 0, firstCodeLineIndex: 0);
+      expect(dependenciesOfLine(parsed, {'tax'}), isEmpty);
+      expect(freeVariablesOfLine(parsed, {'tax'}), {'foo'});
+    });
+
+    test('reserved CAS names are not free vars', () {
+      final parsed = classify('sin(x) + pi',
+          lineIndex: 0, firstCodeLineIndex: 0);
+      expect(freeVariablesOfLine(parsed, {}), {'x'});
+    });
+
+    test('Ans is not a free var', () {
+      final parsed = classify('Ans + foo',
+          lineIndex: 1, firstCodeLineIndex: 0);
+      expect(freeVariablesOfLine(parsed, {}), {'foo'});
+    });
+
+    test('blank / comment / useDirective return empty deps', () {
+      expect(dependenciesOfLine(ParsedNotepadLine.blank(), {'x'}), isEmpty);
+      expect(dependenciesOfLine(ParsedNotepadLine.comment(), {'x'}), isEmpty);
+      expect(
+          dependenciesOfLine(
+              ParsedNotepadLine.useDirective(['tax']), {'x'}),
+          isEmpty);
+    });
+  });
+
+  group('buildDependencyGraph', () {
+    test('empty doc has zero edges', () {
+      final g = buildDependencyGraph(docOf([]));
+      expect(g.dependsOn, isEmpty);
+      expect(g.dependents, isEmpty);
+    });
+
+    test('single line with no refs has empty dep set', () {
+      final g = buildDependencyGraph(
+          docOf([(source: '5 + 3', cached: null)]));
+      expect(g.dependsOn[0], isEmpty);
+      expect(g.dependents[0], isEmpty);
+    });
+
+    test('explicit-name reference', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'tax = 0.085', cached: null),
+        (source: 'tax * 2', cached: null),
+      ]));
+      expect(g.dependsOn[1], {0});
+      expect(g.dependents[0], {1});
+    });
+
+    test('lineN-alias reference', () {
+      final g = buildDependencyGraph(docOf([
+        (source: '5 + 3', cached: null),
+        (source: 'line1 * 2', cached: null),
+      ]));
+      expect(g.dependsOn[1], {0});
+    });
+
+    test('transitive chain', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = b + 1', cached: null),
+      ]));
+      expect(g.dependsOn[1], {0});
+      expect(g.dependsOn[2], {1});
+      expect(g.dependents[0], {1});
+      expect(g.dependents[1], {2});
+    });
+
+    test('comments and blanks contribute no edges', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: '// hi', cached: null),
+        (source: '', cached: null),
+        (source: 'a + 1', cached: null),
+      ]));
+      expect(g.dependsOn[1], isEmpty);
+      expect(g.dependsOn[2], isEmpty);
+      expect(g.dependsOn[3], {0});
+    });
+
+    test('external-scope-only ref produces no in-doc edge', () {
+      final g = buildDependencyGraph(
+          docOf([(source: 'imported * 2', cached: null)]),
+          externalScope: {'imported': '42'});
+      expect(g.dependsOn[0], isEmpty);
+    });
+
+    test('self-reference via lineN alias is a self-loop', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'line1 + 1', cached: null),
+      ]));
+      expect(g.dependsOn[0], {0});
+      expect(g.dependents[0], {0});
+    });
+  });
+
+  group('kahnTopologicalOrder', () {
+    test('empty graph', () {
+      final g = buildDependencyGraph(docOf([]));
+      expect(kahnTopologicalOrder(g), isEmpty);
+    });
+
+    test('linear chain in dependency order', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = b + 1', cached: null),
+      ]));
+      expect(kahnTopologicalOrder(g), [0, 1, 2]);
+    });
+
+    test('parallel branches both before the join', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = 2', cached: null),
+        (source: 'c = a + b', cached: null),
+      ]));
+      final order = kahnTopologicalOrder(g);
+      expect(order.indexOf(0), lessThan(order.indexOf(2)));
+      expect(order.indexOf(1), lessThan(order.indexOf(2)));
+    });
+
+    test('cycle nodes excluded from order', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = b + 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = 5', cached: null),
+      ]));
+      final order = kahnTopologicalOrder(g);
+      expect(order, [2]); // only c gets ordered
+    });
+  });
+
+  group('findCycleParticipants', () {
+    test('no cycles', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'a + 1', cached: null),
+      ]));
+      expect(findCycleParticipants(g), isEmpty);
+    });
+
+    test('two-cycle', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = b + 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+      ]));
+      expect(findCycleParticipants(g), {0, 1});
+    });
+
+    test('self-loop', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'x = x + 1', cached: null),
+      ]));
+      expect(findCycleParticipants(g), {0});
+    });
+
+    test('cycle plus innocent bystander', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = b', cached: null),
+        (source: 'b = a', cached: null),
+        (source: '5 + 3', cached: null),
+      ]));
+      expect(findCycleParticipants(g), {0, 1});
+    });
+  });
+
+  group('downstreamFrom', () {
+    test('isolated node only includes itself', () {
+      final g = buildDependencyGraph(docOf([
+        (source: '5 + 3', cached: null),
+      ]));
+      expect(downstreamFrom(0, g), {0});
+    });
+
+    test('transitive downstream', () {
+      final g = buildDependencyGraph(docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = b + 1', cached: null),
+        (source: 'd = a + 1', cached: null),
+      ]));
+      // Editing line 0 should ripple to b, c, d.
+      expect(downstreamFrom(0, g), {0, 1, 2, 3});
+      // Editing line 1 should ripple to c only (d branches off a).
+      expect(downstreamFrom(1, g), {1, 2});
+      // Editing line 2 ripples to itself only.
+      expect(downstreamFrom(2, g), {2});
+    });
+  });
+
+  // ---- NotepadEvaluator integration ----
+
+  // Stub dispatcher helper: echo the input back as the "result".
+  NotepadEngineDispatcher echo() => (expr) async => expr;
+
+  group('NotepadEvaluator.evaluateAll', () {
+    test('all lines populated when engine echoes', () async {
+      final doc = docOf([
+        (source: 'tax = 0.085', cached: null),
+        (source: 'tax * 2', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      // tax line evaluated with body 0.085 → echo returns '0.085'.
+      expect(doc.lines[0].cachedResult, '0.085');
+      expect(doc.lines[0].cachedError, isNull);
+      // Second line preprocessed body is '(0.085) * 2'; echo returns it.
+      expect(doc.lines[1].cachedResult, '(0.085) * 2');
+      expect(doc.lines[1].cachedError, isNull);
+    });
+
+    test('blank and comment lines cleared', () async {
+      final doc = docOf([
+        (source: '', cached: 'stale'),
+        (source: '// hi', cached: 'stale'),
+        (source: 'a = 1', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedResult, isNull);
+      expect(doc.lines[0].cachedError, isNull);
+      expect(doc.lines[1].cachedResult, isNull);
+      expect(doc.lines[1].cachedError, isNull);
+    });
+
+    test('useDirective with no error → cleared', () async {
+      final doc = docOf([
+        (source: 'use tax', cached: 'stale'),
+        (source: '5 + 3', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedResult, isNull);
+      expect(doc.lines[0].cachedError, isNull);
+    });
+
+    test('useDirective with invalid import → cached error with prefix',
+        () async {
+      final doc = docOf([
+        (source: 'use 2x', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedError, startsWith('useDirective:'));
+      expect(doc.lines[0].cachedError, contains('invalidImport:2x'));
+    });
+
+    test('engine error → cachedError prefixed evaluation:', () async {
+      final doc = docOf([(source: '1/0', cached: null)]);
+      final ev = NotepadEvaluator(
+          dispatcher: (_) async => 'Error: divide by zero');
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedResult, isNull);
+      expect(doc.lines[0].cachedError,
+          'evaluation:Error: divide by zero');
+    });
+
+    test('downstream of errored line gets blockedBy with correct alias',
+        () async {
+      final doc = docOf([
+        (source: 'a = 1/0', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = b + 1', cached: null),
+      ]);
+      // Engine errors only on the 1/0 expression; everything else echoes.
+      final ev = NotepadEvaluator(
+        dispatcher: (expr) async =>
+            expr.contains('1/0') ? 'Error: divide by zero' : expr,
+      );
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedError,
+          'evaluation:Error: divide by zero');
+      expect(doc.lines[1].cachedError, startsWith('blockedBy:'));
+      expect(doc.lines[1].cachedError, contains(':line1'));
+      // Transitive: c is blocked by b (its immediate upstream).
+      expect(doc.lines[2].cachedError, startsWith('blockedBy:'));
+      expect(doc.lines[2].cachedError, contains(':line2'));
+    });
+
+    test('cycle participants get circularReference error', () async {
+      final doc = docOf([
+        (source: 'a = b + 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+        (source: 'c = 5', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedError,
+          startsWith('circularReference:'));
+      expect(doc.lines[1].cachedError,
+          startsWith('circularReference:'));
+      // The innocent line c still evaluates.
+      expect(doc.lines[2].cachedResult, '5');
+      expect(doc.lines[2].cachedError, isNull);
+    });
+
+    test('self-reference is a cycle (one-element)', () async {
+      final doc = docOf([
+        (source: 'x = x + 1', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedError,
+          startsWith('circularReference:'));
+    });
+
+    test('free vars populated on success', () async {
+      final doc = docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'a + foo + bar', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      expect(doc.lines[1].cachedFreeVars.toSet(), {'foo', 'bar'});
+    });
+
+    test('free vars excluded for reserved names', () async {
+      final doc = docOf([
+        (source: 'sin(x) + pi', cached: null),
+      ]);
+      final ev = NotepadEvaluator(dispatcher: echo());
+      await ev.evaluateAll(doc);
+      // pi + sin are reserved; only x is free.
+      expect(doc.lines[0].cachedFreeVars, ['x']);
+    });
+
+    test('Ans substituted before dispatch', () async {
+      String? lastDispatched;
+      final ev = NotepadEvaluator(dispatcher: (expr) async {
+        lastDispatched = expr;
+        return expr;
+      });
+      final doc = docOf([
+        (source: '5 + 3', cached: null),
+        (source: 'Ans * 2', cached: null),
+      ]);
+      await ev.evaluateAll(doc);
+      // Line 1 dispatcher saw the substituted form, not literal `Ans`.
+      expect(lastDispatched, '(5 + 3) * 2');
+    });
+
+    test('externalScope contributes to substitution and free-var filter',
+        () async {
+      final doc = docOf([
+        (source: 'imported + foo', cached: null),
+      ]);
+      final ev = NotepadEvaluator(
+        dispatcher: echo(),
+        externalScope: {'imported': '42'},
+      );
+      await ev.evaluateAll(doc);
+      expect(doc.lines[0].cachedResult, '(42) + foo');
+      expect(doc.lines[0].cachedFreeVars, ['foo']);
+    });
+  });
+
+  group('NotepadEvaluator.evaluateFrom', () {
+    test('only the downstream subgraph is re-evaluated', () async {
+      // Distinct multipliers so b and d preprocess to different
+      // strings (otherwise touched-key collisions would mask the
+      // assertion).
+      final touched = <String, int>{};
+      final ev = NotepadEvaluator(dispatcher: (expr) async {
+        touched[expr] = (touched[expr] ?? 0) + 1;
+        return expr;
+      });
+      final doc = docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = a * 10', cached: null),
+        (source: 'c = b * 100', cached: null),
+        (source: 'd = a * 1000', cached: null),
+      ]);
+      // Full eval seeds everything.
+      await ev.evaluateAll(doc);
+      touched.clear();
+
+      // Now evaluate-from line 1 (b). Should hit b and c, not a or d.
+      await ev.evaluateFrom(doc, 1);
+      // a's body is '1' — should NOT have been re-dispatched.
+      expect(touched.containsKey('1'), isFalse);
+      // d's body is '(1) * 1000' — should NOT have been re-dispatched.
+      expect(touched.containsKey('(1) * 1000'), isFalse);
+      // b touched once with '(1) * 10'.
+      expect(touched['(1) * 10'], 1);
+      // c touched once — its preprocessed body uses b's new echo result.
+      expect(
+          touched.keys.where((k) => k.contains('* 100')).length, 1);
+    });
+
+    test('editing a leaf node only re-evaluates that node', () async {
+      final touched = <String>[];
+      final ev = NotepadEvaluator(dispatcher: (expr) async {
+        touched.add(expr);
+        return expr;
+      });
+      final doc = docOf([
+        (source: 'a = 1', cached: null),
+        (source: 'b = a + 1', cached: null),
+      ]);
+      await ev.evaluateAll(doc);
+      touched.clear();
+
+      // b is a leaf — nothing depends on it.
+      await ev.evaluateFrom(doc, 1);
+      expect(touched.length, 1);
+    });
+  });
+
+  group('error encoding round-trip', () {
+    test('blockedBy format', () {
+      final encoded = NotepadErrorPrefix.blocked('l-abc-123', 'line5');
+      expect(encoded, 'blockedBy:l-abc-123:line5');
+    });
+
+    test('circularReference format', () {
+      final encoded = NotepadErrorPrefix.circular(['a', 'b', 'a']);
+      expect(encoded, 'circularReference:a→b→a');
+    });
+
+    test('evaluation format wraps engine error', () {
+      final encoded = NotepadErrorPrefix.fromEngine('Error: parse failed');
+      expect(encoded, 'evaluation:Error: parse failed');
+    });
+  });
 }
