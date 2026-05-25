@@ -341,14 +341,33 @@ class SudokuSolver {
     // summing to the cage's target. The linear-arithmetic
     // propagator handles the sum efficiently (same path that
     // makes SEND+MORE solve in ms).
+    //
+    // Round 64: SKIP the cage allDifferent when it's already
+    // implied by an existing row/column/box allDifferent (cage
+    // is entirely within one row, one column, or one box).
+    // Adding the redundant constraint exposes a propagation
+    // pathology in dart_csp's GAC propagator that incorrectly
+    // prunes valid solutions when multiple allDifferents share
+    // the same variable subset.
     if (puzzle.cages != null) {
+      final boxRows = puzzle.layout.boxRows;
+      final boxCols = puzzle.layout.boxCols;
       for (final cage in puzzle.cages!) {
         final keys = [
-          for (final idx in cage.cellIndexes)
-            _key(idx ~/ n, idx % n),
+          for (final idx in cage.cellIndexes) _key(idx ~/ n, idx % n),
         ];
         if (keys.length > 1) {
-          p.addAllDifferent(keys);
+          final rows = {for (final i in cage.cellIndexes) i ~/ n};
+          final cols = {for (final i in cage.cellIndexes) i % n};
+          final boxes = {
+            for (final i in cage.cellIndexes)
+              (i ~/ n ~/ boxRows) * (n ~/ boxCols) + (i % n ~/ boxCols)
+          };
+          final redundant =
+              rows.length == 1 || cols.length == 1 || boxes.length == 1;
+          if (!redundant) {
+            p.addAllDifferent(keys);
+          }
         }
         p.addLinearEquals(
           keys,
@@ -957,11 +976,73 @@ class SudokuPresets {
       KillerCage(cellIndexes: [0, 4], targetSum: 4), //  (0,0)+(1,0) = 1+3
       KillerCage(cellIndexes: [1, 2], targetSum: 5), //  (0,1)+(0,2) = 2+3
       KillerCage(cellIndexes: [3], targetSum: 4), //     (0,3)       = 4
-      KillerCage(cellIndexes: [5, 6, 7], targetSum: 7), // (1,1)+(1,2)+(1,3) = 4+1+2
+      KillerCage(
+          cellIndexes: [5, 6, 7], targetSum: 7), // (1,1)+(1,2)+(1,3) = 4+1+2
       KillerCage(cellIndexes: [8, 9], targetSum: 3), //  (2,0)+(2,1) = 2+1
       KillerCage(cellIndexes: [10, 11], targetSum: 7), // (2,2)+(2,3) = 4+3
       KillerCage(cellIndexes: [12, 13], targetSum: 7), // (3,0)+(3,1) = 4+3
       KillerCage(cellIndexes: [14, 15], targetSum: 3), // (3,2)+(3,3) = 2+1
+    ],
+  );
+
+  /// 9×9 Killer derived from a canonical solved grid. The cage
+  /// partition uses horizontal 2/3-cell groups (4 cages per row,
+  /// 36 cages total). Each row's cage sums total 45 (= 1+2+…+9).
+  /// Ships with no givens — solving relies entirely on the cage
+  /// sum + all-different constraints + Sudoku rules. Note: this
+  /// preset is FEASIBLE rather than provably unique under cages
+  /// alone — proper uniqueness for 9×9 Killer requires irregular
+  /// cage shapes that cut across rows, deferred to V2.
+  static final SudokuPuzzle killer9x9 = SudokuPuzzle(
+    layout: SudokuLayout.standard,
+    variant: SudokuVariant.killer,
+    cells: List<int>.filled(81, 0),
+    cages: const [
+      // Row 0: 5 3 4 6 7 8 9 1 2 — sum 45 = 8+17+17+3
+      KillerCage(cellIndexes: [0, 1], targetSum: 8),
+      KillerCage(cellIndexes: [2, 3, 4], targetSum: 17),
+      KillerCage(cellIndexes: [5, 6], targetSum: 17),
+      KillerCage(cellIndexes: [7, 8], targetSum: 3),
+      // Row 1: 6 7 2 1 9 5 3 4 8 — sum 45 = 13+3+17+12
+      KillerCage(cellIndexes: [9, 10], targetSum: 13),
+      KillerCage(cellIndexes: [11, 12], targetSum: 3),
+      KillerCage(cellIndexes: [13, 14, 15], targetSum: 17),
+      KillerCage(cellIndexes: [16, 17], targetSum: 12),
+      // Row 2: 1 9 8 3 4 2 5 6 7 — sum 45 = 18+7+7+13
+      KillerCage(cellIndexes: [18, 19, 20], targetSum: 18),
+      KillerCage(cellIndexes: [21, 22], targetSum: 7),
+      KillerCage(cellIndexes: [23, 24], targetSum: 7),
+      KillerCage(cellIndexes: [25, 26], targetSum: 13),
+      // Row 3: 8 5 9 7 6 1 4 2 3 — sum 45 = 13+16+7+9
+      KillerCage(cellIndexes: [27, 28], targetSum: 13),
+      KillerCage(cellIndexes: [29, 30], targetSum: 16),
+      KillerCage(cellIndexes: [31, 32], targetSum: 7),
+      KillerCage(cellIndexes: [33, 34, 35], targetSum: 9),
+      // Row 4: 4 2 6 8 5 3 7 9 1 — sum 45 = 12+13+10+10
+      KillerCage(cellIndexes: [36, 37, 38], targetSum: 12),
+      KillerCage(cellIndexes: [39, 40], targetSum: 13),
+      KillerCage(cellIndexes: [41, 42], targetSum: 10),
+      KillerCage(cellIndexes: [43, 44], targetSum: 10),
+      // Row 5: 7 1 3 9 2 4 8 5 6 — sum 45 = 8+14+12+11
+      KillerCage(cellIndexes: [45, 46], targetSum: 8),
+      KillerCage(cellIndexes: [47, 48, 49], targetSum: 14),
+      KillerCage(cellIndexes: [50, 51], targetSum: 12),
+      KillerCage(cellIndexes: [52, 53], targetSum: 11),
+      // Row 6: 9 6 1 5 3 7 2 8 4 — sum 45 = 15+6+12+12
+      KillerCage(cellIndexes: [54, 55], targetSum: 15),
+      KillerCage(cellIndexes: [56, 57], targetSum: 6),
+      KillerCage(cellIndexes: [58, 59, 60], targetSum: 12),
+      KillerCage(cellIndexes: [61, 62], targetSum: 12),
+      // Row 7: 2 8 7 4 1 9 6 3 5 — sum 45 = 17+5+15+8
+      KillerCage(cellIndexes: [63, 64, 65], targetSum: 17),
+      KillerCage(cellIndexes: [66, 67], targetSum: 5),
+      KillerCage(cellIndexes: [68, 69], targetSum: 15),
+      KillerCage(cellIndexes: [70, 71], targetSum: 8),
+      // Row 8: 3 4 5 2 8 6 1 7 9 — sum 45 = 7+7+14+17
+      KillerCage(cellIndexes: [72, 73], targetSum: 7),
+      KillerCage(cellIndexes: [74, 75], targetSum: 7),
+      KillerCage(cellIndexes: [76, 77], targetSum: 14),
+      KillerCage(cellIndexes: [78, 79, 80], targetSum: 17),
     ],
   );
 
@@ -975,5 +1056,6 @@ class SudokuPresets {
     (id: 'standard9x9Medium', puzzle: standard9x9Medium),
     (id: 'standard9x9Hard', puzzle: standard9x9Hard),
     (id: 'killer4x4', puzzle: killer4x4),
+    (id: 'killer9x9', puzzle: killer9x9),
   ];
 }

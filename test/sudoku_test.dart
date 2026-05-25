@@ -462,6 +462,74 @@ void main() {
       expect(sol, isNull);
     });
 
+    test('killer9x9 preset partitions every cell into exactly one cage', () {
+      final puzzle = SudokuPresets.killer9x9;
+      final n = puzzle.layout.side;
+      final seen = <int>{};
+      for (final c in puzzle.cages!) {
+        for (final idx in c.cellIndexes) {
+          expect(seen.add(idx), isTrue,
+              reason: 'cell $idx appears in more than one cage');
+        }
+      }
+      expect(seen.length, n * n,
+          reason: 'cages must cover every cell of the 9×9 grid');
+    });
+
+    test('killer9x9 preset is feasible and cage sums match a solution',
+        () async {
+      final puzzle = SudokuPresets.killer9x9;
+      final sol = await SudokuSolver.solve(puzzle);
+      expect(sol, isNotNull, reason: 'killer9x9 must be feasible');
+      _expectValidSudoku(puzzle.layout, sol!);
+      for (final cage in puzzle.cages!) {
+        final values = [for (final idx in cage.cellIndexes) sol[idx]];
+        expect(values.reduce((a, b) => a + b), cage.targetSum,
+            reason: 'cage with target ${cage.targetSum} sums to wrong total');
+        expect(values.toSet().length, values.length,
+            reason: 'cage with target ${cage.targetSum} has duplicates');
+      }
+    }, timeout: const Timeout(Duration(seconds: 180)));
+
+    test(
+        'regression: horizontal-only cage (subset of one row) does not '
+        'over-constrain the solver', () async {
+      // Round 64 bisection found that adding a redundant cage
+      // allDifferent to dart_csp on top of the existing row
+      // allDifferent triggers a propagation pathology that prunes
+      // valid solutions. The engine now skips the cage
+      // allDifferent when the cage is entirely within one row,
+      // one column, or one box. This test asserts a tiny 4×4
+      // Killer with all horizontal cages still solves.
+      final cages = const [
+        // Row 0: pairs (3+1=4) and (4+2=6)
+        KillerCage(cellIndexes: [0, 1], targetSum: 4),
+        KillerCage(cellIndexes: [2, 3], targetSum: 6),
+        // Row 1: pairs (4+2=6) and (3+1=4)
+        KillerCage(cellIndexes: [4, 5], targetSum: 6),
+        KillerCage(cellIndexes: [6, 7], targetSum: 4),
+        // Row 2: (1+3=4) and (2+4=6)
+        KillerCage(cellIndexes: [8, 9], targetSum: 4),
+        KillerCage(cellIndexes: [10, 11], targetSum: 6),
+        // Row 3: (2+4=6) and (1+3=4)
+        KillerCage(cellIndexes: [12, 13], targetSum: 6),
+        KillerCage(cellIndexes: [14, 15], targetSum: 4),
+      ];
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: List<int>.filled(16, 0),
+        variant: SudokuVariant.killer,
+        cages: cages,
+      );
+      final sol = await SudokuSolver.solve(puzzle);
+      expect(sol, isNotNull, reason: 'horizontal-only Killer must be feasible');
+      _expectValidSudoku(SudokuLayout.small, sol!);
+      for (final cage in cages) {
+        final values = [for (final idx in cage.cellIndexes) sol[idx]];
+        expect(values.reduce((a, b) => a + b), cage.targetSum);
+      }
+    });
+
     test('asserts: killer variant without cages throws', () {
       expect(
         () => SudokuPuzzle(

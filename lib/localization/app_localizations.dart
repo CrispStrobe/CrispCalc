@@ -961,6 +961,8 @@ class EnLocalizations implements AppLocalizations {
         return '9×9 Sudoku-X easy';
       case 'killer4x4':
         return '4×4 Killer';
+      case 'killer9x9':
+        return '9×9 Killer';
     }
     return id;
   }
@@ -1932,6 +1934,8 @@ class DeLocalizations implements AppLocalizations {
         return '9×9 Sudoku-X leicht';
       case 'killer4x4':
         return '4×4 Killer';
+      case 'killer9x9':
+        return '9×9 Killer';
     }
     return id;
   }
@@ -3006,6 +3010,8 @@ class FrLocalizations implements AppLocalizations {
         return '9×9 Sudoku-X facile';
       case 'killer4x4':
         return '4×4 Killer';
+      case 'killer9x9':
+        return '9×9 Killer';
     }
     return id;
   }
@@ -4081,6 +4087,8 @@ class EsLocalizations implements AppLocalizations {
         return '9×9 Sudoku-X fácil';
       case 'killer4x4':
         return '4×4 Killer';
+      case 'killer9x9':
+        return '9×9 Killer';
     }
     return id;
   }

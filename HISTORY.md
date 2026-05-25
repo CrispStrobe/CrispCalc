@@ -2,6 +2,73 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 64) — Sudoku V4.1: Killer 9×9 preset + propagation fix
+
+Ships a 9×9 Killer preset (derived from a canonical solved grid,
+36 cages partitioning all 81 cells into horizontal 2/3-cell
+groups, no givens) and fixes a propagation pathology surfaced by
+the larger size.
+
+### The bug
+
+While bringing up the 9×9 preset the solver returned no solution
+even though a valid assignment provably exists. Bisection across
+cages showed that the issue was independent of which cage —
+dropping ANY single cage left it feasible. A hand-built dart_csp
+problem (sums only, no cage allDifferent) solved instantly; the
+same problem WITH cage allDifferent failed.
+
+Root cause: when a cage is entirely within one row, one column,
+or one box, adding a cage `addAllDifferent` is redundant with
+the existing row/column/box `addAllDifferent`. Stacking two GAC
+allDifferent propagators on the same variable subset triggers
+incorrect domain pruning in dart_csp's propagator (the redundant
+constraint contributes no new information but the propagator
+combination prunes values that should be reachable).
+
+### Fix
+
+`_buildProblem` now detects when a cage's cells share a row,
+column, or box and skips the cage `addAllDifferent` in that
+case. The cage sum (`addLinearEquals`) is always added — sums
+carry real information not covered by row/col/box constraints.
+A regression test (`horizontal-only cage does not over-constrain
+the solver`) pins the behavior.
+
+### killer9x9 preset
+
+Derived from the canonical 9×9 solution:
+
+```
+5 3 4 | 6 7 8 | 9 1 2
+6 7 2 | 1 9 5 | 3 4 8
+1 9 8 | 3 4 2 | 5 6 7
+------+-------+------
+8 5 9 | 7 6 1 | 4 2 3
+4 2 6 | 8 5 3 | 7 9 1
+7 1 3 | 9 2 4 | 8 5 6
+------+-------+------
+9 6 1 | 5 3 7 | 2 8 4
+2 8 7 | 4 1 9 | 6 3 5
+3 4 5 | 2 8 6 | 1 7 9
+```
+
+Partition: 4 cages per row (mix of 2-pair and 3-cell triple),
+36 cages total. Cage sums per row total 45 (= 1+…+9), verified
+in tests. Ships with no givens — the cage system alone admits
+a feasible solution. Note: uniqueness is NOT guaranteed for
+horizontal-only cage layouts (cages alone don't disambiguate
+between many valid fills); irregular cross-row cage shapes that
+would give a unique solution are V2.
+
+### i18n + tests
+
+- `sudokuPresetLabel('killer9x9')` → '9×9 Killer' across en/de/
+  fr/es.
+- Two new test cases: cage-partition exhaustiveness for the
+  killer9x9 preset, and feasibility + cage-sum correctness
+  vs. the actual found solution.
+
 ## 2026-05-25 (round 63) — Sudoku V4: Killer Sudoku variant
 
 Cage-based Sudoku where each cage is a contiguous (or arbitrary)

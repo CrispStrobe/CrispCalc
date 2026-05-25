@@ -306,6 +306,7 @@ void main() {
           'standard9x9Medium',
           'standard9x9Hard',
           'killer4x4',
+          'killer9x9',
         ]) {
           expect(t.sudokuPresetLabel(id).trim(), isNotEmpty);
         }
