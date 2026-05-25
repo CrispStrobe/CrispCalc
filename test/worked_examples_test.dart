@@ -83,6 +83,7 @@ void main() {
         'orderedTriples',
         'coinChangeMin',
         'schedulingMakespan',
+        'cumulativeScheduling',
       };
       var seen = 0;
       for (final e in WorkedExamples.all) {

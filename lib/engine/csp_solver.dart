@@ -33,6 +33,19 @@ typedef DiophantineSolution = Map<String, int>;
 /// cumulative time-table propagator under the hood.
 typedef NoOverlapGroup = ({List<String> starts, List<int> durations});
 
+/// Round 80: one cumulative (renewable-resource) group. Generalises
+/// [NoOverlapGroup] from a unary machine to a resource of integer
+/// [capacity]: at any time `t`, the sum of `demands[i]` across tasks
+/// whose half-open interval `[starts[i], starts[i] + durations[i])`
+/// covers `t` may not exceed [capacity]. Routes to dart_csp's
+/// `Problem.addCumulative`.
+typedef CumulativeGroup = ({
+  List<String> starts,
+  List<int> durations,
+  List<int> demands,
+  int capacity,
+});
+
 /// Result envelope returned by [CspSolver.solveDiophantine]. Holds
 /// either a list of solutions or an error message — never both.
 class DiophantineResult {
@@ -122,6 +135,7 @@ class CspSolver {
     required Map<String, ({int min, int max})> variables,
     required List<String> constraints,
     List<NoOverlapGroup> noOverlap = const [],
+    List<CumulativeGroup> cumulative = const [],
     int maxSolutions = 100,
   }) async {
     if (variables.isEmpty) {
@@ -181,6 +195,17 @@ class CspSolver {
       // validates start vars + non-negative durations itself.
       for (final group in noOverlap) {
         problem.addNoOverlap(group.starts, group.durations);
+      }
+      // Round 80: renewable-resource scheduling overlays. Same time-
+      // table propagator as addNoOverlap but with variable per-task
+      // demands and an integer capacity bound.
+      for (final group in cumulative) {
+        problem.addCumulative(
+          group.starts,
+          group.durations,
+          group.demands,
+          group.capacity,
+        );
       }
     } catch (e) {
       return DiophantineResult.failure(
@@ -448,6 +473,8 @@ class CspSolver {
   /// vars: x, y, z in 1..9
   /// allDifferent(x, y, z)
   /// x + y + z == 15
+  /// noOverlap(s1=4, s2=3)               # single-resource scheduling
+  /// cumulative(s1=2@2, s2=3@1; capacity=2)
   /// minimize x + y      # or `maximize <linear-expr>` — at most one
   /// ```
   ///
@@ -468,6 +495,7 @@ class CspSolver {
     final vars = <String, ({int min, int max})>{};
     final constraints = <String>[];
     final noOverlap = <NoOverlapGroup>[];
+    final cumulative = <CumulativeGroup>[];
     ({String op, String expr, int lineNum})? objective;
 
     final lines = input.split('\n');
@@ -601,6 +629,90 @@ class CspSolver {
         continue;
       }
 
+      // Round 80: renewable-resource scheduling overlay.
+      //
+      //   cumulative(s1=4@2, s2=3@1, s3=5@3; capacity=3)
+      //
+      // The body splits on `;` into (i) a comma-separated task list
+      // and (ii) a single `capacity=N` clause. Each task pair is
+      // `name=duration@demand` where `name` is a previously-declared
+      // start variable, `duration` is the constant length of the
+      // task's half-open interval, and `demand` is the per-unit-time
+      // resource consumption. Routes to dart_csp's `addCumulative`.
+      final cumulativeMatch =
+          RegExp(r'^cumulative\s*\(\s*([^)]*)\s*\)$').firstMatch(line);
+      if (cumulativeMatch != null) {
+        final inner = cumulativeMatch.group(1)!.trim();
+        final parts = inner.split(';');
+        if (parts.length != 2) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: cumulative expects `tasks; capacity=N` '
+              '(found ${parts.length} `;`-separated segments).');
+        }
+        final taskList = parts[0].trim();
+        final capacityClause = parts[1].trim();
+        final capMatch =
+            RegExp(r'^capacity\s*=\s*(-?\d+)$').firstMatch(capacityClause);
+        if (capMatch == null) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: cumulative — expected `capacity=N`, '
+              'got "$capacityClause".');
+        }
+        final capacity = int.parse(capMatch.group(1)!);
+        if (capacity < 0) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: cumulative capacity must be '
+              'non-negative (got $capacity).');
+        }
+        if (taskList.isEmpty) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: cumulative needs at least one task '
+              'pair `name=duration@demand`.');
+        }
+        final starts = <String>[];
+        final durations = <int>[];
+        final demands = <int>[];
+        for (final raw in taskList.split(',')) {
+          final pair = raw.trim();
+          final m =
+              RegExp(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+)\s*@\s*(-?\d+)$')
+                  .firstMatch(pair);
+          if (m == null) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: cumulative pair "$pair" — '
+                'expected `name=duration@demand`.');
+          }
+          final name = m.group(1)!;
+          final dur = int.parse(m.group(2)!);
+          final dem = int.parse(m.group(3)!);
+          if (!vars.containsKey(name)) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: cumulative references undeclared '
+                'variable "$name".');
+          }
+          if (dur < 0) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: cumulative duration for "$name" '
+                'must be non-negative (got $dur).');
+          }
+          if (dem < 0) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: cumulative demand for "$name" '
+                'must be non-negative (got $dem).');
+          }
+          starts.add(name);
+          durations.add(dur);
+          demands.add(dem);
+        }
+        cumulative.add((
+          starts: starts,
+          durations: durations,
+          demands: demands,
+          capacity: capacity,
+        ));
+        continue;
+      }
+
       // Anything else is a constraint.
       constraints.add(line);
     }
@@ -617,6 +729,7 @@ class CspSolver {
         minimize: objective.op == 'minimize',
         objectiveExpr: objective.expr,
         noOverlap: noOverlap,
+        cumulative: cumulative,
       );
     }
 
@@ -624,6 +737,7 @@ class CspSolver {
       variables: vars,
       constraints: constraints,
       noOverlap: noOverlap,
+      cumulative: cumulative,
       maxSolutions: maxSolutions,
     );
   }
@@ -651,6 +765,7 @@ class CspSolver {
     required bool minimize,
     required String objectiveExpr,
     List<NoOverlapGroup> noOverlap = const [],
+    List<CumulativeGroup> cumulative = const [],
   }) async {
     if (variables.isEmpty) {
       return DiophantineResult.failure('No variables declared.');
@@ -736,6 +851,14 @@ class CspSolver {
       }
       for (final group in noOverlap) {
         problem.addNoOverlap(group.starts, group.durations);
+      }
+      for (final group in cumulative) {
+        problem.addCumulative(
+          group.starts,
+          group.durations,
+          group.demands,
+          group.capacity,
+        );
       }
     } catch (e) {
       return DiophantineResult.failure(

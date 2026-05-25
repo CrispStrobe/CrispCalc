@@ -1080,6 +1080,8 @@ class EnLocalizations implements AppLocalizations {
         return 'Coin change (minimize coins)';
       case 'schedulingMakespan':
         return 'Scheduling — minimize makespan';
+      case 'cumulativeScheduling':
+        return 'Cumulative scheduling — capacity 2';
     }
     return id;
   }
@@ -2116,6 +2118,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Münzwechsel (Anzahl minimieren)';
       case 'schedulingMakespan':
         return 'Scheduling — Makespan minimieren';
+      case 'cumulativeScheduling':
+        return 'Kumulatives Scheduling — Kapazität 2';
     }
     return id;
   }
@@ -2219,6 +2223,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Münzwechsel — Anzahl minimieren (DSL)';
       case 'dslSchedulingMakespan':
         return 'Einzelmaschinen-Scheduling — Makespan minimieren (DSL)';
+      case 'dslCumulativeScheduling':
+        return 'Parallele Ressourcen-Planung — cumulative (DSL)';
       case 'derivPoly':
         return 'Ableitung eines Polynoms';
       case 'chainRule':
@@ -2282,6 +2288,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Lädt ein DSL-Programm, das 17¢ mit den wenigsten Münzen aus {1, 5, 10, 25} via `minimize` zahlt.';
       case 'dslSchedulingMakespan':
         return 'Lädt ein DSL-Programm, das drei Aufgaben (Dauern 4/3/2) auf einer Maschine via `noOverlap` plant und den Makespan minimiert.';
+      case 'dslCumulativeScheduling':
+        return 'Lädt ein DSL-Programm, das drei Aufgaben auf einer Ressource der Kapazität 2 via `cumulative` plant und den Makespan minimiert.';
       case 'derivPoly':
         return 'd/dx von x³ − 4x + 7 an beliebigem x.';
       case 'chainRule':
@@ -3283,6 +3291,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Rendu de monnaie (minimiser les pièces)';
       case 'schedulingMakespan':
         return 'Ordonnancement — minimiser le makespan';
+      case 'cumulativeScheduling':
+        return 'Ordonnancement cumulatif — capacité 2';
     }
     return id;
   }
@@ -3388,6 +3398,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Rendu de monnaie — minimiser les pièces (DSL)';
       case 'dslSchedulingMakespan':
         return 'Ordonnancement mono-machine — minimiser le makespan (DSL)';
+      case 'dslCumulativeScheduling':
+        return 'Ordonnancement parallèle — cumulative (DSL)';
       case 'derivPoly':
         return 'Dérivée d\'un polynôme';
       case 'chainRule':
@@ -3451,6 +3463,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Charge un programme DSL qui paie 17 ¢ avec le moins de pièces de {1, 5, 10, 25} via `minimize`.';
       case 'dslSchedulingMakespan':
         return 'Charge un programme DSL qui ordonnance trois tâches (durées 4/3/2) sur une machine via `noOverlap` et minimise le makespan.';
+      case 'dslCumulativeScheduling':
+        return 'Charge un programme DSL qui ordonnance trois tâches sur une ressource de capacité 2 via `cumulative` et minimise le makespan.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en tout x.';
       case 'chainRule':
@@ -4449,6 +4463,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Cambio de monedas (minimizar piezas)';
       case 'schedulingMakespan':
         return 'Planificación — minimizar el makespan';
+      case 'cumulativeScheduling':
+        return 'Planificación acumulativa — capacidad 2';
     }
     return id;
   }
@@ -4554,6 +4570,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Cambio de monedas — minimizar piezas (DSL)';
       case 'dslSchedulingMakespan':
         return 'Planificación mono-máquina — minimizar el makespan (DSL)';
+      case 'dslCumulativeScheduling':
+        return 'Planificación paralela — cumulative (DSL)';
       case 'derivPoly':
         return 'Derivada de un polinomio';
       case 'chainRule':
@@ -4617,6 +4635,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Carga un programa DSL que paga 17 ¢ con el menor número de monedas de {1, 5, 10, 25} mediante `minimize`.';
       case 'dslSchedulingMakespan':
         return 'Carga un programa DSL que planifica tres tareas (duraciones 4/3/2) en una máquina con `noOverlap` y minimiza el makespan.';
+      case 'dslCumulativeScheduling':
+        return 'Carga un programa DSL que planifica tres tareas sobre un recurso de capacidad 2 con `cumulative` y minimiza el makespan.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en cualquier x.';
       case 'chainRule':

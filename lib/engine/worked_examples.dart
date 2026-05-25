@@ -274,5 +274,17 @@ class WorkedExamples {
           'on one machine via `noOverlap` and minimizes the makespan.',
       expression: 'dsl:schedulingMakespan',
     ),
+    // Round 80: cumulative (renewable-resource) scheduling — sibling
+    // to the round-77 noOverlap entry but on a capacity-2 resource so
+    // tasks with low demand can run in parallel.
+    WorkedExample(
+      id: 'dslCumulativeScheduling',
+      category: WorkedExampleCategory.constraints,
+      title: 'Parallel-resource scheduling — cumulative (DSL)',
+      description:
+          'Loads a DSL program that schedules three tasks on a capacity-2 '
+          'resource via `cumulative` and minimizes the makespan.',
+      expression: 'dsl:cumulativeScheduling',
+    ),
   ];
 }

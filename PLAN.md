@@ -620,16 +620,20 @@ Roadmap (ship one round at a time):
   Coin-change gallery entry demonstrates the canonical least-coins
   problem.
 
-- [x] ~~**CSP Round E — Scheduling (noOverlap)**.~~ Done 2026-05-25 —
-  see HISTORY rounds 77 + 78. `noOverlap(s1=4, s2=3, s3=2)` syntax
-  parses into a `NoOverlapGroup` and routes to
-  `Problem.addNoOverlap` (cumulative time-table propagator under
-  capacity 1, all heights 1). Composes with `minimize` for the
-  single-machine-makespan classic. Round 78 closed the loop by
-  extending the linear-expression parser to accept expressions on
-  both sides of the comparator (`s + d <= makespan` is the natural
-  form now). Still open from the round-E bundle:
-  `addCumulative` (variable per-task heights + global capacity).
+- [x] ~~**CSP Round E — Scheduling (noOverlap + cumulative)**.~~ Done
+  2026-05-25 — see HISTORY rounds 77 + 78 + 80.
+  `noOverlap(s1=4, s2=3, s3=2)` syntax parses into a
+  `NoOverlapGroup` and routes to `Problem.addNoOverlap` (cumulative
+  time-table propagator under capacity 1, all heights 1). Composes
+  with `minimize` for the single-machine-makespan classic. Round
+  78 closed the loop by extending the linear-expression parser to
+  accept expressions on both sides of the comparator (`s + d <=
+  makespan` is the natural form now). Round 80 added the
+  renewable-resource generalization:
+  `cumulative(s1=2@2, s2=3@1; capacity=2)` for variable per-task
+  demands and an integer capacity — routes to
+  `Problem.addCumulative` and shipped with the
+  `cumulativeScheduling` gallery + discovery entries.
 
 #### Precision & number theory (native libs already linked)
 

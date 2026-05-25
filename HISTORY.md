@@ -2,6 +2,84 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 80) — CSP Round E — cumulative (renewable-resource scheduling)
+
+Closes out the round-E scheduling bundle that HANDOFF.md §6 listed
+as the natural next 1-session pick. Round 77's `noOverlap` is the
+unary-resource (single-machine) case; `cumulative` is the
+renewable-resource generalization: tasks consume an integer
+per-unit-time *demand* on a shared resource of integer *capacity*,
+and at every time the total demand may not exceed capacity. Setting
+`capacity = 1` and every demand to `1` reduces to `noOverlap`.
+
+### DSL syntax
+
+```
+cumulative(s1=2@2, s2=3@1, s3=4@1; capacity=2)
+```
+
+Each task pair is `name=duration@demand` where `name` is a
+previously-declared start variable, `duration` is the constant
+length of the task's half-open interval, and `demand` is the
+per-unit-time resource consumption. The semicolon separates the
+comma-separated task list from the `capacity=N` clause — a
+deliberate choice so `capacity` doesn't compete for namespace with
+task variable names.
+
+### Parser + engine
+
+New `CumulativeGroup` typedef in `lib/engine/csp_solver.dart`
+(parallel to `NoOverlapGroup` plus `demands` and `capacity` fields).
+`solveDsl` matches `^cumulative\s*\(\s*([^)]*)\s*\)$`, splits the
+body on `;`, then parses each task pair with
+`([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+)\s*@\s*(-?\d+)`. All the
+same validation the noOverlap parser does — undeclared start
+variable, malformed pair, negative duration — plus negative demand
+and negative capacity rejection.
+
+Both `solveDiophantine` and `solveOptimization` gain an optional
+`List<CumulativeGroup> cumulative` parameter that routes each
+group to dart_csp's `Problem.addCumulative(starts, durations,
+demands, capacity)` — the time-table propagator that already
+backs `addNoOverlap` under the hood.
+
+### Gallery + worked-examples discovery
+
+New `cumulativeScheduling` entry in
+`_DslTabState._gallery` (constraints_screen.dart): three tasks on
+a capacity-2 resource, total work 11, lower-bound makespan 6.
+
+New `dslCumulativeScheduling` WorkedExample entry (catalog id
+plus the `dsl:cumulativeScheduling` sentinel for the catalog
+dialog → DSL-tab navigation).
+
+Localized titles + descriptions for en/de/fr/es (the catalog
+title is the EN fallback; DE/FR/ES override). `constraintsDsl
+ExampleTitle` gains a `cumulativeScheduling` case per locale.
+
+### Tests
+
+Nine new tests in `csp_solver_test.dart` under
+`CspSolver.solveDsl — Round 80 cumulative`:
+- `capacity=1` with unit demands degenerates to noOverlap
+  semantics (sanity vs round 77)
+- `cumulative + minimize makespan` finds optimum 6
+- demand > capacity yields zero solutions
+- undeclared start var rejected with "undeclared"
+- malformed pair (missing `@demand`) rejected with
+  "name=duration@demand"
+- missing capacity clause rejected with "capacity"
+- negative demand / negative capacity / empty task list each
+  rejected with the matching friendly error
+
+`worked_examples_test.dart` updated to include `cumulativeScheduling`
+in `knownDslIds` — the catalog-vs-gallery sentinel check
+already in place since round 73 keeps both surfaces aligned.
+
+One new WorkedExample entry auto-generates 6 locale-coverage
+tests via `worked_examples_localization_test.dart`; suite grows
+from 1248 to 1263.
+
 ## 2026-05-25 (round 79) — Worked-examples discovery for DSL optimization + docs sync
 
 The round-74 (`coinChangeMin`) and round-77

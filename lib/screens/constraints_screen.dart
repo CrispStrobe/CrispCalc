@@ -450,6 +450,23 @@ s2 + 3 <= makespan
 s3 + 2 <= makespan
 minimize makespan''',
     ),
+    (
+      // Round 80: parallel-resource scheduling. Three tasks share a
+      // renewable resource of capacity 2: task s1 alone consumes the
+      // whole resource (demand 2, duration 2), while s2 and s3 each
+      // demand 1 and so can run in parallel with each other. Total
+      // work = 2·2 + 3·1 + 4·1 = 11; with capacity 2 the makespan
+      // lower bound is ⌈11/2⌉ = 6. Achieved e.g. by running s2 + s3
+      // parallel from t=0..3, s3 alone t=3..4, then s1 from t=4..6.
+      id: 'cumulativeScheduling',
+      program: '''vars: s1, s2, s3 in 0..6
+vars: makespan in 0..6
+cumulative(s1=2@2, s2=3@1, s3=4@1; capacity=2)
+s1 + 2 <= makespan
+s2 + 3 <= makespan
+s3 + 4 <= makespan
+minimize makespan''',
+    ),
   ];
 
   final _ctl = TextEditingController(text: _gallery.first.program);

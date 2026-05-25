@@ -425,6 +425,157 @@ vars: x in 0..3
     });
   });
 
+  group('CspSolver.solveDsl — Round 80 cumulative', () {
+    // Soundness check used in every enumeration assertion: at every
+    // integer time t in [0, horizon), the sum of demands across tasks
+    // whose half-open interval [s_i, s_i + d_i) covers t must not
+    // exceed capacity.
+    bool capacityRespected(
+      List<int> starts,
+      List<int> durations,
+      List<int> demands,
+      int capacity,
+      int horizon,
+    ) {
+      for (var t = 0; t < horizon; t++) {
+        var load = 0;
+        for (var i = 0; i < starts.length; i++) {
+          if (t >= starts[i] && t < starts[i] + durations[i]) {
+            load += demands[i];
+          }
+        }
+        if (load > capacity) return false;
+      }
+      return true;
+    }
+
+    test('capacity=1 with unit demands degenerates to noOverlap', () async {
+      // Same shape as the round-77 noOverlap test but routed through
+      // the cumulative path — every returned schedule must still be
+      // pairwise disjoint.
+      const dsl = '''
+vars: s1, s2, s3 in 0..8
+cumulative(s1=4@1, s2=3@1, s3=2@1; capacity=1)
+''';
+      final r = await CspSolver.solveDsl(dsl, maxSolutions: 200);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.solutions, isNotEmpty);
+      for (final s in r.solutions) {
+        final s1 = s['s1']!, s2 = s['s2']!, s3 = s['s3']!;
+        expect(
+          capacityRespected([s1, s2, s3], [4, 3, 2], [1, 1, 1], 1, 9),
+          isTrue,
+          reason: 'over capacity at some t: s1=$s1 s2=$s2 s3=$s3',
+        );
+      }
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('cumulative + minimize makespan finds the proven optimum', () async {
+      // Three tasks on a capacity-2 resource. Total work = 2·2 + 3·1
+      // + 4·1 = 11, lower bound ⌈11/2⌉ = 6. The schedule s1=4, s2=0,
+      // s3=0 (s2+s3 parallel for 3, s3 alone for 1, then s1) achieves
+      // makespan 6.
+      const dsl = '''
+vars: s1, s2, s3 in 0..6
+vars: makespan in 0..6
+cumulative(s1=2@2, s2=3@1, s3=4@1; capacity=2)
+s1 + 2 <= makespan
+s2 + 3 <= makespan
+s3 + 4 <= makespan
+minimize makespan
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 6);
+      expect(r.solutions, hasLength(1));
+      final s = r.solutions.first;
+      expect(
+        capacityRespected(
+          [s['s1']!, s['s2']!, s['s3']!],
+          [2, 3, 4],
+          [2, 1, 1],
+          2,
+          7,
+        ),
+        isTrue,
+        reason: 'optimal schedule exceeds capacity at some t',
+      );
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('demand exceeding capacity makes the program infeasible', () async {
+      // Single task with demand 3 on a capacity-2 resource: trivially
+      // infeasible at every time inside the task interval.
+      const dsl = '''
+vars: s1 in 0..5
+cumulative(s1=2@3; capacity=2)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.solutions, isEmpty);
+    });
+
+    test('cumulative referencing an undeclared start var is rejected',
+        () async {
+      const dsl = '''
+vars: s1 in 0..5
+cumulative(s1=2@1, s9=3@1; capacity=2)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('undeclared'));
+    });
+
+    test('cumulative with malformed pair is rejected', () async {
+      const dsl = '''
+vars: s1, s2 in 0..5
+cumulative(s1=2@1, s2=3; capacity=2)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('name=duration@demand'));
+    });
+
+    test('cumulative without capacity clause is rejected', () async {
+      const dsl = '''
+vars: s1, s2 in 0..5
+cumulative(s1=2@1, s2=3@1)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('capacity'));
+    });
+
+    test('negative demand is rejected', () async {
+      const dsl = '''
+vars: s1 in 0..5
+cumulative(s1=2@-1; capacity=2)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('non-negative'));
+    });
+
+    test('negative capacity is rejected', () async {
+      const dsl = '''
+vars: s1 in 0..5
+cumulative(s1=2@1; capacity=-1)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('non-negative'));
+    });
+
+    test('empty task list is rejected', () async {
+      const dsl = '''
+vars: s1 in 0..5
+cumulative(; capacity=2)
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('at least one task'));
+    });
+  });
+
   group('CspSolver.solveCryptarithm', () {
     test('SEND + MORE = MONEY finds the unique assignment', () async {
       final r = await CspSolver.solveCryptarithm('SEND + MORE = MONEY');

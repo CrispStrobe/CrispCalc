@@ -112,7 +112,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1248 tests total)
+  ... (~50 test files, ~1263 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -132,6 +132,9 @@ project depends on it via a git ref pin in `pubspec.yaml`.
 - **Round 79** — worked-examples library surfaces the round-74
   and round-77 DSL gallery entries (`coinChangeMin`,
   `schedulingMakespan`); PLAN.md + this file synced
+- **Round 80** — CSP DSL `cumulative(s1=2@2, ...; capacity=N)`
+  — renewable-resource generalization of round 77's `noOverlap`;
+  closes the round-E bundle
 
 ## 4. Land mines we have already hit
 
@@ -295,7 +298,24 @@ catches typos in (1) vs (2), but **all four touch-points are
 needed for full discoverability**. Round 79 surfaced the
 round-74 (`coinChangeMin`) and round-77 (`schedulingMakespan`)
 entries that had previously only been in the gallery — keep
-new entries from drifting again.
+new entries from drifting again. Round 80 added
+`cumulativeScheduling` through this same four-point pattern.
+
+### 4.11 `cumulative` body parses by splitting on `;` — exactly two segments
+
+Round 80 syntax is `cumulative(<tasks>; capacity=N)`. The parser
+splits the inner body on `;` and requires *exactly two* segments
+— a missing `; capacity=N` clause is a friendly rejection, not a
+silent fallback. If someone tries to support more than one
+`capacity=N` clause (multi-resource per-overlay) they have to
+choose another separator or another keyword — don't relax the
+exact-2 check; the malformed-input tests rely on it.
+
+The task-pair regex requires `name=duration@demand` (the `@` is
+literal, not optional). Don't let a future "convenience"
+fallback to `name=duration` silently treat the demand as 1 —
+that overloads what `noOverlap(...)` is for and makes the parser
+ambiguous. Keep `cumulative` strict.
 
 ## 5. Cross-screen + cross-feature patterns worth knowing
 
@@ -400,27 +420,29 @@ fresh feature arcs.
 
 ### Small / medium (1 session each)
 
-1. **`addCumulative` (CSP Round E continued)** (~45–60 min) —
-   sibling to round 77's `noOverlap`. Variable per-task heights
-   plus a global capacity. Pick a DSL syntax (`cumulative(s1=4@2,
-   s2=3@1; capacity=3)` or similar), parse + thread through both
-   `solveDiophantine` and `solveOptimization`, add a gallery
-   example like "schedule three jobs on a 2-capacity resource."
-2. **Step-trace "why" annotations** (~1–2 hours) — the Sudoku
+1. **Step-trace "why" annotations** (~1–2 hours) — the Sudoku
    visualizer currently shows *what* cell was assigned, not
    *which constraint* fired. dart_csp's propagation callback
    already fires per decision; surface the firing-constraint
    name as a per-frame caption. Touches engine, widget, and
    i18n.
-3. **8×8 Sudoku-X / 8×8 Killer / 8×8 Disjoint presets** (~30 min
+2. **8×8 Sudoku-X / 8×8 Killer / 8×8 Disjoint presets** (~30 min
    each) — round 75 added the layout but only a Regular preset.
    Each variant works on the layout automatically; just need
    curated puzzles + the preset id + locale labels.
-4. **10×10 / 12×12 / 15×15 Sudoku layouts** (~30 min each) —
+3. **10×10 / 12×12 / 15×15 Sudoku layouts** (~30 min each) —
    pure surface-area growth, mirrors the round-75 pattern (one
    layout constant + one preset + one clue-count branch +
    locale labels). Wikipedia's minimum-clue table provides
    target counts.
+4. **Multi-resource cumulative + RCPSP gallery** (~1 hour) —
+   round 80 ships single-resource `cumulative`. The natural
+   extension is the classical RCPSP (multiple parallel
+   `cumulative` overlays representing distinct resource types);
+   the DSL already accepts multiple `cumulative` lines —
+   nothing else has to change in the engine. The lift is one
+   curated multi-resource gallery example plus the discovery
+   wiring.
 
 ### Fresh feature arcs (multi-session)
 
@@ -451,7 +473,7 @@ fresh feature arcs.
 # Run-and-iterate
 flutter run -d macos              # dev build (debug, hot reload)
 flutter analyze                   # must be clean before commit
-flutter test                      # full suite; expect ~1248 tests, ~1 min
+flutter test                      # full suite; expect ~1263 tests, ~1 min
 dart format <files>               # CI runs format check on pinned Dart toolchain
 
 # CI
@@ -473,8 +495,8 @@ If something in this file is wrong by the time you read it,
 work around it. Stale handover docs cause future regressions.
 
 Specifically:
-- Test count drifts as features land — update §3's "~1248 tests"
-  and §7's "expect ~1248 tests". Adding a WorkedExample entry
+- Test count drifts as features land — update §3's "~1263 tests"
+  and §7's "expect ~1263 tests". Adding a WorkedExample entry
   auto-generates 6 tests (3 non-EN locales × title + description)
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.
