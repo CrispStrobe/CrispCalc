@@ -447,17 +447,20 @@ before handing back to the caller — see `solveOptimization` in
 ### Chosen next arc — MPFR/FLINT precision
 
 `HANDOFF_PRECISION.md` is the load-bearing doc for the next
-session. It covers the wrapper-layer reality (PLAN.md's "tiny:
-one FFI call per constant" framing is wrong by ~10×), three
-viable implementation paths with trade-offs, a 5-round
+session. It covers the three-repo pipeline (math-stack-ios-
+builder → symbolic_math_bridge → CrispCalc), a 5-round
 breakdown, the smallest first slice, and arc-specific land
 mines. Read it before opening a file.
 
 The arc strengthens the CAS-grade moat that PLAN.md's
 Strategic Context (May 2026) calls out, builds on infra that
-already ships (SymEngine + GMP/MPFR/FLINT linked + +load
-keepalive in place), and ships discrete completable rounds
-without blocking on UI/AI design.
+already ships (SymEngine + GMP/MPFR/FLINT compiled into
+xcframeworks + +load keepalive in place), and ships discrete
+completable rounds without blocking on UI/AI design. The C
+wrapper source lives in `math-stack-ios-builder/src/` and
+already uses SymEngine's `basic_evalf` / `ntheory_*` API — so
+adding a precision function is "edit one .c, rebuild, copy
+into bridge, repin."
 
 ### Other arcs (multi-session, deferred)
 
