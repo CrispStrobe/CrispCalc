@@ -188,5 +188,36 @@ void main() {
         expect(find.text(label), findsOneWidget);
       }
     });
+
+    testWidgets(
+        'Sudoku screen: variant switcher cycles without DropdownButton crash',
+        (tester) async {
+      // Round 70 regression: switching variants used to leave the
+      // preset dropdown holding a value (the freshly-constructed
+      // empty puzzle) that wasn't in the items list, which trips
+      // a "There should be exactly one item with this value"
+      // assertion. The picker now falls back to no-selection
+      // when current isn't identical to any preset.
+      await _pumpApp(tester);
+      await tester.tap(find.text('Analysis'));
+      await tester.pumpAndSettle();
+      // Scroll down + tap Sudoku.
+      final scrollable = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(find.text('Sudoku'), 200,
+          scrollable: scrollable);
+      await tester.tap(find.text('Sudoku'));
+      await tester.pumpAndSettle();
+      // Cycle through the three variants in the SegmentedButton.
+      // Tapping any of Regular / Sudoku-X / Killer used to crash.
+      for (final label in const ['Sudoku-X', 'Killer', 'Regular']) {
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+      }
+      // Reaching here without a thrown exception is the assertion.
+      // The Sudoku tab title is enough — if any frame in the cycle
+      // had thrown the dropdown / overflow assertion, pumpAndSettle
+      // would have surfaced it as a test failure.
+      expect(find.text('Sudoku'), findsWidgets);
+    });
   });
 }

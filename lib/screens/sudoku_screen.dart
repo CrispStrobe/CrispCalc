@@ -351,7 +351,12 @@ class _SudokuScreenState extends State<SudokuScreen> {
             label: Text(t.sudokuSolveButton),
           ),
           const SizedBox(height: 8),
-          Row(
+          // Wrap rather than Row so a narrow right panel can flow
+          // the chip below the button instead of overflowing.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
             children: [
               OutlinedButton.icon(
                 onPressed: _checkingUnique ? null : _checkUnique,
@@ -364,7 +369,6 @@ class _SudokuScreenState extends State<SudokuScreen> {
                     : const Icon(Icons.fingerprint, size: 18),
                 label: Text(t.sudokuCheckUnique),
               ),
-              const SizedBox(width: 12),
               if (_unique != null)
                 Chip(
                   visualDensity: VisualDensity.compact,
@@ -416,7 +420,14 @@ class _SudokuScreenState extends State<SudokuScreen> {
           ? Row(
               children: [
                 Expanded(child: gridBlock),
-                SizedBox(width: 360, child: controlsBlock),
+                SizedBox(
+                  width: 360,
+                  // Round 70: the right panel got taller after the
+                  // uniqueness chip + variant picker landed. Wrap in
+                  // a scroll view so short windows don't overflow
+                  // the column at the bottom.
+                  child: SingleChildScrollView(child: controlsBlock),
+                ),
               ],
             )
           : ListView(children: [gridBlock, controlsBlock]),
@@ -457,10 +468,20 @@ class _PresetPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Match by identity so the dropdown shows the active preset
+    // when one is loaded; render no selection ("Custom") when the
+    // current puzzle was built fresh (variant/layout switch,
+    // generator output, hand-entered clues). Returning a non-item
+    // value here trips the DropdownButton "exactly one item with
+    // this value" assertion — passing null avoids the crash.
+    final matched = SudokuPresets.all
+        .map((e) => e.puzzle)
+        .where((p) => identical(p, current))
+        .firstOrNull;
     return DropdownButtonFormField<SudokuPuzzle>(
-      initialValue: SudokuPresets.all
-          .map((e) => e.puzzle)
-          .firstWhere((p) => identical(p, current), orElse: () => current),
+      initialValue: matched,
+      isExpanded: true, // round 70: stop long preset labels from
+      // overflowing the 360 px right panel; text now ellipsises.
       decoration: InputDecoration(
         labelText: AppLocalizations.of(context).sudokuPresetLabelChooser,
         border: const OutlineInputBorder(),
@@ -470,7 +491,10 @@ class _PresetPicker extends StatelessWidget {
         for (final preset in SudokuPresets.all)
           DropdownMenuItem(
             value: preset.puzzle,
-            child: Text(labelOf(preset.puzzle)),
+            child: Text(
+              labelOf(preset.puzzle),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
       ],
       onChanged: (p) {
@@ -643,23 +667,24 @@ class _SizeVariantPickers extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        SegmentedButton<SudokuVariant>(
-          segments: [
-            ButtonSegment(
-              value: SudokuVariant.regular,
-              label: Text(labels.sudokuVariantRegular),
-            ),
-            ButtonSegment(
-              value: SudokuVariant.x,
-              label: Text(labels.sudokuVariantX),
-            ),
-            ButtonSegment(
-              value: SudokuVariant.killer,
-              label: Text(labels.sudokuVariantKiller),
-            ),
+        // Wrap rather than SegmentedButton so the three variant
+        // labels can flow to a second line on narrow right panels
+        // (round 70: the segmented version overflowed by 80+ px at
+        // the standard 360 px panel width).
+        Wrap(
+          spacing: 4,
+          children: [
+            for (final v in SudokuVariant.values)
+              ChoiceChip(
+                label: Text(switch (v) {
+                  SudokuVariant.regular => labels.sudokuVariantRegular,
+                  SudokuVariant.x => labels.sudokuVariantX,
+                  SudokuVariant.killer => labels.sudokuVariantKiller,
+                }),
+                selected: variant == v,
+                onSelected: (_) => onVariantChanged(v),
+              ),
           ],
-          selected: {variant},
-          onSelectionChanged: (s) => onVariantChanged(s.first),
         ),
       ],
     );
@@ -685,29 +710,29 @@ class _GeneratorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // Round 70: Wrap so the difficulty picker + Generate button
+    // flow onto a second line on narrow right panels rather than
+    // overflowing horizontally.
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Expanded(
-          child: SegmentedButton<SudokuDifficulty>(
-            segments: [
-              ButtonSegment(
-                value: SudokuDifficulty.easy,
-                label: Text(labels.sudokuDifficultyEasy),
+        Wrap(
+          spacing: 4,
+          children: [
+            for (final d in SudokuDifficulty.values)
+              ChoiceChip(
+                label: Text(switch (d) {
+                  SudokuDifficulty.easy => labels.sudokuDifficultyEasy,
+                  SudokuDifficulty.medium => labels.sudokuDifficultyMedium,
+                  SudokuDifficulty.hard => labels.sudokuDifficultyHard,
+                }),
+                selected: difficulty == d,
+                onSelected: disabled ? null : (_) => onDifficulty(d),
               ),
-              ButtonSegment(
-                value: SudokuDifficulty.medium,
-                label: Text(labels.sudokuDifficultyMedium),
-              ),
-              ButtonSegment(
-                value: SudokuDifficulty.hard,
-                label: Text(labels.sudokuDifficultyHard),
-              ),
-            ],
-            selected: {difficulty},
-            onSelectionChanged: disabled ? null : (s) => onDifficulty(s.first),
-          ),
+          ],
         ),
-        const SizedBox(width: 8),
         FilledButton.icon(
           onPressed: (generating || disabled) ? null : onGenerate,
           icon: generating
