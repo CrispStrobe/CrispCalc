@@ -199,6 +199,26 @@ class GraphingScreenState extends State<GraphingScreen>
 
     if (textToAdd.isEmpty) return;
 
+    // Reject obviously-malformed input before it lands in a graph
+    // slot. The plot painter would otherwise silently render
+    // nothing for an unparseable expression like `tan(x` or
+    // `1/(x-` and the user gets no feedback. This is a cheap
+    // syntactic gate; expressions that parse but evaluate to NaN
+    // at every sample point still slip through (e.g.
+    // `sqrt(-x^2 - 1)`) — that case is handled by the plot
+    // painter's empty-curve render.
+    final validationError = _validateGraphInput(textToAdd, t);
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(validationError),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     final emptySlotIndex =
         _appState.graphFunctions.indexWhere((f) => f.isEmpty);
     if (emptySlotIndex != -1) {
@@ -220,6 +240,48 @@ class GraphingScreenState extends State<GraphingScreen>
         ),
       );
     }
+  }
+
+  /// Cheap syntactic validation for a graph-function string. Returns
+  /// a localized error message when the input is obviously broken
+  /// (unbalanced parens / brackets / braces, leftover binary
+  /// operators), or `null` if the input looks well-formed enough
+  /// to attempt plotting. Cosmetic prefix `y=` is allowed.
+  String? _validateGraphInput(String input, AppLocalizations t) {
+    var src = input.trim();
+    if (src.toLowerCase().startsWith('y=')) {
+      src = src.substring(2).trim();
+    } else if (src.toLowerCase().startsWith('y =')) {
+      src = src.substring(3).trim();
+    }
+    if (src.isEmpty) return t.graphErrorEmpty;
+
+    // Paren / bracket / brace balance.
+    var parens = 0, brackets = 0, braces = 0;
+    for (var i = 0; i < src.length; i++) {
+      final ch = src[i];
+      if (ch == '(') parens++;
+      if (ch == ')') parens--;
+      if (ch == '[') brackets++;
+      if (ch == ']') brackets--;
+      if (ch == '{') braces++;
+      if (ch == '}') braces--;
+      if (parens < 0 || brackets < 0 || braces < 0) {
+        return t.graphErrorUnbalanced;
+      }
+    }
+    if (parens != 0 || brackets != 0 || braces != 0) {
+      return t.graphErrorUnbalanced;
+    }
+
+    // Trailing binary operator (`x +`, `x -`, `x *`, `x /`, `x ^`).
+    final lastTok = src.replaceAll(RegExp(r'\s+$'), '');
+    if (lastTok.isNotEmpty &&
+        '+-*/^'.contains(lastTok[lastTok.length - 1])) {
+      return t.graphErrorTrailingOperator;
+    }
+
+    return null;
   }
 
   void _removeFunction(String functionToRemove) {

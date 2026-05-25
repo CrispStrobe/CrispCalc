@@ -74,6 +74,9 @@ abstract class AppLocalizations {
   String get historyNoMatches;
 
   // -- Graphing screen --
+  String get graphErrorEmpty;
+  String get graphErrorUnbalanced;
+  String get graphErrorTrailingOperator;
   String graphingTitle(int count);
   String functionAdded(int slot);
   String functionRemoved(int slot);
@@ -601,6 +604,14 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get notepadJsonImportFailed =>
       'Import failed: payload is not valid notepad JSON';
+  @override
+  String get graphErrorEmpty => 'Function is empty';
+  @override
+  String get graphErrorUnbalanced =>
+      'Unbalanced parentheses or brackets — the function can\'t be plotted';
+  @override
+  String get graphErrorTrailingOperator =>
+      'Function ends with an operator — add the right-hand side';
   @override
   String get navGraphing => 'Graphing';
   @override
@@ -1749,6 +1760,14 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get notepadJsonImportFailed =>
       'Import fehlgeschlagen: kein gültiges Rechenblock-JSON';
+  @override
+  String get graphErrorEmpty => 'Funktion ist leer';
+  @override
+  String get graphErrorUnbalanced =>
+      'Klammern unausgewogen — die Funktion kann nicht gezeichnet werden';
+  @override
+  String get graphErrorTrailingOperator =>
+      'Funktion endet mit einem Operator — bitte rechte Seite ergänzen';
   @override
   String get navGraphing => 'Graphen';
   @override
@@ -3044,6 +3063,14 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get notepadJsonImportFailed =>
       'Échec de l\'import : charge utile JSON de note invalide';
+  @override
+  String get graphErrorEmpty => 'La fonction est vide';
+  @override
+  String get graphErrorUnbalanced =>
+      'Parenthèses ou crochets non équilibrés — la fonction ne peut pas être tracée';
+  @override
+  String get graphErrorTrailingOperator =>
+      'La fonction se termine par un opérateur — ajoutez le membre de droite';
   @override
   String get navGraphing => 'Graphes';
   @override
@@ -4344,6 +4371,14 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get notepadJsonImportFailed =>
       'Importación fallida: la carga no es un JSON de nota válido';
+  @override
+  String get graphErrorEmpty => 'La función está vacía';
+  @override
+  String get graphErrorUnbalanced =>
+      'Paréntesis o corchetes desequilibrados — la función no se puede graficar';
+  @override
+  String get graphErrorTrailingOperator =>
+      'La función termina con un operador — añade el lado derecho';
   @override
   String get navGraphing => 'Gráficos';
   @override
