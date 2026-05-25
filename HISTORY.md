@@ -2,6 +2,68 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 85) — Precision arc round 1 — `pi(N)` via MPFR
+
+First concrete round of the MPFR/FLINT precision arc primed by
+`HANDOFF_PRECISION.md`. Validates the whole three-repo pipeline
+(math-stack-ios-builder → symbolic_math_bridge → CrispCalc)
+end-to-end against the round-13 +load keepalive trick so future
+rounds can ship single precision functions in one session each.
+
+### math-stack-ios-builder (feat/precision-pi-N, commit e366c9a5)
+
+New `flutter_symengine_pi_with_precision(int decimal_digits)`
+in `src/flutter_symengine_wrapper.{c,h}`. Takes 1..10000
+decimal digits, converts to MPFR bits via `digits × 3.322 + 8`,
+goes through SymEngine's `basic_const_pi` + `basic_evalf(real=1)`,
+returns a `char*` the caller frees. Rebuilt
+`SymEngineFlutterWrapper.xcframework` for all three slices
+(ios-arm64, ios-arm64_x86_64-simulator, macos-arm64_x86_64);
+verified the symbol is present via `nm`.
+
+### symbolic_math_bridge (feat/precision-pi-N, commit 726a093)
+
+Dart binding: new `_FactorialDart?`-typed `_piWithPrecision`
+field, optional lookup in `_initializeSymEngine` (try/catch so
+older bridge builds without the symbol degrade gracefully),
+real `mpfrHighPrecisionPi(int)` replacing the throwing stub.
++load keepalive lists in iOS and macOS `SymEngineBridge.m`
+extended with the new symbol so release-build dead-strip
+can't drop it. xcframeworks copied from math-stack via
+`copy_xcframeworks.sh`.
+
+### CrispCalc (feat/precision-pi-N)
+
+`CalculatorEngine.getPiWithPrecision(int)` routes through
+`mpfrHighPrecisionPi`. Falls back to the standard 15-digit π
+when the bridge isn't loaded (Linux CI headless mode) — the
+test detects the fallback and skips its prefix assertion
+cleanly. Bridge pin bumped from `6652199` to `726a093`.
+
+### Tests
+
+Five new tests in `test/precision_test.dart`:
+- `pi(50)`, `pi(100)`, `pi(500)` return strings whose first
+  50/100/100 decimal digits match the reference π prefix
+  inlined from piday.org. All three skip silently when the
+  bridge isn't loaded.
+- `pi(0)` and `pi(10001)` throw `ArgumentError`.
+
+Suite 1288 → 1293. Wrapper-layer reality documented in
+`HANDOFF_PRECISION.md` §3 — the three-repo pipeline cost is
+~5-15 min per arc round (the SymEngine rebuild dominates),
+amortized across 3-8 new wrapper functions.
+
+### Worktree discipline
+
+Per the multi-repo-arc lesson (filed in user memory after this
+round started on `main` in all three repos), all edits now go
+through feature-branch worktrees:
+`../CrispCalc-precision/`,
+`../symbolic_math_bridge-precision/`,
+`../math-stack-ios-builder-precision/`. Subsequent precision
+rounds inherit the same worktree pattern.
+
 ## 2026-05-25 (round 84) — Multi-resource RCPSP gallery
 
 Round 80 shipped the single-resource `cumulative` overlay; the

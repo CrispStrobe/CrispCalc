@@ -112,7 +112,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1288 tests total)
+  ... (~50 test files, ~1293 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -143,6 +143,10 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   presets; same parameterized engine, no per-size code paths
 - **Round 84** — multi-resource RCPSP gallery entry; two parallel
   `cumulative` overlays (crew + equipment) for project scheduling
+- **Round 85** — Precision arc round 1: `pi(N)` via MPFR through
+  the three-repo pipeline (math-stack-ios-builder → bridge →
+  CrispCalc). First multi-repo feature-branch arc; see
+  `HANDOFF_PRECISION.md` for the next slices.
 
 ## 4. Land mines we have already hit
 
@@ -494,7 +498,7 @@ below it operationally.
 # Run-and-iterate
 flutter run -d macos              # dev build (debug, hot reload)
 flutter analyze                   # must be clean before commit
-flutter test                      # full suite; expect ~1288 tests, ~1 min
+flutter test                      # full suite; expect ~1293 tests, ~1 min
 dart format <files>               # CI runs format check on pinned Dart toolchain
 
 # CI
@@ -516,8 +520,8 @@ If something in this file is wrong by the time you read it,
 work around it. Stale handover docs cause future regressions.
 
 Specifically:
-- Test count drifts as features land — update §3's "~1288 tests"
-  and §7's "expect ~1288 tests". Adding a WorkedExample entry
+- Test count drifts as features land — update §3's "~1293 tests"
+  and §7's "expect ~1293 tests". Adding a WorkedExample entry
   auto-generates 6 tests (3 non-EN locales × title + description)
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.

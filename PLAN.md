@@ -106,9 +106,12 @@ TestFlight / App Store the rest compounds at zero.
 
 ## P2 — Engine + native bridge
 
-- [ ] **High-precision evaluation.** `SymbolicMathBridge.evaluateWithPrecision`
-  / `gmpPower` / `mpfrHighPrecisionPi` still throw — wire them when the
-  C++ wrapper exposes the corresponding symbols.
+- [~] **High-precision evaluation.** `mpfrHighPrecisionPi` wired
+  2026-05-25 — see HISTORY round 85; `evaluateWithPrecision` and
+  `gmpPower` still throw. Subsequent precision-arc rounds
+  (`e(N)` / `EulerGamma(N)` / `sqrt(2,N)` / number-theory set)
+  follow the same three-repo pipeline documented in
+  `HANDOFF_PRECISION.md`.
 - [x] ~~**Matrix arithmetic end-to-end.** Confirm `det(Matrix([[…]]))`,
   `inv(...)`, `transpose(...)` round-trip cleanly through the engine
   with a release SymEngine build.~~ Done 2026-05-17 — see HISTORY

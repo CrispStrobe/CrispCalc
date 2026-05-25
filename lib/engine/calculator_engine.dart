@@ -161,6 +161,24 @@ class CalculatorEngine {
       ? _bridge!.getEulerGamma()
       : '0.5772156649015329';
 
+  /// Round 81 (precision arc): π to [decimalDigits] decimal places via
+  /// MPFR through SymEngine's `basic_evalf`. Routes through the bridge's
+  /// `mpfrHighPrecisionPi`. Returns the standard double-precision π if
+  /// the native bridge isn't available — useful for `flutter test`
+  /// headless mode on Linux CI where the macOS xcframework doesn't
+  /// load. Throws when [decimalDigits] is out of 1..10000.
+  String getPiWithPrecision(int decimalDigits) {
+    if (decimalDigits < 1 || decimalDigits > 10000) {
+      throw ArgumentError(
+          'decimalDigits must be in 1..10000 (got $decimalDigits)');
+    }
+    if (!_nativeAvailable || _bridge == null) {
+      return '3.141592653589793';
+    }
+    return _bridgeCall(
+        'pi_with_precision', (b) => b.mpfrHighPrecisionPi(decimalDigits));
+  }
+
   String factorial(int n) {
     if (n < 0) return 'Error: factorial requires non-negative integer';
     return _bridgeCall('factorial', (b) => b.factorial(n));
