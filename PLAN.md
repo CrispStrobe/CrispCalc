@@ -1162,6 +1162,309 @@ Group B (V2 — more specialized, ship after Group A lands):
 
 ---
 
+## P6 — Discoverability + help system overhaul (May 2026)
+
+CrispCalc now has five distinct *floors*: Calculator, Notepad,
+Graphing, Functions (user-defined), and Analyze (the hub with 9
+modules). Each grew independently. The result is a feature-
+rich CAS where **most users never find half the features** —
+worked examples are buried in Settings, function references
+don't exist at all, and the precision-arc work in rounds 85-90
+(seven new MPFR/ntheory functions) can only be reached by Dart
+code, not from the UI. This section lays out the recovery.
+
+### Current information architecture (the problem)
+
+Where things live today, and the gaps:
+
+| Surface | What's there | What's buried / missing |
+|---|---|---|
+| **Calculator** | Keypad (Basic / Adv), LaTeX input, history, Settings sheet | Precision functions unreachable. History results give no explanation. No on-demand help on operators. |
+| **Notepad** | Document-style scratch with live recalc (Phase 1-8 in progress) | Same: precision functions, no help on operators, no operator/result explanations. |
+| **Graphing** | 2D + 3D plots, annotations | No tutorial path for "how do I plot a piecewise?" or "what are the annotation toggles?" |
+| **Functions (user-defined)** | Slot-based UDF editor in Settings | No documentation of what syntax is supported. |
+| **Analyze (hub)** | 9 module cards | Modules each have their own help-or-not. No cross-module discovery. |
+| **Settings** | Locale, theme, number format, **worked examples library**, **import/export**, **about** | "Worked examples" buried here — wrong place; users go to Settings to *configure*, not to *learn*. "Funktionsreferenz" doesn't exist anywhere. |
+
+### The five strategic adds
+
+1. **Move "Worked examples" out of Settings.** Make it a
+   first-class surface accessible from a top-of-screen `(?)`
+   icon on the Calculator and Notepad. Same dialog content
+   today — it's purely a location move. Keep a soft link in
+   Settings so old habits don't break, but the *primary*
+   entrance is from the surfaces where the user actually does
+   math.
+
+2. **New top-level Function Reference.** A dedicated dialog +
+   route that catalogs every function/operator CrispCalc
+   supports: `solve`, `expand`, `simplify`, `diff`, `integrate`,
+   `factor`, `rref`, `pi(N)`, `factorint`, `isprime`, etc.
+   Each entry: signature, one-sentence what-it-does, 2-3
+   worked examples with expected output, and a *deep link*
+   into the calculator that inserts the example. Searchable.
+
+3. **Help (?) overlay system across the app.** Every screen
+   gets a `(?)` button in the AppBar. Tapping toggles "help
+   mode": cells / buttons / history rows / notepad lines
+   render with a subtle blue dotted outline and reveal a
+   tooltip + tap-to-expand modal explaining what they are and
+   how they work. Tap `(?)` again to exit.
+
+4. **Precision-arc + ntheory surfacing.** Round-85/86/89/90
+   wrappers (`pi(N)`, `e(N)`, `EulerGamma(N)`, `sqrt(2,N)`,
+   `isprime(n)`, `nextprime(n)`, `prevprime(n)`,
+   `factorint(n)`) become first-class user-facing functions in
+   Calculator + Notepad parsers, with Adv-keypad buttons, and
+   discovery via #1 and #2.
+
+5. **Cross-surface result explanation.** Long-press / right-
+   click on any history row in Calculator or any line in
+   Notepad opens a "How was this computed?" modal that names
+   the engine call(s) used (`SymEngine.solve` / `MPFR.evalf` /
+   `FLINT.fmpz_factor` / `dart_csp.getSolutions` / …), with a
+   short trace where the engine surfaces one (e.g. solve
+   steps, integration steps, Sudoku trace replay).
+
+### Round-by-round plan (rounds 91-105)
+
+Each round is single-session, shippable independently, and
+testable in CI. The plan is conservative — each round delivers
+visible user value rather than chunks of plumbing.
+
+#### Rounds 91-92: Precision-arc surfacing (the low-hanging fruit)
+
+##### Round 91 — Calculator parser binds precision arc
+
+Engine: in `CalculatorEngine.evaluate` (and the notepad
+dispatcher), pre-parse:
+
+- `pi(N)` / `e(N)` / `EulerGamma(N)` / `sqrt(2, N)` →
+  route to the round-85/86 `getXWithPrecision` getters.
+- `isprime(n)` / `nextprime(n)` / `prevprime(n)` →
+  route to the round-89 ntheory methods.
+- `factorint(n)` → route to round 90; format the result as
+  `2³ · 3² · 5` (Unicode superscripts) inline.
+
+Tests: each of the 8 new shapes produces the right string in
+history. Errors (invalid N, too-large factorint input)
+surface as friendly inline messages.
+
+Round 91 is the load-bearing UI round — without it,
+rounds 85-90's wrappers are unreachable from the UI.
+
+##### Round 92 — Adv keypad buttons + worked-examples entries
+
+- Adv tab gains a new "Number theory & precision" subsection
+  with 8 buttons: π(N), e(N), √2(N), γ(N), isprime, nextprime,
+  prevprime, factorint. Each inserts a template with cursor
+  positioned between the parens.
+- 5-8 new `WorkedExample` catalog entries in
+  `lib/engine/worked_examples.dart`:
+  - "π to 100 digits" → `pi(100)`
+  - "Factorize 360" → `factorint(360)`
+  - "Is 2⁶⁴ + 1 prime?" → `isprime(2^64+1)`
+  - "Next prime after 1000" → `nextprime(1000)`
+  - "Mersenne M31" → `factorint(2^31-1)` (shows it's prime →
+    single record)
+- New `WorkedExampleCategory.precision` (or fold into
+  `numberTheory`).
+
+#### Rounds 93-95: Move worked examples out of Settings
+
+##### Round 93 — Add (?) icon + lift dialog to Calculator + Notepad
+
+Both Calculator and Notepad screens get a `(?)` icon in the
+AppBar. Tapping opens the existing `WorkedExamplesDialog`. The
+Settings entry stays but its subtitle changes from "Browse
+and copy ready-to-paste calculator expressions covering the
+major problem types" to "(see the **?** icon on the
+Calculator and Notepad screens)".
+
+##### Round 94 — Pre-filter the dialog by the active surface
+
+When opened from the Calculator screen, the dialog defaults to
+the "All" category. When opened from Notepad, it filters to
+categories that make sense for the document model
+(calculus / algebra / linear algebra; **not** Sudoku /
+constraints / units which are surface-specific). Same dialog,
+different default filter.
+
+##### Round 95 — Examples open the right module
+
+Today every example inserts a string into the calculator. With
+the round-69 `open:<module>` sentinel and round-73 `dsl:<id>`
+sentinel patterns already in place, extend so a Sudoku example
+opens the Sudoku module pre-loaded, a Statistics example opens
+the Statistics module with the data pre-filled, etc. Round 92's
+new precision entries all stay calculator-bound.
+
+#### Rounds 96-100: Function Reference surface
+
+##### Round 96 — Data model + scaffolding
+
+New `lib/engine/function_reference.dart` with:
+
+```dart
+class FunctionRef {
+  final String id;            // 'solve', 'diff', 'pi_precision'
+  final FunctionRefCategory category;
+  final String signature;     // 'solve(equation, variable)'
+  final String shortDescription; // one sentence
+  final List<({String input, String expected, String hint})> examples;
+  final List<String> seeAlso;  // ids of related FunctionRefs
+}
+
+enum FunctionRefCategory {
+  cas,             // solve, expand, simplify, factor, diff, integrate
+  numberTheory,    // gcd, lcm, isprime, factorint, ...
+  precision,       // pi(N), e(N), sqrt(2, N), ...
+  matrix,          // det, inv, rref, transpose, ...
+  graphing,        // plot annotations, derivative overlay, ...
+  statistics,      // mean, stddev, t-test, ...
+  constraints,     // DSL operators
+  sudoku,          // variant rules
+  units,           // unit math
+}
+```
+
+Plus a `FunctionReferenceDialog` widget (mirrors
+WorkedExamplesDialog: search, category chips, list, detail
+panel). Cards link to a "Try in Calculator" deep-link
+(uses the existing `pendingInsertExpression` AppState slot)
+and a "See worked example" cross-link.
+
+##### Round 97 — Write CAS function entries (the meat)
+
+~15 entries for the CAS category alone: `solve`, `expand`,
+`simplify`, `factor`, `diff`, `integrate`, `subst`, `limit`,
+`series`, `taylor`, `gcd`, `lcm`, `factorial`, `fibonacci`,
+plus the precision-arc set. Each gets the 2-3 examples + the
+"how SymEngine implements this" one-paragraph explanation.
+
+Importantly: these explanations are NOT the math itself —
+they're "in CrispCalc, `solve(x^2 - 1, x)` returns `[-1, 1]`
+as a list; the underlying call is SymEngine's
+`solve_poly()`; for transcendental equations it falls through
+to the numerical solver".
+
+##### Round 98 — Matrix + linear algebra entries
+
+`det`, `inv`, `transpose`, `rref`, `Matrix([[…]])` syntax,
+eigenvalues (if shipped). ~8 entries.
+
+##### Round 99 — Statistics + Constraints + Sudoku entries
+
+The Analyze-module categories. ~15 more entries describing the
+Statistics module functions (`mean`, `welchT`, `pairedT`,
+`anova1`, `chi2Goodness`, `chi2Independence`, `fisherExact`,
+`wilcoxon`, `signTest`), the Constraints DSL operators (`vars`,
+`allDifferent`, `noOverlap`, `cumulative`, `minimize`,
+`maximize`), and the Sudoku variant rules.
+
+##### Round 100 — i18n pass
+
+Function reference content × 4 locales. By far the biggest
+i18n round to date — 50+ entries × ~150 words each × 4 locales
+= ~30k words. Will likely span 2-3 sub-rounds. Triage:
+- 100a: EN only (existing primary)
+- 100b: DE (high priority — user's local audience)
+- 100c: FR + ES batched
+
+#### Rounds 101-104: Help overlay system
+
+##### Round 101 — Help-mode design + state
+
+Each screen's `_ScreenState` gains a `_helpMode: bool`. AppBar
+gets a `(?)` IconButton that toggles. New `HelpModeNotifier`
+in AppState so we can show / hide help mode across screens
+consistently (Calculator + Notepad share). Visual: when
+`_helpMode` is true, target widgets get a dotted blue outline.
+
+Round 101 ships just the toggle + outline — no popovers yet.
+Establishes the pattern.
+
+##### Round 102 — Help popovers on Calculator keypad
+
+For each Adv-tab button, tap-in-help-mode opens a small
+popover with:
+- The function name + signature
+- One-line description
+- A "Learn more" link to its FunctionRef entry
+
+About 30 buttons in the Calculator's Adv tab today. The
+popover content can derive from FunctionRef entries (round 97)
+so there's no content duplication.
+
+##### Round 103 — Help on history rows (Calculator)
+
+In help mode, tapping a history row opens a "How was this
+computed?" modal:
+- Names the engine call(s) (`SymEngine.solve`, `MPFR.evalf`,
+  ...)
+- For solve / integrate / diff: shows the step trace if
+  available (round 24/26-ish step trace work).
+- For factorint / isprime: short explanation of the algorithm.
+- Always: a link to the relevant FunctionRef entry.
+
+##### Round 104 — Help on Notepad lines
+
+Same pattern as round 103 but for Notepad. The line model
+already carries enough info (parsed expression + result + any
+errors) for the modal to fire. Long-press on touch
+platforms; right-click on desktop.
+
+#### Round 105 — Help on Analyze hub modules
+
+Each module's screen gets a `(?)` button that, in help mode,
+explains the module: what it computes, what the inputs mean,
+what the output represents, and links into a worked example.
+Notable per-module additions:
+
+- **Statistics**: explain p-value, confidence interval, what
+  the test types do.
+- **Constraints (DSL)**: explain `allDifferent`, `noOverlap`,
+  `cumulative`, `minimize` with a side-by-side example.
+- **Sudoku**: explain the variant rules (X, Killer,
+  Disjoint), the hint levels, the win-check semantics.
+
+### Distribution surfaces (information architecture, refined)
+
+After P6 lands, the new IA:
+
+| Surface | Primary intent | (?) opens | Long-press / right-click opens |
+|---|---|---|---|
+| Calculator | Type math, see history | Worked Examples + Function Reference modals | On history row: "How was this computed?" |
+| Notepad | Document-style math | Same modals (filtered to calc-relevant categories) | On line: same explanation modal |
+| Graphing | Plot a function | Function Reference filtered to graphing | On annotation: explanation of extremum / inflection / root algorithm |
+| Functions (UDF editor) | Define + edit UDFs | Function Reference + worked examples for UDF syntax | n/a |
+| Analyze hub | Pick a module | Module-list explanation | n/a |
+| (Inside any Analyze module) | Solve a CSP / draw a Sudoku / … | Module-specific worked examples + reference | Result row → algorithm explanation |
+
+Settings becomes purely *configuration*: locale, theme, number
+format, user-defined functions, import/export, about. The
+"learning" surfaces all move out.
+
+### Why this matters (and what we measure)
+
+The strategic context from earlier in this file calls out
+that CrispCalc is "competitive-to-ahead on the
+scientific/power-user axis" but the input paradigm is
+"still 1995". P6 doesn't fix the input paradigm — that's the
+notepad work — but it fixes the **discovery** of all the
+power-user features that already exist. A user who can find
+`factorint`, `welchT`, and the CSP DSL is a fundamentally
+different user from one who only finds the `+`/`-`/`×`/`÷`
+buttons.
+
+Success metric (informal): after P6 lands, a first-time user
+should be able to discover, understand, and use a non-trivial
+feature (e.g. Sudoku-X with hints, t-test on a small dataset,
+factorint of a 20-digit number) within 5 minutes of opening
+the app — without reading any external documentation.
+
+---
+
 ## Out of scope this round
 
 - C++ implementation of symbolic `limit` and `integrate`.
