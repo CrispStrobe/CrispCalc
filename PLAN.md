@@ -450,7 +450,7 @@ but become *moat-building* rather than *positioning*, since the moat
       empty doc can be created, mutated, persisted, and
       round-tripped through Export → clipboard → Import; the
       Welcome doc appears after a fresh install.
-    - **Phase 2 — Line parser + scope.** New
+    - **Phase 2 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/engine/notepad_evaluator.dart`. Per-line classification:
       `{blank, comment, useDirective, assignment, expression}`.
       Comment per **#13**: regex `^\s*(//|#)`; everything after the
