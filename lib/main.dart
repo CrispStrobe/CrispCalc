@@ -10,6 +10,7 @@
 
 import 'dart:io' show Platform, exit, stdout;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -592,16 +593,26 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.fact_check_outlined),
-                  title: Text(t.matrixDiagnosticsTitle),
-                  subtitle: Text(t.matrixDiagnosticsSubtitle),
-                  trailing: const Icon(Icons.play_arrow),
-                  onTap: () => _showMatrixDiagnostics(context, t),
+              // Round 91 follow-up: matrix self-test is a developer
+              // diagnostic — it runs the SymbolicMathBridge calls and
+              // prints a pass/fail report. End users will never need
+              // it, and a release-build user who taps it sees raw
+              // bridge output. Gate behind kDebugMode so it ships only
+              // to dev builds. CI / scripted runs still reach it via
+              // the CRISPCALC_DIAGNOSTIC=matrix env-var at startup
+              // (see main.dart:73-79).
+              if (kDebugMode) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: Text(t.matrixDiagnosticsTitle),
+                    subtitle: Text(t.matrixDiagnosticsSubtitle),
+                    trailing: const Icon(Icons.play_arrow),
+                    onTap: () => _showMatrixDiagnostics(context, t),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               Card(
                 child: ListTile(
