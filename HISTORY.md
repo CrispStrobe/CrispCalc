@@ -2,6 +2,56 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 68) — CSP Round C: free-form constraint mini-DSL
+
+A third tab in the Constraints module lets the user write a
+constraint program directly:
+
+```
+vars: x, y, z in 1..9
+allDifferent(x, y, z)
+x + y + z == 15
+```
+
+This was the next `[ ]` item after Sudoku in PLAN.md.
+
+### Engine: `CspSolver.solveDsl(text)`
+
+A small line-based parser:
+
+- `vars:` lines declare comma-separated names + a `lo..hi`
+  integer range. Multiple `vars:` lines allowed. Names must
+  match `[a-zA-Z_][a-zA-Z0-9_]*`; ranges check `hi >= lo` and
+  width ≤ 10000 (caps dart_csp domain size). Duplicate
+  declarations are an error.
+- `allDifferent(x, y, z)` is expanded to pairwise `!=`
+  constraints (≥ 2 vars required).
+- `#` comments (line and trailing) + blank lines are stripped.
+- Anything else is treated as a constraint and routed through
+  the existing `solveDiophantine` path — same `_tryParseLinear`
+  router that already handles coefficient-bearing
+  `2*x + 3*y == 12`.
+
+The parser returns `DiophantineResult` so the existing
+`_ResultBlock` widget (truncation badge + copy-to-clipboard
++ error chip) just works.
+
+### UI
+
+`_DslTab` adds a multi-line monospace TextField (pre-seeded
+with the magic-sum example), a Solve button with spinner, and
+the reused `_ResultBlock`. Three new i18n strings
+(`constraintsTabDsl`, `constraintsDslIntro`,
+`constraintsDslInputLabel`) across en/de/fr/es, locale-coverage
+test extended.
+
+### Tests
+
+Seven DSL tests in `csp_solver_test.dart`: magic-sum example,
+comments + blank lines, missing `vars:`, invalid name,
+duplicate declaration, `allDifferent` with too few vars, and
+the coefficient-bearing linear constraint.
+
 ## 2026-05-25 (round 67) — Sudoku: Killer-aware hint mode
 
 The pencil-marks (Show Hints) currently filter by row, column,

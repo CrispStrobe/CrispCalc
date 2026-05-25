@@ -588,18 +588,12 @@ Roadmap (ship one round at a time):
     annotations explaining each propagation (currently the
     visualizer shows *what* changes, not *why*).
 
-- [ ] **CSP Round C — Generic constraint mini-DSL**.
-  A free-text "Constraint problem" editor in the Analysis hub. Users
-  type:
-  ```
-  vars: x, y, z in 1..9
-  allDifferent(x, y, z)
-  x + y + z == 15
-  ```
-  We feed it to dart_csp's string parser and surface solutions in a
-  table with copy-to-clipboard / show-trace. Power-user feature; very
-  flexible. Worked-example entries for N-queens, magic square,
-  map-coloring, simple scheduling.
+- ~~**CSP Round C — Generic constraint mini-DSL**.~~ **V1 SHIPPED**
+  in HISTORY round 68. A "Free-form" tab in the Constraints module
+  accepts the documented DSL (`vars: x, y in 1..9` + `allDifferent`
+  + string-form constraints) and surfaces solutions in the
+  Diophantine result-block. V2: trace mode, worked-example
+  entries for N-queens / magic-square / map-coloring / scheduling.
 
 - [ ] **CSP Round D — Optimization + scheduling (deferred)**.
   Exposes `minimize` / `maximize` to the DSL; adds

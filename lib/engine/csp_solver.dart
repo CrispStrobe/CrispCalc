@@ -349,4 +349,103 @@ class CspSolver {
     final s = e.toString();
     return s.replaceAll(RegExp(r'^Exception:\s*'), '').split('\n').first;
   }
+
+  // === CSP Round C — generic constraint mini-DSL ==========================
+
+  /// Round 68: parses a small line-based DSL and solves it. Grammar:
+  ///
+  /// ```
+  /// # comments start with '#', blank lines ignored
+  /// vars: x, y, z in 1..9
+  /// allDifferent(x, y, z)
+  /// x + y + z == 15
+  /// ```
+  ///
+  /// `vars:` lines accept comma-separated variable names + an
+  /// inclusive `lo..hi` integer range. Multiple `vars:` lines are
+  /// allowed. `allDifferent(...)` is expanded to pairwise `!=`
+  /// constraints (small N — typical CSP examples have ≤ 10 vars).
+  /// Anything else is fed to the existing dart_csp string-constraint
+  /// parser / `addLinear*` router via [solveDiophantine].
+  static Future<DiophantineResult> solveDsl(String input,
+      {int maxSolutions = 100}) async {
+    final vars = <String, ({int min, int max})>{};
+    final constraints = <String>[];
+
+    final lines = input.split('\n');
+    for (var lineNum = 0; lineNum < lines.length; lineNum++) {
+      var line = lines[lineNum].trim();
+      // Strip trailing '#' comments.
+      final hash = line.indexOf('#');
+      if (hash >= 0) line = line.substring(0, hash).trim();
+      if (line.isEmpty) continue;
+
+      // Variable declaration.
+      final varsMatch =
+          RegExp(r'^vars\s*:\s*(.+?)\s+in\s+(-?\d+)\s*\.\.\s*(-?\d+)$')
+              .firstMatch(line);
+      if (varsMatch != null) {
+        final names = varsMatch
+            .group(1)!
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        final lo = int.parse(varsMatch.group(2)!);
+        final hi = int.parse(varsMatch.group(3)!);
+        if (names.isEmpty) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: vars: declared no names.');
+        }
+        for (final name in names) {
+          if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(name)) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: invalid variable name "$name".');
+          }
+          if (vars.containsKey(name)) {
+            return DiophantineResult.failure(
+                'Line ${lineNum + 1}: variable "$name" already declared.');
+          }
+          vars[name] = (min: lo, max: hi);
+        }
+        continue;
+      }
+
+      // allDifferent expansion to pairwise !=.
+      final allDiffMatch =
+          RegExp(r'^allDifferent\s*\(\s*([^)]*)\s*\)$').firstMatch(line);
+      if (allDiffMatch != null) {
+        final names = allDiffMatch
+            .group(1)!
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (names.length < 2) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: allDifferent needs ≥ 2 variables.');
+        }
+        for (var i = 0; i < names.length; i++) {
+          for (var j = i + 1; j < names.length; j++) {
+            constraints.add('${names[i]} != ${names[j]}');
+          }
+        }
+        continue;
+      }
+
+      // Anything else is a constraint.
+      constraints.add(line);
+    }
+
+    if (vars.isEmpty) {
+      return DiophantineResult.failure(
+          'No variables declared. Use `vars: x, y in 1..9`.');
+    }
+
+    return solveDiophantine(
+      variables: vars,
+      constraints: constraints,
+      maxSolutions: maxSolutions,
+    );
+  }
 }

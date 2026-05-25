@@ -307,6 +307,9 @@ abstract class AppLocalizations {
   String get moduleConstraintsSubtitle;
   String get constraintsTabDiophantine;
   String get constraintsTabCryptarithm;
+  String get constraintsTabDsl;
+  String get constraintsDslIntro;
+  String get constraintsDslInputLabel;
   String get constraintsDiophantineIntro;
   String get constraintsCryptarithmIntro;
   String get constraintsVariablesLabel;
@@ -1021,6 +1024,15 @@ class EnLocalizations implements AppLocalizations {
   String get constraintsTabDiophantine => 'Diophantine';
   @override
   String get constraintsTabCryptarithm => 'Cryptarithm';
+  @override
+  String get constraintsTabDsl => 'Free-form';
+  @override
+  String get constraintsDslIntro =>
+      'Declare variables with `vars: x, y in 1..9`, '
+      'use `allDifferent(x, y, z)` for distinctness, and '
+      'write any other line as a constraint (e.g. `x + 2*y == 10`).';
+  @override
+  String get constraintsDslInputLabel => 'Constraint program';
   @override
   String get constraintsDiophantineIntro =>
       'Declare bounded integer variables, list the constraints they '
@@ -2001,6 +2013,15 @@ class DeLocalizations implements AppLocalizations {
   String get constraintsTabDiophantine => 'Diophantisch';
   @override
   String get constraintsTabCryptarithm => 'Kryptarithmus';
+  @override
+  String get constraintsTabDsl => 'Freitext';
+  @override
+  String get constraintsDslIntro =>
+      'Variablen deklarieren mit `vars: x, y in 1..9`, '
+      'für Verschiedenheit `allDifferent(x, y, z)`, '
+      'jede weitere Zeile ist eine Bedingung (z.B. `x + 2*y == 10`).';
+  @override
+  String get constraintsDslInputLabel => 'Bedingungsprogramm';
   @override
   String get constraintsDiophantineIntro =>
       'Beschränkte ganzzahlige Variablen deklarieren, die zu '
@@ -3084,6 +3105,16 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get constraintsTabCryptarithm => 'Cryptarithme';
   @override
+  String get constraintsTabDsl => 'Texte libre';
+  @override
+  String get constraintsDslIntro =>
+      'Déclarer des variables avec `vars: x, y in 1..9`, '
+      'utiliser `allDifferent(x, y, z)` pour la distinction, '
+      "et écrire toute autre ligne comme contrainte "
+      '(p. ex. `x + 2*y == 10`).';
+  @override
+  String get constraintsDslInputLabel => 'Programme de contraintes';
+  @override
   String get constraintsDiophantineIntro =>
       'Déclare des variables entières bornées, liste les contraintes '
       'à satisfaire — le solveur énumère toutes les solutions '
@@ -4165,6 +4196,16 @@ class EsLocalizations implements AppLocalizations {
   String get constraintsTabDiophantine => 'Diofántico';
   @override
   String get constraintsTabCryptarithm => 'Criptoaritmo';
+  @override
+  String get constraintsTabDsl => 'Texto libre';
+  @override
+  String get constraintsDslIntro =>
+      'Declare variables con `vars: x, y in 1..9`, '
+      'use `allDifferent(x, y, z)` para distinción, '
+      'y escriba cualquier otra línea como restricción '
+      '(p. ej. `x + 2*y == 10`).';
+  @override
+  String get constraintsDslInputLabel => 'Programa de restricciones';
   @override
   String get constraintsDiophantineIntro =>
       'Declara variables enteras acotadas, lista las restricciones a '

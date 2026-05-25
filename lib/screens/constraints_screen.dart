@@ -35,7 +35,7 @@ class _ConstraintsScreenState extends State<ConstraintsScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -55,12 +55,13 @@ class _ConstraintsScreenState extends State<ConstraintsScreen>
           tabs: [
             Tab(text: t.constraintsTabDiophantine),
             Tab(text: t.constraintsTabCryptarithm),
+            Tab(text: t.constraintsTabDsl),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabs,
-        children: const [_DiophantineTab(), _CryptarithmTab()],
+        children: const [_DiophantineTab(), _CryptarithmTab(), _DslTab()],
       ),
     );
   }
@@ -339,6 +340,83 @@ class _CryptarithmTabState extends State<_CryptarithmTab> {
           if (_result != null) ...[
             const SizedBox(height: 16),
             _CryptarithmResultBlock(result: _result!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// === DSL tab (CSP Round C) ==============================================
+
+class _DslTab extends StatefulWidget {
+  const _DslTab();
+  @override
+  State<_DslTab> createState() => _DslTabState();
+}
+
+class _DslTabState extends State<_DslTab> {
+  static const _example = '''vars: x, y, z in 1..9
+allDifferent(x, y, z)
+x + y + z == 15''';
+
+  final _ctl = TextEditingController(text: _example);
+  DiophantineResult? _result;
+  bool _solving = false;
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _solve() async {
+    setState(() => _solving = true);
+    final r = await CspSolver.solveDsl(_ctl.text);
+    if (!mounted) return;
+    setState(() {
+      _solving = false;
+      _result = r;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(t.constraintsDslIntro,
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctl,
+            minLines: 6,
+            maxLines: 16,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            decoration: InputDecoration(
+              labelText: t.constraintsDslInputLabel,
+              border: const OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _solving ? null : _solve,
+            icon: _solving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_arrow),
+            label: Text(t.constraintsSolveButton),
+          ),
+          if (_result != null) ...[
+            const SizedBox(height: 16),
+            _ResultBlock(result: _result!),
           ],
         ],
       ),

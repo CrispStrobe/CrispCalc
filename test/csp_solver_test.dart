@@ -86,6 +86,81 @@ void main() {
     }, timeout: const Timeout(Duration(seconds: 10)));
   });
 
+  group('CspSolver.solveDsl', () {
+    test('classic 3-variable example: x + y + z = 15 over 1..9 all-diff',
+        () async {
+      const dsl = '''
+vars: x, y, z in 1..9
+allDifferent(x, y, z)
+x + y + z == 15
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.solutions, isNotEmpty);
+      for (final s in r.solutions) {
+        expect(s['x']! + s['y']! + s['z']!, 15);
+        expect({s['x'], s['y'], s['z']}.length, 3);
+      }
+    });
+
+    test('comments + blank lines are ignored', () async {
+      const dsl = '''
+# a problem
+vars: a, b in 1..5
+
+# all-different
+allDifferent(a, b)
+
+a + b == 7  # the constraint
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.solutions.length, 4);
+    });
+
+    test('rejects missing vars: line with friendly error', () async {
+      final r = await CspSolver.solveDsl('x + y == 10');
+      expect(r.ok, isFalse);
+      expect(r.error, contains('No variables declared'));
+    });
+
+    test('rejects invalid variable name', () async {
+      final r = await CspSolver.solveDsl('vars: 1bad in 1..9');
+      expect(r.ok, isFalse);
+      expect(r.error, contains('invalid variable name'));
+    });
+
+    test('rejects duplicate variable declaration', () async {
+      final r = await CspSolver.solveDsl('''
+vars: x in 1..9
+vars: x in 1..9
+''');
+      expect(r.ok, isFalse);
+      expect(r.error, contains('already declared'));
+    });
+
+    test('allDifferent with only one var is an error', () async {
+      final r = await CspSolver.solveDsl('''
+vars: x in 1..9
+allDifferent(x)
+''');
+      expect(r.ok, isFalse);
+    });
+
+    test('supports coefficient-bearing linear constraints', () async {
+      const dsl = '''
+vars: x, y in 1..5
+2*x + 3*y == 12
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.solutions, isNotEmpty);
+      for (final s in r.solutions) {
+        expect(2 * s['x']! + 3 * s['y']!, 12);
+      }
+    });
+  });
+
   group('CspSolver.solveCryptarithm', () {
     test('SEND + MORE = MONEY finds the unique assignment', () async {
       final r = await CspSolver.solveCryptarithm('SEND + MORE = MONEY');
