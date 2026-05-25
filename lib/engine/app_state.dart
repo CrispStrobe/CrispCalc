@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/exact_integer.dart';
+import 'notepad.dart';
 
 enum HistoryEntryType { calculation, solve }
 
@@ -115,6 +116,8 @@ class AppState extends ChangeNotifier {
   static const _kExactIntegerMode = 'crisp.exactIntegerMode';
   static const _kOnboardingDismissed = 'crisp.onboardingDismissed';
   static const _kUserFunctions = 'crisp.userFunctions';
+  static const _kNotepadDocs = 'crisp.notepadDocs';
+  static const _kCurrentNotepadDoc = 'crisp.currentNotepadDoc';
 
   static const int _kGraphSlotCount = 10;
   static const int _kHistoryCap = 200;
@@ -164,6 +167,8 @@ class AppState extends ChangeNotifier {
     userVariables.clear();
     userFunctions.clear();
     functionParameters.clear();
+    notepadDocuments.clear();
+    _currentNotepadDocId = null;
     for (var i = 0; i < graphFunctions.length; i++) {
       graphFunctions[i] = '';
     }
@@ -250,8 +255,39 @@ class AppState extends ChangeNotifier {
           debugPrint('STATE: failed to parse parameters: $e');
         }
       }
+      final notepadJson = _prefs!.getString(_kNotepadDocs);
+      if (notepadJson != null) {
+        try {
+          final list = jsonDecode(notepadJson) as List<dynamic>;
+          for (final raw in list) {
+            if (raw is Map) {
+              final doc = NotepadDocument.fromJson(
+                  Map<String, dynamic>.from(raw));
+              if (doc.id.isNotEmpty) notepadDocuments[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          debugPrint('STATE: failed to parse notepad docs: $e');
+        }
+      }
+      _currentNotepadDocId = _prefs!.getString(_kCurrentNotepadDoc);
     } catch (e) {
       debugPrint('STATE: failed to load prefs: $e');
+    }
+    // First-launch seed (decision #7): empty `Untitled` + the static
+    // `Welcome` sample. Runs whenever there are zero notepad docs,
+    // not just on a literal first launch — if a user deletes every
+    // doc (including Welcome) and relaunches, they get a clean slate
+    // back. The Welcome sample is always recreated from the constant
+    // so its content stays in sync across releases.
+    if (notepadDocuments.isEmpty) {
+      final untitled = NotepadDocument.fresh(name: 'Untitled');
+      final welcome = buildWelcomeNotepadDocument();
+      notepadDocuments[untitled.id] = untitled;
+      notepadDocuments[welcome.id] = welcome;
+      _currentNotepadDocId = untitled.id;
+      _persistNotepadDocs();
+      _persistCurrentNotepadDoc();
     }
     _loaded = true;
   }
@@ -331,6 +367,57 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  void _persistNotepadDocs() {
+    _prefs?.setString(
+      _kNotepadDocs,
+      jsonEncode(notepadDocuments.values
+          .map((d) => d.toJson())
+          .toList(growable: false)),
+    );
+  }
+
+  void _persistCurrentNotepadDoc() {
+    final id = _currentNotepadDocId;
+    if (id == null) {
+      _prefs?.remove(_kCurrentNotepadDoc);
+    } else {
+      _prefs?.setString(_kCurrentNotepadDoc, id);
+    }
+  }
+
+  /// Insert or update a notepad document. The `updatedAt` timestamp
+  /// is the caller's responsibility — bump it on the doc before
+  /// passing it in if you want the doc list to re-sort.
+  void setNotepadDocument(NotepadDocument doc) {
+    notepadDocuments[doc.id] = doc;
+    _persistNotepadDocs();
+    notifyListeners();
+  }
+
+  /// Remove a notepad document. If [id] was the current doc, the
+  /// next one (alphabetically by id) becomes current, or `null` if
+  /// none remain. Callers that want snackbar-undo (decision #18)
+  /// should snapshot the doc *before* calling this.
+  void deleteNotepadDocument(String id) {
+    final removed = notepadDocuments.remove(id);
+    if (removed == null) return;
+    if (_currentNotepadDocId == id) {
+      _currentNotepadDocId =
+          notepadDocuments.isEmpty ? null : notepadDocuments.keys.first;
+      _persistCurrentNotepadDoc();
+    }
+    _persistNotepadDocs();
+    notifyListeners();
+  }
+
+  void setCurrentNotepadDoc(String? id) {
+    if (_currentNotepadDocId == id) return;
+    if (id != null && !notepadDocuments.containsKey(id)) return;
+    _currentNotepadDocId = id;
+    _persistCurrentNotepadDoc();
+    notifyListeners();
+  }
+
   // --- Volatile (now also persisted) state --------------------------------
 
   final List<CalculationEntry> history = [];
@@ -342,6 +429,18 @@ class AppState extends ChangeNotifier {
   /// occurrences before sending the expression to SymEngine, with up to
   /// `_kUdfExpansionDepth` passes so `g(f(x))` composes correctly.
   final Map<String, UserFunction> userFunctions = {};
+
+  /// Notepad / document-mode state (P5 strategic next, Phase 1).
+  /// Keyed by `NotepadDocument.id`. The static Welcome sample lives
+  /// under the reserved id [kWelcomeNotepadDocId] so first-launch
+  /// seeding and the "Open Welcome sample" menu action never
+  /// double-create it.
+  final Map<String, NotepadDocument> notepadDocuments = {};
+
+  /// Active document on the Notepad screen. Persisted so the
+  /// notepad re-opens whichever doc was last viewed.
+  String? _currentNotepadDocId;
+  String? get currentNotepadDocId => _currentNotepadDocId;
 
   /// Cross-screen "insert this expression into the calculator field"
   /// signal. Set by [requestInsertExpression] (typically from a dialog
@@ -653,6 +752,30 @@ class AppState extends ChangeNotifier {
       _persistUserFunctions();
       imported.add('${userFunctions.length} user functions');
     }
+    if (json['notepadDocuments'] is List) {
+      // Drop user docs but keep the Welcome sample (always recreated
+      // by load(); excluded from export). Import only user docs.
+      notepadDocuments.removeWhere((id, _) => id != kWelcomeNotepadDocId);
+      var importedCount = 0;
+      for (final raw in (json['notepadDocuments'] as List)) {
+        if (raw is Map) {
+          final doc =
+              NotepadDocument.fromJson(Map<String, dynamic>.from(raw));
+          if (doc.id.isEmpty || doc.id == kWelcomeNotepadDocId) continue;
+          notepadDocuments[doc.id] = doc;
+          importedCount++;
+        }
+      }
+      _persistNotepadDocs();
+      imported.add('$importedCount notepad documents');
+    }
+    if (json['currentNotepadDocId'] is String) {
+      final id = json['currentNotepadDocId'] as String;
+      if (notepadDocuments.containsKey(id)) {
+        _currentNotepadDocId = id;
+        _persistCurrentNotepadDoc();
+      }
+    }
 
     notifyListeners();
     return imported.isEmpty
@@ -675,6 +798,15 @@ class AppState extends ChangeNotifier {
       'functions': List<String>.from(graphFunctions),
       'parameters': functionParameters
           .map((slot, params) => MapEntry(slot.toString(), params)),
+      // Notepad docs (excluding the always-recreated Welcome sample
+      // — it's reseeded on import / reinstall from the static
+      // constant in lib/engine/notepad.dart so its body stays in
+      // sync with the release).
+      'notepadDocuments': notepadDocuments.values
+          .where((d) => d.id != kWelcomeNotepadDocId)
+          .map((d) => d.toJson())
+          .toList(growable: false),
+      'currentNotepadDocId': _currentNotepadDocId,
     };
   }
 

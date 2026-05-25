@@ -425,7 +425,7 @@ but become *moat-building* rather than *positioning*, since the moat
   - **Implementation plan (V1)** — 8 phases, each independently
     reviewable / mergeable. File references anchored to the
     current tree. Numbered design decisions referenced as **#N**.
-    - **Phase 1 — Data model & persistence skeleton.** New
+    - **Phase 1 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/engine/notepad.dart` with `NotepadDocument { id, name,
       createdAt, updatedAt, lines: List<NotepadLine> }` and
       `NotepadLine { id, source, cachedResult, cachedError,
