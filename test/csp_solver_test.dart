@@ -161,6 +161,99 @@ vars: x, y in 1..5
     });
   });
 
+  group('CspSolver.solveDsl — Round 74 optimization', () {
+    test('minimize returns the proven optimum + its objective value', () async {
+      // Pay 17 cents with the fewest coins drawn from {1, 5, 10}.
+      // Optimum: one 10 + one 5 + two 1s = four coins, objective = 4.
+      const dsl = '''
+vars: pennies in 0..17
+vars: nickels in 0..3
+vars: dimes in 0..1
+pennies + 5*nickels + 10*dimes == 17
+minimize pennies + nickels + dimes
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 4);
+      expect(r.solutions, hasLength(1));
+      final s = r.solutions.first;
+      expect(s['pennies']! + 5 * s['nickels']! + 10 * s['dimes']!, 17);
+      expect(s['pennies']! + s['nickels']! + s['dimes']!, 4);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('maximize returns the proven optimum', () async {
+      // Maximize 3*x + 2*y subject to x + y <= 10, x,y in 0..10.
+      // Optimum is x=10, y=0 → 30.
+      const dsl = '''
+vars: x, y in 0..10
+x + y <= 10
+maximize 3*x + 2*y
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 30);
+      expect(r.solutions, hasLength(1));
+      expect(r.solutions.first['x'], 10);
+      expect(r.solutions.first['y'], 0);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test('two objective directives in one program is rejected', () async {
+      const dsl = '''
+vars: x in 0..5
+minimize x
+maximize x
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('only one minimize/maximize'));
+    });
+
+    test('infeasible optimization returns a clear error', () async {
+      const dsl = '''
+vars: x in 1..5
+x == 7
+minimize x
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('No assignment'));
+    }, timeout: const Timeout(Duration(seconds: 10)));
+
+    test('non-linear objective expression is rejected at parse time', () async {
+      const dsl = '''
+vars: x, y in 1..5
+minimize x*y
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+      // Either parse error or unknown-variable error — both are fine
+      // as long as it doesn't pass through silently.
+      expect(r.error, isNotNull);
+    });
+
+    test('objective referencing undeclared variable is rejected', () async {
+      const dsl = '''
+vars: x in 1..5
+minimize x + z
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isFalse);
+    });
+
+    test(
+        'enumeration mode (no objective) keeps the old behaviour — '
+        'objective is null', () async {
+      const dsl = '''
+vars: x, y in 1..5
+x + y == 6
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue);
+      expect(r.objective, isNull);
+      expect(r.solutions, isNotEmpty);
+    });
+  });
+
   group('CspSolver.solveCryptarithm', () {
     test('SEND + MORE = MONEY finds the unique assignment', () async {
       final r = await CspSolver.solveCryptarithm('SEND + MORE = MONEY');

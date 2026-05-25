@@ -235,18 +235,27 @@ class _ResultBlock extends StatelessWidget {
       final entries = result.solutions[i].entries
           .map((e) => '${e.key}=${e.value}')
           .join(', ');
-      lines.add('${i + 1}.  $entries');
+      // Optimization mode is always one assignment — drop the
+      // numbering so the result reads "x=3, y=4" rather than
+      // "1. x=3, y=4".
+      lines.add(result.objective != null ? entries : '${i + 1}.  $entries');
     }
     final body = lines.isEmpty ? t.constraintsNoSolutions : lines.join('\n');
+    // Round 74: optimization results get a dedicated header showing
+    // the optimal objective value; enumeration results keep the
+    // "N solutions" header (or "first N" when truncated).
+    final headerText = result.objective != null
+        ? t.constraintsOptimalHeader(result.objective!)
+        : result.truncated
+            ? t.constraintsTruncatedHeader(result.solutions.length)
+            : t.constraintsSolutionsHeader(result.solutions.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
             Text(
-              result.truncated
-                  ? t.constraintsTruncatedHeader(result.solutions.length)
-                  : t.constraintsSolutionsHeader(result.solutions.length),
+              headerText,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const Spacer(),
@@ -410,6 +419,19 @@ r2 != r4''',
 a + b + c == 20
 a < b
 b < c''',
+    ),
+    (
+      // Round 74: textbook coin-change. Pay 17 cents with the
+      // fewest coins drawn from {1, 5, 10, 25}. The minimize
+      // directive returns the unique optimum (one 10 + one 5 +
+      // two 1s = four coins) plus the objective value.
+      id: 'coinChangeMin',
+      program: '''vars: pennies in 0..17
+vars: nickels in 0..3
+vars: dimes in 0..1
+vars: quarters in 0..0
+pennies + 5*nickels + 10*dimes + 25*quarters == 17
+minimize pennies + nickels + dimes + quarters''',
     ),
   ];
 

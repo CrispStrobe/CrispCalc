@@ -337,6 +337,8 @@ void main() {
           t.constraintsDslExampleTitle('magicSquare3'),
           t.constraintsDslExampleTitle('mapColoring'),
           t.constraintsDslExampleTitle('orderedTriples'),
+          t.constraintsDslExampleTitle('coinChangeMin'),
+          t.constraintsOptimalHeader(4),
           t.constraintsDiophantineIntro,
           t.constraintsCryptarithmIntro,
           t.constraintsVariablesLabel,

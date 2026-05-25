@@ -81,6 +81,7 @@ void main() {
         'magicSquare3',
         'mapColoring',
         'orderedTriples',
+        'coinChangeMin',
       };
       var seen = 0;
       for (final e in WorkedExamples.all) {

@@ -2,6 +2,80 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 74) — CSP Round D: minimize / maximize in the DSL
+
+The constraint mini-DSL (round 68) was enumeration-only:
+declare variables, list constraints, get every solution. Real
+optimization problems — least-coin change, max-revenue mix,
+shortest cover — need the solver to *pick* the best feasible
+assignment rather than dump all of them. PLAN's CSP Round D
+called for `minimize` / `maximize` directives routed through
+dart_csp's branch-and-bound (`Problem.minimize` /
+`Problem.maximize`).
+
+### Grammar extension
+
+One new directive: `minimize <linear-expr>` or `maximize
+<linear-expr>` anywhere in the program. Linear-expr is the same
+shape constraints already accept (e.g. `2*x + 3*y - z`). At most
+one objective per program; specifying two surfaces a parse error
+naming both line numbers. The objective is parsed *before* the
+var-declaration / allDifferent / constraint matchers so a stray
+`minimize` keyword can't be swallowed by the fallback constraint
+path.
+
+### Engine: `solveOptimization`
+
+New static method alongside `solveDiophantine`. Builds the
+dart_csp `Problem` identically (same range vars, same constraint
+routing), then adds a synthetic `__obj__` variable bound to
+`Σ coef_i · var_i` via `addLinearEquals`. The synthetic var gets
+a TIGHT integer range computed from the input variable ranges
+(per-term min/max contribution summed independently) so dart_csp
+can use its interval domain rep — no billion-element list even
+for objectives like `3*x + 5*y` with x,y in 0..100.
+
+Calls `problem.minimize('__obj__')` / `.maximize('__obj__')`,
+strips the synthetic var from the returned assignment, and
+returns a `DiophantineResult.optimal(assignment, objectiveValue)`
+— a new factory constructor that puts the singleton optimum
+into `solutions` AND populates the new `num? objective` field.
+Enumeration mode is unchanged (objective stays null).
+
+### UI: header switches to "Optimal: objective = N"
+
+The shared `_ResultBlock` checks `result.objective != null` and
+swaps the "N solutions" header for the new
+`constraintsOptimalHeader(num)` string. Solution rendering drops
+the index prefix in optimization mode (always one assignment,
+the numbering reads weird otherwise). Copy-button + body
+formatting are unchanged.
+
+### Refactor
+
+Factored out a `_parseLinearTerms(expr, knownVars)` helper that
+both `_tryParseLinear` (constraint LHS) and the new
+`solveOptimization` objective parser share. No behaviour change
+for existing constraints.
+
+### Gallery + i18n + tests
+
+New `coinChangeMin` gallery entry (pay 17¢ with the fewest coins
+from {1, 5, 10, 25}). Two new i18n strings — gallery title plus
+`constraintsOptimalHeader(num)` — across all four locales.
+Locale-coverage test extended.
+
+Seven new engine tests in `csp_solver_test.dart`:
+- minimize returns the proven optimum + correct objective value
+- maximize ditto
+- two objective directives in one program is rejected
+- infeasible optimization surfaces "No assignment" cleanly
+- non-linear objective (`x*y`) is rejected at parse time
+- objective referencing undeclared variable is rejected
+- enumeration mode keeps the old behaviour (objective is null)
+
+Suite total: 1219 tests (+7 net).
+
 ## 2026-05-25 (round 73) — Sudoku advanced hints (SAC by probing)
 
 The V3 hint mode (round 62) was naive single-pass elimination:

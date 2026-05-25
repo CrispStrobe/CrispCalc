@@ -110,7 +110,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1212 tests total)
+  ... (~50 test files, ~1219 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -280,11 +280,11 @@ fresh feature arcs.
 
 ### Fresh feature arcs (multi-session)
 
-5. **CSP Round D — minimize / maximize in the DSL** — extend
-   the DSL grammar (`minimize x + y`, `maximize ...`), route to
-   dart_csp's `solveOptimal`. Adds the optimization side to the
-   constraint editor. Plus `addNoOverlap` / `addCumulative` for
-   scheduling. PLAN has this as the next CSP item.
+5. ~~**CSP Round D — minimize / maximize in the DSL**~~ shipped
+   round 74. Synthetic `__obj__` + tight interval bounds + new
+   `DiophantineResult.optimal` factory. Still open: scheduling
+   helpers (`addNoOverlap` / `addCumulative`) would be a
+   separate Round E.
 6. **Killer generator V2** — programmatic cage-layout generation
    with uniqueness guarantee. Requires search over shapes; the
    round-66 probe loop is a starting point.

@@ -333,6 +333,7 @@ abstract class AppLocalizations {
   String constraintsTruncatedHeader(int n);
   String get constraintsCopyResult;
   String get constraintsCopiedToast;
+  String constraintsOptimalHeader(num objective);
 
   // -- Accessibility tooltips (V1 a11y pass) --
   String get clearSearchTooltip;
@@ -1070,6 +1071,8 @@ class EnLocalizations implements AppLocalizations {
         return 'Map coloring (K4)';
       case 'orderedTriples':
         return 'Ordered triples summing to 20';
+      case 'coinChangeMin':
+        return 'Coin change (minimize coins)';
     }
     return id;
   }
@@ -1116,6 +1119,9 @@ class EnLocalizations implements AppLocalizations {
   String get constraintsCopyResult => 'Copy solutions';
   @override
   String get constraintsCopiedToast => 'Copied to clipboard.';
+  @override
+  String constraintsOptimalHeader(num objective) =>
+      'Optimal: objective = $objective';
 
   @override
   String get clearSearchTooltip => 'Clear search';
@@ -2095,6 +2101,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Landkartenfärbung (K4)';
       case 'orderedTriples':
         return 'Geordnete Tripel mit Summe 20';
+      case 'coinChangeMin':
+        return 'Münzwechsel (Anzahl minimieren)';
     }
     return id;
   }
@@ -2141,6 +2149,9 @@ class DeLocalizations implements AppLocalizations {
   String get constraintsCopyResult => 'Lösungen kopieren';
   @override
   String get constraintsCopiedToast => 'In Zwischenablage kopiert.';
+  @override
+  String constraintsOptimalHeader(num objective) =>
+      'Optimal: Zielfunktion = $objective';
 
   @override
   String get clearSearchTooltip => 'Suche leeren';
@@ -3243,6 +3254,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Coloration de carte (K4)';
       case 'orderedTriples':
         return 'Triplets ordonnés sommant à 20';
+      case 'coinChangeMin':
+        return 'Rendu de monnaie (minimiser les pièces)';
     }
     return id;
   }
@@ -3290,6 +3303,9 @@ class FrLocalizations implements AppLocalizations {
   String get constraintsCopyResult => 'Copier les solutions';
   @override
   String get constraintsCopiedToast => 'Copié dans le presse-papiers.';
+  @override
+  String constraintsOptimalHeader(num objective) =>
+      'Optimal : objectif = $objective';
 
   @override
   String get clearSearchTooltip => 'Effacer la recherche';
@@ -4390,6 +4406,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Coloración de mapa (K4)';
       case 'orderedTriples':
         return 'Tripletes ordenados que suman 20';
+      case 'coinChangeMin':
+        return 'Cambio de monedas (minimizar piezas)';
     }
     return id;
   }
@@ -4438,6 +4456,9 @@ class EsLocalizations implements AppLocalizations {
   String get constraintsCopyResult => 'Copiar soluciones';
   @override
   String get constraintsCopiedToast => 'Copiado al portapapeles.';
+  @override
+  String constraintsOptimalHeader(num objective) =>
+      'Óptimo: objetivo = $objective';
 
   @override
   String get clearSearchTooltip => 'Borrar búsqueda';

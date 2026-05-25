@@ -40,10 +40,16 @@ class DiophantineResult {
   /// caller can show a "showing first N" badge.
   final bool truncated;
 
+  /// Round 74: optimal objective value for `minimize` / `maximize`
+  /// DSL programs. Null for enumeration-mode results. When present,
+  /// [solutions] holds exactly one assignment (the optimum).
+  final num? objective;
+
   const DiophantineResult._({
     required this.solutions,
     required this.error,
     required this.truncated,
+    this.objective,
   });
 
   factory DiophantineResult.ok(
@@ -57,6 +63,19 @@ class DiophantineResult {
         solutions: const [],
         error: message,
         truncated: false,
+      );
+
+  /// Round 74: optimization result (minimize / maximize). Carries a
+  /// single optimal assignment plus the corresponding objective value.
+  factory DiophantineResult.optimal(
+    DiophantineSolution assignment,
+    num objective,
+  ) =>
+      DiophantineResult._(
+        solutions: [assignment],
+        error: null,
+        truncated: false,
+        objective: objective,
       );
 }
 
@@ -310,11 +329,27 @@ class CspSolver {
     final op = opMatch.group(2)!;
     final bound = num.parse(opMatch.group(3)!);
 
-    // Split LHS on top-level `+` / `-` keeping the sign with each term.
+    final parsed = _parseLinearTerms(lhs, knownVars);
+    if (parsed == null) return null;
+    return (vars: parsed.vars, coeffs: parsed.coeffs, op: op, bound: bound);
+  }
+
+  /// Round 74: split a sum-of-terms expression like `2*x + y - 3*z`
+  /// into matched `(vars, coeffs)` lists. Whitespace tolerant. Each
+  /// term must reference a known variable (returns null otherwise so
+  /// callers can decline-and-fallback). Coefficients default to 1
+  /// when omitted; an optional leading sign is folded into the
+  /// coefficient.
+  ///
+  /// Used by both [_tryParseLinear] (constraint LHS parsing) and
+  /// the `minimize` / `maximize` directives in [solveDsl].
+  static ({List<String> vars, List<num> coeffs})? _parseLinearTerms(
+      String expr, Set<String> knownVars) {
+    final stripped = expr.replaceAll(' ', '');
     final terms = <String>[];
     var current = StringBuffer();
-    for (var i = 0; i < lhs.length; i++) {
-      final c = lhs[i];
+    for (var i = 0; i < stripped.length; i++) {
+      final c = stripped[i];
       if ((c == '+' || c == '-') && i > 0) {
         terms.add(current.toString());
         current = StringBuffer();
@@ -327,8 +362,6 @@ class CspSolver {
     final coeffs = <num>[];
     for (final raw in terms) {
       final term = raw.trim();
-      // Allow optional leading sign + optional coeff + optional `*` + var.
-      // Examples: `x`, `+x`, `-x`, `2*x`, `+3y`, `-4*z`.
       final m = RegExp(r'^([+-]?)(\d+(?:\.\d+)?)?\*?([A-Za-z_][A-Za-z0-9_]*)$')
           .firstMatch(term);
       if (m == null) return null;
@@ -340,7 +373,7 @@ class CspSolver {
       coeffs.add(sign * mag);
     }
     if (vars.isEmpty) return null;
-    return (vars: vars, coeffs: coeffs, op: op, bound: bound);
+    return (vars: vars, coeffs: coeffs);
   }
 
   /// Strip the `Exception:` prefix and any stack-trace noise so the
@@ -352,25 +385,34 @@ class CspSolver {
 
   // === CSP Round C — generic constraint mini-DSL ==========================
 
-  /// Round 68: parses a small line-based DSL and solves it. Grammar:
+  /// Round 68 / extended round 74: parses a small line-based DSL
+  /// and solves it. Grammar:
   ///
   /// ```
   /// # comments start with '#', blank lines ignored
   /// vars: x, y, z in 1..9
   /// allDifferent(x, y, z)
   /// x + y + z == 15
+  /// minimize x + y      # or `maximize <linear-expr>` — at most one
   /// ```
   ///
   /// `vars:` lines accept comma-separated variable names + an
   /// inclusive `lo..hi` integer range. Multiple `vars:` lines are
   /// allowed. `allDifferent(...)` is expanded to pairwise `!=`
   /// constraints (small N — typical CSP examples have ≤ 10 vars).
+  /// `minimize` / `maximize` take a linear expression in the declared
+  /// variables and route to dart_csp's branch-and-bound; only one
+  /// objective per program (specifying both, or one twice, is an
+  /// error). With no objective the result is the enumeration of
+  /// all solutions; with an objective the result holds the single
+  /// optimal assignment plus its objective value.
   /// Anything else is fed to the existing dart_csp string-constraint
   /// parser / `addLinear*` router via [solveDiophantine].
   static Future<DiophantineResult> solveDsl(String input,
       {int maxSolutions = 100}) async {
     final vars = <String, ({int min, int max})>{};
     final constraints = <String>[];
+    ({String op, String expr, int lineNum})? objective;
 
     final lines = input.split('\n');
     for (var lineNum = 0; lineNum < lines.length; lineNum++) {
@@ -379,6 +421,24 @@ class CspSolver {
       final hash = line.indexOf('#');
       if (hash >= 0) line = line.substring(0, hash).trim();
       if (line.isEmpty) continue;
+
+      // Objective directive (round 74). Checked before the variable
+      // and allDifferent matchers so a stray `minimize` keyword
+      // can't be silently swallowed by the constraint fallback.
+      final optMatch = RegExp(r'^(minimize|maximize)\s+(.+)$').firstMatch(line);
+      if (optMatch != null) {
+        if (objective != null) {
+          return DiophantineResult.failure(
+              'Line ${lineNum + 1}: only one minimize/maximize allowed '
+              '(first one was on line ${objective.lineNum + 1}).');
+        }
+        objective = (
+          op: optMatch.group(1)!,
+          expr: optMatch.group(2)!.trim(),
+          lineNum: lineNum,
+        );
+        continue;
+      }
 
       // Variable declaration.
       final varsMatch =
@@ -442,10 +502,144 @@ class CspSolver {
           'No variables declared. Use `vars: x, y in 1..9`.');
     }
 
+    if (objective != null) {
+      return solveOptimization(
+        variables: vars,
+        constraints: constraints,
+        minimize: objective.op == 'minimize',
+        objectiveExpr: objective.expr,
+      );
+    }
+
     return solveDiophantine(
       variables: vars,
       constraints: constraints,
       maxSolutions: maxSolutions,
     );
+  }
+
+  /// Round 74: route a linear minimization / maximization through
+  /// dart_csp's branch-and-bound. Models the objective as a synthetic
+  /// `__obj__` variable bound to `Σ coef_i · var_i` via
+  /// [csp.Problem.addLinearEquals]; the synthetic variable gets a
+  /// tight integer range derived from the input variable ranges so
+  /// dart_csp can use its interval domain rep (no billion-element
+  /// list).
+  ///
+  /// Returns [DiophantineResult.optimal] with the single proven
+  /// optimal assignment on success, or `.failure` with a parse /
+  /// solver message on error. Returns "no assignment satisfies the
+  /// constraints" rather than `.optimal([], …)` when infeasible so
+  /// the [_ResultBlock] UI's empty-list branch never lights up for
+  /// optimization mode.
+  ///
+  /// Limitations: only linear objectives in the declared variables.
+  /// Non-linear objectives (`x*y`, `x^2`) are rejected at parse time.
+  static Future<DiophantineResult> solveOptimization({
+    required Map<String, ({int min, int max})> variables,
+    required List<String> constraints,
+    required bool minimize,
+    required String objectiveExpr,
+  }) async {
+    if (variables.isEmpty) {
+      return DiophantineResult.failure('No variables declared.');
+    }
+    final knownVars = variables.keys.toSet();
+    final parsed = _parseLinearTerms(objectiveExpr, knownVars);
+    if (parsed == null) {
+      return DiophantineResult.failure(
+          'Could not parse ${minimize ? 'minimize' : 'maximize'} '
+          'expression "$objectiveExpr" — only linear expressions in '
+          'the declared variables are supported.');
+    }
+    // Tight bounds on Σ coef_i · var_i. For each term, the min
+    // contribution is coef * varLo when coef ≥ 0 else coef * varHi
+    // (symmetric for max). Sum independently.
+    var objLo = 0;
+    var objHi = 0;
+    for (var i = 0; i < parsed.vars.length; i++) {
+      final coef = parsed.coeffs[i].toInt();
+      final range = variables[parsed.vars[i]]!;
+      final a = coef * range.min;
+      final b = coef * range.max;
+      objLo += a < b ? a : b;
+      objHi += a < b ? b : a;
+    }
+    const objVar = '__obj__';
+    if (knownVars.contains(objVar)) {
+      return DiophantineResult.failure(
+          'Variable name "$objVar" is reserved for the objective '
+          '— rename it in your `vars:` declaration.');
+    }
+
+    final problem = csp.Problem();
+    try {
+      for (final entry in variables.entries) {
+        final (min: lo, max: hi) = entry.value;
+        if (hi < lo) {
+          return DiophantineResult.failure(
+              'Variable ${entry.key}: range max ($hi) < min ($lo).');
+        }
+        if (hi - lo > 10000) {
+          return DiophantineResult.failure(
+              'Variable ${entry.key}: range too large (max−min > 10000).');
+        }
+        problem.addRangeVariable(entry.key, lo, hi);
+      }
+      problem.addRangeVariable(objVar, objLo, objHi);
+      // Bind __obj__ = Σ coef_i · var_i  ⇔  Σ coef_i · var_i − __obj__ == 0.
+      problem.addLinearEquals(
+        [...parsed.vars, objVar],
+        [...parsed.coeffs, -1],
+        0,
+      );
+      for (final c in constraints) {
+        final linear = _tryParseLinear(c, knownVars);
+        if (linear != null) {
+          final (:vars, :coeffs, :op, :bound) = linear;
+          switch (op) {
+            case '==':
+              problem.addLinearEquals(vars, coeffs, bound);
+              break;
+            case '<=':
+              problem.addLinearLeq(vars, coeffs, bound);
+              break;
+            case '>=':
+              problem.addLinearGeq(vars, coeffs, bound);
+              break;
+            case '<':
+              problem.addLinearLeq(vars, coeffs, bound - 1);
+              break;
+            case '>':
+              problem.addLinearGeq(vars, coeffs, bound + 1);
+              break;
+          }
+          continue;
+        }
+        problem.addStringConstraint(c);
+      }
+    } catch (e) {
+      return DiophantineResult.failure(
+          'Failed to parse constraints: ${_friendlyError(e)}');
+    }
+
+    try {
+      final result = minimize
+          ? await problem.minimize(objVar)
+          : await problem.maximize(objVar);
+      if (result is! Map<String, dynamic>) {
+        return DiophantineResult.failure(
+            'No assignment satisfies the constraints.');
+      }
+      final objValue = (result[objVar] as num).toInt();
+      final assignment = <String, int>{
+        for (final entry in result.entries)
+          if (entry.key != objVar) entry.key: (entry.value as num).toInt(),
+      };
+      return DiophantineResult.optimal(assignment, objValue);
+    } catch (e) {
+      return DiophantineResult.failure(
+          'Optimizer failed: ${_friendlyError(e)}');
+    }
   }
 }
