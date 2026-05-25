@@ -57,10 +57,12 @@ void main() {
       );
     });
 
-    test('falls back to gamma for large literal factorials', () {
+    test('falls back to gamma for literal factorials past the big-int cap', () {
+      // The exact big-int path covers n up to 1000 (commit 27336ae); above
+      // that we fall back to SymEngine's gamma(n+1).
       expect(
-        ExpressionPreprocessingUtils.preprocessNativeExpression('25!'),
-        equals('gamma(26)'),
+        ExpressionPreprocessingUtils.preprocessNativeExpression('1001!'),
+        equals('gamma(1002)'),
       );
     });
 

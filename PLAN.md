@@ -1647,26 +1647,17 @@ which means 100+ fresh LaTeX layouts on the main thread.
 
 History search has the same shape: re-filter + re-render.
 
-### Round 120 — Cache rendered LaTeX per entry
+### Round 120 — Cache rendered LaTeX per entry — **SHIPPED**
 
-Cheapest, highest-impact fix. Store the rendered `Math.tex`
-widget per `CalculationEntry`:
-
-```dart
-class _CachedEntryRender {
-  final Widget latex;
-  final Widget plain;
-}
-```
-
-Build once at entry creation; reuse on every rebuild. Toggle
-just swaps which one is shown. Estimated 50-100× speedup on
-the toggle for long histories.
-
-Trade-off: memory grows linearly in history length. For
-~1000 entries × ~10 KB per cached Math.tex tree = ~10 MB —
-acceptable. Cap at the most-recent 500; older entries render
-lazily on demand.
+Done 2026-05-25 — see HISTORY round 120. Per-expression
+insertion-ordered Map used as an LRU keyed by the raw
+expression string, capped at 500 entries. Hits move the key
+to MRU; overflow evicts the oldest. Only the LaTeX branch
+goes through the cache — plain `Text` is cheap. `Math.tex`
+layout now happens once per unique expression per session;
+toggling the switch or typing into the search filter only
+fires `setState` and the cache serves the same widget tree
+on every rebuild. Plain-text branch unchanged.
 
 ### Round 121 — `RepaintBoundary` + `ListView.builder` virtualization
 

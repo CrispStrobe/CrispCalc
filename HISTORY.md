@@ -2,6 +2,50 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 120) — Calculator history LaTeX render cache
+
+User-reported (end of last session): toggling the Calculator's
+ASCII ↔ LaTeX history view was "very very long" on
+`flutter run -d macos`. Root cause: `_buildExpressionDisplay`
+constructed a fresh `Math.tex(...)` widget on every rebuild for
+every visible history row, and `flutter_math_fork` re-parsed the
+LaTeX source + rebuilt the AST + laid out glyphs on every call.
+With 100+ history entries, toggling `_showLatexHistory` triggered
+100+ fresh layout passes on the main thread.
+
+### Fix
+
+Per-expression LaTeX widget cache in `CalculatorScreenState`,
+keyed by the raw expression string (insertion-ordered `Map<String,
+Widget>` used as an LRU — hits move the key to MRU, overflow at
+500 entries evicts the oldest). `_buildExpressionDisplay` now
+calls `_renderCachedLatex(expression)` on the LaTeX path so the
+expensive `Math.tex` layout happens once per unique expression
+per session. Toggling the switch or typing into the search
+filter only triggers a setState; the cache serves the same
+widget tree on every subsequent rebuild.
+
+The plain-text branch is unchanged (a single `Text` widget is
+cheap — no caching needed). The cap of 500 bounds memory at a
+few MB for very long sessions; entries past the cap re-layout
+on demand. Cache is process-local; cleared implicitly when the
+calculator screen is rebuilt from scratch (full process restart).
+
+Smallest scope possible for the perf win — PLAN P8 rounds 121
+(`RepaintBoundary` + virtualization), 122 (async LaTeX
+precomputation), 123 (search debounce + index), 124 (profile
+pass) remain available if 120 alone doesn't make the toggle
+feel instant. Expectation per the PLAN sketch: 50-100× speedup.
+
+### Test debt cleanup
+
+The factorial big-int round (commit `27336ae`) extended the
+exact factorial path to n ≤ 1000, which made the
+`expression_preprocessing_utils_test` assertion `25! →
+gamma(26)` stale. Updated to `1001! → gamma(1002)` so the test
+still exercises the gamma fallback, just at the new boundary.
+1465 tests pass.
+
 ## 2026-05-25 (round 90) — Precision arc round 4 — `factorint(n)` via FLINT
 
 First FLINT-backed wrapper in the precision arc. Integer

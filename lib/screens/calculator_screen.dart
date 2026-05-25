@@ -149,35 +149,51 @@ class CalculatorScreenState extends State<CalculatorScreen>
     return MathDisplayUtils.toHistoryDisplayLatex(text);
   }
 
-  Widget _buildExpressionDisplay(String expression) {
-    if (_showLatexHistory && expression.isNotEmpty) {
-      // Try to render as LaTeX
-      try {
-        return Math.tex(
-          _toLatex(expression),
-          textStyle: TextStyle(fontSize: 20, color: Colors.grey[500]),
-          onErrorFallback: (err) => Text(
-            expression,
-            style: TextStyle(fontSize: 20, color: Colors.grey[500]),
-            textAlign: TextAlign.right,
-          ),
-        );
-      } catch (e) {
-        // Fallback to plain text if LaTeX rendering fails
-        return Text(
-          expression,
-          style: TextStyle(fontSize: 20, color: Colors.grey[500]),
-          textAlign: TextAlign.right,
-        );
-      }
-    } else {
-      // Plain text display
-      return Text(
+  // Round 120: per-expression LaTeX render cache. `Math.tex` parses
+  // LaTeX, builds an AST, and lays out glyphs; toggling the
+  // ASCII↔LaTeX history switch or typing into the search filter used
+  // to re-run that pipeline for every visible history row on every
+  // rebuild (100+ entries × layout-on-main-thread = the "very very
+  // long" toggle the user reported). The cache is a plain
+  // insertion-ordered Map used as an LRU: hits move the key to MRU,
+  // overflow evicts the oldest. Keyed by expression because
+  // `_buildExpressionDisplay` only depends on the expression and the
+  // text style is static. Cap of 500 keeps memory bounded for very
+  // long sessions; entries past the cap re-layout on demand.
+  static const int _kLatexCacheCap = 500;
+  final Map<String, Widget> _latexCache = <String, Widget>{};
+
+  Widget _renderCachedLatex(String expression) {
+    final cached = _latexCache.remove(expression);
+    if (cached != null) {
+      _latexCache[expression] = cached;
+      return cached;
+    }
+    final widget = Math.tex(
+      _toLatex(expression),
+      textStyle: TextStyle(fontSize: 20, color: Colors.grey[500]),
+      onErrorFallback: (err) => Text(
         expression,
         style: TextStyle(fontSize: 20, color: Colors.grey[500]),
         textAlign: TextAlign.right,
-      );
+      ),
+    );
+    _latexCache[expression] = widget;
+    if (_latexCache.length > _kLatexCacheCap) {
+      _latexCache.remove(_latexCache.keys.first);
     }
+    return widget;
+  }
+
+  Widget _buildExpressionDisplay(String expression) {
+    if (_showLatexHistory && expression.isNotEmpty) {
+      return _renderCachedLatex(expression);
+    }
+    return Text(
+      expression,
+      style: TextStyle(fontSize: 20, color: Colors.grey[500]),
+      textAlign: TextAlign.right,
+    );
   }
 
   /// Called whenever the input text changes.
