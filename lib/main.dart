@@ -421,33 +421,36 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       Text(t.settingsNumberFormat,
                           style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      RadioGroup<NumberDisplayFormat>(
-                        groupValue: appState.numberFormat,
-                        onChanged: (v) {
-                          if (v != null) appState.setNumberFormat(v);
+                      const SizedBox(height: 4),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t.settingsNumberFormatAuto),
+                        value: appState.decimalPlaces < 0,
+                        onChanged: (auto) {
+                          appState.setDecimalPlaces(auto ? -1 : 2);
                         },
-                        child: Column(
+                      ),
+                      if (appState.decimalPlaces >= 0) ...[
+                        Row(
                           children: [
-                            RadioListTile<NumberDisplayFormat>(
-                              title: Text(t.settingsNumberFormatAuto),
-                              value: NumberDisplayFormat.auto,
-                            ),
-                            RadioListTile<NumberDisplayFormat>(
-                              title: Text(t.settingsNumberFormatInteger),
-                              value: NumberDisplayFormat.integer,
-                            ),
-                            RadioListTile<NumberDisplayFormat>(
-                              title: Text(t.settingsNumberFormatOneDecimal),
-                              value: NumberDisplayFormat.oneDecimal,
-                            ),
-                            RadioListTile<NumberDisplayFormat>(
-                              title: Text(t.settingsNumberFormatTwoDecimal),
-                              value: NumberDisplayFormat.twoDecimal,
+                            Expanded(
+                              child: Text(
+                                t.settingsNumberFormatDecimalPlaces(
+                                    appState.decimalPlaces),
+                              ),
                             ),
                           ],
                         ),
-                      ),
+                        Slider(
+                          value: appState.decimalPlaces.toDouble(),
+                          min: 0,
+                          max: 10,
+                          divisions: 10,
+                          label: appState.decimalPlaces.toString(),
+                          onChanged: (v) =>
+                              appState.setDecimalPlaces(v.round()),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -496,6 +499,16 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Text(t.settingsExactIntegerModeSubtitle),
                   value: appState.exactIntegerMode,
                   onChanged: appState.setExactIntegerMode,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.link),
+                  title: Text(t.settingsAutoBindSolve),
+                  subtitle: Text(t.settingsAutoBindSolveSubtitle),
+                  value: appState.autoBindSolve,
+                  onChanged: appState.setAutoBindSolve,
                 ),
               ),
               const SizedBox(height: 16),

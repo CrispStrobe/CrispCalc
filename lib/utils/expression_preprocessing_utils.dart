@@ -91,10 +91,15 @@ class ExpressionPreprocessingUtils {
     p = p.replaceAllMapped(
         RegExp(r'(\))(\d|\b[a-zA-Z]\b)'), (m) => '${m[1]}*${m[2]}');
 
-    // n! for literal small n -> compute directly; otherwise gamma(n+1).
+    // n! for literal n -> compute the exact BigInt product directly
+    // and inline the digit string. SymEngine's `gamma(n+1)` returns
+    // a float (scientific notation past ~15 digits), which defeats
+    // the exact-integer-mode display, so we extend the BigInt path
+    // up to n = 1000 (~2568 digits — completes in milliseconds).
+    // Above that the cost gets noticeable and we fall back to gamma.
     p = p.replaceAllMapped(RegExp(r'(\d+)!'), (m) {
       final n = int.tryParse(m.group(1)!) ?? 0;
-      if (n <= 20) {
+      if (n >= 0 && n <= 1000) {
         var f = BigInt.one;
         for (var i = 2; i <= n; i++) {
           f *= BigInt.from(i);

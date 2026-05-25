@@ -197,6 +197,9 @@ abstract class AppLocalizations {
   String get settingsNumberFormatInteger;
   String get settingsNumberFormatOneDecimal;
   String get settingsNumberFormatTwoDecimal;
+  String settingsNumberFormatDecimalPlaces(int n);
+  String get settingsAutoBindSolve;
+  String get settingsAutoBindSolveSubtitle;
   String get settingsLanguage;
   String get settingsLanguageEnglish;
   String get settingsLanguageGerman;
@@ -854,6 +857,14 @@ class EnLocalizations implements AppLocalizations {
   String get settingsNumberFormat => 'Number Display Format';
   @override
   String get settingsNumberFormatAuto => 'Auto (129, 129.5)';
+  @override
+  String settingsNumberFormatDecimalPlaces(int n) =>
+      'Decimal places: $n';
+  @override
+  String get settingsAutoBindSolve => 'Auto-bind solve results';
+  @override
+  String get settingsAutoBindSolveSubtitle =>
+      'When on, solve(eq, x) also assigns the solution to x.';
   @override
   String get settingsNumberFormatInteger => 'Integer (129)';
   @override
@@ -2015,6 +2026,13 @@ class DeLocalizations implements AppLocalizations {
   String get settingsNumberFormat => 'Zahlendarstellung';
   @override
   String get settingsNumberFormatAuto => 'Auto (129, 129,5)';
+  @override
+  String settingsNumberFormatDecimalPlaces(int n) => 'Nachkommastellen: $n';
+  @override
+  String get settingsAutoBindSolve => 'Lösungen automatisch zuweisen';
+  @override
+  String get settingsAutoBindSolveSubtitle =>
+      'Wenn aktiv, weist solve(gleichung, x) die Lösung auch x zu.';
   @override
   String get settingsNumberFormatInteger => 'Ganzzahl (129)';
   @override
@@ -3318,6 +3336,13 @@ class FrLocalizations implements AppLocalizations {
   String get settingsNumberFormat => 'Format des nombres';
   @override
   String get settingsNumberFormatAuto => 'Auto (129, 129,5)';
+  @override
+  String settingsNumberFormatDecimalPlaces(int n) => 'Décimales : $n';
+  @override
+  String get settingsAutoBindSolve => 'Liaison automatique des solutions';
+  @override
+  String get settingsAutoBindSolveSubtitle =>
+      'Si activé, solve(éq, x) assigne aussi la solution à x.';
   @override
   String get settingsNumberFormatInteger => 'Entier (129)';
   @override
@@ -4628,6 +4653,13 @@ class EsLocalizations implements AppLocalizations {
   String get settingsNumberFormat => 'Formato numérico';
   @override
   String get settingsNumberFormatAuto => 'Auto (129; 129,5)';
+  @override
+  String settingsNumberFormatDecimalPlaces(int n) => 'Decimales: $n';
+  @override
+  String get settingsAutoBindSolve => 'Asignar soluciones automáticamente';
+  @override
+  String get settingsAutoBindSolveSubtitle =>
+      'Si está activo, solve(ec, x) también asigna la solución a x.';
   @override
   String get settingsNumberFormatInteger => 'Entero (129)';
   @override

@@ -103,13 +103,18 @@ class _NotepadScreenState extends State<NotepadScreen> {
   /// in flight, no concurrent kill races.
   Future<void>? _activeRecalc;
 
-  /// Snapshot of the global NumberDisplayFormat we last evaluated
-  /// against. When `_onAppStateChanged` sees this drift, it kicks
-  /// a full recalc so previously-cached `cachedResult` strings get
-  /// re-formatted under the new setting (the cache stores the
-  /// already-formatted string, so a settings change otherwise has
-  /// no visible effect until the user edits a line).
+  /// Snapshot of the global number-format settings we last
+  /// evaluated against. When `_onAppStateChanged` sees either
+  /// drift, it kicks a full recalc so previously-cached
+  /// `cachedResult` strings get re-formatted under the new
+  /// setting (the cache stores the already-formatted string, so a
+  /// settings change otherwise has no visible effect until the
+  /// user edits a line). Tracks `decimalPlaces` (the canonical
+  /// int setting) AND the legacy enum to be safe — the slider
+  /// can move within "auto" (enum-stable) and we still need a
+  /// recalc.
   NumberDisplayFormat? _lastNumberFormat;
+  int? _lastDecimalPlaces;
 
   /// Evaluator is rebuilt per recalc so the `externalScope` reflects
   /// the doc's current `use` directive resolved against
@@ -119,6 +124,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
   void initState() {
     super.initState();
     _lastNumberFormat = _appState.numberFormat;
+    _lastDecimalPlaces = _appState.decimalPlaces;
     _appState.addListener(_onAppStateChanged);
   }
 
@@ -144,8 +150,10 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // result strings reflect the new setting. Other AppState
     // notifications (variable edits, doc updates we triggered
     // ourselves) just trigger a repaint via setState.
-    if (_lastNumberFormat != _appState.numberFormat) {
+    if (_lastNumberFormat != _appState.numberFormat ||
+        _lastDecimalPlaces != _appState.decimalPlaces) {
       _lastNumberFormat = _appState.numberFormat;
+      _lastDecimalPlaces = _appState.decimalPlaces;
       final doc = _currentDoc;
       if (doc != null) {
         _runRecalc(doc, startIndex: null);

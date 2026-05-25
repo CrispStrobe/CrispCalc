@@ -108,6 +108,7 @@ class AppState extends ChangeNotifier {
 
   static const _kLocale = 'crisp.locale';
   static const _kNumberFormat = 'crisp.numberFormat';
+  static const _kDecimalPlaces = 'crisp.decimalPlaces';
   static const _kThemeMode = 'crisp.themeMode';
   static const _kHistory = 'crisp.history';
   static const _kVariables = 'crisp.variables';
@@ -115,6 +116,7 @@ class AppState extends ChangeNotifier {
   static const _kParameters = 'crisp.parameters';
   static const _kExactIntegerMode = 'crisp.exactIntegerMode';
   static const _kOnboardingDismissed = 'crisp.onboardingDismissed';
+  static const _kAutoBindSolve = 'crisp.autoBindSolve';
   static const _kUserFunctions = 'crisp.userFunctions';
   static const _kNotepadDocs = 'crisp.notepadDocs';
   static const _kCurrentNotepadDoc = 'crisp.currentNotepadDoc';
@@ -131,6 +133,18 @@ class AppState extends ChangeNotifier {
 
   NumberDisplayFormat _numberFormat = NumberDisplayFormat.auto;
   NumberDisplayFormat get numberFormat => _numberFormat;
+
+  /// Arbitrary-N decimal-places setting. Replaces the
+  /// [NumberDisplayFormat] enum's hard-coded 0/1/2-only choices.
+  /// `-1` means "auto" (existing default — keep integers as integers,
+  /// non-integer doubles render with Dart's `toString`). `0` ≤ n
+  /// means render via `toStringAsFixed(n)`.
+  ///
+  /// The legacy enum is kept for backwards-compat (existing tests +
+  /// older prefs blobs round-trip cleanly) but the int is the
+  /// canonical setting now. [setNumberFormat] migrates to the int.
+  int _decimalPlaces = -1;
+  int get decimalPlaces => _decimalPlaces;
 
   ThemeMode _themeMode = ThemeMode.dark;
   ThemeMode get themeMode => _themeMode;
@@ -151,6 +165,16 @@ class AppState extends ChangeNotifier {
   bool _onboardingDismissed = false;
   bool get onboardingDismissed => _onboardingDismissed;
 
+  /// When true, `solve(eq, x)` in the calculator/notepad also stores
+  /// the solution into `AppState.userVariables` (variable `x`), so a
+  /// subsequent `x + 1`-style expression resolves with that value.
+  /// Default off — standard CAS behavior is stateless (Mathematica,
+  /// SymPy, TI all return a solution without rebinding the variable).
+  /// Multi-solution results pick the first numeric value; if no
+  /// numeric value can be extracted nothing is stored.
+  bool _autoBindSolve = false;
+  bool get autoBindSolve => _autoBindSolve;
+
   /// Read persisted settings into memory. Must be awaited before runApp.
   /// Pass `force: true` (from tests) to re-read prefs after they've been
   /// mocked with new values — production callers should leave this alone.
@@ -160,9 +184,11 @@ class AppState extends ChangeNotifier {
     // defaults instead of whatever the previous test left behind.
     _locale = const Locale('en');
     _numberFormat = NumberDisplayFormat.auto;
+    _decimalPlaces = -1;
     _themeMode = ThemeMode.dark;
     _exactIntegerMode = true;
     _onboardingDismissed = false;
+    _autoBindSolve = false;
     history.clear();
     userVariables.clear();
     userFunctions.clear();
@@ -188,7 +214,13 @@ class AppState extends ChangeNotifier {
           (v) => v.name == formatName,
           orElse: () => NumberDisplayFormat.auto,
         );
+        // Migrate legacy enum to the int. Persisted int takes
+        // precedence (read just below); this line only matters when
+        // the saved blob predates the int setting.
+        _decimalPlaces = _enumToDecimalPlaces(_numberFormat);
       }
+      final dp = _prefs!.getInt(_kDecimalPlaces);
+      if (dp != null) _decimalPlaces = dp;
       final themeName = _prefs!.getString(_kThemeMode);
       if (themeName != null) {
         _themeMode = ThemeMode.values.firstWhere(
@@ -200,6 +232,8 @@ class AppState extends ChangeNotifier {
       if (exactMode != null) _exactIntegerMode = exactMode;
       final onboarded = _prefs!.getBool(_kOnboardingDismissed);
       if (onboarded != null) _onboardingDismissed = onboarded;
+      final autoBind = _prefs!.getBool(_kAutoBindSolve);
+      if (autoBind != null) _autoBindSolve = autoBind;
       final udfJson = _prefs!.getString(_kUserFunctions);
       if (udfJson != null) {
         try {
@@ -320,10 +354,56 @@ class AppState extends ChangeNotifier {
   }
 
   void setNumberFormat(NumberDisplayFormat format) {
-    if (_numberFormat == format) return;
+    final dp = _enumToDecimalPlaces(format);
+    if (_numberFormat == format && _decimalPlaces == dp) return;
     _numberFormat = format;
+    _decimalPlaces = dp;
     _prefs?.setString(_kNumberFormat, format.name);
+    _prefs?.setInt(_kDecimalPlaces, dp);
     notifyListeners();
+  }
+
+  /// Canonical API for "render numeric results with N decimal places".
+  /// `-1` = auto (integer-shaped values stay integers; non-integer
+  /// doubles render with Dart's `toString`). `0` ≤ N ≤ 15 renders
+  /// via `toStringAsFixed(N)`. Values are clamped on the caller side
+  /// (the Settings slider goes 0–10).
+  void setDecimalPlaces(int n) {
+    if (_decimalPlaces == n) return;
+    _decimalPlaces = n;
+    // Keep the legacy enum in sync for serialization parity and
+    // for any consumer that still reads `numberFormat`. Anything
+    // outside the enum's range maps to `auto`.
+    _numberFormat = _decimalPlacesToEnum(n);
+    _prefs?.setInt(_kDecimalPlaces, n);
+    _prefs?.setString(_kNumberFormat, _numberFormat.name);
+    notifyListeners();
+  }
+
+  static int _enumToDecimalPlaces(NumberDisplayFormat f) {
+    switch (f) {
+      case NumberDisplayFormat.auto:
+        return -1;
+      case NumberDisplayFormat.integer:
+        return 0;
+      case NumberDisplayFormat.oneDecimal:
+        return 1;
+      case NumberDisplayFormat.twoDecimal:
+        return 2;
+    }
+  }
+
+  static NumberDisplayFormat _decimalPlacesToEnum(int n) {
+    switch (n) {
+      case 0:
+        return NumberDisplayFormat.integer;
+      case 1:
+        return NumberDisplayFormat.oneDecimal;
+      case 2:
+        return NumberDisplayFormat.twoDecimal;
+      default:
+        return NumberDisplayFormat.auto;
+    }
   }
 
   void setThemeMode(ThemeMode mode) {
@@ -344,6 +424,13 @@ class AppState extends ChangeNotifier {
     if (_onboardingDismissed == dismissed) return;
     _onboardingDismissed = dismissed;
     _prefs?.setBool(_kOnboardingDismissed, dismissed);
+    notifyListeners();
+  }
+
+  void setAutoBindSolve(bool enabled) {
+    if (_autoBindSolve == enabled) return;
+    _autoBindSolve = enabled;
+    _prefs?.setBool(_kAutoBindSolve, enabled);
     notifyListeners();
   }
 
@@ -514,18 +601,16 @@ class AppState extends ChangeNotifier {
     final number = double.tryParse(numberString);
     if (number == null) return numberString;
 
-    switch (_numberFormat) {
-      case NumberDisplayFormat.integer:
-        return number.round().toString();
-      case NumberDisplayFormat.oneDecimal:
-        return number.toStringAsFixed(1);
-      case NumberDisplayFormat.twoDecimal:
-        return number.toStringAsFixed(2);
-      case NumberDisplayFormat.auto:
-        return number == number.roundToDouble()
-            ? number.round().toString()
-            : number.toString();
+    if (_decimalPlaces < 0) {
+      // Auto: integer-shaped doubles stay integers; non-integer
+      // values fall through to Dart's `toString`.
+      return number == number.roundToDouble()
+          ? number.round().toString()
+          : number.toString();
     }
+    final n = _decimalPlaces.clamp(0, 15);
+    if (n == 0) return number.round().toString();
+    return number.toStringAsFixed(n);
   }
 
   void addHistoryEntry(String expression, String result,
