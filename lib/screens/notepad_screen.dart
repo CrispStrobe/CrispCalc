@@ -1104,7 +1104,8 @@ class _NotepadResultColumn extends StatelessWidget {
       children.add(Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
-          'free: ${line.cachedFreeVars.join(', ')}',
+          AppLocalizations.of(context)
+              .notepadFreeVars(line.cachedFreeVars.join(', ')),
           style: TextStyle(
             fontSize: 11,
             fontStyle: FontStyle.italic,
@@ -1228,7 +1229,7 @@ class _NotepadResultColumn extends StatelessWidget {
       return ActionChip(
         avatar: Icon(Icons.block, size: 16, color: cs.error),
         label: Text(
-          'Blocked by $alias',
+          t.notepadBlockedBy(alias),
           style: TextStyle(color: cs.error, fontSize: 12),
         ),
         onPressed: () => onScrollToLineId(lineId),
@@ -1241,7 +1242,7 @@ class _NotepadResultColumn extends StatelessWidget {
       return Chip(
         avatar: Icon(Icons.sync_problem, size: 16, color: cs.error),
         label: Text(
-          'Cycle: $path',
+          t.notepadCycle(path),
           style: TextStyle(color: cs.error, fontSize: 12),
         ),
         backgroundColor: cs.errorContainer.withValues(alpha: 0.3),
@@ -1252,15 +1253,13 @@ class _NotepadResultColumn extends StatelessWidget {
       final code = rawError.substring(NotepadErrorPrefix.useDirective.length);
       String label;
       if (code.startsWith('unknownImport:')) {
-        final name = code.substring('unknownImport:'.length);
-        label = 'Unknown import: "$name" not in global variables';
+        label = t.notepadUnknownImport(code.substring('unknownImport:'.length));
       } else if (code.startsWith('invalidImport:')) {
-        final name = code.substring('invalidImport:'.length);
-        label = 'Invalid import name: "$name"';
+        label = t.notepadInvalidImport(code.substring('invalidImport:'.length));
       } else if (code == 'emptyImportList') {
-        label = 'Empty import list';
+        label = t.notepadEmptyImportList;
       } else {
-        label = 'Use directive: $code';
+        label = t.notepadUseDirective(code);
       }
       return Text(
         label,

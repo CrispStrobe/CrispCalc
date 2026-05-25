@@ -45,6 +45,13 @@ abstract class AppLocalizations {
   String get notepadCopiedAsLatex;
   String get notepadEmptyTitle;
   String get notepadEmptyBody;
+  String notepadFreeVars(String names);
+  String notepadBlockedBy(String alias);
+  String notepadCycle(String path);
+  String notepadUnknownImport(String name);
+  String notepadInvalidImport(String name);
+  String get notepadEmptyImportList;
+  String notepadUseDirective(String code);
 
   // -- Calculator screen --
   String get historyHere;
@@ -548,6 +555,21 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get notepadEmptyBody =>
       'Create a new document or open the Welcome sample to get started.';
+  @override
+  String notepadFreeVars(String names) => 'free: $names';
+  @override
+  String notepadBlockedBy(String alias) => 'Blocked by $alias';
+  @override
+  String notepadCycle(String path) => 'Cycle: $path';
+  @override
+  String notepadUnknownImport(String name) =>
+      'Unknown import: "$name" not in global variables';
+  @override
+  String notepadInvalidImport(String name) => 'Invalid import name: "$name"';
+  @override
+  String get notepadEmptyImportList => 'Empty import list';
+  @override
+  String notepadUseDirective(String code) => 'Use directive: $code';
   @override
   String get navGraphing => 'Graphing';
   @override
@@ -1659,6 +1681,22 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get notepadEmptyBody =>
       'Lege ein neues Dokument an oder öffne das Willkommen-Beispiel.';
+  @override
+  String notepadFreeVars(String names) => 'frei: $names';
+  @override
+  String notepadBlockedBy(String alias) => 'Blockiert durch $alias';
+  @override
+  String notepadCycle(String path) => 'Zyklus: $path';
+  @override
+  String notepadUnknownImport(String name) =>
+      'Unbekannter Import: „$name" nicht in globalen Variablen';
+  @override
+  String notepadInvalidImport(String name) =>
+      'Ungültiger Importname: „$name"';
+  @override
+  String get notepadEmptyImportList => 'Leere Importliste';
+  @override
+  String notepadUseDirective(String code) => 'Use-Anweisung: $code';
   @override
   String get navGraphing => 'Graphen';
   @override
@@ -2916,6 +2954,22 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get notepadEmptyBody =>
       'Créez un nouveau document ou ouvrez l\'exemple de bienvenue pour commencer.';
+  @override
+  String notepadFreeVars(String names) => 'libre : $names';
+  @override
+  String notepadBlockedBy(String alias) => 'Bloqué par $alias';
+  @override
+  String notepadCycle(String path) => 'Cycle : $path';
+  @override
+  String notepadUnknownImport(String name) =>
+      'Import inconnu : « $name » absent des variables globales';
+  @override
+  String notepadInvalidImport(String name) =>
+      'Nom d\'import invalide : « $name »';
+  @override
+  String get notepadEmptyImportList => 'Liste d\'imports vide';
+  @override
+  String notepadUseDirective(String code) => 'Directive use : $code';
   @override
   String get navGraphing => 'Graphes';
   @override
@@ -4179,6 +4233,22 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get notepadEmptyBody =>
       'Crea un nuevo documento o abre la muestra de bienvenida para empezar.';
+  @override
+  String notepadFreeVars(String names) => 'libre: $names';
+  @override
+  String notepadBlockedBy(String alias) => 'Bloqueado por $alias';
+  @override
+  String notepadCycle(String path) => 'Ciclo: $path';
+  @override
+  String notepadUnknownImport(String name) =>
+      'Import desconocido: «$name» no está en las variables globales';
+  @override
+  String notepadInvalidImport(String name) =>
+      'Nombre de import no válido: «$name»';
+  @override
+  String get notepadEmptyImportList => 'Lista de imports vacía';
+  @override
+  String notepadUseDirective(String code) => 'Directiva use: $code';
   @override
   String get navGraphing => 'Gráficos';
   @override
