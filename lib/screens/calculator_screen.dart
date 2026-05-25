@@ -796,14 +796,26 @@ class CalculatorScreenState extends State<CalculatorScreen>
           ExpressionPreprocessingUtils.preprocessExpression(
               substituted, _appState),
         );
-        // Big expressions (integrate, factor, simplify, matrix, long
-        // factorials) get offloaded to a worker isolate via
-        // EngineService so the UI stays interactive. Short bare
-        // arithmetic stays on the main thread — the isolate-init
-        // overhead would dwarf the work.
-        final rawResult = await _runEngineOpMaybeAsync('evaluate', preprocessed,
-            fallback: () => _engine.evaluate(preprocessed));
-        result = ExpressionPreprocessingUtils.normalizeComplexResult(rawResult);
+        // If preprocessing already produced a bare integer literal
+        // (typical case: `100!` → 158-digit BigInt string), don't
+        // round-trip it through SymEngine — the engine's parser
+        // converts integers past ~15 digits into a RealDouble and
+        // returns scientific notation, which defeats exact-integer
+        // mode. Just return the literal directly.
+        if (RegExp(r'^[+-]?\d+$').hasMatch(preprocessed.trim())) {
+          result = preprocessed.trim();
+        } else {
+          // Big expressions (integrate, factor, simplify, matrix, long
+          // factorials) get offloaded to a worker isolate via
+          // EngineService so the UI stays interactive. Short bare
+          // arithmetic stays on the main thread — the isolate-init
+          // overhead would dwarf the work.
+          final rawResult = await _runEngineOpMaybeAsync(
+              'evaluate', preprocessed,
+              fallback: () => _engine.evaluate(preprocessed));
+          result =
+              ExpressionPreprocessingUtils.normalizeComplexResult(rawResult);
+        }
       }
 
       setState(() {

@@ -478,6 +478,17 @@ class _NotepadScreenState extends State<NotepadScreen> {
 
     final native =
         ExpressionPreprocessingUtils.preprocessNativeExpression(preNative);
+
+    // If preprocessing already produced a bare integer literal
+    // (typical case: `100!` → 158-digit BigInt string), don't
+    // round-trip through SymEngine — the parser converts integers
+    // past ~15 digits to RealDouble and returns scientific notation.
+    // Return the literal as-is; exact-integer-mode display picks it
+    // up via the digit-count guard in `AppState.formatNumber`.
+    if (RegExp(r'^[+-]?\d+$').hasMatch(native.trim())) {
+      return _appState.formatNumber(native.trim());
+    }
+
     try {
       final raw = await EngineService.evaluateAsync(native);
       if (raw.startsWith('Error')) return raw;
