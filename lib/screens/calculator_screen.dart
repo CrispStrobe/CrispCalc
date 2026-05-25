@@ -755,7 +755,11 @@ class CalculatorScreenState extends State<CalculatorScreen>
       String result;
       if (_isFunctionCall(converted, 'solve')) {
         result = await _handleSolveFunction(converted);
-      } else if (_isFunctionCall(converted, 'd/dx')) {
+      } else if (_isFunctionCall(converted, 'd/dx') ||
+          _isFunctionCall(converted, 'diff')) {
+        // `diff(expr, var)` is the SymPy / Mathematica convention;
+        // `d/dx(expr, var)` is what the calculator's button emits.
+        // Both route to the same handler — see _handleDifferentiateFunction.
         result = await _handleDifferentiateFunction(converted);
       } else if (_isFunctionCall(converted, 'factor')) {
         result = await _handleFactorFunction(converted);
@@ -1026,7 +1030,11 @@ class CalculatorScreenState extends State<CalculatorScreen>
 
   Future<String> _handleDifferentiateFunction(String expression) async {
     try {
-      final content = expression.substring(5, expression.length - 1).trim();
+      // Accept both prefixes — `d/dx(EXPR, VAR)` from the keypad and
+      // `diff(EXPR, VAR)` from typed input. Slice the right opener.
+      final prefix = expression.startsWith('d/dx(') ? 'd/dx(' : 'diff(';
+      final content =
+          expression.substring(prefix.length, expression.length - 1).trim();
       final parts = content.split(',');
 
       String expr = parts[0].trim();

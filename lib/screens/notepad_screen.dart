@@ -454,6 +454,16 @@ class _NotepadScreenState extends State<NotepadScreen> {
     }
     if (unitResult != null) return _appState.formatNumber(unitResult);
 
+    // CAS function calls — route to the dedicated specialized
+    // handlers in the worker isolate (engine_service.dart's
+    // `runOpAsync`) rather than the generic evaluate. Mirrors the
+    // calculator's dispatch table at calculator_screen.dart:756-795
+    // so `diff(x^3, x)`, `integrate(x^2, x)`, `solve(2x+3, x)`,
+    // `factor(x^2-1)`, `expand((x+1)^2)`, `simplify(...)`,
+    // `limit(...)` all produce the same result the calculator would.
+    final casResult = await _maybeDispatchCas(preNative);
+    if (casResult != null) return casResult;
+
     final native =
         ExpressionPreprocessingUtils.preprocessNativeExpression(preNative);
     try {
@@ -481,6 +491,100 @@ class _NotepadScreenState extends State<NotepadScreen> {
       return 'Error: $e';
     }
   }
+
+  /// Detect a single CAS function call like `diff(x^3, x)` or
+  /// `integrate(sin(x), x)` and route it to the corresponding
+  /// `EngineService.runOpAsync(EngineOp(...))` path. Returns null
+  /// when [src] isn't a recognized CAS function so the dispatcher
+  /// can fall through to generic `evaluate`. Mirrors the dispatch
+  /// table in `calculator_screen.dart:756-795`.
+  Future<String?> _maybeDispatchCas(String src) async {
+    final trimmed = src.trim();
+    EngineOp? op;
+
+    if (_isCasCall(trimmed, 'diff') || _isCasCall(trimmed, 'd/dx')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 2) return null;
+      op = EngineOp('differentiate', _native(args[0]), args[1].trim());
+    } else if (_isCasCall(trimmed, 'integrate')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length < 2 || args.length > 4) return null;
+      op = EngineOp(
+        'integrate',
+        _native(args[0]),
+        args[1].trim(),
+        args.length > 2 ? args[2].trim() : null,
+        args.length > 3 ? args[3].trim() : null,
+      );
+    } else if (_isCasCall(trimmed, 'solve')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 2) return null;
+      op = EngineOp('solve', _native(args[0]), args[1].trim());
+    } else if (_isCasCall(trimmed, 'limit')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 3) return null;
+      op = EngineOp('limit', _native(args[0]), args[1].trim(), args[2].trim());
+    } else if (_isCasCall(trimmed, 'factor')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 1) return null;
+      op = EngineOp('factor', _native(args[0]));
+    } else if (_isCasCall(trimmed, 'expand')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 1) return null;
+      op = EngineOp('expand', _native(args[0]));
+    } else if (_isCasCall(trimmed, 'simplify')) {
+      final args = _splitCasArgs(trimmed);
+      if (args.length != 1) return null;
+      op = EngineOp('simplify', _native(args[0]));
+    }
+
+    if (op == null) return null;
+    try {
+      final raw = await EngineService.runOpAsync(op);
+      if (raw.startsWith('Error')) return raw;
+      final normalized =
+          ExpressionPreprocessingUtils.normalizeComplexResult(raw);
+      return _appState.formatNumber(normalized);
+    } on EngineCancelled {
+      return 'Error: cancelled';
+    } catch (e) {
+      return 'Error: $e';
+    }
+  }
+
+  bool _isCasCall(String src, String name) {
+    return src.startsWith('$name(') && src.endsWith(')');
+  }
+
+  /// Comma-split with paren/bracket-depth awareness so
+  /// `integrate(f(x), x)` splits into `[f(x), x]` rather than
+  /// `[f(x, x)]`.
+  List<String> _splitCasArgs(String src) {
+    final open = src.indexOf('(');
+    if (open < 0) return const [];
+    final body = src.substring(open + 1, src.length - 1);
+    final out = <String>[];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < body.length; i++) {
+      final ch = body[i];
+      if (ch == '(' || ch == '[') {
+        depth++;
+      } else if (ch == ')' || ch == ']') {
+        depth--;
+      } else if (ch == ',' && depth == 0) {
+        out.add(body.substring(start, i));
+        start = i + 1;
+      }
+    }
+    if (start <= body.length) {
+      out.add(body.substring(start));
+    }
+    return out;
+  }
+
+  String _native(String s) =>
+      ExpressionPreprocessingUtils.preprocessNativeExpression(s);
 
   /// Resolve the doc's optional `use name1, name2, ...` directive
   /// against the global namespaces (decision #20). Variables in
