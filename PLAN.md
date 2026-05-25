@@ -8,6 +8,70 @@ conic, numerical helpers and full AppState persistence; the calculator
 history clear button; persistent history / variables / graph functions;
 and the light/dark/system theme picker.
 
+See **Strategic context (May 2026)** below for the framing that drives the
+P5 "Strategic next" cluster.
+
+---
+
+## Strategic context (May 2026)
+
+Where the iOS/Mac calculator category sits today and where CrispCalc fits
+in it. This frames priorities below.
+
+**Five distinct paradigms** dominate the 2026 calculator category:
+
+1. **System-level** — Apple's Math Notes (iPadOS 18+) put handwriting,
+   variables, and graphing into the OS calculator. On iPad this largely
+   killed the case for a third-party "just a nicer calculator."
+2. **Notepad / natural-language** (Soulver 3, Numi, Tydlig, Caldy,
+   LetsCalc) — the dominant *innovation* paradigm. Type math like prose;
+   results in a side column; edit any line and downstream recomputes.
+   Where new users in the category are going.
+3. **AI math solvers** (MathGPT, Photomath, Microsoft Math Solver,
+   Calculator Air) — photo → step-by-step via multimodal LLM. The big
+   2024–2026 shift, but most are pure-LLM and hallucinate arithmetic.
+4. **Graphing** — Desmos, GeoGebra. Unchanged; no real challenger.
+5. **Scientific / power-user** — PCalc, TechniCalc. Stable but no
+   recent innovation.
+
+**Where CrispCalc actually stands.** Competitive-to-ahead on the
+scientific/power-user axis and owning ground nobody else does:
+
+- True symbolic CAS (SymEngine FFI) — most rivals don't have this.
+- Deterministic step-by-step for `diff` / `solve` / `integrate` with
+  plain-language localized notes across en/de/fr/es.
+- Hypothesis-testing surface that beats every consumer iOS calculator
+  (one-sample / paired / Welch t, ANOVA, χ² GoF, χ² independence,
+  Fisher exact, sign, Wilcoxon).
+- CSP module via `dart_csp` — Sudoku family (4×4 through 16×16, plus
+  X / Killer / Disjoint variants), Diophantine, cryptarithm, generic
+  DSL with optimization, scheduling (`noOverlap`, `cumulative`).
+  **Nothing in the consumer category does this.**
+- Composite-dimension unit arithmetic with SI prefixes and derived
+  units (N/J/W/Pa/Hz).
+- Cross-platform: iOS / Android / macOS / Linux / Windows. Most rivals
+  are mobile-only or Mac-only.
+
+**Where we're behind.** Two gaps, in priority order:
+
+1. **Input paradigm is still 1995.** Keypad + LaTeX text field. The
+   notepad-style document is the single biggest 2024–2026 innovation
+   and we have none of it. Every primitive needed exists in the engine
+   layer; this is a UI surface, not a new engine.
+2. **No AI anywhere.** The category is racing toward LLM-frontended
+   math. The empty quadrant — and the one CrispCalc is uniquely placed
+   to occupy — is **AI as a *verifier-frontend*, never a solver**. AI
+   translates input and narrates output; SymEngine + the step engine
+   remain the only sources of arithmetic. No hallucinations, natural
+   input.
+
+**The bet.** Two strategic adds (P5 "Strategic next" below) reposition
+CrispCalc from *"the strongest engine nobody knows about"* to *"the only
+CAS-grade calculator with a 2026 input surface."* Existing
+differentiators (CAS, CSP, stats, units, cross-platform) become the moat.
+Distribution pipeline (P4) is the load-bearing prerequisite — without
+TestFlight / App Store the rest compounds at zero.
+
 ---
 
 ## P1 — Open follow-ups
@@ -117,6 +181,10 @@ single feature. Roughly in priority order — top items unblock the next.
   the App Store / TestFlight / hardened-runtime paths aren't open. Apple
   Developer enrollment + notarization workflow + automatic version
   bumping on tag. Same shape for Android via Play.
+  **Priority bump (2026 reset)**: load-bearing prerequisite for the
+  Strategic-next items above to matter. Without TestFlight / App Store,
+  every new feature reaches only people willing to build from source.
+  Should land before notepad V1 ships.
 - [~] **Long-evaluation off-main-thread**. Big integrals or matrix ops
   can freeze the UI for several seconds. Wrap bridge calls in a Dart
   isolate (or at least `compute()`) and show the progress overlay
@@ -259,6 +327,235 @@ app category. Some are pedagogy features, some are graphing features,
 some are knowledge-domain expansions. Each costs roughly 1–2 weeks of
 focused work; doing all four of the "recommended next" cluster would
 roughly double the perceived value of the app.
+
+### Strategic next (May 2026 reset)
+
+Two adds that close the 2026 input-paradigm gap (see "Strategic context"
+at the top of the file). Items in "Recommended next" below remain valid
+but become *moat-building* rather than *positioning*, since the moat
+(engine breadth) is already largely cut.
+
+- [ ] **Notepad / document mode** (Soulver-style). New top-level surface
+  alongside Calculator / Graphing / Analysis: a multi-line document
+  where each line is a referenceable expression, results appear in a
+  right-hand column, and editing any line live-recomputes every
+  downstream dependent. Every primitive already exists; this is a UI
+  layer over the engine, not a new engine.
+  - **V1 scope**: new `NotepadScreen` with a `TextField` per line backed
+    by `LatexController`. Right-column result via
+    `EngineService.runOpAsync`. Variables auto-bind from `x = 5` style
+    assignments and persist into the document only (not into the global
+    `AppState.variables`, so documents stay self-contained). Inline unit
+    syntax via the existing `UnitExpressionEvaluator`. Lines addressable
+    as `line2`, `line3`, … or by user-chosen name (`tax = 8.5%`).
+  - **V2**: live dependency graph between lines so a single edit
+    repaints only affected downstream cells (incremental recalc, not
+    full-sheet re-eval). Multi-document support — left-rail list of
+    saved documents, persisted as JSON in `shared_preferences` (or
+    `sembast` if the P4 storage-hardening item lands first).
+  - **V3**: cross-document references (`{doc:taxes}.line4`), Markdown +
+    LaTeX export, share-sheet integration (pairs with P4 "Share /
+    export").
+  - **Open question**: do documents call user-defined functions from
+    the global namespace, or sandbox each document? Soulver sandboxes;
+    Numi shares. Probable answer: *opt-in import* per document via an
+    explicit `use f, g` line at top.
+  - **Why this first**: closes the single biggest 2026 gap and reuses
+    every primitive we've already built. Notepad UX is what new users
+    in the category now expect by default.
+  - **Implementation plan (V1)** — 8 phases, each independently
+    reviewable / mergeable. File references below are anchored to the
+    current tree so they survive normal refactoring.
+    - **Phase 1 — Data model & persistence skeleton.** New
+      `lib/engine/notepad.dart` with `NotepadDocument { id, name,
+      createdAt, updatedAt, lines: List<NotepadLine> }` and
+      `NotepadLine { id, source, cachedResult, cachedError }`. Both
+      `toJson` / `fromJson` following the `CalculationEntry` pattern
+      at `lib/engine/app_state.dart:43-56` (single-letter keys to keep
+      the prefs blob small). Extend `AppState` with
+      `Map<String, NotepadDocument> notepadDocuments` +
+      `String? currentNotepadDocId`, `_kNotepadDocs` /
+      `_kCurrentNotepadDoc` pref keys (alongside the existing keys at
+      `app_state.dart:108-117`), load block patterned on the variables
+      lifecycle (`app_state.dart:215-224`), `_persistNotepadDocs()`
+      mirroring `_persistVariables()` at `app_state.dart:453-455`,
+      and `setNotepadDocument(doc)` / `deleteNotepadDocument(id)`
+      mirroring `setVariable(...)` at `app_state.dart:506-509`. Add
+      keys to `exportToJson` / `importFromJson` at
+      `app_state.dart:663-679`. **Done when**: an empty `NotepadDocument`
+      can be created, mutated, persisted, and round-tripped through
+      Export → clipboard → Import.
+    - **Phase 2 — Line parser + document scope.** New
+      `lib/engine/notepad_evaluator.dart`. Classify each line into one
+      of `{blank, comment (// or # prefix), assignment, expression}`.
+      Assignment grammar: `^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$`
+      where the LHS isn't a reserved CAS keyword (sin/cos/log/…).
+      Maintain a document-local `Map<String, String> scope` keyed by
+      explicit assignment names *or* auto-names (`line1`, `line2`, …).
+      `String preprocessLine(NotepadLine line, Map<String, String>
+      scope)` substitutes scope names with their cached results —
+      same shape as `ExpressionPreprocessingUtils.substituteVariables`
+      at `lib/utils/expression_preprocessing_utils.dart:159-175`.
+      **Done when**: unit-tested at `test/notepad_evaluator_test.dart`
+      with stub scopes (assignment parsing, auto-name vs. explicit,
+      reserved-keyword rejection, substitution).
+    - **Phase 3 — Dependency graph + topological evaluator.** Same
+      file. `Set<String> referencedNames(String preprocessed)` over the
+      line's parsed AST (cheap: regex match on `\b[a-zA-Z_][a-zA-Z0-9_]*\b`
+      filtered against `scope.keys`). Build a per-document DAG, topo-sort
+      with Kahn's algorithm, evaluate in order via
+      `EngineService.evaluateAsync(...)` at
+      `lib/services/engine_service.dart:70-73`. `Future<void>
+      evaluateAll(NotepadDocument)` + `Future<void>
+      evaluateFrom(NotepadDocument, int lineIndex)` (recomputes the
+      given line and every downstream dependent only). Cycle detection:
+      emit `Error: circular reference: a → b → a` on the offending
+      lines (consumed by `EngineErrorFormatter` at
+      `lib/utils/error_formatter.dart:21-76`). **Done when**: tests
+      cover topo order, cycle detection, downstream-only invalidation.
+    - **Phase 4 — NotepadScreen UI skeleton.** New
+      `lib/screens/notepad_screen.dart`. Scrollable `ListView.builder`
+      of `_NotepadLineRow` widgets; each row = left `TextField`
+      (`TextEditingController` per line — plain text for V1, no
+      `LatexController`; the input-LaTeX feature can graduate from
+      `CalculatorScreen` in a later round) + right `Math.tex` result
+      using `MathDisplayUtils.toHistoryDisplayLatex` (same pattern as
+      `_buildExpressionDisplay` at
+      `lib/screens/calculator_screen.dart:152-181`). Adaptive: at
+      `MediaQuery` width ≥ 720 px render side-by-side; below that
+      stack the result under the input. AppBar: document name (tap to
+      rename), `+` to append a line, `⋮` menu (new / duplicate /
+      delete document, export single doc). Wire into the navigation
+      shell at `lib/main.dart:192-226` — append `const int _kNotepad =
+      5;`, add `NotepadScreen()` to the `_screens` list at line 214,
+      add a destination tuple at line 285. **Done when**: the tab is
+      visible across all three breakpoints, basic add/delete line
+      works, switching documents persists.
+    - **Phase 5 — Live recalc pipeline.** On every line edit:
+      300 ms debounce → `evaluateFrom(doc, lineIndex)`. Use
+      `EngineService.cancelInFlight()` (`engine_service.dart:88`) when
+      a fresh edit arrives while the previous run is still in flight;
+      the worker's monotonic run-id (HISTORY round 56) drops the
+      stale result. Per-row result widget switches between three
+      states: idle (no source), pending (greyed-out previous result +
+      tiny progress dot), computed (LaTeX + copy-on-long-press).
+      Errors routed through `EngineErrorFormatter.format(raw,
+      AppLocalizations.of(context))` and rendered in the theme's
+      error color (same affordance as
+      `calculator_screen.dart:799-803`). **Done when**: typing into
+      a line updates the result within ~500 ms steady-state; rapid
+      typing doesn't queue up stale evals.
+    - **Phase 6 — Unit syntax + scope-local assignments.** Before the
+      generic `evaluate` route, call
+      `UnitExpressionEvaluator.tryEvaluate(preprocessed)` at
+      `lib/engine/unit_expression.dart:50-198`; on non-null result
+      use it, else fall through. Mirrors `calculator_screen.dart:745-753`.
+      Assignment lines (`tax = 0.085`) bind into the document-local
+      scope only — **not** into `AppState.userVariables`, so two
+      open documents can each have an `x` without colliding. The
+      `Ans` magic from `expression_preprocessing_utils.dart:161-164`
+      should resolve to the previous *line's* result, not the global
+      history — i.e. document-scoped `Ans`. **Done when**: a doc
+      containing `tax = 0.085` / `subtotal = 142.50` /
+      `subtotal * (1 + tax)` produces the correct total; `5 km +
+      3 m` parses inline; two parallel docs don't leak variables.
+    - **Phase 7 — Export / Import + share single doc.** Plumb
+      `notepadDocuments` + `currentNotepadDocId` into the JSON shape
+      at `app_state.dart:663-679` (forward-compatible: missing keys
+      tolerated, same as existing fields). Add a "Copy as Markdown"
+      action to the AppBar `⋮` menu — emits one fenced block per
+      line `source` with `// → result` comments; useful for sharing
+      a quick calc into Slack / email without the share-sheet
+      package. Full `share_plus` integration deferred to V2 (already
+      tracked under P4 → "Share / export"). **Done when**: a fresh
+      install can import a doc previously exported on another
+      device and see it in the document list.
+    - **Phase 8 — Localization + onboarding + tests.** Add strings
+      for the tab name, default doc name ("Untitled"), empty-state
+      copy ("Type math like prose…"), and the new error keys (cycle,
+      undefined-name, etc.) across en/de/fr/es in
+      `lib/localization/app_localizations.dart`; the existing locale
+      non-emptiness test will fail CI if any locale is missed.
+      Extend `OnboardingTour` (`lib/widgets/onboarding_tour.dart`)
+      with a 5th card describing the notepad. New
+      `test/notepad_evaluator_test.dart` (parser, scope, cycle, topo)
+      and `test/notepad_screen_test.dart` (build + line add + edit
+      + persistence). **Done when**: locale tests + unit tests +
+      widget tests all green; manual smoke on macOS confirms the
+      doc loads after relaunch.
+  - **Open design questions (decide during Phase 1 / 2)**:
+    - **Scope import.** Should a notepad doc see global
+      `AppState.userVariables` and `AppState.userFunctions`?
+      Soulver sandboxes; Numi shares. **Lean**: opt-in via an
+      explicit `use` line at top of doc (`use f, g, taxrate`) so
+      default behavior is safe sandboxed. Defer to V2 if Phase 6
+      ships before consensus.
+    - **Line addressing.** Auto-names (`line1`, `line2`, …) shift
+      when a line is inserted / deleted. **Lean**: line *id* (stable
+      uuid) is the canonical key; auto-name is a *display alias*
+      that recomputes on the fly. Users referencing `line5` keep
+      working even after they delete `line3`, because the alias
+      resolves to whatever line is currently in position 5. This
+      matches Soulver's mental model. (Explicit names like
+      `tax = ...` are immune by definition.)
+    - **Input rendering.** V1 uses plain `TextField` (no inline
+      LaTeX render-in-place). Rationale: simpler diff against the
+      LaTeX-rendered result on the right; matches Soulver's plain-
+      text input convention; avoids re-implementing
+      `LatexController`'s cursor edge cases for a brand-new
+      surface. V2 can adopt `LatexController` once the layout has
+      stabilized.
+  - **Out of scope for V1** (push to V2/V3): incremental subgraph
+    recalc (V1 just re-evals from the edited line down, full DAG
+    walk, which is fine for docs up to a few hundred lines);
+    multi-document list view as a left rail on wide screens
+    (V1 ships with a `⋮`-menu document switcher); cross-document
+    references (`{doc:taxes}.line4`); PDF export of a doc; rich-text
+    formatting / headings within a doc; collaborative editing.
+
+- [ ] **AI copilot — verifier-frontend, never solver**. The defining
+  property: every numeric or symbolic answer continues to come from
+  SymEngine / the step engine; the LLM is restricted to three jobs.
+  Pluggable provider (Claude / OpenAI / on-device Apple Foundation
+  Models on iOS 18+); user supplies key in Settings; opt-in only;
+  expressions sent only on explicit user action; key stored locally.
+  - **Job 1 — Translate**: natural language → engine syntax.
+    *"integrate x squared from 0 to 1"* → `integrate(x^2, x, 0, 1)`.
+    Single button on the calculator + notepad input field; round-trips
+    through the engine so the user sees the translated syntax before
+    evaluation. Failures fall through to the existing parser (no silent
+    acceptance of LLM output).
+  - **Job 2 — Narrate**: turn the deterministic step trace from
+    `step_engine.dart` into prose. Today each step has a `StepNote`
+    with a one-sentence localized explanation; the LLM upgrades this
+    to a paragraph that *connects* steps ("we apply the chain rule
+    here because the inner function is itself a power"). The formal
+    formula + before/after row remains the source of truth.
+  - **Job 3 — Explain**: an "Explain this result" button on history
+    rows and notepad result cells. Takes the input expression + the
+    engine's answer and produces a plain-language interpretation
+    ("the area under the curve from 0 to 1 is exactly 1/3 square
+    units"). Optional; off by default.
+  - **Hard guardrail**: the LLM is never asked "what's the answer." It
+    only sees expressions and engine-produced results. The About screen
+    should state this verbatim — it's the positioning: *"CrispCalc
+    uses AI to read your input and explain the answer. It never uses
+    AI to compute the answer."*
+  - **V1 scope**: Job 1 only. Cloud provider (Claude default). Setting
+    toggle + API-key field. One button on the input field labelled
+    "Interpret".
+  - **V2**: Job 2 + Job 3. Streaming UI for narrated steps.
+  - **V3**: on-device translation via Apple Foundation Models on
+    iOS 18+ / macOS 15+ so the basic translator works offline and
+    without an API key on Apple platforms. Falls back to cloud provider
+    elsewhere.
+  - **Audit log**: each LLM call logged locally (opt-in viewer in
+    Settings) so the user can see what was sent and what came back —
+    helpful for debugging and load-bearing for the privacy story.
+  - **Why this second**: notepad mode is more valuable when the input
+    field accepts prose. But notepad ships first because it's useful
+    on its own (with typed math) and validates the surface before AI
+    multiplies its leverage.
 
 ### Recommended next (top 4, in priority order)
 
@@ -465,9 +762,20 @@ roughly double the perceived value of the app.
   equation has become table stakes in the consumer math-help category.
   Possible on-device with TFLite or Apple's `VisionKit` (iOS); cloud
   OCR is faster to ship but conflicts with the on-device promise.
+  **Strategic promotion (2026 reset)**: slots into the AI copilot's
+  Job 1 (Translate) — OCR converts image to text, the LLM translates
+  that text to engine syntax. Ship after AI copilot V1 so the
+  translation pipeline is already proven on typed input.
 - [ ] **Pen / handwriting input**. Apple Pencil + macOS trackpad
   handwriting recognition (`PKCanvasView` + `MLHandwritingRecognizer`)
-  for math expressions. Niche but high-end feature.
+  for math expressions. iPad specifically — competes with Math Notes
+  on its home turf. **Strategic note (2026 reset)**: Apple's on-device
+  handwriting recognizer is free, latency-friendly, and doesn't need
+  an LLM round-trip. Ship as the iPad input modality for the notepad
+  surface — the killer combo is "write the equation by hand, see it
+  solve in the right column, optionally ask the AI to explain the
+  answer." Treat as iPad/Mac-only; Android can fall through to typed
+  input until a parity recognizer is identified.
 
 #### Math surface area
 

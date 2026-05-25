@@ -444,42 +444,46 @@ before handing back to the caller — see `solveOptimization` in
 
 ## 6. Open arcs, ranked by lift vs. cost
 
-Recommended next picks for a fresh session. Mix of small wins and
-fresh feature arcs.
+### Chosen next arc — MPFR/FLINT precision
 
-### Small / medium (1 session each)
+`HANDOFF_PRECISION.md` is the load-bearing doc for the next
+session. It covers the wrapper-layer reality (PLAN.md's "tiny:
+one FFI call per constant" framing is wrong by ~10×), three
+viable implementation paths with trade-offs, a 5-round
+breakdown, the smallest first slice, and arc-specific land
+mines. Read it before opening a file.
+
+The arc strengthens the CAS-grade moat that PLAN.md's
+Strategic Context (May 2026) calls out, builds on infra that
+already ships (SymEngine + GMP/MPFR/FLINT linked + +load
+keepalive in place), and ships discrete completable rounds
+without blocking on UI/AI design.
+
+### Other arcs (multi-session, deferred)
 
 1. **dart_csp propagation-callback identity** — round 81
    shipped constraint-*context* captions; the next tightening
-   is to expose **which** constraint actually propagated each
-   pruning step through dart_csp's `CspCallback` so the
-   visualizer can name the firing propagator rather than the
-   passive overlays the cell sits in. Multi-repo: a dart_csp
-   change (extend the callback signature with a constraint
-   tag) plus a CrispCalc-side consumer.
-
-### Fresh feature arcs (multi-session)
-
-5. **Irregular-region Sudoku (Du-sum-oh)** — boxes become
-   arbitrary same-size polyomino tilings instead of the regular
-   rectangular partition. Engine: replace the box-partition
-   walker (`_boxes`) with a per-puzzle region list; everything
-   else (allDifferent overlay, hint elimination) reuses the
-   existing path. Generator becomes its own problem (sampling
-   valid tilings).
-6. **Killer generator V2** — programmatic cage-layout generation
-   with uniqueness guarantee. Requires search over shapes; the
-   round-66 probe loop is a starting point.
-7. **GMP / MPFR / MPC / FLINT precision arc** — native bridge
-   for arbitrary precision + number theory. Plumbed but not
-   surfaced. New feature arc, ~5–10 rounds. See PLAN
-   §"Precision & number theory" for the staged breakdown
-   (Group A: integer mode is shipped; arbitrary-precision
-   constants + number-theory toy set are the next slices).
-8. **Worked-examples V3** — advanced topics (related rates,
-   eigenvalue, multivariable, parametric) and a "view this
+   would expose **which** propagator actually fired through
+   dart_csp's `CspCallback`. Multi-repo: dart_csp signature
+   extension + CrispCalc consumer.
+2. **Irregular-region Sudoku (Du-sum-oh)** — boxes become
+   arbitrary same-size polyomino tilings. Engine replaces the
+   `_boxes` walker with a per-puzzle region list; allDifferent
+   overlay + hint elimination reuse the existing path.
+   Generator (sampling valid tilings) is its own problem.
+3. **Killer generator V2** — programmatic cage-layout
+   generation with uniqueness guarantee. Search over shapes;
+   the round-66 probe loop is the starting point.
+4. **Worked-examples V3** — advanced topics (related rates,
+   eigenvalue, multivariable, parametric) + a "view this
    step-by-step" jump from a worked example to its trace
    dialog. Listed as V3 pending in PLAN.
+
+The two strategic adds from PLAN.md's May-2026 Strategic
+Context (notepad/document input paradigm + AI as
+verifier-frontend) are bigger lifts and don't have an obvious
+"first round" yet. They sit above this menu strategically but
+below it operationally.
 
 ## 7. Critical commands
 
