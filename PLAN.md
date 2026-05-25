@@ -342,180 +342,285 @@ but become *moat-building* rather than *positioning*, since the moat
   right-hand column, and editing any line live-recomputes every
   downstream dependent. Every primitive already exists; this is a UI
   layer over the engine, not a new engine.
-  - **V1 scope**: new `NotepadScreen` with a `TextField` per line backed
-    by `LatexController`. Right-column result via
-    `EngineService.runOpAsync`. Variables auto-bind from `x = 5` style
-    assignments and persist into the document only (not into the global
-    `AppState.variables`, so documents stay self-contained). Inline unit
-    syntax via the existing `UnitExpressionEvaluator`. Lines addressable
-    as `line2`, `line3`, … or by user-chosen name (`tax = 8.5%`).
+  - **V1 scope**: new `NotepadScreen` with a plain `TextField` per
+    line (no inline LaTeX in input for V1). Right-column result
+    rendered via `flutter_math_fork`. Lines evaluated via
+    `EngineService` with 300 ms debounced live recalc + in-flight
+    cancellation. Lines addressable as `line2`, `line3`, … (stable
+    id under the hood; the alias resolves to whatever line is
+    currently in that position) or by user-chosen name
+    (`tax = 0.085`). Documents are sandboxed by default; an explicit
+    `use name1, name2, ...` line at the top imports specific global
+    variables / user-defined functions from `AppState` into the
+    doc's scope. Drag handle on each row for reorder. Snackbar
+    with Undo for delete-doc / delete-line.
   - **V2**: live dependency graph between lines so a single edit
     repaints only affected downstream cells (incremental recalc, not
-    full-sheet re-eval). Multi-document support — left-rail list of
-    saved documents, persisted as JSON in `shared_preferences` (or
-    `sembast` if the P4 storage-hardening item lands first).
-  - **V3**: cross-document references (`{doc:taxes}.line4`), Markdown +
-    LaTeX export, share-sheet integration (pairs with P4 "Share /
-    export").
-  - **Open question**: do documents call user-defined functions from
-    the global namespace, or sandbox each document? Two reasonable
-    extremes exist in the category — full sandbox vs. shared global
-    namespace. Probable answer: *opt-in import* per document via an
-    explicit `use f, g` line at top.
+    full-sheet re-eval). Inline-LaTeX input via `LatexController`
+    once the layout has stabilized. Left-rail document list on wide
+    screens (V1 ships with a `⋮`-menu doc switcher). `sembast`
+    migration if storage-hardening item lands.
+  - **V3**: cross-document references (`{doc:taxes}.line4`),
+    PDF export of a doc, share-sheet integration (pairs with P4
+    "Share / export"), document templates.
+  - **Design decisions (V1 interview, 2026-05-25)** — captured to
+    keep the Phases below consistent with the agreed surface:
+    1. **Scope**: sandboxed by default; opt-in `use name1, name2,
+       ...` line at the top of a doc imports specific globals.
+    2. **Line addressing**: stable internal id; `lineN` is a
+       display alias resolving to whatever is currently at
+       position N.
+    3. **Input rendering**: plain `TextField` per line for V1 (no
+       inline LaTeX in input).
+    4. **`Ans`**: result of the nearest non-blank line above;
+       document-scoped (not the global calculator history).
+    5. **Tab position**: after Calculator, before Graphing.
+    6. **Doc switcher**: `⋮` menu in the AppBar (doc list + new
+       doc + open Welcome sample).
+    7. **First launch**: auto-create empty `Untitled` doc; ship a
+       built-in `Welcome` sample doc accessible from the `⋮`
+       menu and surfaced as a card in the onboarding tour.
+    8. **Default doc name**: sequential — `Untitled`,
+       `Untitled 2`, …
+    9. **Recalc trigger**: 300 ms debounce on edit; cancel
+       in-flight stale work via the existing isolate run-id
+       mechanism.
+    10. **Error chain**: when line N has an error, dependents
+        render "Blocked by line N" with a tap-to-jump link
+        instead of propagating the error or using stale values.
+    11. **Result format**: always LaTeX via `flutter_math_fork`,
+        plain-text fallback on parser error; long-press to copy
+        as plain or as LaTeX (mirrors existing history affordance).
+    12. **Empty result**: when input is blank the row collapses to
+        a small height; no `—` placeholder.
+    13. **Comments**: both `//` and `#` are accepted, stripped from
+        first match to EOL.
+    14. **Assignment**: single-identifier-LHS heuristic — `name =
+        expr` with LHS matching `^[A-Za-z_][A-Za-z0-9_]*$` (and
+        not a reserved CAS keyword) is an assignment; everything
+        else (`x^2 = 4`, `sin(x) = 0`) is treated as a plain
+        expression.
+    15. **Undefined name**: a referenced name not in the doc's
+        scope evaluates as a free symbolic variable (CAS default);
+        the result row carries a small `free: x, y` tag so typos
+        pop.
+    16. **Line reorder**: drag handle on each row
+        (`ReorderableListView`). Reordering only changes the
+        meaning of positional aliases (`lineN`); explicit names
+        follow the line.
+    17. **Layout breakpoint**: 720 px (matches the existing nav
+        breakpoint) — side-by-side at and above, stacked below.
+    18. **Destructive actions**: snackbar with Undo (5 s timeout)
+        for delete-doc, delete-line, clear-doc; no upfront
+        dialogs.
+    19. **Number format**: inherits the global
+        `AppState.numberFormat`; no per-doc override in V1.
+    20. **Import syntax**: `use name1, name2, ...` on its own
+        line at the very top of a doc (must be the first
+        non-blank, non-comment line); each imported name binds
+        the global into the doc's scope.
   - **Why this first**: closes the single biggest 2026 gap and reuses
     every primitive we've already built. Notepad UX is what new users
     in the category now expect by default.
   - **Implementation plan (V1)** — 8 phases, each independently
-    reviewable / mergeable. File references below are anchored to the
-    current tree so they survive normal refactoring.
+    reviewable / mergeable. File references anchored to the
+    current tree. Numbered design decisions referenced as **#N**.
     - **Phase 1 — Data model & persistence skeleton.** New
       `lib/engine/notepad.dart` with `NotepadDocument { id, name,
       createdAt, updatedAt, lines: List<NotepadLine> }` and
-      `NotepadLine { id, source, cachedResult, cachedError }`. Both
-      `toJson` / `fromJson` following the `CalculationEntry` pattern
-      at `lib/engine/app_state.dart:43-56` (single-letter keys to keep
-      the prefs blob small). Extend `AppState` with
-      `Map<String, NotepadDocument> notepadDocuments` +
-      `String? currentNotepadDocId`, `_kNotepadDocs` /
-      `_kCurrentNotepadDoc` pref keys (alongside the existing keys at
-      `app_state.dart:108-117`), load block patterned on the variables
-      lifecycle (`app_state.dart:215-224`), `_persistNotepadDocs()`
-      mirroring `_persistVariables()` at `app_state.dart:453-455`,
-      and `setNotepadDocument(doc)` / `deleteNotepadDocument(id)`
-      mirroring `setVariable(...)` at `app_state.dart:506-509`. Add
-      keys to `exportToJson` / `importFromJson` at
-      `app_state.dart:663-679`. **Done when**: an empty `NotepadDocument`
-      can be created, mutated, persisted, and round-tripped through
-      Export → clipboard → Import.
-    - **Phase 2 — Line parser + document scope.** New
-      `lib/engine/notepad_evaluator.dart`. Classify each line into one
-      of `{blank, comment (// or # prefix), assignment, expression}`.
-      Assignment grammar: `^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$`
-      where the LHS isn't a reserved CAS keyword (sin/cos/log/…).
-      Maintain a document-local `Map<String, String> scope` keyed by
-      explicit assignment names *or* auto-names (`line1`, `line2`, …).
-      `String preprocessLine(NotepadLine line, Map<String, String>
-      scope)` substitutes scope names with their cached results —
-      same shape as `ExpressionPreprocessingUtils.substituteVariables`
+      `NotepadLine { id, source, cachedResult, cachedError,
+      cachedFreeVars }`. Both `toJson` / `fromJson` following the
+      `CalculationEntry` pattern at
+      `lib/engine/app_state.dart:43-56` (single-letter keys to keep
+      the prefs blob small). Extend `AppState` with `Map<String,
+      NotepadDocument> notepadDocuments` + `String?
+      currentNotepadDocId`, `_kNotepadDocs` / `_kCurrentNotepadDoc`
+      pref keys (alongside the existing keys at
+      `app_state.dart:108-117`), load block patterned on the
+      variables lifecycle (`app_state.dart:215-224`),
+      `_persistNotepadDocs()` mirroring `_persistVariables()` at
+      `app_state.dart:453-455`, and `setNotepadDocument(doc)` /
+      `deleteNotepadDocument(id)` mirroring `setVariable(...)` at
+      `app_state.dart:506-509`. Add keys to `exportToJson` /
+      `importFromJson` at `app_state.dart:663-679`. Bundle a
+      static `Welcome` sample doc as a constant in
+      `lib/engine/notepad.dart` (one short version per locale,
+      see Phase 8) — seeded on first launch alongside the
+      auto-created empty `Untitled` per **#7**. **Done when**: an
+      empty doc can be created, mutated, persisted, and
+      round-tripped through Export → clipboard → Import; the
+      Welcome doc appears after a fresh install.
+    - **Phase 2 — Line parser + scope.** New
+      `lib/engine/notepad_evaluator.dart`. Per-line classification:
+      `{blank, comment, useDirective, assignment, expression}`.
+      Comment per **#13**: regex `^\s*(//|#)`; everything after the
+      marker stripped to EOL. `use` directive per **#20**: matches
+      `^\s*use\s+(...)$` *only if it is the first non-blank,
+      non-comment line of the doc*; later occurrences are treated
+      as plain expressions referencing an identifier called `use`.
+      Assignment per **#14**: regex
+      `^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$` on a not-reserved
+      LHS (reserved list = CAS keywords from
+      `expression_preprocessing_utils.dart` + `Ans`). LHS that
+      doesn't match the strict identifier pattern (e.g. `x^2 = 4`)
+      falls through to `expression` and is passed verbatim to the
+      engine. Document-local `Map<String, String> scope` keyed by
+      assignment names *or* auto-aliases (`line1`, `line2`, …); the
+      `use` import populates the scope from
+      `AppState.userVariables` and `AppState.userFunctions` at
+      evaluation time. `String preprocessLine(NotepadLine line, Map
+      scope)` substitutes scope names with cached results — same
+      shape as `ExpressionPreprocessingUtils.substituteVariables`
       at `lib/utils/expression_preprocessing_utils.dart:159-175`.
-      **Done when**: unit-tested at `test/notepad_evaluator_test.dart`
-      with stub scopes (assignment parsing, auto-name vs. explicit,
-      reserved-keyword rejection, substitution).
+      `Ans` per **#4** resolves to the cached result of the nearest
+      non-blank line above the current line. **Done when**:
+      unit-tested at `test/notepad_evaluator_test.dart` covering
+      each line kind, the `use` first-line-only constraint, the
+      assignment heuristic, scope substitution, and `Ans`
+      resolution.
     - **Phase 3 — Dependency graph + topological evaluator.** Same
-      file. `Set<String> referencedNames(String preprocessed)` over the
-      line's parsed AST (cheap: regex match on `\b[a-zA-Z_][a-zA-Z0-9_]*\b`
-      filtered against `scope.keys`). Build a per-document DAG, topo-sort
-      with Kahn's algorithm, evaluate in order via
+      file. `Set<String> referencedNames(String preprocessed,
+      Set<String> scopeKeys)` — regex `\b[A-Za-z_][A-Za-z0-9_]*\b`
+      filtered against scope keys. Build a per-document DAG;
+      topo-sort via Kahn's algorithm; evaluate in order via
       `EngineService.evaluateAsync(...)` at
       `lib/services/engine_service.dart:70-73`. `Future<void>
       evaluateAll(NotepadDocument)` + `Future<void>
       evaluateFrom(NotepadDocument, int lineIndex)` (recomputes the
-      given line and every downstream dependent only). Cycle detection:
-      emit `Error: circular reference: a → b → a` on the offending
-      lines (consumed by `EngineErrorFormatter` at
-      `lib/utils/error_formatter.dart:21-76`). **Done when**: tests
-      cover topo order, cycle detection, downstream-only invalidation.
+      given line and every downstream dependent only). Cycle
+      detection: every line in the cycle gets a structured error
+      `circularReference(['a','b','a'])`. **Error-chain UX** per
+      **#10**: when line N has an error, every downstream
+      dependent's `cachedError` is set to `blockedBy(lineId: N.id,
+      alias: "line5")` instead of being evaluated; the UI renders
+      this as a tap-to-jump banner. Free variables per **#15**:
+      `cachedFreeVars: Set<String>` = `referencedNames` minus
+      `scopeKeys` — fed into the UI as the "free: x, y" tag.
+      **Done when**: tests cover topo order, cycle detection,
+      downstream-only invalidation, blocked-by propagation, and
+      free-var tracking.
     - **Phase 4 — NotepadScreen UI skeleton.** New
-      `lib/screens/notepad_screen.dart`. Scrollable `ListView.builder`
-      of `_NotepadLineRow` widgets; each row = left `TextField`
-      (`TextEditingController` per line — plain text for V1, no
-      `LatexController`; the input-LaTeX feature can graduate from
-      `CalculatorScreen` in a later round) + right `Math.tex` result
-      using `MathDisplayUtils.toHistoryDisplayLatex` (same pattern as
+      `lib/screens/notepad_screen.dart`. `ReorderableListView` per
+      **#16** of `_NotepadLineRow` widgets with drag handles on
+      each row; each row = left plain `TextField` (no
+      `LatexController` per **#3**) + right `Math.tex` result via
+      `MathDisplayUtils.toHistoryDisplayLatex` (same pattern as
       `_buildExpressionDisplay` at
-      `lib/screens/calculator_screen.dart:152-181`). Adaptive: at
-      `MediaQuery` width ≥ 720 px render side-by-side; below that
-      stack the result under the input. AppBar: document name (tap to
-      rename), `+` to append a line, `⋮` menu (new / duplicate /
-      delete document, export single doc). Wire into the navigation
-      shell at `lib/main.dart:192-226` — append `const int _kNotepad =
-      5;`, add `NotepadScreen()` to the `_screens` list at line 214,
-      add a destination tuple at line 285. **Done when**: the tab is
-      visible across all three breakpoints, basic add/delete line
-      works, switching documents persists.
-    - **Phase 5 — Live recalc pipeline.** On every line edit:
-      300 ms debounce → `evaluateFrom(doc, lineIndex)`. Use
-      `EngineService.cancelInFlight()` (`engine_service.dart:88`) when
-      a fresh edit arrives while the previous run is still in flight;
-      the worker's monotonic run-id (HISTORY round 56) drops the
-      stale result. Per-row result widget switches between three
-      states: idle (no source), pending (greyed-out previous result +
-      tiny progress dot), computed (LaTeX + copy-on-long-press).
-      Errors routed through `EngineErrorFormatter.format(raw,
-      AppLocalizations.of(context))` and rendered in the theme's
-      error color (same affordance as
-      `calculator_screen.dart:799-803`). **Done when**: typing into
-      a line updates the result within ~500 ms steady-state; rapid
-      typing doesn't queue up stale evals.
-    - **Phase 6 — Unit syntax + scope-local assignments.** Before the
-      generic `evaluate` route, call
+      `lib/screens/calculator_screen.dart:152-181`). Adaptive per
+      **#17**: at `MediaQuery` width ≥ 720 px render side-by-side;
+      below that stack the result under the input. Blank-input
+      rows collapse to a small height per **#12** (no `—`
+      placeholder). AppBar: document name (tap to rename inline),
+      `+` action to append a line, `⋮` menu per **#6**: New doc
+      (sequential name per **#8**), Open doc (sub-menu of existing
+      docs), Open Welcome sample, Rename, Duplicate, Delete
+      (snackbar-undo), Copy as Markdown. Wire into navigation
+      shell at `lib/main.dart:192-226` per **#5** — insert
+      `const int _kNotepad = 1;` and renumber the existing
+      constants (`_kGraphing = 2`, `_kFunctionEditor = 3`,
+      `_kAnalysis = 4`, `_kSettings = 5`); insert
+      `NotepadScreen()` into `_screens` at index 1; insert the
+      destination tuple at the matching position in
+      `_destinations()`. First-launch behaviour per **#7**: if
+      `AppState.notepadDocuments` is empty, seed one `Untitled`
+      doc + the static `Welcome` sample (Welcome is recreated on
+      reset; user can delete it and re-open it via the `⋮` menu).
+      **Done when**: tab is visible across all breakpoints,
+      add / delete / drag-reorder lines all work, doc switching
+      via the `⋮` menu persists across relaunch, Welcome doc
+      appears once on first launch.
+    - **Phase 5 — Live recalc pipeline.** Per **#9**: on every
+      line edit, 300 ms debounce → `evaluateFrom(doc, lineIndex)`.
+      Use `EngineService.cancelInFlight()` (`engine_service.dart:88`)
+      when a fresh edit arrives while the previous run is still
+      in flight; the worker's monotonic run-id (HISTORY round 56)
+      drops the stale result. Per-row result widget states:
+      `idle` (blank input → row collapsed per **#12**), `pending`
+      (greyed previous result + tiny progress dot), `computed`
+      (LaTeX via **#11** + long-press copy as plain or as LaTeX),
+      `blocked` (renders the `blockedBy(...)` chip per **#10** with
+      tap-to-scroll-to-line-N), `errored` (renders
+      `EngineErrorFormatter.format(raw,
+      AppLocalizations.of(context))` in the theme's error color —
+      same affordance as `calculator_screen.dart:799-803`).
+      Free-var tag per **#15**: when `cachedFreeVars` is
+      non-empty, a small italic label `free: x, y` appears
+      underneath the result. **Done when**: typing into a line
+      updates the result within ~500 ms steady-state; rapid
+      typing doesn't queue up stale evals; blocked-by chip jumps
+      to the correct upstream line on tap; free-var tag updates
+      as variables are defined / removed.
+    - **Phase 6 — Unit syntax + scope-local assignments + `use`.**
+      Before the generic `evaluate` route, call
       `UnitExpressionEvaluator.tryEvaluate(preprocessed)` at
-      `lib/engine/unit_expression.dart:50-198`; on non-null result
-      use it, else fall through. Mirrors `calculator_screen.dart:745-753`.
-      Assignment lines (`tax = 0.085`) bind into the document-local
-      scope only — **not** into `AppState.userVariables`, so two
-      open documents can each have an `x` without colliding. The
-      `Ans` magic from `expression_preprocessing_utils.dart:161-164`
-      should resolve to the previous *line's* result, not the global
-      history — i.e. document-scoped `Ans`. **Done when**: a doc
-      containing `tax = 0.085` / `subtotal = 142.50` /
-      `subtotal * (1 + tax)` produces the correct total; `5 km +
-      3 m` parses inline; two parallel docs don't leak variables.
-    - **Phase 7 — Export / Import + share single doc.** Plumb
-      `notepadDocuments` + `currentNotepadDocId` into the JSON shape
-      at `app_state.dart:663-679` (forward-compatible: missing keys
-      tolerated, same as existing fields). Add a "Copy as Markdown"
-      action to the AppBar `⋮` menu — emits one fenced block per
-      line `source` with `// → result` comments; useful for sharing
-      a quick calc into Slack / email without the share-sheet
-      package. Full `share_plus` integration deferred to V2 (already
-      tracked under P4 → "Share / export"). **Done when**: a fresh
-      install can import a doc previously exported on another
-      device and see it in the document list.
+      `lib/engine/unit_expression.dart:50-198`; on non-null
+      result use it, else fall through. Mirrors
+      `calculator_screen.dart:745-753`. Assignment lines per
+      **#1**: bind into the document-local scope only — **not**
+      into `AppState.userVariables`. `use` line per **#20**, when
+      present at doc top: extract the comma-separated identifier
+      list, look each name up in `AppState.userVariables` *then*
+      `AppState.userFunctions` (variable wins on collision);
+      unknown imports flag the `use` line as `errored` with
+      `unknownImport(name)`. Number formatting per **#19**: every
+      result string passes through the existing
+      `AppState.formatNumber(...)` so the global
+      `NumberDisplayFormat` setting applies consistently.
+      **Done when**: a doc containing `tax = 0.085` /
+      `subtotal = 142.50` / `subtotal * (1 + tax)` produces the
+      correct total; `5 km + 3 m` parses inline; two parallel
+      docs don't leak variables; a doc with
+      `use mygridsize` at the top reads the global
+      `mygridsize` user variable; an unknown `use foo` flags the
+      directive line as errored.
+    - **Phase 7 — Export / Import + share single doc + snackbar
+      undo.** Plumb `notepadDocuments` + `currentNotepadDocId`
+      into the JSON shape at `app_state.dart:663-679`
+      (forward-compatible: missing keys tolerated, same as
+      existing fields). The static `Welcome` sample is excluded
+      from export (always recreated from the constant in
+      `lib/engine/notepad.dart`). Add a "Copy as Markdown" action
+      to the AppBar `⋮` menu — emits one fenced block per line
+      `source` with `// → result` comments. Snackbar-with-undo
+      per **#18**: introduce a `_pendingDeletion` slot in
+      `NotepadScreenState` holding the just-deleted entity (doc
+      or line) for 5 seconds; the snackbar `Undo` action restores
+      it. `share_plus` integration deferred to V2 (tracked under
+      P4 → "Share / export"). **Done when**: a fresh install can
+      import a doc previously exported on another device;
+      delete-and-undo round-trips a doc or a line with no data
+      loss.
     - **Phase 8 — Localization + onboarding + tests.** Add strings
-      for the tab name, default doc name ("Untitled"), empty-state
-      copy ("Type math like prose…"), and the new error keys (cycle,
-      undefined-name, etc.) across en/de/fr/es in
-      `lib/localization/app_localizations.dart`; the existing locale
+      across en/de/fr/es in
+      `lib/localization/app_localizations.dart`: tab name
+      (`Notepad` / `Notizen` / `Notes` / `Notas`), default doc
+      name (`Untitled` / `Unbenannt` / `Sans titre` / `Sin
+      título`), Welcome sample doc body (one short version per
+      locale — a 6-line sample covering an assignment, a unit
+      expression, an `Ans`, and a comment), empty-state hint,
+      and the new error / chrome keys (`blockedByLine`,
+      `circularReference`, `useDirectiveNotFirst`, `unknownImport`,
+      `freeVariables`, `restored`, `undo`, `copyAsMarkdown`,
+      `renameDocument`, `openWelcomeSample`). The existing locale
       non-emptiness test will fail CI if any locale is missed.
-      Extend `OnboardingTour` (`lib/widgets/onboarding_tour.dart`)
-      with a 5th card describing the notepad. New
-      `test/notepad_evaluator_test.dart` (parser, scope, cycle, topo)
-      and `test/notepad_screen_test.dart` (build + line add + edit
-      + persistence). **Done when**: locale tests + unit tests +
-      widget tests all green; manual smoke on macOS confirms the
-      doc loads after relaunch.
-  - **Open design questions (decide during Phase 1 / 2)**:
-    - **Scope import.** Should a notepad doc see global
-      `AppState.userVariables` and `AppState.userFunctions`? Two
-      reasonable extremes exist in the category — full sandbox vs.
-      shared global namespace. **Lean**: opt-in via an explicit
-      `use` line at top of doc (`use f, g, taxrate`) so default
-      behavior is safe sandboxed. Defer to V2 if Phase 6 ships
-      before consensus.
-    - **Line addressing.** Auto-names (`line1`, `line2`, …) shift
-      when a line is inserted / deleted. **Lean**: line *id* (stable
-      uuid) is the canonical key; auto-name is a *display alias*
-      that recomputes on the fly. Users referencing `line5` keep
-      working even after they delete `line3`, because the alias
-      resolves to whatever line is currently in position 5. This is
-      the convention users expect from notebook-style calculators.
-      (Explicit names like `tax = ...` are immune by definition.)
-    - **Input rendering.** V1 uses plain `TextField` (no inline
-      LaTeX render-in-place). Rationale: simpler diff against the
-      LaTeX-rendered result on the right; matches the standard
-      convention for notebook-style calculators (plain-text input,
-      rendered result on the right); avoids re-implementing
-      `LatexController`'s cursor edge cases for a brand-new
-      surface. V2 can adopt `LatexController` once the layout has
-      stabilized.
-  - **Out of scope for V1** (push to V2/V3): incremental subgraph
-    recalc (V1 just re-evals from the edited line down, full DAG
-    walk, which is fine for docs up to a few hundred lines);
-    multi-document list view as a left rail on wide screens
-    (V1 ships with a `⋮`-menu document switcher); cross-document
-    references (`{doc:taxes}.line4`); PDF export of a doc; rich-text
-    formatting / headings within a doc; collaborative editing.
+      Extend `OnboardingTour`
+      (`lib/widgets/onboarding_tour.dart`) per **#7** with a
+      5th card describing the Notepad and pointing the user to
+      the Welcome sample. New `test/notepad_evaluator_test.dart`
+      (parser, scope, cycle, topo, `use` handling, blocked-by
+      propagation) and `test/notepad_screen_test.dart` (build,
+      add line, drag-reorder, edit + debounce + result, snackbar
+      undo). **Done when**: locale tests + unit tests + widget
+      tests all green; manual smoke on macOS confirms the doc
+      loads after relaunch and the Welcome doc renders.
+  - **Out of scope for V1** (push to V2 / V3): incremental
+    subgraph recalc (V1 just re-evals from the edited line down,
+    full DAG walk, which is fine for docs up to a few hundred
+    lines); inline-LaTeX input via `LatexController` (V2);
+    left-rail document list on wide screens (V1 uses the `⋮`
+    menu); cross-document references (`{doc:taxes}.line4`); PDF
+    export of a doc; rich-text formatting / headings within a
+    doc; collaborative editing; per-doc number-format override.
 
 - [ ] **AI copilot — verifier-frontend, never solver**. The defining
   property: every numeric or symbolic answer continues to come from
