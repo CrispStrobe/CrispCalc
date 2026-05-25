@@ -428,7 +428,7 @@ but become *moat-building* rather than *positioning*, since the moat
   - **Implementation plan (V1)** — 8 phases, each independently
     reviewable / mergeable. File references anchored to the
     current tree. Numbered design decisions referenced as **#N**.
-    - **Phase 1 — Data model & persistence skeleton.** New
+    - **Phase 1 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/engine/notepad.dart` with `NotepadDocument { id, name,
       createdAt, updatedAt, lines: List<NotepadLine> }` and
       `NotepadLine { id, source, cachedResult, cachedError,
@@ -453,7 +453,7 @@ but become *moat-building* rather than *positioning*, since the moat
       empty doc can be created, mutated, persisted, and
       round-tripped through Export → clipboard → Import; the
       Welcome doc appears after a fresh install.
-    - **Phase 2 — Line parser + scope.** New
+    - **Phase 2 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/engine/notepad_evaluator.dart`. Per-line classification:
       `{blank, comment, useDirective, assignment, expression}`.
       Comment per **#13**: regex `^\s*(//|#)`; everything after the
@@ -481,7 +481,7 @@ but become *moat-building* rather than *positioning*, since the moat
       each line kind, the `use` first-line-only constraint, the
       assignment heuristic, scope substitution, and `Ans`
       resolution.
-    - **Phase 3 — Dependency graph + topological evaluator.** Same
+    - **Phase 3 done 2026-05-25 (`feature/notepad-phase-1`).** Same
       file. `Set<String> referencedNames(String preprocessed,
       Set<String> scopeKeys)` — regex `\b[A-Za-z_][A-Za-z0-9_]*\b`
       filtered against scope keys. Build a per-document DAG;
@@ -502,7 +502,7 @@ but become *moat-building* rather than *positioning*, since the moat
       **Done when**: tests cover topo order, cycle detection,
       downstream-only invalidation, blocked-by propagation, and
       free-var tracking.
-    - **Phase 4 — NotepadScreen UI skeleton.** New
+    - **Phase 4 done 2026-05-25 (`feature/notepad-phase-1`).** New
       `lib/screens/notepad_screen.dart`. `ReorderableListView` per
       **#16** of `_NotepadLineRow` widgets with drag handles on
       each row; each row = left plain `TextField` (no
