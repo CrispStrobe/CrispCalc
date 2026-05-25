@@ -1,0 +1,41 @@
+#!/bin/sh
+# Pre-commit hook for CrispCalc. Runs the same checks the CI
+# analyze-and-test job runs locally so format/analyze failures
+# surface BEFORE the push instead of after.
+#
+# Enable in this repo once:
+#   git config core.hooksPath tools/hooks
+#
+# Disable temporarily:
+#   git commit --no-verify
+#
+# Disable permanently:
+#   git config --unset core.hooksPath
+
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Only files Dart cares about. Skip when no .dart files staged.
+if ! git diff --cached --name-only --diff-filter=ACM | grep -qE '\.dart$'; then
+    exit 0
+fi
+
+echo "[pre-commit] dart format --set-exit-if-changed lib/ test/"
+if ! dart format --output=none --set-exit-if-changed lib/ test/ ; then
+    echo
+    echo "[pre-commit] Formatting failures above. Run:"
+    echo "  dart format lib/ test/"
+    echo "to fix, then re-stage and re-commit."
+    exit 1
+fi
+
+echo "[pre-commit] flutter analyze (lib/ test/)"
+if ! flutter analyze --no-pub 2>&1 | tee /dev/stderr | grep -q "No issues found"; then
+    echo
+    echo "[pre-commit] flutter analyze reported issues — see above."
+    exit 1
+fi
+
+echo "[pre-commit] ✅ checks pass"
+exit 0

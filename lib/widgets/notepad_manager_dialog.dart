@@ -46,8 +46,7 @@ class NotepadManagerDialog extends StatefulWidget {
 class _NotepadManagerDialogState extends State<NotepadManagerDialog> {
   final AppState _appState = AppState();
   String? _renamingDocId;
-  late final TextEditingController _renameController =
-      TextEditingController();
+  late final TextEditingController _renameController = TextEditingController();
 
   @override
   void initState() {
@@ -90,7 +89,8 @@ class _NotepadManagerDialogState extends State<NotepadManagerDialog> {
 
   void _newDocument() {
     final t = AppLocalizations.of(context);
-    final doc = NotepadDocument.fresh(name: _nextUntitledName(t.notepadDefaultDocName));
+    final doc =
+        NotepadDocument.fresh(name: _nextUntitledName(t.notepadDefaultDocName));
     _appState.setNotepadDocument(doc);
     _appState.setCurrentNotepadDoc(doc.id);
     widget.onSwitchTo(doc.id);
@@ -313,8 +313,7 @@ class _NotepadManagerDialogState extends State<NotepadManagerDialog> {
           : Text(
               doc.name,
               style: TextStyle(
-                fontWeight:
-                    isCurrent ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
       subtitle: Text(subtitle),

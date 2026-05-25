@@ -1722,8 +1722,7 @@ class DeLocalizations implements AppLocalizations {
   String notepadUnknownImport(String name) =>
       'Unbekannter Import: „$name" nicht in globalen Variablen';
   @override
-  String notepadInvalidImport(String name) =>
-      'Ungültiger Importname: „$name"';
+  String notepadInvalidImport(String name) => 'Ungültiger Importname: „$name"';
   @override
   String get notepadEmptyImportList => 'Leere Importliste';
   @override
@@ -3039,8 +3038,7 @@ class FrLocalizations implements AppLocalizations {
   String get notepadImportJsonHint =>
       'Collez ici une charge utile JSON de note…';
   @override
-  String get notepadJsonCopied =>
-      'JSON de note copié dans le presse-papiers';
+  String get notepadJsonCopied => 'JSON de note copié dans le presse-papiers';
   @override
   String notepadJsonImported(String name) => '« $name » importé';
   @override
@@ -4338,11 +4336,9 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get notepadImport => 'Importar';
   @override
-  String get notepadImportJsonHint =>
-      'Pega aquí una carga JSON de la nota…';
+  String get notepadImportJsonHint => 'Pega aquí una carga JSON de la nota…';
   @override
-  String get notepadJsonCopied =>
-      'JSON de la nota copiado al portapapeles';
+  String get notepadJsonCopied => 'JSON de la nota copiado al portapapeles';
   @override
   String notepadJsonImported(String name) => '«$name» importado';
   @override
