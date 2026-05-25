@@ -46,7 +46,17 @@ class _SudokuScreenState extends State<SudokuScreen> {
   bool _playing = false;
   bool _solving = false;
   bool _generating = false;
-  bool _showHints = false;
+  SudokuHintLevel _hintLevel = SudokuHintLevel.off;
+  // Advanced (SAC-pruned) candidates for the current displayed grid.
+  // Null when not yet computed for the current grid. Lifecycle:
+  //   - Invalidated to null on any puzzle / displayed-cells change.
+  //   - Recomputed asynchronously when [_hintLevel] is advanced.
+  //   - The request-id pattern below cancels stale in-flight
+  //     computes so a fast sequence of edits only commits the
+  //     latest result.
+  List<Set<int>>? _advancedCandidates;
+  bool _computingAdvanced = false;
+  int _advancedRequestId = 0;
   SudokuDifficulty _genDifficulty = SudokuDifficulty.medium;
   _Speed _speed = _Speed.medium;
 
@@ -100,7 +110,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _trace = null;
       _frameIndex = 0;
       _unique = null;
+      _advancedCandidates = null;
     });
+    _maybeRecomputeAdvanced();
   }
 
   @override
@@ -124,7 +136,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _trace = null;
       _frameIndex = 0;
       _unique = null;
+      _advancedCandidates = null;
     });
+    _maybeRecomputeAdvanced();
   }
 
   void _onTapCell(int idx) {
@@ -145,7 +159,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _trace = null;
       _frameIndex = 0;
       _unique = null;
+      _advancedCandidates = null;
     });
+    _maybeRecomputeAdvanced();
   }
 
   Future<void> _generate() async {
@@ -168,7 +184,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _trace = null;
       _frameIndex = 0;
       _unique = null;
+      _advancedCandidates = null;
     });
+    _maybeRecomputeAdvanced();
   }
 
   Future<void> _solve() async {
@@ -202,6 +220,47 @@ class _SudokuScreenState extends State<SudokuScreen> {
     setState(() {
       _checkingUnique = false;
       _unique = result;
+    });
+  }
+
+  /// Switches the hint level. Off and basic are pure UI decisions
+  /// (rendering branches off `_hintLevel`); advanced additionally
+  /// kicks off the async SAC-pruning compute below.
+  void _setHintLevel(SudokuHintLevel level) {
+    setState(() {
+      _hintLevel = level;
+      // Drop any cached advanced result so a flip to advanced
+      // forces a fresh compute against the current grid (rather
+      // than briefly flashing a stale set from a previous puzzle).
+      _advancedCandidates = null;
+    });
+    _maybeRecomputeAdvanced();
+  }
+
+  /// Recompute advanced hints if (and only if) advanced mode is on
+  /// and the visualizer isn't replaying a trace. Uses a monotonic
+  /// request id so a sequence of quick edits cancels stale results
+  /// — only the latest in-flight compute commits to state.
+  ///
+  /// dart_csp doesn't expose mid-search cancellation, so a busy
+  /// solve still runs to completion; we just drop its result.
+  Future<void> _maybeRecomputeAdvanced() async {
+    if (_hintLevel != SudokuHintLevel.advanced || _trace != null) {
+      return;
+    }
+    final id = ++_advancedRequestId;
+    setState(() => _computingAdvanced = true);
+    final livePuzzle = SudokuPuzzle(
+      layout: _puzzle.layout,
+      cells: _displayed,
+      variant: _puzzle.variant,
+      cages: _puzzle.cages,
+    );
+    final result = await SudokuSolver.computeCandidatesPruned(livePuzzle);
+    if (!mounted || id != _advancedRequestId) return;
+    setState(() {
+      _computingAdvanced = false;
+      _advancedCandidates = result;
     });
   }
 
@@ -263,19 +322,32 @@ class _SudokuScreenState extends State<SudokuScreen> {
     final highlightIdx =
         _trace == null ? null : _trace!.frames[_frameIndex].justChangedIndex;
 
-    // V3: when "Show hints" is on, compute the candidate set per
-    // empty cell against the *displayed* grid (so as the user
-    // fills in digits or the visualizer plays, candidates update
-    // live). Disabled while the visualizer trace is mid-replay to
-    // avoid two competing "what's in this cell" overlays.
+    // V3/Round 73: pencil-mark candidates per empty cell against
+    // the *displayed* grid. Always disabled while the visualizer is
+    // replaying a trace (two competing "what's in this cell"
+    // overlays is confusing).
+    //
+    //   - `basic` runs the cheap synchronous eliminator on every
+    //     build, so candidates stay live as the user edits.
+    //   - `advanced` uses the SAC-pruned set cached in
+    //     `_advancedCandidates`. While that's being recomputed
+    //     (after an edit or a level flip) we fall back to the basic
+    //     set so the grid never blanks — the spinner subtitle below
+    //     tells the user a tighter set is on the way.
     List<Set<int>>? candidates;
-    if (_showHints && _trace == null) {
+    if (_hintLevel != SudokuHintLevel.off && _trace == null) {
       final livePuzzle = SudokuPuzzle(
         layout: layout,
         cells: _displayed,
         variant: _puzzle.variant,
+        cages: _puzzle.cages,
       );
-      candidates = SudokuSolver.computeCandidates(livePuzzle);
+      if (_hintLevel == SudokuHintLevel.advanced &&
+          _advancedCandidates != null) {
+        candidates = _advancedCandidates;
+      } else {
+        candidates = SudokuSolver.computeCandidates(livePuzzle);
+      }
     }
 
     final gridBlock = Padding(
@@ -329,14 +401,11 @@ class _SudokuScreenState extends State<SudokuScreen> {
             onPress: _setDigit,
           ),
           const SizedBox(height: 8),
-          SwitchListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: Text(t.sudokuShowHints),
-            subtitle: Text(t.sudokuShowHintsSubtitle,
-                style: Theme.of(context).textTheme.bodySmall),
-            value: _showHints,
-            onChanged: (v) => setState(() => _showHints = v),
+          _HintLevelPicker(
+            level: _hintLevel,
+            computing: _computingAdvanced,
+            onChanged: _setHintLevel,
+            labels: t,
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
@@ -454,6 +523,18 @@ enum _Speed {
   final Duration interval;
   const _Speed(this.interval);
 }
+
+/// Round 73: three-level hint mode.
+///
+/// - `off` — no pencil marks.
+/// - `basic` — sync naive elimination (rows / cols / boxes /
+///   diagonals / cage residue). Cheap enough to recompute on every
+///   keystroke.
+/// - `advanced` — async singleton arc consistency via the dart_csp
+///   solver. Catches hidden singles + naked pairs / triples that
+///   the naive eliminator misses, at the cost of seconds-per-edit
+///   on hard 9×9 puzzles. Opt-in only.
+enum SudokuHintLevel { off, basic, advanced }
 
 class _PresetPicker extends StatelessWidget {
   final SudokuPuzzle current;
@@ -744,6 +825,86 @@ class _GeneratorRow extends StatelessWidget {
               : const Icon(Icons.shuffle),
           label: Text(labels.sudokuGenerateButton),
         ),
+      ],
+    );
+  }
+}
+
+/// Round 73: three-state hint-level selector replacing the V3
+/// on/off switch. Chips wrap, so it survives the 360 px right
+/// panel without overflow. A spinner subtitle appears while the
+/// advanced level is recomputing.
+class _HintLevelPicker extends StatelessWidget {
+  final SudokuHintLevel level;
+  final bool computing;
+  final ValueChanged<SudokuHintLevel> onChanged;
+  final AppLocalizations labels;
+
+  const _HintLevelPicker({
+    required this.level,
+    required this.computing,
+    required this.onChanged,
+    required this.labels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(labels.sudokuShowHints,
+                  style: Theme.of(context).textTheme.titleSmall),
+            ),
+            Tooltip(
+              message: labels.sudokuHintLevelAdvancedHelp,
+              child: Icon(
+                Icons.help_outline,
+                size: 18,
+                color: scheme.outline,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final l in SudokuHintLevel.values)
+              ChoiceChip(
+                label: Text(switch (l) {
+                  SudokuHintLevel.off => labels.sudokuHintLevelOff,
+                  SudokuHintLevel.basic => labels.sudokuHintLevelBasic,
+                  SudokuHintLevel.advanced => labels.sudokuHintLevelAdvanced,
+                }),
+                selected: level == l,
+                onSelected: (_) => onChanged(l),
+              ),
+          ],
+        ),
+        if (computing) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  labels.sudokuHintLevelComputing,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

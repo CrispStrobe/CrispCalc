@@ -362,6 +362,70 @@ class SudokuSolver {
     return out;
   }
 
+  /// Round 73: AC-pruned ("advanced") hint mode. For each empty
+  /// cell, returns the set of values that can extend to AT LEAST
+  /// ONE complete solution of the current puzzle. Strictly tighter
+  /// than [computeCandidates] — catches "hidden singles" (a digit
+  /// that only fits in one cell within a row / column / box) plus
+  /// naked pairs / triples and any other consequence of the full
+  /// constraint network.
+  ///
+  /// Implementation is singleton arc consistency by probing: start
+  /// from the naive candidate set, fetch one base solution, then
+  /// for each empty cell's remaining candidates probe
+  /// `puzzle.withCell(...)` through the dart_csp solver. Candidates
+  /// whose probe is infeasible are dropped. Two short-circuits keep
+  /// the work bounded:
+  ///   - The base solution's value at each cell is trivially
+  ///     feasible, so skip the probe for it.
+  ///   - Every successful probe returns a different complete
+  ///     solution; harvest its per-cell values into a `confirmed`
+  ///     set so subsequent probes for already-confirmed (cell,
+  ///     value) pairs are skipped.
+  ///
+  /// dart_csp's `Problem` doesn't expose a propagate-to-fixpoint
+  /// API, so we route through the full backtracker. That makes
+  /// each probe a full search, but Sudoku probes terminate fast
+  /// (AC-3 + GAC propagation hits unsat quickly on bad assignments).
+  ///
+  /// Returns an all-empty list when the puzzle is infeasible — the
+  /// caller can render that as "no valid pencil marks".
+  static Future<List<Set<int>>> computeCandidatesPruned(
+    SudokuPuzzle puzzle,
+  ) async {
+    final naive = computeCandidates(puzzle);
+    final layout = puzzle.layout;
+    final n = layout.side;
+    final base = await solve(puzzle);
+    if (base == null) {
+      return List<Set<int>>.generate(n * n, (_) => <int>{});
+    }
+    final pruned = [for (final s in naive) Set<int>.from(s)];
+    // Per-cell digits already proven extendable by a probe whose
+    // solution we've seen. Seed from the base solution.
+    final confirmed = List<Set<int>>.generate(n * n, (i) => <int>{base[i]});
+    for (var idx = 0; idx < n * n; idx++) {
+      if (puzzle.cells[idx] != 0) continue;
+      final cands = pruned[idx];
+      if (cands.length <= 1) continue;
+      for (final v in List<int>.from(cands)) {
+        if (confirmed[idx].contains(v)) continue;
+        final probe = puzzle.withCell(idx ~/ n, idx % n, v);
+        final sol = await solve(probe);
+        if (sol == null) {
+          cands.remove(v);
+        } else {
+          // Harvest: every cell's value in this solution is
+          // confirmed feasible, so future probes can skip it.
+          for (var c = 0; c < n * n; c++) {
+            confirmed[c].add(sol[c]);
+          }
+        }
+      }
+    }
+    return pruned;
+  }
+
   /// Round 72 helper: union of digits that appear in ANY
   /// `k`-element subset of `source` summing exactly to `target`.
   /// Used to tighten Killer-cage candidate sets — if `v` is not in

@@ -227,5 +227,42 @@ void main() {
       // would have surfaced it as a test failure.
       expect(find.text('Sudoku'), findsWidgets);
     });
+
+    testWidgets(
+        'Sudoku screen: switching to Advanced hints kicks off a '
+        'compute, then commits the SAC-pruned set without crashing',
+        (tester) async {
+      // Round 73: the hint-level picker replaces the V3 on/off
+      // switch. Switching to Advanced should fire computeCandidates-
+      // Pruned in the background, then settle without throwing.
+      await _pumpApp(tester);
+      await tester.tap(find.text('Analysis'));
+      await tester.pumpAndSettle();
+      final scrollable = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(find.text('Sudoku'), 200,
+          scrollable: scrollable);
+      await tester.tap(find.text('Sudoku'));
+      await tester.pumpAndSettle();
+      // The hint picker chips are labelled Off / Basic / Advanced —
+      // verify all three are present, then exercise each.
+      expect(find.text('Off'), findsOneWidget);
+      expect(find.text('Basic'), findsOneWidget);
+      expect(find.text('Advanced'), findsOneWidget);
+      // Tap Basic — synchronous; should render candidates without
+      // any background work.
+      await tester.tap(find.text('Basic'));
+      await tester.pumpAndSettle();
+      // Tap Advanced — kicks off SAC pruning. The default preset
+      // is small enough (9×9 easy) that pumpAndSettle drains the
+      // future without timing out.
+      await tester.tap(find.text('Advanced'));
+      await tester.pumpAndSettle(const Duration(seconds: 15));
+      // Sanity: still on the Sudoku screen, no exceptions surfaced.
+      expect(find.text('Sudoku'), findsWidgets);
+      // Flip back to Off — chip stays selectable.
+      await tester.tap(find.text('Off'));
+      await tester.pumpAndSettle();
+      expect(find.text('Off'), findsOneWidget);
+    }, timeout: const Timeout(Duration(seconds: 60)));
   });
 }

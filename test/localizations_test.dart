@@ -295,6 +295,11 @@ void main() {
           t.sudokuMultipleSolutions,
           t.sudokuShowHints,
           t.sudokuShowHintsSubtitle,
+          t.sudokuHintLevelOff,
+          t.sudokuHintLevelBasic,
+          t.sudokuHintLevelAdvanced,
+          t.sudokuHintLevelAdvancedHelp,
+          t.sudokuHintLevelComputing,
         ]) {
           expect(s.trim(), isNotEmpty);
         }

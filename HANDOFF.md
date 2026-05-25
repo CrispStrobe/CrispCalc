@@ -110,7 +110,7 @@ lib/
 test/
   sudoku_test.dart, csp_solver_test.dart, ui_flows_test.dart,
   localizations_test.dart, worked_examples_test.dart,
-  ... (~50 test files, ~1207 tests total)
+  ... (~50 test files, ~1212 tests total)
 PLAN.md                    ← Roadmap; mark items SHIPPED with round refs
 HISTORY.md                 ← Newest-first changelog (this file's source of truth)
 ```
@@ -267,11 +267,10 @@ fresh feature arcs.
    forbidden across same-position cells in different boxes. Pure
    per-variant addition to the parameterized engine; mirrors the
    Sudoku-X pattern.
-2. **AC-3-pruned hints (advanced level)** (~1 hr) — V2 of round
-   62: opt-in toggle that routes pencil-mark computation through
-   dart_csp's AC-3 propagator. Catches "hidden singles" the naive
-   eliminator misses. Big enough that toggling matters (live
-   recompute is too slow with the bridge).
+2. ~~**AC-3-pruned hints (advanced level)** — shipped round 73 as
+   SAC-by-probing through the full dart_csp solver (Problem
+   doesn't expose propagate-only). See HISTORY round 73 for the
+   request-id cancellation pattern.~~
 3. **8×8 Sudoku layout** (~30 min) — one-line layout addition +
    one preset. Cheap surface area growth.
 4. **Step-trace "why" annotations** (medium) — the visualizer

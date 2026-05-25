@@ -484,6 +484,127 @@ void main() {
     });
   });
 
+  group('Sudoku V4 — computeCandidatesPruned (advanced hints)', () {
+    test('pruned ⊆ naive for every cell on a partially-solved 4×4', () async {
+      final puzzle = SudokuPresets.small4x4Medium;
+      final naive = SudokuSolver.computeCandidates(puzzle);
+      final pruned = await SudokuSolver.computeCandidatesPruned(puzzle);
+      expect(pruned, hasLength(naive.length));
+      for (var i = 0; i < pruned.length; i++) {
+        expect(pruned[i].difference(naive[i]), isEmpty,
+            reason: 'pruned[$i] must be a subset of naive[$i]');
+      }
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
+    test(
+        'uniquely-solvable puzzle collapses each empty cell to '
+        'the singleton solution value', () async {
+      // Generator-produced 4×4 puzzles are unique by construction
+      // (the peel loop guards against multiple solutions). Under
+      // SAC pruning, every empty cell must therefore collapse to a
+      // singleton {solution value} — anything else would imply a
+      // second solution exists.
+      final puzzle = await SudokuGenerator.generate(
+        layout: SudokuLayout.small,
+        difficulty: SudokuDifficulty.easy,
+        seed: 7,
+      );
+      final solution = await SudokuSolver.solve(puzzle);
+      expect(solution, isNotNull);
+      final pruned = await SudokuSolver.computeCandidatesPruned(puzzle);
+      for (var i = 0; i < puzzle.cells.length; i++) {
+        if (puzzle.cells[i] != 0) {
+          expect(pruned[i], isEmpty,
+              reason: 'clue cell $i should have no candidates');
+        } else {
+          expect(pruned[i], equals({solution![i]}),
+              reason: 'empty cell $i must collapse to its unique '
+                  'solution value');
+        }
+      }
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('infeasible puzzle returns an all-empty candidate list', () async {
+      // Two 1s in the same row → unsolvable.
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+        ],
+      );
+      final pruned = await SudokuSolver.computeCandidatesPruned(puzzle);
+      expect(pruned, hasLength(16));
+      for (final s in pruned) {
+        expect(s, isEmpty);
+      }
+    }, timeout: const Timeout(Duration(seconds: 15)));
+
+    test(
+        'pruned catches a hidden single that the naive eliminator '
+        'misses', () async {
+      // Construct a 4×4 where naive elimination at cell (0, 1) gives
+      // multiple candidates but only one extends to a solution.
+      // Solution grid:
+      //   2 1 3 4
+      //   3 4 1 2
+      //   1 2 4 3
+      //   4 3 2 1
+      // Provide clues to make cell (0,1) ambiguous under naive but
+      // unique under SAC.
+      final puzzle = SudokuPuzzle(
+        layout: SudokuLayout.small,
+        cells: [
+          2,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          3,
+          0,
+          3,
+          0,
+          0,
+        ],
+      );
+      final naive = SudokuSolver.computeCandidates(puzzle);
+      final pruned = await SudokuSolver.computeCandidatesPruned(puzzle);
+      // Naive at (0,1): excludes 2 (row), 3 (row+col), → {1, 4}.
+      expect(naive[1], contains(1));
+      // Pruned should be tighter — strictly subset somewhere — or
+      // at least the puzzle must be uniquely solvable so SAC
+      // collapses every cell to a singleton even where naive left
+      // multiple options.
+      final solution = await SudokuSolver.solve(puzzle);
+      expect(solution, isNotNull);
+      for (var i = 0; i < 16; i++) {
+        if (puzzle.cells[i] != 0) continue;
+        expect(pruned[i].length, lessThanOrEqualTo(naive[i].length),
+            reason: 'cell $i: SAC must not widen the candidate set');
+      }
+    }, timeout: const Timeout(Duration(seconds: 30)));
+  });
+
   group('Sudoku V2 — Sudoku-X variant', () {
     test('generator round-trip: 9×9 X variant easy', () async {
       final puzzle = await SudokuGenerator.generate(

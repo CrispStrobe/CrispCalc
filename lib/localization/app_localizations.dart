@@ -301,6 +301,11 @@ abstract class AppLocalizations {
   String get sudokuMultipleSolutions;
   String get sudokuShowHints;
   String get sudokuShowHintsSubtitle;
+  String get sudokuHintLevelOff;
+  String get sudokuHintLevelBasic;
+  String get sudokuHintLevelAdvanced;
+  String get sudokuHintLevelAdvancedHelp;
+  String get sudokuHintLevelComputing;
 
   // -- Constraints module (Analysis hub / CSP Round A) --
   String get moduleConstraintsTitle;
@@ -1017,6 +1022,19 @@ class EnLocalizations implements AppLocalizations {
   String get sudokuShowHintsSubtitle =>
       'Pencil-marks: for each empty cell, the digits not yet '
       'eliminated by row, column, box, or diagonal.';
+  @override
+  String get sudokuHintLevelOff => 'Off';
+  @override
+  String get sudokuHintLevelBasic => 'Basic';
+  @override
+  String get sudokuHintLevelAdvanced => 'Advanced';
+  @override
+  String get sudokuHintLevelAdvancedHelp =>
+      'Advanced runs the full CSP solver on every candidate, so it '
+      'also catches hidden singles and naked pairs. Slower — takes '
+      'a few seconds on hard 9×9 puzzles.';
+  @override
+  String get sudokuHintLevelComputing => 'Computing advanced hints…';
 
   @override
   String get moduleConstraintsTitle => 'Constraint problems';
@@ -2027,6 +2045,21 @@ class DeLocalizations implements AppLocalizations {
       'Bleistift-Notizen: für jedes leere Feld die Ziffern, die noch '
       'nicht durch Zeile, Spalte, Block oder Diagonale ausgeschlossen '
       'sind.';
+  @override
+  String get sudokuHintLevelOff => 'Aus';
+  @override
+  String get sudokuHintLevelBasic => 'Einfach';
+  @override
+  String get sudokuHintLevelAdvanced => 'Erweitert';
+  @override
+  String get sudokuHintLevelAdvancedHelp =>
+      'Erweitert führt für jeden Kandidaten den vollständigen '
+      'CSP-Solver aus und erkennt so auch versteckte Einzelne und '
+      'nackte Paare. Langsamer — dauert bei schweren 9×9-Rätseln '
+      'einige Sekunden.';
+  @override
+  String get sudokuHintLevelComputing =>
+      'Erweiterte Hinweise werden berechnet…';
 
   @override
   String get moduleConstraintsTitle => 'Bedingungsprobleme';
@@ -3159,6 +3192,20 @@ class FrLocalizations implements AppLocalizations {
       'Annotations au crayon : pour chaque case vide, les chiffres '
       'pas encore éliminés par la ligne, la colonne, le bloc ou la '
       'diagonale.';
+  @override
+  String get sudokuHintLevelOff => 'Désactivé';
+  @override
+  String get sudokuHintLevelBasic => 'Simple';
+  @override
+  String get sudokuHintLevelAdvanced => 'Avancé';
+  @override
+  String get sudokuHintLevelAdvancedHelp =>
+      'Le mode avancé exécute le solveur CSP complet sur chaque '
+      'candidat ; il détecte aussi les singletons cachés et les '
+      'paires nues. Plus lent — quelques secondes sur les grilles '
+      '9×9 difficiles.';
+  @override
+  String get sudokuHintLevelComputing => 'Calcul des indices avancés…';
 
   @override
   String get moduleConstraintsTitle => 'Problèmes de contraintes';
@@ -4293,6 +4340,20 @@ class EsLocalizations implements AppLocalizations {
   String get sudokuShowHintsSubtitle =>
       'Notas a lápiz: para cada casilla vacía, los dígitos aún no '
       'eliminados por fila, columna, bloque o diagonal.';
+  @override
+  String get sudokuHintLevelOff => 'Desactivado';
+  @override
+  String get sudokuHintLevelBasic => 'Básico';
+  @override
+  String get sudokuHintLevelAdvanced => 'Avanzado';
+  @override
+  String get sudokuHintLevelAdvancedHelp =>
+      'El modo avanzado ejecuta el solver CSP completo en cada '
+      'candidato, detectando también los singles ocultos y los pares '
+      'desnudos. Más lento — tarda unos segundos en sudokus 9×9 '
+      'difíciles.';
+  @override
+  String get sudokuHintLevelComputing => 'Calculando pistas avanzadas…';
 
   @override
   String get moduleConstraintsTitle => 'Problemas de restricciones';

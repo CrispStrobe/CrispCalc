@@ -2,6 +2,78 @@
 
 Completed work, newest first.
 
+## 2026-05-25 (round 73) — Sudoku advanced hints (SAC by probing)
+
+The V3 hint mode (round 62) was naive single-pass elimination:
+fast enough to recompute on every keystroke, but it misses
+"hidden singles" — a digit that can only legally land in one
+cell within a row / column / box even though row + column + box
+elimination alone leaves multiple candidates marked. PLAN's V4
+follow-up called for an opt-in advanced level routed through
+the full CSP solver.
+
+### Engine: `computeCandidatesPruned(puzzle)`
+
+Singleton arc consistency by probing. For each empty cell's
+naive candidate v, build `puzzle.withCell(idx, v)` and ask the
+dart_csp solver whether it's still satisfiable. Infeasible
+candidates are dropped. Two short-circuits keep the work
+bounded:
+
+- Fetch one base solution up front. Each cell's base value is
+  trivially feasible, so skip the probe for it.
+- Every successful probe returns a complete *different*
+  solution; harvest its per-cell values into a `confirmed` set
+  so subsequent (cell, value) pairs already proven feasible are
+  skipped.
+
+dart_csp's `Problem` doesn't expose a "propagate to fixpoint,
+return reduced domains" entry point, so we route through the
+full backtracker. Each probe is therefore a full search, but
+Sudoku probes terminate fast (AC-3 + GAC propagation hits unsat
+quickly on contradictory pin assignments). Empirically, a 9×9
+hard puzzle with ~60 empty cells runs in 2–4 seconds — too slow
+to debounce live on every keystroke, hence the opt-in level.
+
+### UI: three-state hint-level picker
+
+`bool _showHints` becomes `SudokuHintLevel _hintLevel` with
+values `off`, `basic` (synchronous naive), `advanced` (async
+SAC). The `_HintLevelPicker` widget shows the three options as
+ChoiceChips so the picker survives the 360 px right panel
+without overflow, plus a tooltip explaining the speed tradeoff
+and a spinner subtitle while advanced is recomputing.
+
+State management uses a monotonic `_advancedRequestId`: a fast
+sequence of edits cancels in-flight stale results (only the
+latest compute commits to state). The advanced cache is
+invalidated to null at every puzzle / displayed-cells change
+site (`_loadPreset`, `_setDigit`, `_generate`,
+`_switchLayoutOrVariant`) — same pattern the round-65 unique
+chip uses. While advanced is recomputing, the grid renders the
+basic candidates as a fallback so it never blanks.
+
+### i18n + tests
+
+Five new strings × four locales:
+`sudokuHintLevelOff/Basic/Advanced/AdvancedHelp/Computing`.
+The locale-coverage test catches missing translations.
+
+Four new engine tests in `sudoku_test.dart`:
+- pruned ⊆ naive at every cell (regression for any future
+  optimization that might accidentally widen the set)
+- uniquely-solvable puzzle (generator-produced) collapses every
+  empty cell to the singleton solution value — strong proof
+  that SAC actually picks up the slack from hidden singles
+- infeasible puzzle returns all-empty
+- hidden-single regression on a hand-crafted 4×4 where naive
+  leaves multiple candidates but SAC tightens.
+
+One UI flow test in `ui_flows_test.dart` cycles Off → Basic →
+Advanced → Off without crashing — guards against the request-id
+cancellation logic regressing if the recompute trigger sites
+get refactored.
+
 ## 2026-05-25 (round 69) — Worked-examples library surfaces Killer + CSP DSL
 
 Before this round the worked-examples library was 100% CAS /
