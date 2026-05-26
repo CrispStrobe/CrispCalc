@@ -88,6 +88,24 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
                 if (q != null) _appState.addOrUpdateSceneObject(q);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.layers_outlined),
+              title: Text(t.scene3DAddParametricSurface),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final s = await showParametricSurfaceEditorDialog(context);
+                if (s != null) _appState.addOrUpdateSceneObject(s);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.show_chart),
+              title: Text(t.scene3DAddParametricCurve),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final c = await showParametricCurveEditorDialog(context);
+                if (c != null) _appState.addOrUpdateSceneObject(c);
+              },
+            ),
           ],
         ),
       ),
@@ -108,9 +126,14 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
       case QuadricObject q:
         final updated = await showQuadricEditorDialog(context, existing: q);
         if (updated != null) _appState.addOrUpdateSceneObject(updated);
-      case ParametricSurfaceObject _:
-      case ParametricCurveObject _:
-        break;
+      case ParametricSurfaceObject ps:
+        final updated =
+            await showParametricSurfaceEditorDialog(context, existing: ps);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
+      case ParametricCurveObject pc:
+        final updated =
+            await showParametricCurveEditorDialog(context, existing: pc);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
     }
   }
 
@@ -164,9 +187,35 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
           cJ: q.cJ,
           preset: q.preset,
         ));
-      case ParametricSurfaceObject _:
-      case ParametricCurveObject _:
-        break;
+      case ParametricSurfaceObject ps:
+        _appState.addOrUpdateSceneObject(ParametricSurfaceObject(
+          id: ps.id,
+          label: ps.label,
+          color: ps.color,
+          visible: visible,
+          exprX: ps.exprX,
+          exprY: ps.exprY,
+          exprZ: ps.exprZ,
+          uMin: ps.uMin,
+          uMax: ps.uMax,
+          vMin: ps.vMin,
+          vMax: ps.vMax,
+          uSteps: ps.uSteps,
+          vSteps: ps.vSteps,
+        ));
+      case ParametricCurveObject pc:
+        _appState.addOrUpdateSceneObject(ParametricCurveObject(
+          id: pc.id,
+          label: pc.label,
+          color: pc.color,
+          visible: visible,
+          exprX: pc.exprX,
+          exprY: pc.exprY,
+          exprZ: pc.exprZ,
+          tMin: pc.tMin,
+          tMax: pc.tMax,
+          steps: pc.steps,
+        ));
     }
   }
 
@@ -409,11 +458,16 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
         final p = q.preset;
         if (p == null) return 'Quadric (custom)';
         return '${_kindShortName(p.kind)} a=${_fmt(p.a)}, b=${_fmt(p.b)}, c=${_fmt(p.c)}';
-      case ParametricSurfaceObject _:
-        return 'Parametric surface';
-      case ParametricCurveObject _:
-        return 'Parametric curve';
+      case ParametricSurfaceObject ps:
+        return 'r(u,v) = (${_short(ps.exprX)}, ${_short(ps.exprY)}, ${_short(ps.exprZ)})';
+      case ParametricCurveObject pc:
+        return 'r(t) = (${_short(pc.exprX)}, ${_short(pc.exprY)}, ${_short(pc.exprZ)})';
     }
+  }
+
+  static String _short(String s, {int max = 12}) {
+    if (s.length <= max) return s;
+    return '${s.substring(0, max - 1)}…';
   }
 
   static String _pt(dynamic v) {

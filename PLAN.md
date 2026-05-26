@@ -1939,19 +1939,19 @@ degenerate-conic detection on `conic_math` (the 3×3
 determinant catches the pair-of-parallel-lines case that
 the discriminant alone misclassifies as a parabola).
 
-#### Round A6 — Parametric surfaces + curves
+#### Round A6 — Parametric surfaces + curves — **SHIPPED**
 
-Add-Surface dialog: `x(u,v)`, `y(u,v)`, `z(u,v)` expressions +
-u/v ranges + sample step counts. Expressions evaluated via the
-same SymEngine pipeline the 2D + existing 3D screens use.
-
-Add-Curve dialog: `x(t)`, `y(t)`, `z(t)` + t range + steps. Renders
-as a polyline of `steps` segments, height-tinted by z.
-
-Intersections involving parametric objects use numerical
-sampling (find closest pair on a fine grid, refine with Newton
-near the minimum). Documented as approximate; the closed-form
-algorithms in A4/A5 remain authoritative for non-parametric pairs.
+Done 2026-05-26 — see HISTORY round 99. Two add/edit
+dialogs (surface defaults to a torus, curve to a helix)
+with monospaced expression fields. Painter samples the
+parametric grid via the shared CalculatorEngine and draws
+u/v-direction wireframes for surfaces, polylines for
+curves; NaN samples skipped. Process-static
+`_ParametricSampleCache` keyed by the full geometry hash
+caches projected samples across rotation frames (FIFO at
+32 entries) so each edit pays the SymEngine cost once.
+6 i18n strings × 4 locales. Numerical intersection with
+other kinds (Newton on a fine grid) deferred to A7.
 
 ### Cross-cutting concerns
 

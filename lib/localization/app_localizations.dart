@@ -177,6 +177,14 @@ abstract class AppLocalizations {
   String get conicOpenIn3DScene;
   String get conicLiftNotAConic;
 
+  // -- P9-A6: parametric surfaces + curves --
+  String get scene3DAddParametricSurface;
+  String get scene3DEditParametricSurface;
+  String get scene3DAddParametricCurve;
+  String get scene3DEditParametricCurve;
+  String get scene3DParametricSurface;
+  String get scene3DParametricCurve;
+
   String get moduleUnitConverterTitle;
   String get moduleUnitConverterSubtitle;
   // -- Variable / function panel --
@@ -967,6 +975,20 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get conicLiftNotAConic =>
       'Not a conic — nothing to lift. Add quadratic terms first.';
+
+  // -- P9-A6 --
+  @override
+  String get scene3DAddParametricSurface => 'Add parametric surface';
+  @override
+  String get scene3DEditParametricSurface => 'Edit parametric surface';
+  @override
+  String get scene3DAddParametricCurve => 'Add parametric curve';
+  @override
+  String get scene3DEditParametricCurve => 'Edit parametric curve';
+  @override
+  String get scene3DParametricSurface => 'Parametric surface';
+  @override
+  String get scene3DParametricCurve => 'Parametric curve';
 
   @override
   String get moduleUnitConverterTitle => 'Unit Converter';
@@ -2328,6 +2350,20 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get conicLiftNotAConic =>
       'Kein Kegelschnitt — nichts anzuheben. Erst quadratische Terme hinzufügen.';
+
+  // -- P9-A6 --
+  @override
+  String get scene3DAddParametricSurface => 'Parametrische Fläche hinzufügen';
+  @override
+  String get scene3DEditParametricSurface => 'Parametrische Fläche bearbeiten';
+  @override
+  String get scene3DAddParametricCurve => 'Parametrische Kurve hinzufügen';
+  @override
+  String get scene3DEditParametricCurve => 'Parametrische Kurve bearbeiten';
+  @override
+  String get scene3DParametricSurface => 'Parametrische Fläche';
+  @override
+  String get scene3DParametricCurve => 'Parametrische Kurve';
 
   @override
   String get moduleUnitConverterTitle => 'Einheitenumrechner';
@@ -3834,6 +3870,20 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get conicLiftNotAConic =>
       'Ce n\'est pas une conique — rien à transposer. Ajoutez d\'abord des termes quadratiques.';
+
+  // -- P9-A6 --
+  @override
+  String get scene3DAddParametricSurface => 'Ajouter une surface paramétrique';
+  @override
+  String get scene3DEditParametricSurface => 'Modifier la surface paramétrique';
+  @override
+  String get scene3DAddParametricCurve => 'Ajouter une courbe paramétrique';
+  @override
+  String get scene3DEditParametricCurve => 'Modifier la courbe paramétrique';
+  @override
+  String get scene3DParametricSurface => 'Surface paramétrique';
+  @override
+  String get scene3DParametricCurve => 'Courbe paramétrique';
 
   @override
   String get moduleUnitConverterTitle => 'Convertisseur d\'unités';
@@ -5344,6 +5394,20 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get conicLiftNotAConic =>
       'No es una cónica — nada que elevar. Añade primero términos cuadráticos.';
+
+  // -- P9-A6 --
+  @override
+  String get scene3DAddParametricSurface => 'Añadir superficie paramétrica';
+  @override
+  String get scene3DEditParametricSurface => 'Editar superficie paramétrica';
+  @override
+  String get scene3DAddParametricCurve => 'Añadir curva paramétrica';
+  @override
+  String get scene3DEditParametricCurve => 'Editar curva paramétrica';
+  @override
+  String get scene3DParametricSurface => 'Superficie paramétrica';
+  @override
+  String get scene3DParametricCurve => 'Curva paramétrica';
 
   @override
   String get moduleUnitConverterTitle => 'Conversor de unidades';

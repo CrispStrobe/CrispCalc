@@ -2,6 +2,78 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 99, P9-A6) — Parametric surfaces + curves (closes P9 V1)
+
+Last two object kinds in the V1 3D Scene module. Both
+evaluate user-typed expressions through the shared
+`CalculatorEngine` pipeline (same path Graphing3DScreen
+uses). FAB sheet now has all six options; the module
+ships with the full set: planes, lines, spheres, quadrics,
+parametric surfaces, parametric curves.
+
+### Add dialogs
+
+`lib/widgets/scene_3d_object_dialogs.dart`:
+- `showParametricSurfaceEditorDialog` — `x(u, v)`,
+  `y(u, v)`, `z(u, v)` text fields (monospaced), u/v ranges
+  + steps. Defaults to a torus
+  (`(2 + cos v) cos u`, `(2 + cos v) sin u`, `sin v`).
+- `showParametricCurveEditorDialog` — `x(t)`, `y(t)`, `z(t)`
+  + t range + steps. Defaults to a helix (`cos t`, `sin t`,
+  `t/5`).
+
+### Painter
+
+`lib/widgets/scene_3d_painter.dart`:
+- `_drawParametricSurface` samples the (u, v) grid into
+  `Vector3` corners, projects each to screen, draws
+  u-direction and v-direction wireframe lines. NaN samples
+  are skipped so a domain hole in the expression doesn't
+  produce stray lines.
+- `_drawParametricCurve` samples t, polylines the result.
+  NaN breaks the polyline into segments.
+- `_ParametricSampleCache` is a process-static cache keyed
+  by the full geometry hash (expression strings + ranges +
+  steps). FIFO eviction at 32 entries. Without this, every
+  rotation gesture would re-evaluate ~324 (surface) or 100
+  (curve) SymEngine calls per frame; with it, edits pay the
+  cost once. User edits change the cache key so stale
+  entries become unreachable.
+
+### Wiring
+
+`lib/screens/scene_3d_screen.dart`:
+- FAB chooser sheet gains two ListTiles
+  (`layers_outlined` and `show_chart` icons).
+- Edit dispatch + visibility toggle + panel subtitle all
+  handle the two new kinds. Subtitle renders as e.g.
+  `r(u,v) = (cos(u)*si…, sin(u)*si…, cos(v))` with a small
+  `_short(str, max: 12)` truncator.
+
+### i18n
+
+6 new strings × 4 locales: `scene3DAddParametricSurface`,
+`scene3DEditParametricSurface`, `scene3DAddParametric
+Curve`, `scene3DEditParametricCurve`,
+`scene3DParametricSurface`, `scene3DParametricCurve`.
+
+### P9 V1 complete
+
+Six rounds (A1–A6) + the conic bridge (A5b + A5c). The
+module supersedes the old text-only Plane Analyzer + Conic
+Section (which still ship as quick analyzers) and turns
+"calculate intersection by hand" into "see it in 3D and
+read off the analytical answer." Open P9 follow-ups:
+- A5d: raw-coefficient quadric input + isosurface
+  extraction in the painter.
+- A7: numerical intersection involving parametric objects
+  (Newton on a fine grid).
+- A8: back-to-front sorting for proper occlusion.
+
+Suite still at 1703 — no new tests added since parametric
+rendering needs the SymEngine bridge which isn't available
+in the headless test environment.
+
 ## 2026-05-26 (round 98, P9-A5c) — Conic Section ↔ 3D Scene bridge
 
 Two cleanups that finish the A5 arc:

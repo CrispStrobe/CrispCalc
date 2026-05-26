@@ -13,10 +13,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../engine/calculator_engine.dart';
 import '../engine/plane_math.dart' show Vector3;
 import '../engine/scene_3d/intersections.dart';
 import '../engine/scene_3d/scene_object.dart';
 import '../engine/scene_3d/scene_state.dart';
+import '../utils/expression_preprocessing_utils.dart';
 
 /// Color used for the intersection highlight overlay. Cyan reads
 /// well against every palette color used for objects themselves.
@@ -72,10 +74,10 @@ class Scene3DPainter extends CustomPainter {
           _drawSphere(canvas, s, project);
         case QuadricObject q:
           _drawQuadric(canvas, q, project);
-        case ParametricSurfaceObject _:
-        case ParametricCurveObject _:
-          // Rendering for these kinds lands in A6.
-          break;
+        case ParametricSurfaceObject ps:
+          _drawParametricSurface(canvas, ps, project);
+        case ParametricCurveObject pc:
+          _drawParametricCurve(canvas, pc, project);
       }
     }
 
@@ -863,4 +865,187 @@ class _QuadricGridSpec {
     required this.closedU,
     required this.closedV,
   });
+}
+
+// ----------------------------------------------------------------
+// P9-A6: parametric surface + curve rendering
+// ----------------------------------------------------------------
+
+/// Lightweight per-process cache of evaluated parametric samples
+/// so we don't pay SymEngine round-trips on every rotation frame.
+/// Keyed by the full geometry hash (expression strings + ranges +
+/// steps). FIFO eviction at 32 entries; user edits change the
+/// hash, so old entries become unreachable and roll off naturally.
+class _ParametricSampleCache {
+  static const int _cap = 32;
+  static final Map<String, List<List<Vector3>>> _surfaces = {};
+  static final Map<String, List<Vector3>> _curves = {};
+  static final CalculatorEngine _engine = CalculatorEngine();
+
+  static String _surfaceKey(ParametricSurfaceObject o) =>
+      '${o.exprX}|${o.exprY}|${o.exprZ}|'
+      '${o.uMin}|${o.uMax}|${o.uSteps}|'
+      '${o.vMin}|${o.vMax}|${o.vSteps}';
+
+  static String _curveKey(ParametricCurveObject o) =>
+      '${o.exprX}|${o.exprY}|${o.exprZ}|'
+      '${o.tMin}|${o.tMax}|${o.steps}';
+
+  static List<List<Vector3>> samplesFor(ParametricSurfaceObject o) {
+    final key = _surfaceKey(o);
+    final cached = _surfaces[key];
+    if (cached != null) return cached;
+    final samples = _evalSurface(o);
+    _surfaces[key] = samples;
+    if (_surfaces.length > _cap) {
+      _surfaces.remove(_surfaces.keys.first);
+    }
+    return samples;
+  }
+
+  static List<Vector3> samplesForCurve(ParametricCurveObject o) {
+    final key = _curveKey(o);
+    final cached = _curves[key];
+    if (cached != null) return cached;
+    final samples = _evalCurve(o);
+    _curves[key] = samples;
+    if (_curves.length > _cap) {
+      _curves.remove(_curves.keys.first);
+    }
+    return samples;
+  }
+
+  /// Evaluate one expression at the given (u, v) numerically.
+  /// Mirrors the Graphing3DScreen `_evaluateAt` pattern:
+  /// substitute coordinate values into the expression string, run
+  /// through the preprocessor, evaluate via CalculatorEngine's
+  /// numeric path. NaN on parse / eval errors so the painter can
+  /// skip those samples.
+  static double _evalAt2(String expr, double u, double v) {
+    try {
+      final us = u < 0 ? '($u)' : '$u';
+      final vs = v < 0 ? '($v)' : '$v';
+      var sub = expr.replaceAll(RegExp(r'\bu\b'), us);
+      sub = sub.replaceAll(RegExp(r'\bv\b'), vs);
+      final pre = ExpressionPreprocessingUtils.preprocessNativeExpression(sub);
+      final result = _engine.evaluateForGraphing(pre);
+      if (result.startsWith('Error') || result.isEmpty) return double.nan;
+      return double.tryParse(result) ?? double.nan;
+    } catch (_) {
+      return double.nan;
+    }
+  }
+
+  static double _evalAt1(String expr, double t) {
+    try {
+      final ts = t < 0 ? '($t)' : '$t';
+      final sub = expr.replaceAll(RegExp(r'\bt\b'), ts);
+      final pre = ExpressionPreprocessingUtils.preprocessNativeExpression(sub);
+      final result = _engine.evaluateForGraphing(pre);
+      if (result.startsWith('Error') || result.isEmpty) return double.nan;
+      return double.tryParse(result) ?? double.nan;
+    } catch (_) {
+      return double.nan;
+    }
+  }
+
+  static List<List<Vector3>> _evalSurface(ParametricSurfaceObject o) {
+    final n = o.uSteps;
+    final m = o.vSteps;
+    final grid = List<List<Vector3>>.generate(
+      n + 1,
+      (i) {
+        final u = o.uMin + (o.uMax - o.uMin) * i / n;
+        return List<Vector3>.generate(m + 1, (j) {
+          final v = o.vMin + (o.vMax - o.vMin) * j / m;
+          return Vector3(
+            _evalAt2(o.exprX, u, v),
+            _evalAt2(o.exprY, u, v),
+            _evalAt2(o.exprZ, u, v),
+          );
+        });
+      },
+    );
+    return grid;
+  }
+
+  static List<Vector3> _evalCurve(ParametricCurveObject o) {
+    return List<Vector3>.generate(o.steps + 1, (i) {
+      final t = o.tMin + (o.tMax - o.tMin) * i / o.steps;
+      return Vector3(
+        _evalAt1(o.exprX, t),
+        _evalAt1(o.exprY, t),
+        _evalAt1(o.exprZ, t),
+      );
+    });
+  }
+}
+
+void _drawParametricSurface(
+  Canvas canvas,
+  ParametricSurfaceObject o,
+  Offset Function(double, double, double) project,
+) {
+  final grid = _ParametricSampleCache.samplesFor(o);
+  if (grid.isEmpty || grid.first.isEmpty) return;
+  final n = grid.length - 1;
+  final m = grid.first.length - 1;
+  final color = Color(o.color);
+  final stroke = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.9
+    ..color = color.withValues(alpha: 0.75);
+
+  Offset? projectIfFinite(Vector3 p) {
+    if (!p.x.isFinite || !p.y.isFinite || !p.z.isFinite) return null;
+    return project(p.x, p.y, p.z);
+  }
+
+  // Pre-project once per cell corner.
+  final screen = List<List<Offset?>>.generate(
+    n + 1,
+    (i) => List<Offset?>.generate(m + 1, (j) => projectIfFinite(grid[i][j])),
+  );
+
+  // u-direction (constant v) curves.
+  for (var j = 0; j <= m; j++) {
+    for (var i = 0; i < n; i++) {
+      final a = screen[i][j];
+      final b = screen[i + 1][j];
+      if (a != null && b != null) canvas.drawLine(a, b, stroke);
+    }
+  }
+  // v-direction (constant u) curves.
+  for (var i = 0; i <= n; i++) {
+    for (var j = 0; j < m; j++) {
+      final a = screen[i][j];
+      final b = screen[i][j + 1];
+      if (a != null && b != null) canvas.drawLine(a, b, stroke);
+    }
+  }
+}
+
+void _drawParametricCurve(
+  Canvas canvas,
+  ParametricCurveObject o,
+  Offset Function(double, double, double) project,
+) {
+  final samples = _ParametricSampleCache.samplesForCurve(o);
+  if (samples.length < 2) return;
+  final color = Color(o.color);
+  final stroke = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.6
+    ..color = color;
+
+  Offset? prev;
+  for (final p in samples) {
+    if (!p.x.isFinite || !p.y.isFinite || !p.z.isFinite) {
+      prev = null;
+      continue;
+    }
+    final s = project(p.x, p.y, p.z);
+    if (prev != null) canvas.drawLine(prev, s, stroke);
+    prev = s;
+  }
 }

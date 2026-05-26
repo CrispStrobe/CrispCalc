@@ -625,6 +625,273 @@ String _quadricKindLabel(QuadricKind k, AppLocalizations t) {
   }
 }
 
+/// P9-A6: Add/Edit Parametric Surface dialog.
+/// `r(u, v) = (x(u, v), y(u, v), z(u, v))` evaluated via the
+/// shared CalculatorEngine pipeline. Defaults render a torus.
+Future<ParametricSurfaceObject?> showParametricSurfaceEditorDialog(
+  BuildContext context, {
+  ParametricSurfaceObject? existing,
+  int defaultColor = 0xFF00897B,
+}) async {
+  final t = AppLocalizations.of(context);
+  final labelCtrl = TextEditingController(
+      text: existing?.label ?? t.scene3DParametricSurface);
+  final exX =
+      TextEditingController(text: existing?.exprX ?? '(2 + cos(v)) * cos(u)');
+  final exY =
+      TextEditingController(text: existing?.exprY ?? '(2 + cos(v)) * sin(u)');
+  final exZ = TextEditingController(text: existing?.exprZ ?? 'sin(v)');
+  final uMin = TextEditingController(text: (existing?.uMin ?? 0).toString());
+  final uMax =
+      TextEditingController(text: (existing?.uMax ?? 6.2832).toString());
+  final vMin = TextEditingController(text: (existing?.vMin ?? 0).toString());
+  final vMax =
+      TextEditingController(text: (existing?.vMax ?? 6.2832).toString());
+  final uSteps =
+      TextEditingController(text: (existing?.uSteps ?? 18).toString());
+  final vSteps =
+      TextEditingController(text: (existing?.vSteps ?? 18).toString());
+  var color = existing?.color ?? defaultColor;
+  final formKey = GlobalKey<FormState>();
+
+  final saved = await showDialog<ParametricSurfaceObject>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setStateDlg) {
+      return AlertDialog(
+        title: Text(existing == null
+            ? t.scene3DAddParametricSurface
+            : t.scene3DEditParametricSurface),
+        content: SizedBox(
+          width: 440,
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: labelCtrl,
+                    decoration: InputDecoration(
+                      labelText: t.scene3DObjectLabel,
+                      isDense: true,
+                    ),
+                    validator: (s) => (s?.trim().isEmpty ?? true)
+                        ? t.scene3DLabelRequired
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _exprField(exX, 'x(u, v)', t),
+                  const SizedBox(height: 6),
+                  _exprField(exY, 'y(u, v)', t),
+                  const SizedBox(height: 6),
+                  _exprField(exZ, 'z(u, v)', t),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _coef(uMin, 'u min', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(uMax, 'u max', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _intField(uSteps, 'u steps', t)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: _coef(vMin, 'v min', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(vMax, 'v max', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _intField(vSteps, 'v steps', t)),
+                  ]),
+                  const SizedBox(height: 16),
+                  Text(t.scene3DColor,
+                      style: Theme.of(ctx).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final swatch in kSceneObjectPalette)
+                      _ColorSwatch(
+                        color: Color(swatch),
+                        selected: color == swatch,
+                        onTap: () => setStateDlg(() => color = swatch),
+                      ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              Navigator.of(ctx).pop(ParametricSurfaceObject(
+                id: existing?.id ?? generateSceneObjectId(),
+                label: labelCtrl.text.trim(),
+                color: color,
+                visible: existing?.visible ?? true,
+                exprX: exX.text.trim(),
+                exprY: exY.text.trim(),
+                exprZ: exZ.text.trim(),
+                uMin: double.tryParse(uMin.text.trim()) ?? 0,
+                uMax: double.tryParse(uMax.text.trim()) ?? 1,
+                vMin: double.tryParse(vMin.text.trim()) ?? 0,
+                vMax: double.tryParse(vMax.text.trim()) ?? 1,
+                uSteps: int.tryParse(uSteps.text.trim()) ?? 18,
+                vSteps: int.tryParse(vSteps.text.trim()) ?? 18,
+              ));
+            },
+            child: Text(existing == null ? t.scene3DAdd : t.scene3DSave),
+          ),
+        ],
+      );
+    }),
+  );
+  return saved;
+}
+
+/// P9-A6: Add/Edit Parametric Curve dialog. Defaults render a
+/// helix.
+Future<ParametricCurveObject?> showParametricCurveEditorDialog(
+  BuildContext context, {
+  ParametricCurveObject? existing,
+  int defaultColor = 0xFFFDD835,
+}) async {
+  final t = AppLocalizations.of(context);
+  final labelCtrl =
+      TextEditingController(text: existing?.label ?? t.scene3DParametricCurve);
+  final exX = TextEditingController(text: existing?.exprX ?? 'cos(t)');
+  final exY = TextEditingController(text: existing?.exprY ?? 'sin(t)');
+  final exZ = TextEditingController(text: existing?.exprZ ?? 't/5');
+  final tMin = TextEditingController(text: (existing?.tMin ?? 0).toString());
+  final tMax =
+      TextEditingController(text: (existing?.tMax ?? 12.5664).toString());
+  final steps =
+      TextEditingController(text: (existing?.steps ?? 100).toString());
+  var color = existing?.color ?? defaultColor;
+  final formKey = GlobalKey<FormState>();
+
+  final saved = await showDialog<ParametricCurveObject>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setStateDlg) {
+      return AlertDialog(
+        title: Text(existing == null
+            ? t.scene3DAddParametricCurve
+            : t.scene3DEditParametricCurve),
+        content: SizedBox(
+          width: 400,
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: labelCtrl,
+                    decoration: InputDecoration(
+                      labelText: t.scene3DObjectLabel,
+                      isDense: true,
+                    ),
+                    validator: (s) => (s?.trim().isEmpty ?? true)
+                        ? t.scene3DLabelRequired
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _exprField(exX, 'x(t)', t),
+                  const SizedBox(height: 6),
+                  _exprField(exY, 'y(t)', t),
+                  const SizedBox(height: 6),
+                  _exprField(exZ, 'z(t)', t),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _coef(tMin, 't min', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(tMax, 't max', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _intField(steps, 'steps', t)),
+                  ]),
+                  const SizedBox(height: 16),
+                  Text(t.scene3DColor,
+                      style: Theme.of(ctx).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final swatch in kSceneObjectPalette)
+                      _ColorSwatch(
+                        color: Color(swatch),
+                        selected: color == swatch,
+                        onTap: () => setStateDlg(() => color = swatch),
+                      ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              Navigator.of(ctx).pop(ParametricCurveObject(
+                id: existing?.id ?? generateSceneObjectId(),
+                label: labelCtrl.text.trim(),
+                color: color,
+                visible: existing?.visible ?? true,
+                exprX: exX.text.trim(),
+                exprY: exY.text.trim(),
+                exprZ: exZ.text.trim(),
+                tMin: double.tryParse(tMin.text.trim()) ?? 0,
+                tMax: double.tryParse(tMax.text.trim()) ?? 1,
+                steps: int.tryParse(steps.text.trim()) ?? 100,
+              ));
+            },
+            child: Text(existing == null ? t.scene3DAdd : t.scene3DSave),
+          ),
+        ],
+      );
+    }),
+  );
+  return saved;
+}
+
+Widget _exprField(TextEditingController c, String label, AppLocalizations t) {
+  return TextFormField(
+    controller: c,
+    decoration: InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      isDense: true,
+      hintStyle: const TextStyle(fontFamily: 'monospace'),
+    ),
+    style: const TextStyle(fontFamily: 'monospace'),
+    validator: (s) =>
+        (s?.trim().isEmpty ?? true) ? t.scene3DCoefRequired : null,
+  );
+}
+
+Widget _intField(TextEditingController c, String label, AppLocalizations t) {
+  return TextFormField(
+    controller: c,
+    keyboardType: const TextInputType.numberWithOptions(),
+    decoration: InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      isDense: true,
+    ),
+    validator: (s) {
+      final v = int.tryParse(s?.trim() ?? '');
+      if (v == null || v < 2) return t.scene3DCoefInvalid;
+      return null;
+    },
+  );
+}
+
 class _ColorSwatch extends StatelessWidget {
   final Color color;
   final bool selected;
