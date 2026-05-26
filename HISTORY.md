@@ -2,6 +2,79 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 102) — Help popovers on Calculator Adv-tab keypad
+
+Hangs actual help content off the Round 101 scaffolding. Tapping
+an Adv-tab button while help mode is on now opens an AlertDialog
+with the function's signature + one-line description + a "Learn
+more" button that deep-links into the full Function Reference
+dialog, pre-filtered to the tapped entry.
+
+### Mechanism
+
+- **`HelpTarget` gains `onHelpTap: VoidCallback?`**. When set and
+  help mode is on, an absorbing `Positioned.fill` GestureDetector
+  layers above the wrapped child to swallow the tap before it
+  reaches the underlying button. When `onHelpTap` is null
+  (Round 101's history-row / notepad-row wrappers), the outline
+  still renders but taps pass through.
+
+- **`KeypadGrid` gains `helpRefIdFor` + `onHelpTap` callbacks**.
+  When both supplied, every button is wrapped in `HelpTarget`;
+  the per-glyph resolver returns a FunctionRef id (or null for
+  buttons without a catalogued entry).
+
+- **`_kAdvKeyHelpRefId` mapping** (`calculator_keypad.dart`)
+  covers the 15 Adv buttons with a FunctionRef match: `!` →
+  `factorial`, `fib` → `fibonacci`, `prime` → `isprime`,
+  `matrix` → `matrix_literal`, `det` / `inv` / `transpose` /
+  `rref` / `nextprime` / `prevprime` / `factorint` (id matches
+  glyph), `π(N)` → `pi_precision`, `e(N)` → `e_precision`,
+  `γ(N)` → `eulergamma_precision`, `√(2,N)` → `sqrt_precision`.
+  Buttons without a mapping (`gamma`, `mod`, `dot`, `cross`,
+  `norm`, `unit`, `i`, the P7 relational/logical ops, `if`)
+  carry no popover; they still render the help-mode outline but
+  a tap inserts normally — that's intentional, no `help
+  unavailable` placeholder.
+
+- **`showKeypadHelpPopover(context, refId)`** renders the
+  AlertDialog. Title is the FunctionRef signature in monospace;
+  body is the `shortDescription`; actions are Close +
+  Learn-more. Learn-more pops the popover and opens
+  `FunctionReferenceDialog(initialSearch: id)`.
+
+### Supporting tweak
+
+`FunctionReferenceDialog` gained an `initialSearch` ctor param
+(mirrors the Round 96 follow-up on `WorkedExamplesDialog`).
+Pre-fills the search controller so the user lands directly on
+the deep-linked row. Search is id-aware so the deep-link works
+across UI languages.
+
+### Scope notes
+
+CAS-tab buttons (`solve`, `factor`, `expand`, `simplify`,
+`d/dx`, `∫`, `lim`, `subst`, `gcd`, `lcm`) all have FunctionRef
+entries and would slot into the same mechanism — kept out of
+Round 102 per PLAN's "Adv-tab only" wording. A follow-up round
+can extend `_paneBody` / the narrow `TabBarView` to wire the
+CAS pane through.
+
+### Tests
+
+`test/keypad_help_popover_test.dart` (3 widget tests):
+
+1. Popover opens with the right signature / description / Close
+   / Learn-more, and `onPressed` does NOT fire (the absorbing
+   overlay swallowed the tap).
+2. Learn-more opens `FunctionReferenceDialog` with the search
+   pre-filled to the FunctionRef id.
+3. An unmapped button still fires `onPressed` normally in help
+   mode (and `onHelpTap` is never invoked for it).
+
+One new i18n string × 4 locales: `keypadHelpLearnMore`.
+1962 → 1965 tests; `flutter analyze` clean.
+
 ## 2026-05-26 (P6 Round 101) — Help-mode toggle + dotted-outline affordance
 
 Scaffolds the help-mode infrastructure the rest of P6 (rounds

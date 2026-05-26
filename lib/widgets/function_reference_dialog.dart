@@ -21,7 +21,13 @@ import '../localization/app_localizations.dart';
 import 'worked_examples_dialog.dart';
 
 class FunctionReferenceDialog extends StatefulWidget {
-  const FunctionReferenceDialog({super.key});
+  /// Round 102 (P6): pre-fill the search field with [initialSearch]
+  /// so callers (e.g. the keypad's "Learn more" deep-link) can land
+  /// on a specific FunctionRef row by id. Mirrors the
+  /// `WorkedExamplesDialog.initialSearch` ctor param.
+  final String? initialSearch;
+
+  const FunctionReferenceDialog({super.key, this.initialSearch});
 
   @override
   State<FunctionReferenceDialog> createState() =>
@@ -29,8 +35,14 @@ class FunctionReferenceDialog extends StatefulWidget {
 }
 
 class _FunctionReferenceDialogState extends State<FunctionReferenceDialog> {
-  final TextEditingController _searchCtrl = TextEditingController();
+  late final TextEditingController _searchCtrl;
   FunctionRefCategory? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController(text: widget.initialSearch ?? '');
+  }
 
   @override
   void dispose() {

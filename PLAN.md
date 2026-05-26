@@ -1764,17 +1764,27 @@ Two new i18n strings × 4 locales:
 1955 → 1962. Round 102 will hang per-button popovers off
 HelpTarget wrappers on the Adv-tab keypad.
 
-##### Round 102 — Help popovers on Calculator keypad
+##### Round 102 — Help popovers on Calculator keypad — **SHIPPED 2026-05-26**
 
-For each Adv-tab button, tap-in-help-mode opens a small
-popover with:
-- The function name + signature
-- One-line description
-- A "Learn more" link to its FunctionRef entry
+`HelpTarget` extended with `onHelpTap` (absorbing
+`Positioned.fill` GestureDetector when set + help mode on).
+`KeypadGrid` extended with `helpRefIdFor` / `onHelpTap`
+callbacks that wrap each button. `_kAdvKeyHelpRefId` mapping
+in `calculator_keypad.dart` covers 15 of ~36 Adv buttons
+(factorial / fibonacci / isprime / matrix_literal / det /
+inv / transpose / rref / nextprime / prevprime / factorint
+plus the four precision-arc entries). Buttons without a
+FunctionRef map (gamma / mod / dot / cross / norm / unit /
+i / P7 ops / if) render the outline but stay tap-through
+— no "help unavailable" placeholder.
 
-About 30 buttons in the Calculator's Adv tab today. The
-popover content can derive from FunctionRef entries (round 97)
-so there's no content duplication.
+`showKeypadHelpPopover(context, refId)` opens an AlertDialog
+with signature + shortDescription + Close + Learn-more.
+Learn-more deep-links to `FunctionReferenceDialog(initialSearch:
+id)` (new ctor param this round, mirrors WorkedExamplesDialog).
+One new i18n string × 4 locales: `keypadHelpLearnMore`. +3
+widget tests, 1962 → 1965. CAS-tab coverage left for a
+follow-up round.
 
 ##### Round 103 — Help on history rows (Calculator)
 

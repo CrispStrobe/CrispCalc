@@ -522,6 +522,10 @@ abstract class AppLocalizations {
   /// Tooltip on the AppBar `(?)` toggle when help mode is on.
   String get helpModeDisableTooltip;
 
+  /// Round 102: action-button label on the keypad help popover
+  /// that deep-links into the full Function Reference dialog.
+  String get keypadHelpLearnMore;
+
   // -- Worked examples library --
   String get workedExamplesTitle;
   String get workedExamplesSearchHint;
@@ -1742,6 +1746,8 @@ class EnLocalizations implements AppLocalizations {
       'Help mode: tap any control for an explanation';
   @override
   String get helpModeDisableTooltip => 'Exit help mode';
+  @override
+  String get keypadHelpLearnMore => 'Learn more';
 
   @override
   String get workedExamplesTitle => 'Worked examples';
@@ -3223,6 +3229,8 @@ class DeLocalizations implements AppLocalizations {
       'Hilfemodus: jedes Bedienelement antippen für eine Erklärung';
   @override
   String get helpModeDisableTooltip => 'Hilfemodus beenden';
+  @override
+  String get keypadHelpLearnMore => 'Mehr erfahren';
 
   @override
   String get workedExamplesTitle => 'Beispielaufgaben';
@@ -4895,6 +4903,8 @@ class FrLocalizations implements AppLocalizations {
       'Mode aide : touchez n\'importe quel contrôle pour une explication';
   @override
   String get helpModeDisableTooltip => 'Quitter le mode aide';
+  @override
+  String get keypadHelpLearnMore => 'En savoir plus';
 
   @override
   String get workedExamplesTitle => 'Exemples résolus';
@@ -6566,6 +6576,8 @@ class EsLocalizations implements AppLocalizations {
       'Modo ayuda: toca cualquier control para ver una explicación';
   @override
   String get helpModeDisableTooltip => 'Salir del modo ayuda';
+  @override
+  String get keypadHelpLearnMore => 'Más información';
 
   @override
   String get workedExamplesTitle => 'Ejemplos resueltos';

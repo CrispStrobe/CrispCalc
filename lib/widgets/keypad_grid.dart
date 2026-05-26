@@ -2,16 +2,34 @@
 
 import 'package:flutter/material.dart';
 import 'calculator_button.dart';
+import 'help_target.dart';
 
 /// A widget that arranges calculator buttons in a responsive grid.
+///
+/// Round 102 (P6): when [helpRefIdFor] AND [onHelpTap] are both
+/// supplied, every button is wrapped in a [HelpTarget]. While help
+/// mode is on, tapping a button whose `helpRefIdFor(text)` returns a
+/// non-null id calls `onHelpTap(id)` instead of the normal press
+/// handler. Buttons without a matching id still render the
+/// help-mode outline but stay functional on tap.
 class KeypadGrid extends StatelessWidget {
   final List<String> buttons;
   final void Function(String) onButtonPressed;
+
+  /// Round 102: per-button glyph→FunctionRef-id resolver. Returns
+  /// `null` for buttons without a catalogued help entry.
+  final String? Function(String buttonText)? helpRefIdFor;
+
+  /// Round 102: invoked with the resolved FunctionRef id when a
+  /// button is tapped in help mode.
+  final void Function(String refId)? onHelpTap;
 
   const KeypadGrid({
     super.key,
     required this.buttons,
     required this.onButtonPressed,
+    this.helpRefIdFor,
+    this.onHelpTap,
   });
 
   @override
@@ -48,9 +66,17 @@ class KeypadGrid extends StatelessWidget {
           itemCount: buttons.length,
           itemBuilder: (context, index) {
             final buttonText = buttons[index];
-            return CalculatorButton(
+            final button = CalculatorButton(
               text: buttonText,
               onPressed: () => onButtonPressed(buttonText),
+            );
+            if (helpRefIdFor == null || onHelpTap == null) return button;
+            final refId = helpRefIdFor!(buttonText);
+            return HelpTarget(
+              padding: EdgeInsets.zero,
+              borderRadius: const Radius.circular(16),
+              onHelpTap: refId == null ? null : () => onHelpTap!(refId),
+              child: button,
             );
           },
         );

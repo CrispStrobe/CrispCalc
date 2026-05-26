@@ -15,13 +15,86 @@
 import 'package:flutter/material.dart';
 
 import '../engine/app_state.dart';
+import '../engine/function_reference.dart';
 import '../localization/app_localizations.dart';
+import 'function_reference_dialog.dart';
 import 'keypad_grid.dart';
 import 'variable_viewer.dart';
 
 const double _kFlatKeypadMinWidth = 900;
 
 enum _PaneKind { num, trig, cas, advanced, vars }
+
+/// Round 102 (P6): per-glyph → FunctionRef.id mapping for the Adv
+/// tab. Buttons not in this map carry no popover content; their
+/// HelpTarget still renders the help-mode outline but a tap
+/// passes through to the normal insert handler. Mapping derived
+/// directly from the insert-text side-effects in
+/// `calculator_screen.dart`'s `case '<glyph>':` arms — e.g. the
+/// `prime` button inserts `isprime()`, so it maps to the
+/// `isprime` FunctionRef row.
+const Map<String, String> _kAdvKeyHelpRefId = {
+  '!': 'factorial',
+  'fib': 'fibonacci',
+  'prime': 'isprime',
+  'matrix': 'matrix_literal',
+  'det': 'det',
+  'inv': 'inv',
+  'transpose': 'transpose',
+  'rref': 'rref',
+  'π(N)': 'pi_precision',
+  'e(N)': 'e_precision',
+  'γ(N)': 'eulergamma_precision',
+  '√(2,N)': 'sqrt_precision',
+  'nextprime': 'nextprime',
+  'prevprime': 'prevprime',
+  'factorint': 'factorint',
+};
+
+/// Round 102: shows a small AlertDialog explaining a single
+/// FunctionRef. "Learn more" deep-links to the full
+/// [FunctionReferenceDialog] filtered by id.
+void showKeypadHelpPopover(BuildContext context, String refId) {
+  final ref = FunctionReferences.all.firstWhere(
+    (e) => e.id == refId,
+    orElse: () => const FunctionRef(
+      id: '',
+      category: FunctionRefCategory.cas,
+      signature: '',
+      shortDescription: '',
+    ),
+  );
+  if (ref.id.isEmpty) return;
+  final t = AppLocalizations.of(context);
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: Text(
+          ref.signature,
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 16),
+        ),
+        content: Text(ref.shortDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(t.dialogClose),
+          ),
+          FilledButton.tonal(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              showDialog<void>(
+                context: context,
+                builder: (_) => FunctionReferenceDialog(initialSearch: ref.id),
+              );
+            },
+            child: Text(t.keypadHelpLearnMore),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 class CalculatorKeypad extends StatefulWidget {
   const CalculatorKeypad({
@@ -254,7 +327,11 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
               KeypadGrid(
                   buttons: _casKeys, onButtonPressed: widget.onButtonPressed),
               KeypadGrid(
-                  buttons: _advKeys, onButtonPressed: widget.onButtonPressed),
+                buttons: _advKeys,
+                onButtonPressed: widget.onButtonPressed,
+                helpRefIdFor: (text) => _kAdvKeyHelpRefId[text],
+                onHelpTap: (refId) => showKeypadHelpPopover(context, refId),
+              ),
               VariableViewer(
                 appState: widget.appState,
                 onVariableTap: widget.onVariableTap,
@@ -326,6 +403,17 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
         onGoToGraphing: widget.onGoToGraphing,
         onGoToAnalysis: widget.onGoToAnalysis,
         onInsertExpression: widget.onVariableTap,
+      );
+    }
+    // Round 102 (P6): Adv pane wires the help-mode popover machinery
+    // through. Other panes (Num / Trig / CAS) are left untouched
+    // until a later round catalogues their entries.
+    if (kind == _PaneKind.advanced) {
+      return KeypadGrid(
+        buttons: _advKeys,
+        onButtonPressed: widget.onButtonPressed,
+        helpRefIdFor: (text) => _kAdvKeyHelpRefId[text],
+        onHelpTap: (refId) => showKeypadHelpPopover(context, refId),
       );
     }
     return KeypadGrid(
