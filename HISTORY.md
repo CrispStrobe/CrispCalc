@@ -2,6 +2,63 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 98) — Function Reference matrix + linear algebra entries
+
+Fills the `matrix` category in `FunctionReferences.all`. Six
+entries — `matrix_literal` (the `Matrix([[…]])` syntax), `det`,
+`inv`, `transpose`, `rref`, and a combined `matrix_arithmetic`
+entry covering the `+ / - / *` operator triplet on `Matrix(...)`
+operands. Catalogue grows 20 → 26.
+
+### Underlying-call prose
+
+The first-example hint on each entry cites the actual
+implementation path:
+
+- `det`: SymEngine `DenseMatrix::det()` — Bareiss fraction-
+  free algorithm, exact for symbolic / rational entries.
+- `inv`: SymEngine `DenseMatrix::inv()` — Gauss–Jordan over
+  the rationals, returns exact fractions.
+- `transpose`: Dart-side cell-by-cell swap into a fresh
+  matrix with swapped dimensions. The bridge doesn't expose
+  a transpose entry point.
+- `rref`: Dart-side Gauss–Jordan elimination calling
+  SymEngine's `simplify()` per cell update — handles symbolic
+  / rational entries, not just floats. Symbolic non-zero
+  detection is the soft spot (see the `matrix_evaluator.dart`
+  algorithm note).
+- `matrix_arithmetic`: SymEngine's `add_dense_dense` /
+  `mul_dense_dense`. Subtraction goes through
+  `add_dense_dense` with a Dart-side element-wise negation
+  of the right-hand side (no negation primitive on the
+  bridge).
+
+### What's deferred
+
+Eigenvalues: PLAN says "if shipped" — the bridge has no
+`eigvals` binding, so the entry stays deferred. The matrix
+slate test explicitly excludes them; when a binding lands the
+seventh entry slots in alongside `det` / `inv`.
+
+### Cross-links
+
+`matrixDet` → `det`, `matrixInverse` → `inv`, `rref` → `rref`
+worked-example cross-links populated automatically via the
+`workedExampleId` field. The other three entries
+(`matrix_literal`, `transpose`, `matrix_arithmetic`) have no
+worked-example sibling yet — the dialog's "See worked example"
+button correctly degrades to hidden when the id is null.
+
+The matrix `seeAlso` graph is dense: every entry points at the
+other five within its category, encouraging cross-category
+exploration only via the chip filter.
+
+### Tests
+
+`test/function_reference_test.dart` gains one round-98 slate-
+coverage invariant, mirroring the round-97 CAS / precision
+invariants. Suite 1952 → 1953.
+
 ## 2026-05-26 (P6 Round 97) — Function Reference CAS + precision arc entries
 
 Grows `FunctionReferences.all` from the 3-entry seed list

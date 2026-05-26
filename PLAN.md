@@ -1691,10 +1691,22 @@ filtered list. Two existing dialog tests that found `isprime(n)`
 first because the grown catalogue pushes those rows below the
 dialog viewport.
 
-##### Round 98 — Matrix + linear algebra entries
+##### Round 98 — Matrix + linear algebra entries — **SHIPPED**
 
 `det`, `inv`, `transpose`, `rref`, `Matrix([[…]])` syntax,
 eigenvalues (if shipped). ~8 entries.
+
+**Shipped (Round 98):** six entries — `matrix_literal`, `det`,
+`inv`, `transpose`, `rref`, `matrix_arithmetic`. The last folds
+the `+ / - / *` operator triplet into one entry rather than
+three near-duplicate rows. Eigenvalues deferred (no bridge
+binding); the matrix-slate test explicitly excludes them.
+Three of six entries cross-link to existing worked examples
+(`matrixDet`, `matrixInverse`, `rref`). Catalogue 20 → 26
+entries. The underlying-call prose cites Bareiss for `det`,
+Gauss–Jordan for `inv` / `rref`, the Dart-side cell-swap for
+`transpose` (bridge doesn't expose it), and `add_dense_dense` /
+`mul_dense_dense` for binary ops.
 
 ##### Round 99 — Statistics + Constraints + Sudoku entries
 
