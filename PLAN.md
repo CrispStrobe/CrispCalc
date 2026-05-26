@@ -1516,25 +1516,49 @@ boolean predicates + the precision arc both ship entries that
 work fine inline in a notepad line (`isprime(2027)`,
 `2 == 2`), and hiding them would be a regression.
 
-##### Round 95 — Examples open the right module (deferred)
+##### Round 95 — Examples open the right module ✅
 
-Today's session shipped rounds 93+94. Round 95 — pre-loading
-state when an example opens its module (Sudoku preset,
-Statistics demo data) — is **deferred** because it cuts
-across three module screens with new pre-load APIs:
+The deferred carve-out from earlier in the day shipped after
+93+94. Implementation plumbs through four pieces:
 
-- AppState needs `_pendingSudokuPreset` + `_pendingStatisticsDemo`
-  slots (mirror of `_pendingDslProgramId` from round 73).
-- `SudokuScreen` + `StatisticsScreen` need init-side drain.
-- `WorkedExamplesDialog._insert` needs a parameterised sentinel
-  parser, e.g. `open:sudoku?preset=killer4x4`.
-- New worked-examples entries to actually use them.
+- **AppState** gains two pending slots —
+  `_pendingSudokuPresetId` and `_pendingStatisticsTab` — each
+  with `request*`/`consume*` methods that mirror the round-73
+  `_pendingDslProgramId` shape.
+- **`WorkedExamplesDialog._insert`** parses
+  `open:<module>?key=value` (the `?` separator is new; the
+  bare `open:<module>` form still works). Recognised pairs:
+  `?preset=<id>` for sudoku, `?tab=<id>` for statistics.
+  Unknown keys are silently ignored so the module still opens.
+- **`SudokuScreen.initState`** drains
+  `pendingSudokuPresetId`, finds the matching entry in
+  `SudokuPresets.all`, and overwrites the field initialisers
+  for `_puzzle`, `_baseCells`, `_clueIndexes`, `_displayed`
+  before the first build. Unknown ids degrade to the default
+  `standard9x9Easy`.
+- **`StatisticsScreen.initState`** drains
+  `pendingStatisticsTab` and sets `_tabs.index` from
+  `descriptive`/`regression`/`distributions`/`tests`. V1 stops
+  at tab-pick — pre-filling the input fields is a future
+  extension once a real demand for it shows up.
 
-That's roughly a 3-piece-change round and warrants its own
-session. Today's `open:sudoku` / `open:constraints` / `dsl:<id>`
-sentinels still work as before (each opens the module bare).
-Round 92's precision entries stay calculator-bound as PLAN
-already specified.
+Catalog changes:
+
+- **`killerSudoku`** upgraded from `open:sudoku` to
+  `open:sudoku?preset=killer9x9` (so the puzzle is pre-loaded
+  instead of requiring the user to pick it from the dropdown).
+  Description updated in en/de/fr/es.
+- New **`statsHypothesisTests`** entry pointing at
+  `open:statistics?tab=tests` — lands the user on the Tests
+  tab (the deepest tab, with sub-tabs of its own). Localized
+  across en/de/fr/es.
+
+44 worked examples now; cap test stays at 50.
+
+Suite 1911 → 1931 (+6 AppState slot tests, +8 receiver/dispatch
+tests in `round_95_pre_load_test.dart`, +6 reshuffled passes
+from sudoku/statistics initState additions surfacing existing
+test counts).
 
 #### Rounds 96-100: Function Reference surface
 

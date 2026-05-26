@@ -2,6 +2,89 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 95) — Examples open the right module (parameterised sentinels)
+
+Closes the discovery loop opened by rounds 93+94: worked
+examples can now navigate to a module **AND** pre-load
+specific state. Carved out of 93+94 earlier in the session
+as a "needs per-module pre-load APIs" follow-up; landed in
+the same session after the doc carve-out described what
+was needed.
+
+### Sentinel parser extension
+
+`open:<module>` now accepts an optional `?<key>=<value>(&...)`
+suffix in `WorkedExamplesDialog._insert`. Recognised:
+
+- `open:sudoku?preset=<id>` — `<id>` matches an entry in
+  `SudokuPresets.all` (e.g. `killer9x9`, `killer4x4`,
+  `standard9x9Hard`, ...).
+- `open:statistics?tab=<id>` — `<id>` is one of
+  `descriptive` / `regression` / `distributions` / `tests`.
+
+Unknown keys are silently ignored, so the module still
+opens with no pre-load — a typo in the catalog degrades
+gracefully rather than crashing the dialog.
+
+### AppState slots + receiver drain
+
+Two new pending slots mirror the round-73
+`_pendingDslProgramId` shape:
+
+- `_pendingSudokuPresetId` with
+  `requestLoadSudokuPreset(id)` / `consumePendingSudokuPresetId()`.
+- `_pendingStatisticsTab` with
+  `requestLoadStatisticsTab(id)` / `consumePendingStatisticsTab()`.
+
+`SudokuScreen.initState` (new) drains the preset slot, finds
+the matching entry in `SudokuPresets.all`, and overwrites
+`_puzzle` + the three `late` companion fields
+(`_baseCells`, `_clueIndexes`, `_displayed`) before the first
+build. The fields are `late` but not `late final`, so
+assigning before any read skips the initialiser — exactly
+what we want when overriding with a preset.
+
+`StatisticsScreen.initState` drains the tab slot and sets
+`_tabs.index` accordingly. V1 stops at tab-pick — pre-filling
+the input fields with overridden sample data is a future
+extension once a real demand surfaces.
+
+### Catalog changes
+
+- **`killerSudoku`** upgraded from `open:sudoku` (which
+  required the user to pick "9×9 Killer" from the dropdown)
+  to `open:sudoku?preset=killer9x9` (puzzle pre-loaded).
+  Description updated in en/de/fr/es.
+- New **`statsHypothesisTests`** entry pointing at
+  `open:statistics?tab=tests`. The Tests tab is the deepest
+  tab (sub-tabs for one-sample t, two-sample t Welch, paired
+  t, ANOVA, chi-square, Wilcoxon) and the hardest to discover
+  by browsing; a direct deep-link is high-leverage.
+  Localized across en/de/fr/es.
+
+44 worked examples now; cap test stays at 50.
+
+### Tests
+
+- 6 new AppState slot tests (`app_state_test.dart`):
+  starts-empty, request → read → consume → null, listener
+  notification — for both pending slots.
+- 8 new receiver / dispatch tests
+  (`round_95_pre_load_test.dart`): SudokuScreen drains
+  preset (happy path + unknown id + no pending), Statistics
+  drains tab (each of the 4 valid ids + unknown), and a full
+  dialog-tap end-to-end that filters to Statistics, taps the
+  new entry, and asserts the Tests tab is selected on the
+  pushed StatisticsScreen.
+- 2 existing tests updated to handle the new sentinel:
+  `worked_examples_test.dart`'s `every open: sentinel
+  targets a known module` parses the `?` separator;
+  `worked_examples_dialog_test.dart` uses the new
+  `open:sudoku?preset=killer9x9` string for the "doesn't
+  appear on notepad" assertion.
+
+Suite 1911 → 1931.
+
 ## 2026-05-26 (P6 Rounds 93+94) — Worked Examples out of Settings + surface filtering
 
 P6's first shippable slice: move the Worked Examples library

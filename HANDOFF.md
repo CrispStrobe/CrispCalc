@@ -104,9 +104,9 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1911 (1810 → 1832 → 1856 → 1880 → 1898 →
-1905 → 1911 across P7 rounds 110/111/112/111b/113 and P6 rounds
-93+94). All green; CI 6-job matrix on every main push.
+**Tests at session end**: 1931 (1810 → 1832 → 1856 → 1880 → 1898 →
+1905 → 1911 → 1931 across P7 rounds 110/111/112/111b/113 and P6
+rounds 93+94+95). All green; CI 6-job matrix on every main push.
 
 **Working mode change (2026-05-26 EOD)**: parallel-arc work is paused.
 All edits now go directly on `main` in `/Volumes/backups/code/CrispCalc`.
@@ -424,6 +424,15 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   constraints). PLAN's spec said the first three only;
   numberTheory included because P7 + the precision arc ship
   entries that work fine inline in notepad.
+- **Round 95** — Per-module pre-loading via parameterised
+  `open:<module>?key=value` sentinels. New AppState pending
+  slots (`pendingSudokuPresetId`, `pendingStatisticsTab`) +
+  receiver drain on `SudokuScreen` + `StatisticsScreen` +
+  parser extension in `WorkedExamplesDialog._insert`.
+  `killerSudoku` worked example upgraded to
+  `open:sudoku?preset=killer9x9`; new `statsHypothesisTests`
+  entry points at `open:statistics?tab=tests`. V1 stops at
+  tab-pick — pre-filling Statistics input fields is deferred.
 - **Docs P6 / P7 / P8 (no round numbers)** — 565 lines of
   PLAN.md added: discoverability + help-system overhaul (P6,
   rounds 91-105), boolean type + relational/logical operators
@@ -854,15 +863,14 @@ the round table). What's left:
    - **A8** — Back-to-front sorting for proper occlusion.
      Cosmetic for now: the back hemisphere of a sphere draws
      over the front when seen edge-on.
-4. **P6 — Discoverability + help (15-round arc, ~⅙ shipped).**
-   Rounds 93 + 94 shipped today (Worked Examples icon on
-   Calculator + Notepad + surface-scoped filtering). Round 95
-   (per-module pre-loading via parameterised `open:<module>?…`
-   sentinels) is **deferred** — it needs new AppState slots +
-   receiver-side drain on Sudoku/Statistics, a sentinel
-   parser, and new worked-examples entries. Next from P6:
-   Round 95, then the Round 96-100 Function Reference arc.
-   Re-read PLAN P6 before committing to the next slice.
+4. **P6 — Discoverability + help (15-round arc, ~⅕ shipped).**
+   Rounds 93 + 94 + 95 shipped today — Worked Examples icon
+   on Calculator + Notepad, surface-scoped filtering, and
+   per-module pre-loading via parameterised
+   `open:<module>?key=value` sentinels. Next from P6: the
+   Round 96-100 Function Reference arc (50+ entries × 4
+   locales, biggest content round so far). Re-read PLAN P6
+   before committing to the next slice.
 
 ### Bigger strategic next: discoverability + help (P6, rounds 91-105)
 
