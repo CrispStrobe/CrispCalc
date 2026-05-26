@@ -542,6 +542,25 @@ abstract class AppLocalizations {
   String get settingsWorkedExamples;
   String get settingsWorkedExamplesSubtitle;
 
+  // -- Function reference (Round 96 P6) --
+  String get functionRefTitle;
+  String get functionRefSearchHint;
+  String get functionRefEmpty;
+  String get functionRefSeeAlso;
+  String get functionRefTryInCalculator;
+  String get functionRefSeeWorkedExample;
+  String get functionRefCatCas;
+  String get functionRefCatNumberTheory;
+  String get functionRefCatPrecision;
+  String get functionRefCatMatrix;
+  String get functionRefCatGraphing;
+  String get functionRefCatStatistics;
+  String get functionRefCatConstraints;
+  String get functionRefCatSudoku;
+  String get functionRefCatUnits;
+  String get settingsFunctionRef;
+  String get settingsFunctionRefSubtitle;
+
   // -- Import data --
   String get importDataTitle;
   String get importDataSubtitle;
@@ -1756,6 +1775,42 @@ class EnLocalizations implements AppLocalizations {
   String get settingsWorkedExamplesSubtitle =>
       'Now also reachable from the open-book icon at the top of the '
       'Calculator and Notepad screens. Tap here for the full library.';
+  @override
+  String get functionRefTitle => 'Function reference';
+  @override
+  String get functionRefSearchHint => 'Search functions…';
+  @override
+  String get functionRefEmpty => 'No functions match this filter.';
+  @override
+  String get functionRefSeeAlso => 'See also:';
+  @override
+  String get functionRefTryInCalculator => 'Try in Calculator';
+  @override
+  String get functionRefSeeWorkedExample => 'See worked example';
+  @override
+  String get functionRefCatCas => 'CAS';
+  @override
+  String get functionRefCatNumberTheory => 'Number theory';
+  @override
+  String get functionRefCatPrecision => 'Precision';
+  @override
+  String get functionRefCatMatrix => 'Matrix';
+  @override
+  String get functionRefCatGraphing => 'Graphing';
+  @override
+  String get functionRefCatStatistics => 'Statistics';
+  @override
+  String get functionRefCatConstraints => 'Constraints';
+  @override
+  String get functionRefCatSudoku => 'Sudoku';
+  @override
+  String get functionRefCatUnits => 'Units';
+  @override
+  String get settingsFunctionRef => 'Function reference';
+  @override
+  String get settingsFunctionRefSubtitle =>
+      'Browse every CrispCalc function: signature, examples, related '
+      'functions, and a paste-into-calculator shortcut.';
 
   @override
   String get importDataTitle => 'Import data';
@@ -3370,6 +3425,42 @@ class DeLocalizations implements AppLocalizations {
   String get settingsWorkedExamplesSubtitle =>
       'Jetzt auch über das Buchsymbol oben im Rechner und im Notizblock '
       'erreichbar. Hier tippen für die vollständige Bibliothek.';
+  @override
+  String get functionRefTitle => 'Funktionsreferenz';
+  @override
+  String get functionRefSearchHint => 'Funktionen durchsuchen…';
+  @override
+  String get functionRefEmpty => 'Keine Funktion entspricht diesem Filter.';
+  @override
+  String get functionRefSeeAlso => 'Siehe auch:';
+  @override
+  String get functionRefTryInCalculator => 'Im Rechner ausprobieren';
+  @override
+  String get functionRefSeeWorkedExample => 'Beispielaufgabe ansehen';
+  @override
+  String get functionRefCatCas => 'CAS';
+  @override
+  String get functionRefCatNumberTheory => 'Zahlentheorie';
+  @override
+  String get functionRefCatPrecision => 'Hochpräzision';
+  @override
+  String get functionRefCatMatrix => 'Matrix';
+  @override
+  String get functionRefCatGraphing => 'Graphen';
+  @override
+  String get functionRefCatStatistics => 'Statistik';
+  @override
+  String get functionRefCatConstraints => 'Bedingungen';
+  @override
+  String get functionRefCatSudoku => 'Sudoku';
+  @override
+  String get functionRefCatUnits => 'Einheiten';
+  @override
+  String get settingsFunctionRef => 'Funktionsreferenz';
+  @override
+  String get settingsFunctionRefSubtitle =>
+      'Jede CrispCalc-Funktion durchstöbern: Signatur, Beispiele, '
+      'verwandte Funktionen und ein Schnellzugriff in den Rechner.';
 
   @override
   String get importDataTitle => 'Daten importieren';
@@ -5003,6 +5094,42 @@ class FrLocalizations implements AppLocalizations {
       'Désormais accessible aussi via l\'icône livre en haut de la '
       'Calculatrice et du Bloc-notes. Appuyez ici pour la bibliothèque '
       'complète.';
+  @override
+  String get functionRefTitle => 'Référence des fonctions';
+  @override
+  String get functionRefSearchHint => 'Rechercher des fonctions…';
+  @override
+  String get functionRefEmpty => 'Aucune fonction ne correspond à ce filtre.';
+  @override
+  String get functionRefSeeAlso => 'Voir aussi :';
+  @override
+  String get functionRefTryInCalculator => 'Essayer dans la Calculatrice';
+  @override
+  String get functionRefSeeWorkedExample => 'Voir l\'exemple résolu';
+  @override
+  String get functionRefCatCas => 'CAS';
+  @override
+  String get functionRefCatNumberTheory => 'Théorie des nombres';
+  @override
+  String get functionRefCatPrecision => 'Haute précision';
+  @override
+  String get functionRefCatMatrix => 'Matrices';
+  @override
+  String get functionRefCatGraphing => 'Graphes';
+  @override
+  String get functionRefCatStatistics => 'Statistiques';
+  @override
+  String get functionRefCatConstraints => 'Contraintes';
+  @override
+  String get functionRefCatSudoku => 'Sudoku';
+  @override
+  String get functionRefCatUnits => 'Unités';
+  @override
+  String get settingsFunctionRef => 'Référence des fonctions';
+  @override
+  String get settingsFunctionRefSubtitle =>
+      'Parcourez chaque fonction de CrispCalc : signature, exemples, '
+      'fonctions liées et un raccourci pour coller dans la Calculatrice.';
 
   @override
   String get importDataTitle => 'Importer les données';
@@ -6632,6 +6759,42 @@ class EsLocalizations implements AppLocalizations {
       'Ahora también accesible mediante el icono de libro en la parte '
       'superior de la Calculadora y el Bloc de notas. Toca aquí para la '
       'biblioteca completa.';
+  @override
+  String get functionRefTitle => 'Referencia de funciones';
+  @override
+  String get functionRefSearchHint => 'Buscar funciones…';
+  @override
+  String get functionRefEmpty => 'Ninguna función coincide con este filtro.';
+  @override
+  String get functionRefSeeAlso => 'Véase también:';
+  @override
+  String get functionRefTryInCalculator => 'Probar en la Calculadora';
+  @override
+  String get functionRefSeeWorkedExample => 'Ver ejemplo resuelto';
+  @override
+  String get functionRefCatCas => 'CAS';
+  @override
+  String get functionRefCatNumberTheory => 'Teoría de números';
+  @override
+  String get functionRefCatPrecision => 'Alta precisión';
+  @override
+  String get functionRefCatMatrix => 'Matrices';
+  @override
+  String get functionRefCatGraphing => 'Gráficos';
+  @override
+  String get functionRefCatStatistics => 'Estadística';
+  @override
+  String get functionRefCatConstraints => 'Restricciones';
+  @override
+  String get functionRefCatSudoku => 'Sudoku';
+  @override
+  String get functionRefCatUnits => 'Unidades';
+  @override
+  String get settingsFunctionRef => 'Referencia de funciones';
+  @override
+  String get settingsFunctionRefSubtitle =>
+      'Explora cada función de CrispCalc: firma, ejemplos, funciones '
+      'relacionadas y un atajo para pegar en la Calculadora.';
 
   @override
   String get importDataTitle => 'Importar datos';

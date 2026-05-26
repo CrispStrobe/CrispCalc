@@ -31,6 +31,7 @@ import 'widgets/export_data_dialog.dart';
 import 'widgets/import_data_dialog.dart';
 import 'widgets/onboarding_tour.dart';
 import 'widgets/user_functions_dialog.dart';
+import 'widgets/function_reference_dialog.dart';
 import 'widgets/worked_examples_dialog.dart';
 
 /// Round 71: a single app-wide [RouteObserver] so screens / dialogs
@@ -573,6 +574,22 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const WorkedExamplesDialog(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Round 96 (P6): Function Reference dialog. Lives in
+              // Settings for V1; Round 101's help-mode toggle will
+              // surface it inline from Calculator / Notepad.
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.functions),
+                  title: Text(t.settingsFunctionRef),
+                  subtitle: Text(t.settingsFunctionRefSubtitle),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const FunctionReferenceDialog(),
                   ),
                 ),
               ),
