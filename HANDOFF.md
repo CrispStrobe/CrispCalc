@@ -24,7 +24,7 @@ this file remains the load-bearing pattern catalog.
 
 | Repo                       | Branch | Last shipped |
 | -------------------------- | ------ | ------------ |
-| CrispCalc                  | main   | `82de781` docs: PLAN — Round E prereq + E.1 + E.4-inline shipped |
+| CrispCalc                  | main   | `ff7d645` docs: PLAN — Round E.2 + E.3 shipped (E.5 deferred on P4) |
 | symbolic_math_bridge       | main   | `505074d` round-90 factorint binding (unchanged today) |
 | math-stack-ios-builder     | master | `34ec0fdf` round-90 fmpz_factor wrapper (unchanged) |
 | dart_csp (pinned via pubspec) | main | `69a9cfb` (bumped 2026-05-26 — FlatZinc frontend + QuickXplain MUS) |
@@ -104,8 +104,8 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1730 (1708 → 1730 after Round E.1 + E.4).
-All green; CI 6-job matrix on every main push.
+**Tests at session end**: 1762 (1708 → 1762 across Round E.1 + E.2
++ E.3 + E.4-inline). All green; CI 6-job matrix on every main push.
 
 ---
 

@@ -1,9 +1,10 @@
 # CrispCalc — handover for the next session
 
-Single-shot briefing from the **2026-05-26 (afternoon) session** that
-shipped CSP Round E's first chunk. The longer-lived `HANDOFF.md` is
-still the load-bearing reference for repo conventions; this file is
-a focused pickup note for what to do *next*.
+Single-shot briefing from the **2026-05-26 (evening) session** that
+shipped the remaining Round E chunks (E.2 + E.3). The longer-lived
+`HANDOFF.md` is still the load-bearing reference for repo
+conventions; this file is a focused pickup note for what to do
+*next*.
 
 ---
 
@@ -14,102 +15,111 @@ a focused pickup note for what to do *next*.
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **Feature worktree (reusable)** | `/Volumes/backups/code/CrispCalc-csp-e` (branch `feat/csp-round-e`) |
 | **Notepad worktree (kept in sync)** | `/Volumes/backups/code/CrispCalc-notepad-phase-1` (branch `feature/notepad-phase-1`) |
-| **All three branches HEAD** | `82de781` docs: PLAN — Round E shipped marks |
-| **Tests** | **1730 pass** (1708 carried + 4 FlatZinc-tab + 18 fzn-evaluator), `flutter analyze` clean |
-| **dart_csp pin** | `69a9cfb` (HEAD with FlatZinc frontend + QuickXplain MUS) |
-| **CI** | green at the end of the previous session; this session pushed in one batch, watch the first run |
+| **All three branches HEAD** | `ff7d645` docs: PLAN — Round E.2 + E.3 shipped |
+| **Tests** | **1762 pass** (1730 → 1762 across E.2 + E.3) — `flutter analyze` clean |
+| **dart_csp pin** | `69a9cfb` (HEAD with FlatZinc frontend + QuickXplain MUS — bumped earlier today) |
+| **CI** | green at the previous push; this session pushed in two batches, watch for the first run |
 
 Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone).
 
-## What this session shipped (4 commits)
+## What this session shipped (4 commits on top of the morning's 5)
 
 | Round | Commit | What |
 |---|---|---|
-| Prereq | `2ca864f` | Bumped `dart_csp` pin from `e3cce21` → `69a9cfb`. Full suite green; no `Problem` API drift. |
-| **E.1** | `e853874` | New 4th "FlatZinc" tab on `ConstraintsScreen`. Textarea + Solve + `All solutions` FilterChip + 2-entry gallery (NQueens-4 with diagonals via `int_lin_ne`; Bin-packing via `bin_packing_load`). Result-block header switches between "First solution" / "N solutions (exhaustive)" / "Unsatisfiable" by inspecting the trailer. Localized en/de/fr/es (7 chrome keys + 2 gallery titles). 4 tests in `test/flatzinc_tab_test.dart`. |
-| **E.4 (inline variant)** | `d90280b` | Notepad lines starting with `fzn:` get sent to dart_csp's FlatZinc frontend. TextField's `maxLines: null` means a single notepad row can carry multi-line FlatZinc — no multi-line cell model needed for V1. New `NotepadLineKind.flatzinc` + `NotepadLine.cachedExports` (JSON-persisted, key `'x'`) + `NotepadFlatZincDispatcher`. `buildNotepadScope` merges exports so downstream lines reference solved values by their FlatZinc names. Output_array values stay in formatted text but don't enter scope. Unsatisfiable → standard `blockedBy` chip on dependents. 18 tests in `test/notepad_flatzinc_test.dart`. |
-| Docs | `82de781` | PLAN.md struck prereq + E.1 + E.4-inline; E.4 multi-line cell variant now noted as deferred-V2 since the inline variant already handles multi-line bodies. |
+| **E.2** | `7fa290f` | QuickXplain MUS "Why no solution?" panel for all four Constraints tabs. Four new `CspSolver.explain*` methods rebuild the Problem with `label:` threaded through every add* call, then call `findMinimalUnsatisfiableSubsetQuickXplain`. Shared `_ExplainSection` widget renders the button + the labeled conflict rows. en/de/fr/es (4 keys). 12 tests in `test/csp_mus_test.dart`. |
+| **E.3** | `6f6be22` | DSL → FlatZinc export. New `DslToFlatZinc.export(input)` produces a ready-to-paste `.fzn` model from any DSL program (vars / allDifferent / linear ==/<=/>=/</>/!= / noOverlap → disjunctive / cumulative / minimize / maximize via synthetic `__obj__`). "Export as FlatZinc" button on the DSL tab; result lands in a copyable `_FlatZincExportBlock`. Non-linear constraints fail with a friendly error. en/de/fr/es (2 keys). 20 tests in `test/dsl_to_flatzinc_test.dart` — 12 structural, 5 error, **3 round-trip** through `FlatZinc.solve` to prove the translation actually solves. |
+| Docs | `ff7d645` | PLAN.md struck E.2 + E.3. Only E.5 (MiniZinc solver bundling) remains on Round E. |
 
-## Pickup points — Round E continuation
+(Earlier in the day: `2ca864f` pin bump + `e853874` E.1 tab + `d90280b` E.4 inline `fzn:` directive + `8bb2fb3` HANDOFF refresh.)
 
-PLAN.md → search `CSP Round E`. What's left:
+## What's left on Round E
 
-1. **E.2 — "Why no solution?" panel using QuickXplain MUS** (~1 day).
-   When a Diophantine/DSL/FlatZinc problem returns no solution, run
-   QuickXplain over the labeled constraints and surface the minimal
-   conflicting subset inline. Requires threading `ConstraintRef`
-   labels through every `addConstraint` / `addLinearEquals` /
-   `addAllDifferent` call in `lib/engine/csp_solver.dart`. The
-   dart_csp pin already has QuickXplain since the bump (commits
-   `66b1a31` + `47beb59` + `a483980`). "Explain failure" button on
-   the result block, only fires on unsat (running QuickXplain isn't
-   free).
-2. **E.3 — DSL → FlatZinc export** (~½ day). "Export as FlatZinc"
-   button on the DSL tab result panel. Emits a `.fzn` text the user
-   can paste into Choco/Gecode/OR-Tools/MiniZinc IDE for
-   cross-solver verification. Maps the existing DSL AST to FlatZinc
-   declarations — algebraic since both share variables, linear
-   constraints, `allDifferent`, `noOverlap` (FlatZinc's
-   `disjunctive`), `cumulative`.
-3. **E.5 — Bundle `dart_csp_fzn` CLI as a MiniZinc solver**. Deferred
-   until P4 distribution pipeline lands (App Store / notarization).
+Just **E.5 — Bundle `dart_csp_fzn` CLI as a MiniZinc solver**. Niche
+distribution play; ship the compiled CLI + `.msc` config in the
+macOS/Linux app bundles so MiniZinc Challenge entrants can register
+CrispCalc's solver. **Blocked on P4** (App Store / notarization).
+Don't start until the distribution pipeline lands.
 
-After Round E, the strategic next slot is **P7 booleans** (5-round
-arc starting at round 110) or **P6 discoverability** (15-round arc
-starting at round 91). PLAN.md has both writeups.
+## Pickup points — Strategic next
 
-## Known issues / context (Round E)
+With Round E nearly complete, the strategic next slot opens up:
 
-- **FlatZinc output_array values stay in the formatted text but
-  don't enter Notepad scope.** A single FlatZinc array doesn't map
-  cleanly to a scalar scope value, so we only export the scalar
-  `:: output_var` annotations. If you need array values in scope
-  later, the cleanest path is to also export them under
-  `name[1]`, `name[2]`, ... keys, parsed from the `array1d(...)`
-  output text.
-- **`fzn:` detection is case-sensitive.** `FZN:` falls through to
-  expression so the user gets a clean "name FZN not defined" error
-  instead of silent miscategorization. Test `case-sensitive: FZN:
-  is treated as an expression` locks this in.
-- **`_flatzincScalarLineRegex` in `notepad_evaluator.dart`**
-  deliberately disallows `(` in the value field so `array1d(...)`
-  lines fall through. If FlatZinc ever adds a scalar value that
-  needs parens (unlikely), revisit the regex.
-- **NotepadScreen's `_buildResult` branches on
-  `line.source.trimLeft().startsWith('fzn:')`** to route FlatZinc
-  results to a monospace block instead of `Math.tex`. If you
-  refactor the result renderer, preserve this branch (Math.tex on
-  multi-line FlatZinc output renders as a fallback text block but
-  with the wrong font / size).
+1. **P7 booleans (5-round arc, starts at round 110)**. Calculator
+   preprocessor: `a == b` → `Eq(a, b)`, `a and b` → `And(a, b)`,
+   etc. `true`/`false` render as colored chips in history. PLAN P7
+   has the full 5-round breakdown. Self-contained engine work; no
+   cross-repo work needed.
+2. **P6 discoverability + help (15-round arc, starts at round 91)**.
+   Move Worked Examples out of Settings; new Function Reference
+   dialog; app-wide `(?)` help-mode overlay; precision-arc /
+   ntheory surfacing in the parsers. The bigger strategic
+   direction. Round 91 (precision-arc calculator binding) is
+   load-bearing for surfacing the round-85/86/89/90 wrappers.
+3. **P9 follow-ups for the 3D Scene module** — A5d (raw-coefficient
+   quadrics), A7 (parametric intersections), A8 (back-to-front
+   sorting). Polish, not load-bearing.
+4. **Precision arc round 4** (`modpow` / `modinv` / `totient` /
+   `jacobi`) — see `HANDOFF_PRECISION.md`. Smallest cross-repo arc;
+   the three-repo pipeline is well-trodden now.
 
-## Hygiene reminders (unchanged from previous handoff)
+## Known issues / context (Round E.2 + E.3)
+
+- **Cryptarithm MUS only fires on the "No assignment satisfies"
+  error**, not on shape-parse errors. The shape-parse path
+  (`Expected WORD1 + WORD2 = WORD3`) means the model wasn't built
+  at all, so MUS would be meaningless. Check
+  `constraints_screen.dart` — `_result!.error!.contains('No assignment')`.
+- **FlatZinc MUS labels are derived from `kind(vars)`**, not from
+  user labels. The dart_csp FlatZinc lowering doesn't currently
+  thread user labels through, so a FlatZinc MUS reads like
+  `linearEquals(x, y)` rather than `C3: x + y == 7`. If you want
+  source-line labels on FlatZinc MUS, that's a dart_csp lowering
+  PR (multi-repo).
+- **`DslToFlatZinc.export` reuses `CspSolver._tryParseLinear` and
+  `CspSolver._parseLinearTerms` directly** (they're library-private
+  in the same file). If you split the file, mind the visibility.
+- **The export's `__obj__` variable name is reserved** —
+  `vars: __obj__ in 0..5` is explicitly rejected with a clear
+  error. Same name dart_csp's `CspSolver.solveOptimization` uses,
+  so the two solvers stay symmetric.
+- **DSL `!=` constraints** in the export go through a small
+  separate `_tryParseLinearNe` path (since `_tryParseLinear`
+  deliberately declines `!=` to keep it on the dart_csp string-
+  parser path during normal solves). For the FlatZinc export we
+  want it as `int_lin_ne`, so the shim splits on `!=` and parses
+  each side as linear.
+- **Background `flutter test` runs race each other** on the
+  `.dart_tool/test/incremental_kernel_*` cache. Don't launch
+  multiple `flutter test` in parallel — run sync or one at a time.
+  Bit me twice this session.
+
+## Hygiene reminders (unchanged)
 
 - **`dart format`** before push — CI's "Verify formatting" step
-  rejects unformatted files. Use `dart format <files-you-touched>`
-  not `dart format lib/` to avoid sweeping unrelated user WIP into
-  your diff (see HANDOFF §4.17).
+  rejects unformatted files. Format only files you actually
+  touched, not `lib/` wholesale (HANDOFF §4.17).
 - **Both branches in sync** — when you commit to `main`,
   fast-forward `feature/notepad-phase-1` in
   `/Volumes/backups/code/CrispCalc-notepad-phase-1` and push too.
-  This session pushed both.
-- **Don't touch `.claude/`** — harness state.
+  This session did so.
+- **Don't push from main** if it has uncommitted WIP. Always
+  commit + push from a feature-branch worktree; only do
+  `git merge --ff-only` + `git push origin main` from main, and
+  check `git status` first.
 
 ## Quick-reference paths
 
-- Notepad UI: `lib/screens/notepad_screen.dart`
-  (new: `_flatzincDispatcher`, `_buildFlatZincResult`)
-- Notepad evaluator: `lib/engine/notepad_evaluator.dart`
-  (new: `NotepadLineKind.flatzinc`, `NotepadFlatZincDispatcher`,
-  `NotepadFlatZincResult`, `flatzincOutputVarsIn`,
-  `parseFlatZincScalarOutputs`, `_evaluateFlatZincLine`)
-- Notepad data model: `lib/engine/notepad.dart`
-  (new: `NotepadLine.cachedExports` + JSON round-trip)
-- CSP UI: `lib/screens/constraints_screen.dart`
-  (new: `_FlatZincTab`, `_FlatZincErrorBlock`, `_FlatZincOutputBlock`)
 - CSP wrapper: `lib/engine/csp_solver.dart`
-  (untouched this session — E.2 will add `ConstraintRef` plumbing here)
+  (new this session: `MusEntry`, `CspMusResult`, `explainDiophantine`,
+  `explainDsl`, `explainCryptarithm`, `explainFlatZinc`,
+  `FlatZincExportResult`, `DslToFlatZinc.export`, `_LinearFlatZinc`)
+- CSP UI: `lib/screens/constraints_screen.dart`
+  (new this session: `_ExplainSection`, `_MusBlock`,
+  `_FlatZincExportBlock`; each tab gained `_mus` / `_explaining`
+  state and the DSL tab gained `_export`)
 - Localization: `lib/localization/app_localizations.dart`
-  (7 new constraint keys × 4 locales)
-- Tests: `test/flatzinc_tab_test.dart`, `test/notepad_flatzinc_test.dart`
+  (6 new constraint keys × 4 locales)
+- Tests: `test/csp_mus_test.dart`, `test/dsl_to_flatzinc_test.dart`,
+  earlier `test/flatzinc_tab_test.dart`, `test/notepad_flatzinc_test.dart`
 
 Good luck.
