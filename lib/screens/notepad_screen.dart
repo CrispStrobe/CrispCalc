@@ -27,6 +27,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 
 import '../engine/app_state.dart';
+import '../engine/calculator_engine.dart';
 import '../engine/notepad.dart';
 import '../engine/notepad_evaluator.dart';
 import '../engine/unit_expression.dart';
@@ -53,6 +54,13 @@ class NotepadScreen extends StatefulWidget {
 
 class _NotepadScreenState extends State<NotepadScreen> {
   final AppState _appState = AppState();
+  // Round 91: a main-isolate CalculatorEngine purely for the
+  // precision-arc pre-pass (pi/e/EulerGamma/sqrt2 with precision,
+  // isprime/nextprime/prevprime, factorint). The heavy
+  // CAS calls still route through EngineService's worker isolate;
+  // this instance is only invoked for short standalone calls that
+  // would otherwise hit SymEngine without a precision-arc binding.
+  final CalculatorEngine _engine = CalculatorEngine();
 
   /// Per-line text controllers, keyed by `NotepadLine.id`. Created
   /// lazily on first build and disposed when the line goes away (or
@@ -452,6 +460,15 @@ class _NotepadScreenState extends State<NotepadScreen> {
     // `solve(x, y)`.
     final preNative = LatexConversionUtils.fromLatex(preprocessed)
         .replaceAllMapped(RegExp(r'\b([a-zA-Z/]+)\s+\('), (m) => '${m[1]}(');
+
+    // Round 91 (P6): precision-arc top-level calls — `pi(100)`,
+    // `factorint(360)`, `isprime(2027)`, etc. Runs before the unit
+    // evaluator since `e(50)` would tokenize as the symbol `e`
+    // followed by `(50)` and unit eval would refuse it. Also
+    // before the CAS dispatcher since `factorint` isn't a CAS
+    // function name. Bypasses SymEngine entirely.
+    final precisionResult = _engine.tryEvaluatePrecisionCall(preNative);
+    if (precisionResult != null) return _appState.formatNumber(precisionResult);
 
     // Try the unit evaluator first against the LaTeX-stripped
     // body and again with all parens stripped — Phase 2's Ans

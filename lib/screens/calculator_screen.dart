@@ -789,6 +789,22 @@ class CalculatorScreenState extends State<CalculatorScreen>
         debugPrint('CALC: post-inline-deriv converted="$converted"');
       }
 
+      // Round 91 (P6): precision-arc top-level calls — `pi(100)`,
+      // `factorint(360)`, `isprime(2027)`, etc. Routes to the bridge's
+      // MPFR / ntheory / FLINT wrappers and bypasses SymEngine entirely.
+      // Sits before the unit pre-pass since `e(50)` would otherwise
+      // tokenize as the symbol `e` followed by `(50)` and the unit
+      // evaluator would refuse it.
+      final precisionResult = _engine.tryEvaluatePrecisionCall(converted);
+      if (precisionResult != null) {
+        setState(() {
+          _appState.addHistoryEntry(expression, precisionResult);
+          _justCalculated = true;
+        });
+        _latexController.clear();
+        return;
+      }
+
       // Inline unit arithmetic: `5 km + 3 m`, `100 km in mph`, etc.
       // Runs before the normal dispatcher so SymEngine never sees raw
       // unit symbols (which it would mis-parse as variables).

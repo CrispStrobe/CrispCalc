@@ -277,6 +277,124 @@ class CalculatorEngine {
     return out;
   }
 
+  /// Round 91 (P6): top-level pre-pass that intercepts precision-arc
+  /// calls before SymEngine sees them. Returns the result string when
+  /// [input] is a recognized standalone precision-arc call, or null
+  /// otherwise — caller falls through to the normal evaluation path.
+  ///
+  /// Recognized shapes (whitespace-tolerant, case-sensitive):
+  ///
+  ///   pi(N) / e(N) / EulerGamma(N) → constant to N decimal digits
+  ///                                   via the round-85/86 MPFR getters.
+  ///   sqrt(2, N)                   → √2 to N digits via round 86.
+  ///   isprime(n)                   → 'true' / 'false' via round 89.
+  ///   nextprime(n) / prevprime(n)  → next/previous prime (round 89).
+  ///   factorint(n)                 → formatted as `p^e · p^e · ...`
+  ///                                   with Unicode superscripts
+  ///                                   (round 90).
+  ///
+  /// Only matches when the call is the **entire** input (after
+  /// trimming whitespace). In-expression calls like `pi(50) + 1` are
+  /// deliberately left for the existing `expression_preprocessing_utils`
+  /// path; substituting `'true'` or a superscript-formatted string
+  /// mid-expression would not make algebraic sense.
+  String? tryEvaluatePrecisionCall(String input) {
+    final trimmed = input.trim();
+
+    // pi(N) / e(N) / EulerGamma(N).
+    var m =
+        RegExp(r'^(pi|e|EulerGamma)\s*\(\s*(\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      final n = int.tryParse(m.group(2)!);
+      if (n == null || n < 1 || n > 10000) {
+        return 'Error: precision must be in 1..10000';
+      }
+      switch (m.group(1)!) {
+        case 'pi':
+          return getPiWithPrecision(n);
+        case 'e':
+          return getEWithPrecision(n);
+        case 'EulerGamma':
+          return getEulerGammaWithPrecision(n);
+      }
+    }
+
+    // sqrt(2, N). One-arg `sqrt(x)` falls through to SymEngine.
+    m = RegExp(r'^sqrt\s*\(\s*2\s*,\s*(\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      final n = int.tryParse(m.group(1)!);
+      if (n == null || n < 1 || n > 10000) {
+        return 'Error: precision must be in 1..10000';
+      }
+      return getSqrt2WithPrecision(n);
+    }
+
+    // isprime / nextprime / prevprime: single arbitrary-precision
+    // integer argument (sign allowed, though prevprime errors on
+    // small / negative input).
+    m = RegExp(r'^(isprime|nextprime|prevprime)\s*\(\s*(-?\d+)\s*\)$')
+        .firstMatch(trimmed);
+    if (m != null) {
+      final name = m.group(1)!;
+      final n = m.group(2)!;
+      switch (name) {
+        case 'isprime':
+          return isprime(n) ? 'true' : 'false';
+        case 'nextprime':
+          return nextprime(n);
+        case 'prevprime':
+          return prevprime(n);
+      }
+    }
+
+    // factorint(n) → Unicode-superscript formatted product.
+    m = RegExp(r'^factorint\s*\(\s*(-?\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      final n = m.group(1)!;
+      try {
+        final factors = factorint(n);
+        return formatFactorint(factors, originalInput: n);
+      } catch (e) {
+        return 'Error: factorint failed: $e';
+      }
+    }
+
+    return null;
+  }
+
+  /// Format a `factorint` result as a Unicode-superscript product
+  /// (`2³ · 3² · 5`). Exponents of 1 are omitted; the middle dot
+  /// separates factors. Empty input (0 / ±1) returns `originalInput`
+  /// verbatim so the user sees `factorint(0) = 0`, `factorint(1) = 1`.
+  String formatFactorint(
+    List<({int prime, int exponent})> factors, {
+    required String originalInput,
+  }) {
+    if (factors.isEmpty) return originalInput;
+    return factors.map((f) {
+      if (f.exponent == 1) return '${f.prime}';
+      return '${f.prime}${_superscriptDigits(f.exponent)}';
+    }).join(' · ');
+  }
+
+  static const Map<String, String> _superscriptMap = {
+    '0': '⁰',
+    '1': '¹',
+    '2': '²',
+    '3': '³',
+    '4': '⁴',
+    '5': '⁵',
+    '6': '⁶',
+    '7': '⁷',
+    '8': '⁸',
+    '9': '⁹',
+    '-': '⁻',
+  };
+
+  static String _superscriptDigits(int n) {
+    return n.toString().split('').map((d) => _superscriptMap[d] ?? d).join();
+  }
+
   /// Headless-CI fallback for `isprime`. Only correct for inputs
   /// that parse as a regular `int` (≤ 2^31 - 1 on this engine);
   /// large bigints fall back to false, which is wrong but at least
