@@ -1815,13 +1815,54 @@ first-top-level-operator-wins behavior, the boolean-result
 normalizer, and the notepad classify tightening. Full suite:
 1810 → 1832 pass.
 
-##### Round 111 — Logical operators + connectives
+##### Round 111 — Logical operators + connectives ✅ (conditional deferred)
 
-- `a and b` / `a or b` / `a xor b` / `not a` → `And(a, b)`,
-  `Or(a, b)`, `Xor(a, b)`, `Not(a)`.
-- Short-circuit semantics where SymEngine permits.
-- `if(cond, thenExpr, elseExpr)` → `Piecewise((thenExpr, cond),
-  (elseExpr, true))` (SymEngine's native conditional).
+Done 2026-05-26.
+`ExpressionPreprocessingUtils.preprocessLogicalOperators` does a
+two-phase walk: phase A descends into each parenthesized
+subexpression so nested logical ops lower before the top level,
+phase B splits at depth 0 in precedence order (`or` ← lowest,
+then `xor`, then `and`) and finally checks for a leading `not`
+before falling through to the round-110 relational rewrite at
+the leaf.
+
+Precedence matches Python: `not` binds tighter than `and` /
+`xor`, which bind tighter than `or`. Relationals bind tighter
+than `not`, so `not x == 5` reads as `Not(Eq(x, 5))`. Chained
+forms collapse to a single n-ary call (`a and b and c` →
+`And(a, b, c)`) — SymEngine accepts arbitrary arity on `And` /
+`Or` / `Xor`.
+
+Calculator + notepad both swapped their direct
+`preprocessRelationalOperators` call for the combined
+`preprocessLogicalOperators`, so the dispatch sees the fully
+lowered form before the assignment / bare-equation /
+precision-call / unit / CAS checks.
+
+Word-boundary checks on every match keep identifiers like
+`random`, `factor(x)`, `notation` safe from accidental
+rewrites. Unbalanced parens stop the descent without throwing
+so SymEngine surfaces the syntax error downstream.
+
+24 new tests in `test/logical_preprocessor_test.dart` cover:
+simple infix / unary rewrites for each operator, chained
+collapse, precedence (`not x and y` vs `not (x and y)`,
+`a and b or c`, `not x == 5`, `isprime(17) and 17 < 20`),
+double-negation nesting, word-boundary safety for `random` /
+`factor` / `notation`, integration with the round-110
+relational rewrite at the leaf, and defensive handling of
+trailing operators + unbalanced parens. Full suite: 1832 →
+1856 pass.
+
+**Conditional `if(cond, thenExpr, elseExpr)` deferred to
+round 111b.** The PLAN's lowering target is
+`Piecewise((thenExpr, cond), (elseExpr, true))` but SymEngine's
+text parser doesn't have a `Piecewise` entry (only the C++
+class exists), so the function-name route doesn't work. A
+clean 111b will Dart-side-fold the condition first: if it
+evaluates to `True`/`False` we return `thenExpr`/`elseExpr`;
+symbolic conditions stay as the original `if(...)` form. Not
+a blocker for the rest of P7.
 
 ##### Round 112 — Boolean keypad + worked examples
 
