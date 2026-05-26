@@ -124,6 +124,64 @@ class ExpressionPreprocessingUtils {
     return preprocessSpecialFunctions(p);
   }
 
+  /// Round 110 (P7 kickoff): rewrite a top-level relational operator
+  /// (`==`, `!=`, `<`, `<=`, `>`, `>=`) into SymEngine's named-function
+  /// form so the expression flows through the generic `evaluate` path
+  /// and yields `True` / `False` for constant operands or stays
+  /// symbolic for free variables. Scans at paren depth 0; longest
+  /// match wins so `<=` is recognized before `<`. `=` alone is left
+  /// untouched — that's still assignment / bare-equation territory.
+  ///
+  /// V1 rewrites the first relational it finds and leaves anything to
+  /// the right intact (so `isprime(17) and 17 < 20` survives as-is
+  /// until round 111 lands logical-operator rewrites). Run BEFORE the
+  /// calculator's assignment regex + `_looksLikeBareEquation` checks
+  /// so `x == 1` doesn't get misrouted to the solver.
+  static String preprocessRelationalOperators(String expression) {
+    if (expression.isEmpty) return expression;
+    const ops = <List<String>>[
+      ['==', 'Eq'],
+      ['!=', 'Ne'],
+      ['<=', 'Le'],
+      ['>=', 'Ge'],
+      ['<', 'Lt'],
+      ['>', 'Gt'],
+    ];
+    var depth = 0;
+    for (var i = 0; i < expression.length; i++) {
+      final c = expression[i];
+      if (c == '(' || c == '[' || c == '{') {
+        depth++;
+        continue;
+      }
+      if (c == ')' || c == ']' || c == '}') {
+        depth--;
+        continue;
+      }
+      if (depth != 0) continue;
+      for (final pair in ops) {
+        final op = pair[0];
+        if (i + op.length > expression.length) continue;
+        if (expression.substring(i, i + op.length) != op) continue;
+        final lhs = expression.substring(0, i).trim();
+        final rhs = expression.substring(i + op.length).trim();
+        if (lhs.isEmpty || rhs.isEmpty) return expression;
+        return '${pair[1]}($lhs, $rhs)';
+      }
+    }
+    return expression;
+  }
+
+  /// Normalize SymEngine's capitalized boolean literals (`True` /
+  /// `False`) down to the rest of the codebase's `true` / `false`
+  /// convention. Applied to result strings, not inputs.
+  static String normalizeBooleanResult(String result) {
+    final trimmed = result.trim();
+    if (trimmed == 'True') return 'true';
+    if (trimmed == 'False') return 'false';
+    return result;
+  }
+
   static String preprocessSpecialFunctions(String expression) {
     var result = expression;
 

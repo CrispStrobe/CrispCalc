@@ -200,6 +200,31 @@ class CalculatorScreenState extends State<CalculatorScreen>
     );
   }
 
+  /// Round 110 (P7 kickoff): render a boolean result as a colored chip
+  /// in the history row. Reuses the secondaryContainer / errorContainer
+  /// pair used for the Sudoku win chip so the two surfaces feel
+  /// consistent.
+  Widget _buildBooleanChip(BuildContext context, bool value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Chip(
+        visualDensity: VisualDensity.compact,
+        backgroundColor:
+            value ? scheme.secondaryContainer : scheme.errorContainer,
+        label: Text(
+          value ? 'true' : 'false',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color:
+                value ? scheme.onSecondaryContainer : scheme.onErrorContainer,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Called whenever the input text changes.
   void _onInputChanged() {
     if (_justCalculated && _latexController.text.isNotEmpty) {
@@ -782,8 +807,12 @@ class CalculatorScreenState extends State<CalculatorScreen>
     try {
       final trimmed = expression.trim();
 
+      // `=(?!=)` keeps `name == value` out of the assignment route —
+      // that's a relational predicate (round 110) and gets rewritten
+      // to `Eq(...)` below.
       final assignmentMatch =
-          RegExp(r'^([a-zA-Z][a-zA-Z0-9]*)\s*=\s*(.+)$').firstMatch(trimmed);
+          RegExp(r'^([a-zA-Z][a-zA-Z0-9]*)\s*=(?!=)\s*(.+)$')
+              .firstMatch(trimmed);
       if (assignmentMatch != null) {
         await _handleAssignment(expression, assignmentMatch);
         return;
@@ -820,6 +849,15 @@ class CalculatorScreenState extends State<CalculatorScreen>
       if (_kVerboseCalc) {
         debugPrint('CALC: post-inline-deriv converted="$converted"');
       }
+
+      // Round 110 (P7 kickoff): rewrite a top-level relational operator
+      // into the matching SymEngine function call before the dispatch
+      // so `x == 1` doesn't get pulled into `_solveBareEquation` and
+      // `2 == 2` doesn't tokenize as a malformed equation. After this
+      // pass the expression contains no top-level `==`, `!=`, `<`,
+      // `<=`, `>`, `>=`.
+      converted =
+          ExpressionPreprocessingUtils.preprocessRelationalOperators(converted);
 
       // Round 91 (P6): precision-arc top-level calls — `pi(100)`,
       // `factorint(360)`, `isprime(2027)`, etc. Routes to the bridge's
@@ -907,8 +945,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
           final rawResult = await _runEngineOpMaybeAsync(
               'evaluate', preprocessed,
               fallback: () => _engine.evaluate(preprocessed));
-          result =
-              ExpressionPreprocessingUtils.normalizeComplexResult(rawResult);
+          result = ExpressionPreprocessingUtils.normalizeBooleanResult(
+              ExpressionPreprocessingUtils.normalizeComplexResult(rawResult));
         }
       }
 
@@ -2143,6 +2181,14 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                       ? 0
                                       : ExactInteger.digitCount(entry.result);
                                   final isBigInt = digitCount > 20;
+                                  // Round 110 (P7 kickoff): boolean-literal
+                                  // results render as a colored chip below.
+                                  // Detection is on the trimmed raw result so
+                                  // formatter-applied padding doesn't hide it.
+                                  final trimmedRaw = entry.result.trim();
+                                  final boolChip = trimmedRaw == 'true'
+                                      ? true
+                                      : (trimmedRaw == 'false' ? false : null);
                                   final shownResult = isBigInt
                                       ? ExactInteger.abbreviate(entry.result)
                                       : display;
@@ -2163,24 +2209,29 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                         _buildExpressionDisplay(
                                             entry.expression),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          isError ? display : '= $shownResult',
-                                          style: TextStyle(
-                                            fontSize: isError
-                                                ? 16
-                                                : (isBigInt ? 18 : 28),
-                                            color: isError
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .error
-                                                : Colors.blue[300],
-                                            fontStyle: isError
-                                                ? FontStyle.italic
-                                                : FontStyle.normal,
+                                        if (boolChip != null && !isError)
+                                          _buildBooleanChip(context, boolChip)
+                                        else
+                                          Text(
+                                            isError
+                                                ? display
+                                                : '= $shownResult',
+                                            style: TextStyle(
+                                              fontSize: isError
+                                                  ? 16
+                                                  : (isBigInt ? 18 : 28),
+                                              color: isError
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .error
+                                                  : Colors.blue[300],
+                                              fontStyle: isError
+                                                  ? FontStyle.italic
+                                                  : FontStyle.normal,
+                                            ),
+                                            textAlign: TextAlign.right,
+                                            softWrap: true,
                                           ),
-                                          textAlign: TextAlign.right,
-                                          softWrap: true,
-                                        ),
                                         if (isBigInt)
                                           Padding(
                                             padding:

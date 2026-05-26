@@ -336,8 +336,11 @@ String _stripComment(String source) {
 /// skip matches that fall inside quoted text.
 final RegExp _commentRegex = RegExp(r'(//|#)');
 final RegExp _useDirectiveRegex = RegExp(r'^use\s+(.+)$');
+// `=(?!=)` keeps `name == value` out of the assignment route — that's
+// a relational predicate (round 110) the engine handles via the
+// preprocessor's `Eq(...)` rewrite.
 final RegExp _assignmentRegex = RegExp(
-  r'^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$',
+  r'^([A-Za-z_][A-Za-z0-9_]*)\s*=(?!=)\s*(.+)$',
 );
 final RegExp _identifierRegex = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$');
 final RegExp _importListStartRegex = RegExp(r'[A-Za-z_0-9,]');
