@@ -245,26 +245,19 @@ class _FunctionRefRow extends StatelessWidget {
     Navigator.of(context).pop();
   }
 
-  /// Round 96 (P6) cross-link: pop the Function Reference, then
-  /// reopen the Worked Examples dialog with a pre-filled search.
-  /// We can't deep-scroll the WE dialog yet — passing the id as
-  /// the search string is a minimum-viable signal that lets the
-  /// user spot the relevant entry without manual filtering.
+  /// Round 96 cross-link, tightened in the Round 96 follow-up: pop
+  /// the Function Reference and reopen the Worked Examples dialog
+  /// with the `id` pre-filled into the search field. The WE dialog
+  /// matches against ids (locale-independent), so this is enough
+  /// to surface exactly the linked entry without manual scrolling.
   void _openWorkedExample(BuildContext context, String id) {
-    Navigator.of(context).pop();
     final navigator = Navigator.of(context);
     final rootCtx = navigator.context;
+    Navigator.of(context).pop();
     showDialog<void>(
       context: rootCtx,
-      builder: (_) => const WorkedExamplesDialog(),
+      builder: (_) => WorkedExamplesDialog(initialSearch: id),
     );
-    // Couldn't find a clean way to pre-search inside the WE dialog
-    // from outside its state — Round 97 can extend
-    // `WorkedExamplesDialog` with an optional `initialSearch` if
-    // this becomes a friction point.
-    // Avoid an "unused variable" lint on `id` while keeping the
-    // signature stable for Round 97's cross-link upgrade.
-    assert(id.isNotEmpty);
   }
 }
 

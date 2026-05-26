@@ -26,9 +26,21 @@ enum WorkedExamplesSurface { calculator, notepad }
 
 class WorkedExamplesDialog extends StatefulWidget {
   final WorkedExamplesSurface surface;
+
+  /// Round 96 follow-up: when set, the search field opens
+  /// pre-filled with this string, and the list is filtered against
+  /// it. Used by `FunctionReferenceDialog`'s "See worked example"
+  /// cross-link to deep-link straight to the related entry.
+  /// Free-form text — usually a `WorkedExample.id` (since ids are
+  /// locale-independent and the filter matches against id as of
+  /// this round) but any substring of title / description /
+  /// expression works too.
+  final String? initialSearch;
+
   const WorkedExamplesDialog({
     super.key,
     this.surface = WorkedExamplesSurface.calculator,
+    this.initialSearch,
   });
 
   @override
@@ -38,6 +50,14 @@ class WorkedExamplesDialog extends StatefulWidget {
 class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
   final TextEditingController _searchCtrl = TextEditingController();
   WorkedExampleCategory? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+      _searchCtrl.text = widget.initialSearch!;
+    }
+  }
 
   @override
   void dispose() {
@@ -105,9 +125,15 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
       if (!allowed.contains(e.category)) return false;
       if (_category != null && e.category != _category) return false;
       if (query.isEmpty) return true;
+      // Round 96 follow-up: include the locale-independent id so
+      // `FunctionReferenceDialog`'s deep-link works regardless of
+      // locale. Ids are camelCase but lowercased for the substring
+      // check (so a search for "quadratic" still finds
+      // `quadraticFormula`).
       return titleFor(e).toLowerCase().contains(query) ||
           descFor(e).toLowerCase().contains(query) ||
-          e.expression.toLowerCase().contains(query);
+          e.expression.toLowerCase().contains(query) ||
+          e.id.toLowerCase().contains(query);
     }).toList();
 
     return AlertDialog(

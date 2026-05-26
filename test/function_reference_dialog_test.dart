@@ -7,7 +7,6 @@
 // onto AppState.
 
 import 'package:crisp_calc/engine/app_state.dart';
-import 'package:crisp_calc/engine/function_reference.dart';
 import 'package:crisp_calc/widgets/function_reference_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -125,6 +124,38 @@ void main() {
       await tester.tap(find.text('pi(N)'));
       await tester.pumpAndSettle();
       expect(find.text('See worked example'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Round 96 follow-up: See-worked-example cross-link pre-filters WE dialog',
+        (tester) async {
+      await _showDialog(tester);
+
+      // Expand the pi(N) row so the cross-link button is visible.
+      await tester.tap(find.text('pi(N)'));
+      await tester.pumpAndSettle();
+
+      final seeBtn = find.text('See worked example');
+      expect(seeBtn, findsOneWidget);
+      await tester.ensureVisible(seeBtn);
+      await tester.pumpAndSettle();
+      // warnIfMissed=false — same Wrap layout reason as the
+      // Try-in-Calculator tap test.
+      await tester.tap(seeBtn, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // The Function Reference dialog popped and the Worked
+      // Examples dialog opened, with the search field pre-filled
+      // to the linked id. The filter (which now matches against
+      // ids too) keeps only the pi(100) example visible.
+      expect(find.text('Worked examples'), findsWidgets);
+      // Search field carries the linked id.
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller?.text, 'piPrecision');
+      // The linked entry's expression renders…
+      expect(find.text('pi(100)'), findsOneWidget);
+      // …while unrelated entries don't.
+      expect(find.text('100!'), findsNothing);
     });
   });
 }

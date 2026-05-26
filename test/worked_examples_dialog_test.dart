@@ -117,4 +117,73 @@ void main() {
       expect(find.text('Inline unit conversion'), findsOneWidget);
     });
   });
+
+  group('WorkedExamplesDialog — Round 96 follow-up: initialSearch', () {
+    Future<void> showWithSearch(WidgetTester tester, String? initial) async {
+      SharedPreferences.setMockInitialValues({});
+      await AppState().load(force: true);
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: ElevatedButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => WorkedExamplesDialog(
+                      initialSearch: initial,
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('initialSearch pre-fills the search field', (tester) async {
+      await showWithSearch(tester, 'piPrecision');
+
+      // Search controller text appears inside the TextField.
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller?.text, 'piPrecision');
+    });
+
+    testWidgets('initialSearch filters the list to the linked entry',
+        (tester) async {
+      await showWithSearch(tester, 'piPrecision');
+
+      // Only the pi-precision entry should remain after filtering by
+      // its id. Verifying it via its expression (which is stable
+      // across locales — the title may vary).
+      expect(find.text('pi(100)'), findsOneWidget);
+      // Unrelated entries should be absent.
+      expect(find.text('100!'), findsNothing);
+      expect(find.text('100 km/h in mph'), findsNothing);
+    });
+
+    testWidgets('filter matches against id (id-substring search)',
+        (tester) async {
+      await showWithSearch(tester, null);
+      // Type the id substring "factorial100" — id-search added in
+      // this round so that locale-independent deep links work.
+      await tester.enterText(find.byType(TextField), 'factorial100');
+      await tester.pumpAndSettle();
+
+      // The matching expression appears.
+      expect(find.text('100!'), findsOneWidget);
+    });
+
+    testWidgets('empty initialSearch is a no-op (default behaviour holds)',
+        (tester) async {
+      await showWithSearch(tester, '');
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller?.text, '');
+    });
+  });
 }
