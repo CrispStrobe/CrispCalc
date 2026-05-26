@@ -46,6 +46,31 @@ typedef CumulativeGroup = ({
   int capacity,
 });
 
+/// Round D / Gantt: per-task metadata threaded from the DSL parser
+/// into the result so the screen can render a Gantt chart over the
+/// solved start times. `demand` is `null` for `noOverlap`-only
+/// tasks; populated only for `cumulative` groups. Pure data
+/// container — no engine state.
+class GanttTaskSpec {
+  final String startVar;
+  final int duration;
+
+  /// Renewable-resource demand. `null` for `noOverlap` (implicit
+  /// 1-against-capacity-1); set for `cumulative` groups.
+  final int? demand;
+
+  /// Tasks from the same `noOverlap` / `cumulative` line share an
+  /// index so the renderer can lay them out on the same lane.
+  final int groupIndex;
+
+  const GanttTaskSpec({
+    required this.startVar,
+    required this.duration,
+    this.demand,
+    required this.groupIndex,
+  });
+}
+
 /// Result envelope returned by [CspSolver.solveDiophantine]. Holds
 /// either a list of solutions or an error message — never both.
 class DiophantineResult {
@@ -66,19 +91,38 @@ class DiophantineResult {
   /// [solutions] holds exactly one assignment (the optimum).
   final num? objective;
 
+  /// Schedule metadata threaded through from the DSL parser for
+  /// `noOverlap` / `cumulative` programs. Each entry pairs a task
+  /// name (the start-time variable) with its duration and (for
+  /// cumulative) demand. The Gantt renderer in the DSL tab uses
+  /// these alongside [solutions] to draw a chart instead of leaving
+  /// the result as a wall of "s1 = 0, s2 = 4" text. Empty when the
+  /// program had no scheduling constraints.
+  final List<GanttTaskSpec> ganttTasks;
+  final int? ganttCapacity;
+
   const DiophantineResult._({
     required this.solutions,
     required this.error,
     required this.truncated,
     this.objective,
+    this.ganttTasks = const [],
+    this.ganttCapacity,
   });
 
   factory DiophantineResult.ok(
     List<DiophantineSolution> solutions, {
     bool truncated = false,
+    List<GanttTaskSpec> ganttTasks = const [],
+    int? ganttCapacity,
   }) =>
       DiophantineResult._(
-          solutions: solutions, error: null, truncated: truncated);
+        solutions: solutions,
+        error: null,
+        truncated: truncated,
+        ganttTasks: ganttTasks,
+        ganttCapacity: ganttCapacity,
+      );
 
   factory DiophantineResult.failure(String message) => DiophantineResult._(
         solutions: const [],
@@ -90,13 +134,17 @@ class DiophantineResult {
   /// single optimal assignment plus the corresponding objective value.
   factory DiophantineResult.optimal(
     DiophantineSolution assignment,
-    num objective,
-  ) =>
+    num objective, {
+    List<GanttTaskSpec> ganttTasks = const [],
+    int? ganttCapacity,
+  }) =>
       DiophantineResult._(
         solutions: [assignment],
         error: null,
         truncated: false,
         objective: objective,
+        ganttTasks: ganttTasks,
+        ganttCapacity: ganttCapacity,
       );
 }
 
@@ -223,10 +271,19 @@ class CspSolver {
         };
         solutions.add(coerced);
         if (solutions.length >= maxSolutions) {
-          return DiophantineResult.ok(solutions, truncated: true);
+          return DiophantineResult.ok(
+            solutions,
+            truncated: true,
+            ganttTasks: _buildGanttTasks(noOverlap, cumulative),
+            ganttCapacity: _firstCapacity(cumulative),
+          );
         }
       }
-      return DiophantineResult.ok(solutions);
+      return DiophantineResult.ok(
+        solutions,
+        ganttTasks: _buildGanttTasks(noOverlap, cumulative),
+        ganttCapacity: _firstCapacity(cumulative),
+      );
     } catch (e) {
       return DiophantineResult.failure('Solver failed: ${_friendlyError(e)}');
     }
@@ -458,6 +515,46 @@ class CspSolver {
 
   /// Strip the `Exception:` prefix and any stack-trace noise so the
   /// UI shows a clean one-line error.
+  /// Flatten the parsed `noOverlap` / `cumulative` groups into a
+  /// single list of `GanttTaskSpec`s for the result. Group indices
+  /// are unique per call so the renderer can lay out one lane per
+  /// scheduling line.
+  static List<GanttTaskSpec> _buildGanttTasks(
+    List<NoOverlapGroup> noOverlap,
+    List<CumulativeGroup> cumulative,
+  ) {
+    final out = <GanttTaskSpec>[];
+    var groupIdx = 0;
+    for (final g in noOverlap) {
+      for (var i = 0; i < g.starts.length; i++) {
+        out.add(GanttTaskSpec(
+          startVar: g.starts[i],
+          duration: g.durations[i],
+          groupIndex: groupIdx,
+        ));
+      }
+      groupIdx++;
+    }
+    for (final g in cumulative) {
+      for (var i = 0; i < g.starts.length; i++) {
+        out.add(GanttTaskSpec(
+          startVar: g.starts[i],
+          duration: g.durations[i],
+          demand: g.demands[i],
+          groupIndex: groupIdx,
+        ));
+      }
+      groupIdx++;
+    }
+    return out;
+  }
+
+  /// First cumulative capacity seen — surface it so the renderer can
+  /// draw the capacity line. Null when only `noOverlap` is in play.
+  static int? _firstCapacity(List<CumulativeGroup> cumulative) {
+    return cumulative.isEmpty ? null : cumulative.first.capacity;
+  }
+
   static String _friendlyError(Object e) {
     final s = e.toString();
     return s.replaceAll(RegExp(r'^Exception:\s*'), '').split('\n').first;
@@ -878,7 +975,12 @@ class CspSolver {
         for (final entry in result.entries)
           if (entry.key != objVar) entry.key: (entry.value as num).toInt(),
       };
-      return DiophantineResult.optimal(assignment, objValue);
+      return DiophantineResult.optimal(
+        assignment,
+        objValue,
+        ganttTasks: _buildGanttTasks(noOverlap, cumulative),
+        ganttCapacity: _firstCapacity(cumulative),
+      );
     } catch (e) {
       return DiophantineResult.failure(
           'Optimizer failed: ${_friendlyError(e)}');

@@ -288,9 +288,240 @@ class _ResultBlock extends StatelessWidget {
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           ),
         ),
+        // Gantt overlay: present only when the DSL program had
+        // `noOverlap` / `cumulative` constraints AND we got at
+        // least one solution. Renders the first solution's start
+        // times as a horizontal chart over the same time axis.
+        if (result.ganttTasks.isNotEmpty && result.solutions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _GanttChart(
+            tasks: result.ganttTasks,
+            assignment: result.solutions.first,
+            capacity: result.ganttCapacity,
+          ),
+        ],
       ],
     );
   }
+}
+
+/// Tiny Gantt chart for schedules produced by the DSL tab. One row
+/// per task, sorted by group and start time; bar width = duration.
+/// For `cumulative` problems the row's right-edge label includes
+/// the demand. Capacity (when known) is shown as a header strip.
+class _GanttChart extends StatelessWidget {
+  final List<GanttTaskSpec> tasks;
+  final DiophantineSolution assignment;
+  final int? capacity;
+
+  const _GanttChart({
+    required this.tasks,
+    required this.assignment,
+    this.capacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Compute the timeline span from the assignment + durations.
+    var maxEnd = 0;
+    for (final t in tasks) {
+      final start = (assignment[t.startVar] as num?)?.toInt();
+      if (start == null) continue;
+      final end = start + t.duration;
+      if (end > maxEnd) maxEnd = end;
+    }
+    if (maxEnd <= 0) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    const rowHeight = 28.0;
+    final headerHeight = capacity != null ? 22.0 : 18.0;
+    final totalHeight = headerHeight + tasks.length * rowHeight + 4;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: SizedBox(
+        height: totalHeight,
+        child: CustomPaint(
+          painter: _GanttPainter(
+            tasks: tasks,
+            assignment: assignment,
+            maxEnd: maxEnd,
+            capacity: capacity,
+            rowHeight: rowHeight,
+            headerHeight: headerHeight,
+            scheme: scheme,
+            textStyle: Theme.of(context).textTheme.bodySmall ??
+                const TextStyle(fontSize: 12),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GanttPainter extends CustomPainter {
+  final List<GanttTaskSpec> tasks;
+  final DiophantineSolution assignment;
+  final int maxEnd;
+  final int? capacity;
+  final double rowHeight;
+  final double headerHeight;
+  final ColorScheme scheme;
+  final TextStyle textStyle;
+
+  _GanttPainter({
+    required this.tasks,
+    required this.assignment,
+    required this.maxEnd,
+    required this.capacity,
+    required this.rowHeight,
+    required this.headerHeight,
+    required this.scheme,
+    required this.textStyle,
+  });
+
+  /// Color palette per group — cycles if there are more groups than
+  /// entries. Picked from Material Design's tonal palette so the
+  /// bars look at home in both light and dark themes.
+  static const List<Color> _groupColors = [
+    Color(0xFF1976D2), // blue 700
+    Color(0xFFE64A19), // deep orange 700
+    Color(0xFF388E3C), // green 700
+    Color(0xFF7B1FA2), // purple 700
+    Color(0xFFFBC02D), // yellow 700
+    Color(0xFF00796B), // teal 700
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Reserve a left gutter for task labels.
+    const chartLeft = 56.0;
+    final chartWidth = size.width - chartLeft - 8;
+    if (chartWidth <= 0) return;
+    final pxPerUnit = chartWidth / maxEnd;
+
+    // Time-axis grid (light vertical lines + tick numbers along the top).
+    final gridPaint = Paint()
+      ..color = scheme.outlineVariant
+      ..strokeWidth = 1;
+    final axisLabelStyle = textStyle.copyWith(
+      color: scheme.onSurfaceVariant,
+      fontSize: 10,
+    );
+    final stepCandidates = [1, 2, 5, 10, 20, 50, 100];
+    var step = 1;
+    for (final s in stepCandidates) {
+      if (maxEnd / s <= 10) {
+        step = s;
+        break;
+      }
+      step = s;
+    }
+    for (var t = 0; t <= maxEnd; t += step) {
+      final x = chartLeft + t * pxPerUnit;
+      canvas.drawLine(
+        Offset(x, headerHeight),
+        Offset(x, size.height),
+        gridPaint,
+      );
+      final tp = TextPainter(
+        text: TextSpan(text: '$t', style: axisLabelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(x + 2, 2));
+    }
+
+    // Capacity header strip (only for cumulative problems).
+    if (capacity != null) {
+      final capLabel = TextPainter(
+        text: TextSpan(
+          text: 'capacity = $capacity',
+          style: axisLabelStyle.copyWith(
+            color: scheme.primary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      capLabel.paint(canvas, Offset(chartLeft, headerHeight - capLabel.height));
+    }
+
+    // Sort tasks by group then start time so each lane reads left-to-right.
+    final sorted = [...tasks]..sort((a, b) {
+        if (a.groupIndex != b.groupIndex) {
+          return a.groupIndex.compareTo(b.groupIndex);
+        }
+        final aStart = (assignment[a.startVar] as num?)?.toInt() ?? 0;
+        final bStart = (assignment[b.startVar] as num?)?.toInt() ?? 0;
+        return aStart.compareTo(bStart);
+      });
+
+    final rowPaint = Paint();
+    final labelStyle = textStyle.copyWith(color: scheme.onSurface);
+    for (var i = 0; i < sorted.length; i++) {
+      final task = sorted[i];
+      final start = (assignment[task.startVar] as num?)?.toInt();
+      if (start == null) continue;
+      final yTop = headerHeight + i * rowHeight + 4;
+      final yBot = yTop + rowHeight - 8;
+
+      // Left-gutter task name.
+      final nameTp = TextPainter(
+        text: TextSpan(text: task.startVar, style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: chartLeft - 4);
+      nameTp.paint(
+        canvas,
+        Offset(0, yTop + (rowHeight - 8 - nameTp.height) / 2),
+      );
+
+      // Bar.
+      final barX = chartLeft + start * pxPerUnit;
+      final barW = task.duration * pxPerUnit;
+      rowPaint.color = _groupColors[task.groupIndex % _groupColors.length];
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(barX, yTop, barX + barW, yBot),
+          const Radius.circular(3),
+        ),
+        rowPaint,
+      );
+
+      // Inside-bar caption: duration (and demand if cumulative).
+      final cap = task.demand != null
+          ? '${task.duration}u · d${task.demand}'
+          : '${task.duration}u';
+      final capTp = TextPainter(
+        text: TextSpan(
+          text: cap,
+          style: labelStyle.copyWith(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      if (capTp.width + 8 < barW) {
+        capTp.paint(
+          canvas,
+          Offset(barX + 4, yTop + (rowHeight - 8 - capTp.height) / 2),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GanttPainter old) =>
+      old.tasks != tasks ||
+      old.assignment != assignment ||
+      old.maxEnd != maxEnd ||
+      old.capacity != capacity;
 }
 
 // === Cryptarithm tab ====================================================
