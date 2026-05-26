@@ -37,6 +37,13 @@ import '../main.dart' show appRouteObserver;
 import '../screens/curve_analysis_input_screen.dart';
 import '../screens/matrix_editor_screen.dart';
 
+/// Verbose calculator-pipeline tracing. Gated by an
+/// `--dart-define=CRISPCALC_VERBOSE=true` env so debug builds
+/// stay quiet by default; flip it on (or temporarily edit this
+/// to `true`) when investigating dispatch / preprocessing bugs.
+const bool _kVerboseCalc =
+    bool.fromEnvironment('CRISPCALC_VERBOSE', defaultValue: false);
+
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key, this.onGoToGraphing, this.onGoToAnalysis});
 
@@ -778,7 +785,13 @@ class CalculatorScreenState extends State<CalculatorScreen>
       // its result. The whole-expression dispatch below catches
       // the bare case; this handles the compound case where the
       // derivative is a subterm.
+      if (_kVerboseCalc) {
+        debugPrint('CALC: pre-inline-deriv converted="$converted"');
+      }
       converted = await _expandInlineDerivatives(converted);
+      if (_kVerboseCalc) {
+        debugPrint('CALC: post-inline-deriv converted="$converted"');
+      }
 
       // Inline unit arithmetic: `5 km + 3 m`, `100 km in mph`, etc.
       // Runs before the normal dispatcher so SymEngine never sees raw
