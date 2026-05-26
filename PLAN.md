@@ -1069,6 +1069,86 @@ Roadmap (ship one round at a time):
   `Problem.addCumulative` and shipped with the
   `cumulativeScheduling` gallery + discovery entries.
 
+##### CSP Round D — what's still untapped in dart_csp (May 2026 audit)
+
+`dart_csp` v2.1.0 (ref `e3cce21`) is a *mature* solver — far
+more capability than we surface today. The audit below pins
+seven candidates, ranked by user-visible impact ÷ effort.
+Pure-Dart, zero native deps for all of them. Each item slots
+into the existing `ConstraintsScreen` Analysis-hub module or
+extends the Sudoku/CSP engine layer directly.
+
+- [ ] **Schedule Gantt renderer** for `noOverlap` / `cumulative`
+  output (high impact / small effort — *recommended first*).
+  The DSL-tab gallery already produces correct `noOverlap` /
+  `cumulative` solutions, but results render as raw text:
+  ```
+  s1 = 0
+  s2 = 4
+  s3 = 7
+  ```
+  A `CustomPainter`-based Gantt chart would 10× the
+  legibility: each task drawn as a horizontal bar at its
+  start-time with width = duration, colored per resource. For
+  `cumulative` problems the bars stack by demand. ~Half a day;
+  no engine changes. Doubles as the visual hook the
+  worked-examples catalog can point users at.
+
+- [ ] **Optimization tab — LP / IP via `minimize` / `maximize`**
+  (big impact / medium effort — *strategically biggest win*).
+  Branch-and-bound is genuinely rare in consumer calculator
+  apps — Mathematica has it, TI / Casio / Soulver / Numi
+  don't. dart_csp ships it for free via `Problem.minimize` /
+  `Problem.maximize` with an objective expression. UX: a new
+  4th tab in `ConstraintsScreen` (Optimize). User types
+  variables + bounds + linear constraints + objective; result
+  is the optimal assignment + objective value. Gallery
+  entries: production planning (mix of products under
+  resource caps), knapsack (max value under weight cap),
+  assignment (min cost matrix), transportation (min cost
+  shipping). ~1–2 days.
+
+- [ ] **Graph / map coloring puzzles** (high pedagogy / small).
+  Classic CSP — `allDifferent` between adjacent regions over
+  a small color domain. New gallery entry in the DSL tab with
+  a pre-built adjacency list (e.g. Australian states, US
+  Midwest, Germany Bundesländer). Bonus: a `CustomPainter`
+  region map colored from the solution. ~1 day with the
+  visualizer, ~half a day text-only.
+
+- [ ] **Magic squares generator** (curiosity / small). 3×3
+  through 6×6 magic squares via `allDifferent` + per-row /
+  per-column / per-diagonal `exactSum(targetMagicNumber)`.
+  New gallery entry. Reuses the existing DSL parser
+  surface — just a different program template. ~Half a day.
+  Bonus: the magic-constant input is auto-computed for
+  square N as `N(N²+1)/2` (default unless overridden).
+
+- [ ] **Set partitioning ("equal-sum split")** (small).
+  Common interview / pedagogy problem — given a list of
+  numbers, split them into K groups of equal sum. Variables
+  are per-number group assignments (domain `0..K-1`);
+  constraint is `exactSum(totalSum/K)` per group. Gallery
+  entry. ~Half a day.
+
+- [ ] **Step-trace visualization of AC-3 propagation** (large
+  / pedagogy gold). Instrument `dart_csp`'s solver to emit
+  propagation steps (variable domain shrinks, constraint
+  firings) and render them as a step-by-step replay in the
+  DSL tab. Would be a *genuinely unique* feature among
+  calculator apps. Requires an upstream solver patch to
+  expose propagation events. ~3–5 days end-to-end.
+
+- [ ] **CBJ-aware "explain failure" mode** (power-user /
+  medium). The newest dart_csp commit (`e3cce21`) added
+  conflict-directed backjumping — when a problem is
+  unsatisfiable, the solver knows *which subset of constraints*
+  caused the dead-end. Surface that as a "Why no solution?"
+  affordance on the result panel: when the DSL produces no
+  solution, the screen shows the minimal conflicting subset
+  instead of just "No solution found". ~2 days incl. UX
+  iteration.
+
 #### Precision & number theory (native libs already linked)
 
 The SymEngine xcframework we ship on iOS/macOS bundles **GMP**
