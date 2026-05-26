@@ -1708,7 +1708,7 @@ Gauss–Jordan for `inv` / `rref`, the Dart-side cell-swap for
 `transpose` (bridge doesn't expose it), and `add_dense_dense` /
 `mul_dense_dense` for binary ops.
 
-##### Round 99 — Statistics + Constraints + Sudoku entries
+##### Round 99 — Statistics + Constraints + Sudoku entries — **SHIPPED**
 
 The Analyze-module categories. ~15 more entries describing the
 Statistics module functions (`mean`, `welchT`, `pairedT`,
@@ -1716,6 +1716,18 @@ Statistics module functions (`mean`, `welchT`, `pairedT`,
 `wilcoxon`, `signTest`), the Constraints DSL operators (`vars`,
 `allDifferent`, `noOverlap`, `cumulative`, `minimize`,
 `maximize`), and the Sudoku variant rules.
+
+**Shipped (Round 99):** 19 entries total — 9 stats, 6
+constraints, 4 sudoku variants (`regular` / `x` / `disjoint` /
+`killer`). All carry `runnable: false`: the stats tests live
+in the Statistics module's Tests tab, the DSL operators inside
+the Constraints DSL editor, and the Sudoku variants are module
+presets. `FunctionRef` gains a `runnable: bool` field (default
+true) — the dialog hides Try-in-Calculator on `runnable: false`
+rows. The See-worked-example cross-link is the proper landing
+for these (the WE dialog dispatches `open:<module>` sentinels).
+All 19 entries cross-link to an existing worked example.
+Catalogue 26 → 45 entries.
 
 ##### Round 100 — i18n pass
 

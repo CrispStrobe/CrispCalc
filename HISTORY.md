@@ -2,6 +2,88 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 99) — Function Reference stats / constraints / sudoku entries
+
+Fills the remaining three module-surface categories with 19
+entries. `FunctionReferences.all` grows 26 → 45, covering 9
+stats hypothesis tests, 6 Constraints DSL operators, and 4
+Sudoku variants.
+
+### `runnable: bool` — model change
+
+Round 99 entries aren't directly callable from the calculator:
+the stats tests live inside the Statistics module's Tests tab,
+the DSL operators inside the Constraints DSL editor, and the
+Sudoku variants are module presets. To handle this honestly the
+data model gains a `runnable: bool` field (default true). When
+false, the dialog hides the Try-in-Calculator button — pasting
+`welchT(...)` into the calculator would just produce an
+"unknown function" error. The See-worked-example cross-link is
+the proper landing for these entries: the WE dialog already
+dispatches `open:<module>` sentinels, so the user can jump
+straight to the right module tab.
+
+### Stats (9 entries, statistics category)
+
+`mean`, `welch_t`, `paired_t`, `anova_1`, `chi2_goodness`,
+`chi2_independence`, `fisher_exact`, `wilcoxon`, `sign_test`.
+Underlying-call prose cites the actual implementations in
+`lib/engine/hypothesis_tests.dart`:
+
+- `welch_t`: Welch–Satterthwaite df, `TDistribution.cdf`.
+- `anova_1`: between/within SS partition, `FDistribution.sf`.
+- `chi2_*`: Σ(O−E)²/E, `ChiSquaredDistribution.sf`.
+- `fisher_exact`: log-Choose hypergeometric tails, R-convention
+  two-sided sum.
+- `wilcoxon`: pooled ranks with midrank tie correction, normal
+  approximation z.
+- `sign_test`: exact `Binomial(n, 0.5)` tails on paired
+  difference signs.
+
+All cross-link to `statsHypothesisTests` (the
+`open:statistics?tab=tests` sentinel).
+
+### Constraints (6 entries, constraints category)
+
+`vars`, `all_different`, `no_overlap`, `cumulative`, `minimize`,
+`maximize`. Underlying-call prose cites
+`lib/engine/csp_solver.dart`'s DSL-to-FlatZinc transpiler:
+
+- `all_different` → `all_different_int(...)`, dart_csp implements
+  Régin's bound-consistency matching.
+- `no_overlap` → `disjunctive([starts], [durations])` with
+  Vilím's θ-tree edge-finding.
+- `cumulative` → timetable + energetic propagators on
+  `cumulative([starts], [durations], [demands], capacity)`.
+- `minimize` / `maximize` → branch-and-bound on `solve {min,max}
+  __obj__` after objective-variable construction.
+
+Each entry cross-links to a topical worked example from the DSL
+gallery (`dslMagicSquare`, `dslSchedulingMakespan`,
+`dslCumulativeScheduling`, `dslCoinChange`, `constraintEditor`).
+
+### Sudoku (4 entries, sudoku category)
+
+`sudoku_regular`, `sudoku_x`, `sudoku_disjoint`, `sudoku_killer`
+— enumerates the four variants in `SudokuVariant`
+(`lib/engine/sudoku.dart`). All cross-link to `killerSudoku`
+(the `open:sudoku?preset=killer9x9` sentinel). The hints
+describe the additional `allDifferent` overlays each variant
+layers on top of the regular row/column/box trio.
+
+### Tests
+
++1 catalogue slate invariant covering all 19 entries and
+asserting `runnable: false` on each — guards against a regression
+where a stats entry gets accidentally flagged runnable and
+exposes a broken Try-in-Calculator button.
+
++1 dialog widget test confirming a `runnable: false` entry
+(`welch_t`) hides the Try button while still rendering the
+See-worked-example cross-link.
+
+Suite 1953 → 1955.
+
 ## 2026-05-26 (P6 Round 98) — Function Reference matrix + linear algebra entries
 
 Fills the `matrix` category in `FunctionReferences.all`. Six

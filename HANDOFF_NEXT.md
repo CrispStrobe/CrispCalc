@@ -1,11 +1,15 @@
 # CrispCalc — handover for the next session
 
-Pickup note from the **2026-05-26 (Round 98) session**. Closed
-P6 §98 matrix slate (modulo eigenvalues). Catalogue now spans
-CAS, number theory, precision, and matrix — 26 entries total.
-Next slot is Round 99 (statistics + constraints + sudoku).
+Pickup note from the **2026-05-26 (Round 99) session**. Closed
+P6 §99 by filling the statistics / constraints / sudoku
+categories with 19 module-surface entries. The catalogue now
+spans all nine categories that the model defined back in Round
+96. Next slot is Round 100 (i18n pass — ~30k words across 4
+locales).
 
-- **98** — P6 matrix entries. 20 → 26 entries. Tests 1952 → 1953.
+- **99** — P6 stats + constraints + sudoku entries. 26 → 45
+  entries. New `runnable: bool` field on `FunctionRef`. Tests
+  1953 → 1955.
 
 `HANDOFF.md` remains the load-bearing pattern reference.
 
@@ -29,10 +33,10 @@ remind yourself the user wants main.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | `36603be` (Round 98) — docs commit to follow |
-| **Tests** | **1953 pass** (1952 → 1953) — `flutter analyze` clean |
+| **main HEAD** | `3406f77` (Round 99) — docs commit to follow |
+| **Tests** | **1955 pass** (1953 → 1955) — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (FlatZinc frontend + QuickXplain MUS) |
-| **CI** | Rounds 97-98 push not yet observed; previous pushes were green |
+| **CI** | Rounds 97-99 push not yet observed; previous pushes were green |
 
 Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone).
 
@@ -42,53 +46,71 @@ Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone
 |---|---|
 | **Round 97** | Function Reference CAS + precision entries. Catalogue 3 → 20. CAS: solve upgraded + 11 new entries. Precision arc: pi_precision upgraded + 3 new entries. Number theory: isprime upgraded + 3 new entries. `series` / `taylor` deferred. +2 slate tests, tightened seeAlso resolver. |
 | **Round 98** | Function Reference matrix entries. Catalogue 20 → 26. `matrix_literal`, `det`, `inv`, `transpose`, `rref`, `matrix_arithmetic`. Eigenvalues deferred (no bridge binding). 3 of 6 entries cross-link to existing worked examples. +1 slate test. |
+| **Round 99** | Function Reference stats + constraints + sudoku entries. Catalogue 26 → 45. New `runnable: bool` field on `FunctionRef` — `runnable: false` rows hide the Try-in-Calculator button (module-surface entries). 9 stats + 6 constraints DSL + 4 sudoku variants. All cross-link to existing worked examples. +1 slate test, +1 dialog widget test. |
 
 ## Pickup points — next strategic slot
 
-P6 rounds 93-98 done; Round 99 is the natural next slot.
+P6 rounds 93-99 done; Round 100 is the natural next slot.
 
-1. **Round 99 — Statistics + Constraints + Sudoku entries**.
-   ~15 more entries covering the module functions. PLAN
-   names:
-   - **Statistics**: `mean`, `welchT`, `pairedT`, `anova1`,
-     `chi2Goodness`, `chi2Independence`, `fisherExact`,
-     `wilcoxon`, `signTest`.
-   - **Constraints DSL**: `vars`, `allDifferent`, `noOverlap`,
-     `cumulative`, `minimize`, `maximize`.
-   - **Sudoku**: variant rules (killer cages, hyper-zones,
-     thermo, etc. — whatever's actually shipped).
-   Many of these are surfaced as worked examples (`zScore`,
-   `statsHypothesisTests`, `dslMagicSquare`, `dslMapColoring`,
-   `dslOrderedTriples`, `dslCoinChange`, `dslSchedulingMakespan`,
-   `dslCumulativeScheduling`, `dslRcpsp`, `killerSudoku`,
-   `constraintEditor`) — line up `workedExampleId` pointers.
+1. **Round 100 — i18n pass (~30k words)**. PLAN says triage:
+   - **100a**: EN-only refinements. Read through the 45
+     entries for typos / phrasing / consistency. Spot-check
+     that every entry's "underlying call" prose actually
+     reflects the current implementation (some Round-97 prose
+     was based on the audit, not a direct code read).
+   - **100b**: DE (high priority — user's local audience).
+   - **100c**: FR + ES batched.
 
-2. **Round 100 — i18n pass (~30k words)**. Triage:
-   100a EN-only refinements, 100b DE, 100c FR+ES.
+   The 45 entries × ~150 words each × 4 locales ≈ 27k words.
+   Lots of strings to add to `app_localizations.dart`. The
+   existing 11 strings per locale (Round 96) cover the
+   *dialog chrome*; Round 100 adds per-entry strings keyed by
+   id (probably `functionRefShortDescription_<id>`,
+   `functionRefExampleHint_<id>_<i>` style).
 
-3. **Round 101 — Help-mode design + state**.
+   Currently `signature` and `shortDescription` are hardcoded
+   English on the `FunctionRef` const. Round 100 needs to
+   either:
+   - Move them out of the const into a lookup table keyed by
+     id, or
+   - Keep the English defaults on the const but have the
+     dialog overlay localised strings when present (graceful
+     fallback to the default).
+
+   The second option is less invasive and matches the
+   existing worked-examples pattern (catalog has English
+   defaults, dialog asks AppLocalizations by id and falls
+   back when no translation exists).
+
+2. **Round 101 — Help-mode design + state**.
    `_helpMode` toggle on Calculator + Notepad AppBars
    (using `Icons.help_outline` — reserved for this).
    `HelpModeNotifier` in AppState.
 
-4. **Rounds 102-104** — Help popovers on the keypad,
-   history rows, and notepad lines. Round-97/98 catalogue is
-   the content source for these popovers, so no duplication.
+3. **Rounds 102-104** — Help popovers on the keypad,
+   history rows, and notepad lines. Round-97/98/99 catalogue
+   is the content source for these popovers, so no
+   duplication.
 
-5. **Round 95 follow-up** — Statistics input pre-fill.
+4. **Round 95 follow-up** — Statistics input pre-fill.
    `pendingStatisticsTab` slot could grow to a richer
    payload. Defer until demand surfaces.
 
-6. **Series / taylor entries (P6 §97 carry-over)** —
-   blocked on a bridge addition (`SymEngine::series_expansion`
-   or equivalent). When the binding lands, drop the deferral
-   comment in `function_reference.dart` and add the two
-   entries (probably alongside `limit`).
+5. **Series / taylor entries (P6 §97 carry-over)** —
+   blocked on a bridge addition (`SymEngine::series_expansion`).
 
-7. **Eigenvalues entry (P6 §98 carry-over)** —
-   blocked on a bridge addition (`DenseMatrix::eigvals` or
-   equivalent). When the binding lands, drop the deferral
-   comment and add the entry alongside `det` / `inv`.
+6. **Eigenvalues entry (P6 §98 carry-over)** —
+   blocked on a bridge addition (`DenseMatrix::eigvals`).
+
+7. **`open:` / `dsl:` dispatch in Try-in-Calculator (P6 §99
+   follow-up)** — currently the Try button is hidden on
+   `runnable: false` entries. A future round could teach the
+   `_tryInCalculator` helper to recognise `open:` and `dsl:`
+   sentinels the same way `WorkedExamplesDialog._tap` already
+   does. Then `runnable: true` could be the default again
+   and the field could mean "the input is dispatchable" (true
+   for both calculator calls AND module sentinels). For now
+   `runnable: false` + cross-link works fine.
 
 8. **CSP Round E.5** (deferred) — `dart_csp_fzn` CLI as a
    MiniZinc solver. Blocked on P4 distribution pipeline.
@@ -107,11 +129,10 @@ P6 rounds 93-98 done; Round 99 is the natural next slot.
   condition stays symbolic, `tryFoldIfConditional` returns
   null. Acceptable V1.
 - **Bool-chip detection is a string match** on `'true'` /
-  `'false'`. `normalizeBooleanResult` runs before the cache
-  write.
+  `'false'`.
 - **Arithmetic-with-boolean is uncoerced.** PLAN P7 R113.
 
-### P6 (rounds 93-98)
+### P6 (rounds 93-99)
 
 - **Calculator top toolbar always renders** (was guarded by
   `history.isNotEmpty`).
@@ -132,22 +153,21 @@ P6 rounds 93-98 done; Round 99 is the natural next slot.
 - **Round-97+ catalogue pushes rows below the 480px viewport.**
   Tests that find a specific row by signature should filter
   via the search field first if the entry isn't in the top
-  ~8 rows. The pattern: `enterText(find.byType(TextField), '<id>')`
-  then `pumpAndSettle` before tapping.
-- **`series` and `taylor` deferred.** No SymEngine binding.
-- **Eigenvalues deferred.** No bridge binding.
-- **`matrix_arithmetic` is one entry, not three.** Treats the
-  `+ / - / *` operator triplet on `Matrix(...)` operands as a
-  single concept. If a future round wants per-operator detail,
-  the entry can split into three.
+  ~8 rows.
+- **`series` / `taylor` / eigenvalues deferred.** No bridge
+  binding.
+- **`matrix_arithmetic` is one entry, not three.**
+- **`runnable: false` entries (Round 99) hide the Try
+  button.** The dialog renders the See-worked-example
+  cross-link only — which is fine because every Round-99
+  entry has a worked-example cross-link.
 
 ## Hygiene reminders
 
 - **`dart format`** before push. Format only files you touched,
   not `lib/` wholesale (HANDOFF §4.17).
 - **Don't run multiple `flutter test` in parallel** — they race
-  on `.dart_tool/test/incremental_kernel_*` and all fail. Run
-  sync or one at a time.
+  on `.dart_tool/test/incremental_kernel_*`.
 - **Don't touch `.claude/`** — harness state.
 - **Working on main now.** If you start a feature branch out of
   habit, ask first.
@@ -158,12 +178,17 @@ P6 rounds 93-98 done; Round 99 is the natural next slot.
 - Shared boolean chip widget: `lib/widgets/boolean_chip.dart`
 - Worked Examples dialog: `lib/widgets/worked_examples_dialog.dart`
 - **Function Reference model**: `lib/engine/function_reference.dart`
-  (Rounds 96-98: 26 entries across CAS / number theory /
-  precision / matrix)
+  (Rounds 96-99: 45 entries across all nine categories. New
+  `runnable: bool` field on `FunctionRef` as of Round 99.)
 - **Function Reference dialog**: `lib/widgets/function_reference_dialog.dart`
-  (Round 96 layout; unchanged since)
+  (Round 99: gated the Try button on `entry.runnable`)
+- Hypothesis tests engine: `lib/engine/hypothesis_tests.dart`
+  (Round 99 cited it for stats prose)
+- CSP / DSL engine: `lib/engine/csp_solver.dart`
+  (Round 99 cited the `DslToFlatZinc` transpiler)
+- Sudoku engine: `lib/engine/sudoku.dart`
+  (Round 99 cited `SudokuVariant` + `SudokuPresets`)
 - Matrix evaluator: `lib/engine/matrix_evaluator.dart`
-  (Round 98 cited it for the underlying-call prose)
 - AppState pending slots: `lib/engine/app_state.dart`
 - Calculator: `lib/screens/calculator_screen.dart`
 - Notepad: `lib/screens/notepad_screen.dart`
@@ -173,7 +198,6 @@ P6 rounds 93-98 done; Round 99 is the natural next slot.
 - Notepad classifier: `lib/engine/notepad_evaluator.dart`
 - Worked-examples catalog: `lib/engine/worked_examples.dart`
 - Localization: `lib/localization/app_localizations.dart`
-  (Round 96 strings still cover the Function Reference UI;
-  Round 100 will i18n the entry bodies)
+  (Round 100 will add per-entry strings here)
 
 Good luck.
