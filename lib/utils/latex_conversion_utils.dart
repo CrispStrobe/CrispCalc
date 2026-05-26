@@ -310,6 +310,15 @@ class LatexConversionUtils {
     readable = readable.replaceAll(r'\ln', 'ln');
     readable = readable.replaceAll(r'\log', 'log');
 
+    // Sized delimiters: strip the LaTeX command, keep the bracket.
+    // Match the `fromLatex` strip pass so the readable history
+    // display doesn't carry `\bigg(` etc. through to the user.
+    readable = readable.replaceAllMapped(
+      RegExp(
+          r'\\(left|right|big|Big|bigg|Bigg|bigl|bigr|Bigl|Bigr|biggl|biggr|Biggl|Biggr)\s*(?=[(){}\[\]])'),
+      (_) => '',
+    );
+
     return readable;
   }
 }
