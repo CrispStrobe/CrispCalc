@@ -429,8 +429,7 @@ class ExpressionPreprocessingUtils {
     // back-references; pass-through would otherwise emit the
     // literal text `\1i` instead of the captured digits.
     normalized = normalized
-        .replaceAllMapped(
-            RegExp(r'(\d+)\s*\*\s*I\b'), (m) => '${m.group(1)}i')
+        .replaceAllMapped(RegExp(r'(\d+)\s*\*\s*I\b'), (m) => '${m.group(1)}i')
         .replaceAll(RegExp(r'\bI\b'), 'i');
 
     // Normalize spacing.

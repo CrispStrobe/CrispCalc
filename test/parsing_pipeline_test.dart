@@ -137,7 +137,8 @@ void main() {
     });
   });
 
-  group('ExpressionPreprocessingUtils.preprocessNativeExpression — '
+  group(
+      'ExpressionPreprocessingUtils.preprocessNativeExpression — '
       'implicit multiplication', () {
     final cases = <String, String>{
       '2(3+4)': '2*(3+4)',
@@ -162,7 +163,8 @@ void main() {
     });
   });
 
-  group('ExpressionPreprocessingUtils.preprocessNativeExpression — '
+  group(
+      'ExpressionPreprocessingUtils.preprocessNativeExpression — '
       'factorial BigInt expansion', () {
     final cases = <int, String>{
       0: '1',
@@ -177,12 +179,14 @@ void main() {
     };
     cases.forEach((n, want) {
       test('$n! -> "$want"', () {
-        final got = ExpressionPreprocessingUtils.preprocessNativeExpression('$n!');
+        final got =
+            ExpressionPreprocessingUtils.preprocessNativeExpression('$n!');
         expect(got, want);
       });
     });
     test('100! is 158 digits all-digit string (BigInt path)', () {
-      final got = ExpressionPreprocessingUtils.preprocessNativeExpression('100!');
+      final got =
+          ExpressionPreprocessingUtils.preprocessNativeExpression('100!');
       expect(got.length, 158);
       expect(RegExp(r'^\d+$').hasMatch(got), isTrue,
           reason: 'all digits, no scientific notation');
@@ -198,7 +202,8 @@ void main() {
     });
   });
 
-  group('ExpressionPreprocessingUtils.preprocessNativeExpression — '
+  group(
+      'ExpressionPreprocessingUtils.preprocessNativeExpression — '
       'fib + isprime', () {
     final fib = <int, String>{
       0: '0',
@@ -234,18 +239,19 @@ void main() {
     };
     prime.forEach((n, want) {
       test('isprime($n) -> "$want"', () {
-        final got =
-            ExpressionPreprocessingUtils.preprocessNativeExpression('isprime($n)');
+        final got = ExpressionPreprocessingUtils.preprocessNativeExpression(
+            'isprime($n)');
         expect(got, want);
       });
     });
   });
 
-  group('ExpressionPreprocessingUtils.preprocessNativeExpression — '
+  group(
+      'ExpressionPreprocessingUtils.preprocessNativeExpression — '
       'matrix literal + German comma', () {
     test('[1,2; 3,4] -> Matrix syntax', () {
-      final got = ExpressionPreprocessingUtils.preprocessNativeExpression(
-          '[1,2; 3,4]');
+      final got =
+          ExpressionPreprocessingUtils.preprocessNativeExpression('[1,2; 3,4]');
       expect(got, contains('Matrix'));
       expect(got, contains('[1, 2]'));
       expect(got, contains('[3, 4]'));
@@ -264,7 +270,8 @@ void main() {
     });
   });
 
-  group('ExpressionPreprocessingUtils.preprocessNativeExpression — '
+  group(
+      'ExpressionPreprocessingUtils.preprocessNativeExpression — '
       'a mod b', () {
     final cases = <String, String>{
       '5 mod 3': '(5) % (3)',

@@ -43,8 +43,7 @@ class LatexConversionUtils {
     for (final p in dPatterns) {
       final close = p == 'left' ? 'right' : (p == 'Bigl' ? 'Bigr' : p);
       result = result.replaceAllMapped(
-        RegExp(
-            '\\\\frac\\{d\\}\\{d([a-zA-Z])\\}\\\\$p\\((.*?)\\\\$close\\)'),
+        RegExp('\\\\frac\\{d\\}\\{d([a-zA-Z])\\}\\\\$p\\((.*?)\\\\$close\\)'),
         (m) => 'd/d${m.group(1)}(${m.group(2)})',
       );
     }
@@ -73,14 +72,22 @@ class LatexConversionUtils {
     result = result.replaceAll(r'\left[', '[').replaceAll(r'\right]', ']');
     result = result.replaceAll(r'\left\{', '{').replaceAll(r'\right\}', '}');
     result = result
-        .replaceAll(r'\bigl(', '(').replaceAll(r'\bigr)', ')')
-        .replaceAll(r'\Bigl(', '(').replaceAll(r'\Bigr)', ')')
-        .replaceAll(r'\biggl(', '(').replaceAll(r'\biggr)', ')')
-        .replaceAll(r'\Biggl(', '(').replaceAll(r'\Biggr)', ')')
-        .replaceAll(r'\big(', '(').replaceAll(r'\big)', ')')
-        .replaceAll(r'\Big(', '(').replaceAll(r'\Big)', ')')
-        .replaceAll(r'\bigg(', '(').replaceAll(r'\bigg)', ')')
-        .replaceAll(r'\Bigg(', '(').replaceAll(r'\Bigg)', ')');
+        .replaceAll(r'\bigl(', '(')
+        .replaceAll(r'\bigr)', ')')
+        .replaceAll(r'\Bigl(', '(')
+        .replaceAll(r'\Bigr)', ')')
+        .replaceAll(r'\biggl(', '(')
+        .replaceAll(r'\biggr)', ')')
+        .replaceAll(r'\Biggl(', '(')
+        .replaceAll(r'\Biggr)', ')')
+        .replaceAll(r'\big(', '(')
+        .replaceAll(r'\big)', ')')
+        .replaceAll(r'\Big(', '(')
+        .replaceAll(r'\Big)', ')')
+        .replaceAll(r'\bigg(', '(')
+        .replaceAll(r'\bigg)', ')')
+        .replaceAll(r'\Bigg(', '(')
+        .replaceAll(r'\Bigg)', ')');
 
     // === STEP 2: Handle function notation with braces ===
 

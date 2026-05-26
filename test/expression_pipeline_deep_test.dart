@@ -110,29 +110,29 @@ void main() {
 
     test('Ans pulls from last history entry', () {
       AppState().addHistoryEntry('1+2', '3');
-      final out = ExpressionPreprocessingUtils.substituteVariables(
-          'Ans*5', AppState());
+      final out =
+          ExpressionPreprocessingUtils.substituteVariables('Ans*5', AppState());
       expect(out, '3*5');
     });
 
     test('Ans defaults to 0 when history is empty', () {
-      final out = ExpressionPreprocessingUtils.substituteVariables(
-          'Ans+1', AppState());
+      final out =
+          ExpressionPreprocessingUtils.substituteVariables('Ans+1', AppState());
       expect(out, '0+1');
     });
 
     test('user variable inlines wrapped in parens', () {
       AppState().setVariable('a', '7');
-      final out = ExpressionPreprocessingUtils.substituteVariables(
-          'a*2', AppState());
+      final out =
+          ExpressionPreprocessingUtils.substituteVariables('a*2', AppState());
       expect(out, '(7)*2');
     });
 
     test('multiple variables', () {
       AppState().setVariable('a', '5');
       AppState().setVariable('b', '3');
-      final out = ExpressionPreprocessingUtils.substituteVariables(
-          'a + b', AppState());
+      final out =
+          ExpressionPreprocessingUtils.substituteVariables('a + b', AppState());
       expect(out, '(5) + (3)');
     });
 
@@ -146,8 +146,8 @@ void main() {
 
     test('Ans with extracted solve numeric', () {
       AppState().addHistoryEntry('solve(x-3, x)', 'x = 3');
-      final out = ExpressionPreprocessingUtils.substituteVariables(
-          'Ans+2', AppState());
+      final out =
+          ExpressionPreprocessingUtils.substituteVariables('Ans+2', AppState());
       expect(out, '3+2');
     });
   });
@@ -195,8 +195,8 @@ void main() {
         paramVar: 'x',
         body: 'x^2 + 1',
       ));
-      final out = ExpressionPreprocessingUtils.preprocessExpression(
-          'f(3)', AppState());
+      final out =
+          ExpressionPreprocessingUtils.preprocessExpression('f(3)', AppState());
       expect(out, contains('3'));
       expect(out, contains('^2'));
     });
@@ -327,8 +327,8 @@ void main() {
     test('decimalPlaces clamped to 0..15', () {
       s.setDecimalPlaces(20);
       // Even if set above 15, formatNumber clamps internally.
-      expect(s.formatNumber('1.234567890123456789').length,
-          lessThanOrEqualTo(20));
+      expect(
+          s.formatNumber('1.234567890123456789').length, lessThanOrEqualTo(20));
     });
   });
 

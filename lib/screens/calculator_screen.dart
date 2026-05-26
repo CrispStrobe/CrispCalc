@@ -1639,117 +1639,118 @@ class CalculatorScreenState extends State<CalculatorScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            ListTile(
-              leading: const Icon(Icons.show_chart),
-              title: Text(t.funcCtxShowOnGraph),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _showOnGraph(entry.expression);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.analytics),
-              title: Text(t.funcCtxAnalyze),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _analyzeExpression(entry.expression);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.trending_up),
-              title: Text(t.funcCtxDifferentiate),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _latexController.insert('diff(${entry.expression}, x)');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.area_chart),
-              title: Text(t.funcCtxIntegrate),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _latexController.insert('integrate(${entry.expression}, x)');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lightbulb_outline),
-              title: Text(t.funcCtxSolve),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _latexController.insert('solve(${entry.expression} = 0, x)');
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: Text(t.historyEntryCopyResult),
-              onTap: () async {
-                Navigator.of(ctx).pop();
-                await Clipboard.setData(ClipboardData(text: entry.result));
-                if (!context.mounted) return;
-                _toast(context, t.historyEntryCopied);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.functions),
-              title: Text(t.historyEntryCopyLatex),
-              subtitle: Text(t.historyEntryCopyLatexSubtitle,
-                  style: Theme.of(ctx).textTheme.bodySmall),
-              onTap: () async {
-                Navigator.of(ctx).pop();
-                final latex =
-                    '${MathDisplayUtils.toHistoryDisplayLatex(entry.expression)} = ${entry.result}';
-                await Clipboard.setData(ClipboardData(text: latex));
-                if (!context.mounted) return;
-                _toast(context, t.historyEntryCopied);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: Text(t.historyEntryReuse),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _latexController.clear();
-                _latexController.insert(entry.expression);
-              },
-            ),
-            const Divider(height: 1),
-            // Round 91: capture this row into a named slot. Variable
-            // is always available (every result is a value). Function
-            // is only meaningful when the expression has at least one
-            // free identifier the user could parameterise on.
-            ListTile(
-              leading: const Icon(Icons.save_alt),
-              title: Text(t.storeAsVariable),
-              onTap: () async {
-                Navigator.of(ctx).pop();
-                final saved = await StoreResultDialogs.promptStoreAsVariable(
-                  context: context,
-                  value: entry.result,
-                );
-                if (saved != null && context.mounted) {
-                  _toast(context, t.storeSavedAs(saved));
-                }
-              },
-            ),
-            if (ExpressionPreprocessingUtils.extractFreeVariables(
-                    entry.expression)
-                .isNotEmpty)
               ListTile(
-                leading: const Icon(Icons.functions),
-                title: Text(t.storeAsFunction),
+                leading: const Icon(Icons.show_chart),
+                title: Text(t.funcCtxShowOnGraph),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showOnGraph(entry.expression);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: Text(t.funcCtxAnalyze),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _analyzeExpression(entry.expression);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.trending_up),
+                title: Text(t.funcCtxDifferentiate),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _latexController.insert('diff(${entry.expression}, x)');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.area_chart),
+                title: Text(t.funcCtxIntegrate),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _latexController.insert('integrate(${entry.expression}, x)');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.lightbulb_outline),
+                title: Text(t.funcCtxSolve),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _latexController.insert('solve(${entry.expression} = 0, x)');
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: Text(t.historyEntryCopyResult),
                 onTap: () async {
                   Navigator.of(ctx).pop();
-                  final saved = await StoreResultDialogs.promptStoreAsFunction(
+                  await Clipboard.setData(ClipboardData(text: entry.result));
+                  if (!context.mounted) return;
+                  _toast(context, t.historyEntryCopied);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.functions),
+                title: Text(t.historyEntryCopyLatex),
+                subtitle: Text(t.historyEntryCopyLatexSubtitle,
+                    style: Theme.of(ctx).textTheme.bodySmall),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final latex =
+                      '${MathDisplayUtils.toHistoryDisplayLatex(entry.expression)} = ${entry.result}';
+                  await Clipboard.setData(ClipboardData(text: latex));
+                  if (!context.mounted) return;
+                  _toast(context, t.historyEntryCopied);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: Text(t.historyEntryReuse),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _latexController.clear();
+                  _latexController.insert(entry.expression);
+                },
+              ),
+              const Divider(height: 1),
+              // Round 91: capture this row into a named slot. Variable
+              // is always available (every result is a value). Function
+              // is only meaningful when the expression has at least one
+              // free identifier the user could parameterise on.
+              ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: Text(t.storeAsVariable),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final saved = await StoreResultDialogs.promptStoreAsVariable(
                     context: context,
-                    expression: entry.expression,
+                    value: entry.result,
                   );
                   if (saved != null && context.mounted) {
                     _toast(context, t.storeSavedAs(saved));
                   }
                 },
               ),
-          ],
+              if (ExpressionPreprocessingUtils.extractFreeVariables(
+                      entry.expression)
+                  .isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.functions),
+                  title: Text(t.storeAsFunction),
+                  onTap: () async {
+                    Navigator.of(ctx).pop();
+                    final saved =
+                        await StoreResultDialogs.promptStoreAsFunction(
+                      context: context,
+                      expression: entry.expression,
+                    );
+                    if (saved != null && context.mounted) {
+                      _toast(context, t.storeSavedAs(saved));
+                    }
+                  },
+                ),
+            ],
           ),
         ),
       ),
