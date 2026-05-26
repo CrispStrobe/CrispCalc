@@ -565,7 +565,13 @@ class CalculatorScreenState extends State<CalculatorScreen>
         break;
 
       case 'd/dx':
-        _latexController.insert(r'\frac{d}{dx}()', cursorOffsetFromEnd: -1);
+        // \left( … \right) scales the parens to the fraction's height
+        // so the brackets line up vertically with the d/dx
+        // numerator-over-denominator. Plain `()` after `\frac` left
+        // the open/close parens floating at the baseline,
+        // misaligned with the (tall) fraction.
+        _latexController.insert(r'\frac{d}{dx}\left(\right)',
+            cursorOffsetFromEnd: -7);
         break;
 
       case 'd/dx⌄':

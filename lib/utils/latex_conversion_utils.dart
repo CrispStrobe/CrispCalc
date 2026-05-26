@@ -41,6 +41,20 @@ class LatexConversionUtils {
       return 'd/d${m.group(1)}(${m.group(2)})';
     });
 
+    // Handle differentiation with \left( … \right) — the keypad's
+    // d/dx button now emits this form so the parens scale with the
+    // fraction height: \frac{d}{dx}\left(expr\right) -> d/dx(expr)
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\left\((.*?)\\right\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
+
+    // Generic \left( / \right) — strip the scaling commands and keep
+    // the bare parens for any other usage in the input.
+    result = result.replaceAll(r'\left(', '(').replaceAll(r'\right)', ')');
+    result = result.replaceAll(r'\left[', '[').replaceAll(r'\right]', ']');
+    result = result.replaceAll(r'\left\{', '{').replaceAll(r'\right\}', '}');
+
     // === STEP 2: Handle function notation with braces ===
 
     // Trigonometric functions: \sin{expr} -> sin(expr)
