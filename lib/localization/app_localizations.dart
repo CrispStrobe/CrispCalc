@@ -3244,6 +3244,14 @@ class DeLocalizations implements AppLocalizations {
         return 'Nächste Primzahl nach 1000';
       case 'mersenneM31':
         return 'Mersenne-Primzahl M31';
+      case 'booleanIsprimeAnd':
+        return 'Primzahl und beschränkt';
+      case 'booleanEqualityFold':
+        return 'Gleichheits-Auswertung';
+      case 'booleanNotPrime':
+        return 'Negation';
+      case 'booleanOrChain':
+        return 'Disjunktion über Vergleiche';
       case 'compoundInterest':
         return 'Zinseszins';
       case 'zScore':
@@ -3322,6 +3330,16 @@ class DeLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — bestätigt die achte Mersenne-Primzahl '
             'als einzelnen Faktor.';
+      case 'booleanIsprimeAnd':
+        return 'isprime(17) und 17 < 20 — beide Teile wahr, also ist die '
+            'Konjunktion wahr.';
+      case 'booleanEqualityFold':
+        return '2 == 2 — konstante Operanden werden zu „wahr" reduziert.';
+      case 'booleanNotPrime':
+        return 'not isprime(15) — 15 = 3·5, also ergibt die Verneinung wahr.';
+      case 'booleanOrChain':
+        return '(5 > 3) oder (1 == 2) — der erste Teil ist wahr, deshalb ist '
+            'die gesamte Disjunktion wahr.';
       case 'compoundInterest':
         return '1000 € zu 5 % über 10 Jahre, jährliche Verzinsung.';
       case 'zScore':
@@ -4846,6 +4864,14 @@ class FrLocalizations implements AppLocalizations {
         return 'Premier suivant après 1000';
       case 'mersenneM31':
         return 'Premier de Mersenne M31';
+      case 'booleanIsprimeAnd':
+        return 'Premier et borné';
+      case 'booleanEqualityFold':
+        return 'Évaluation d\'égalité';
+      case 'booleanNotPrime':
+        return 'Négation';
+      case 'booleanOrChain':
+        return 'Disjonction sur des comparaisons';
       case 'compoundInterest':
         return 'Intérêts composés';
       case 'zScore':
@@ -4924,6 +4950,16 @@ class FrLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — confirme le huitième nombre '
             'premier de Mersenne comme facteur unique.';
+      case 'booleanIsprimeAnd':
+        return 'isprime(17) et 17 < 20 — les deux clauses sont vraies, '
+            'donc la conjonction est vraie.';
+      case 'booleanEqualityFold':
+        return '2 == 2 — des opérandes constants se réduisent à vrai.';
+      case 'booleanNotPrime':
+        return 'not isprime(15) — 15 = 3·5, donc le résultat est vrai.';
+      case 'booleanOrChain':
+        return '(5 > 3) ou (1 == 2) — la première clause est vraie, '
+            'donc la disjonction entière est vraie.';
       case 'compoundInterest':
         return '1000 € à 5 % sur 10 ans, capitalisation annuelle.';
       case 'zScore':
@@ -6443,6 +6479,14 @@ class EsLocalizations implements AppLocalizations {
         return 'Primo siguiente después de 1000';
       case 'mersenneM31':
         return 'Primo de Mersenne M31';
+      case 'booleanIsprimeAnd':
+        return 'Primo y acotado';
+      case 'booleanEqualityFold':
+        return 'Evaluación de igualdad';
+      case 'booleanNotPrime':
+        return 'Negación';
+      case 'booleanOrChain':
+        return 'Disyunción sobre comparaciones';
       case 'compoundInterest':
         return 'Interés compuesto';
       case 'zScore':
@@ -6521,6 +6565,17 @@ class EsLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — confirma el octavo primo de '
             'Mersenne como factor único.';
+      case 'booleanIsprimeAnd':
+        return 'isprime(17) y 17 < 20 — ambas cláusulas son verdaderas, '
+            'así que la conjunción es verdadera.';
+      case 'booleanEqualityFold':
+        return '2 == 2 — operandos constantes se reducen a verdadero.';
+      case 'booleanNotPrime':
+        return 'not isprime(15) — 15 = 3·5, por lo que el resultado '
+            'es verdadero.';
+      case 'booleanOrChain':
+        return '(5 > 3) o (1 == 2) — la primera cláusula es verdadera, '
+            'así que la disyunción entera es verdadera.';
       case 'compoundInterest':
         return '1000 € al 5 % durante 10 años, capitalización anual.';
       case 'zScore':

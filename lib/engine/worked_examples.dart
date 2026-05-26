@@ -203,6 +203,43 @@ class WorkedExamples {
       expression: 'factorint(2147483647)',
     ),
 
+    // === P7 Booleans (Round 112) ============================================
+    // Surfaces the relational + logical operator rewrite shipped in
+    // rounds 110 + 111. Each evaluates to a colored chip in the
+    // history. Folded into number-theory so the boolean entries sit
+    // next to isprime / nextprime / factorint without bloating the
+    // category-chip row.
+    WorkedExample(
+      id: 'booleanIsprimeAnd',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Prime and bounded',
+      description: 'isprime(17) and 17 < 20 — both clauses true, '
+          'so the conjunction is true.',
+      expression: 'isprime(17) and 17 < 20',
+    ),
+    WorkedExample(
+      id: 'booleanEqualityFold',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Equality fold',
+      description: '2 == 2 — constant operands collapse to true.',
+      expression: '2 == 2',
+    ),
+    WorkedExample(
+      id: 'booleanNotPrime',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Negation',
+      description: 'not isprime(15) — 15 = 3·5, so the result is true.',
+      expression: 'not isprime(15)',
+    ),
+    WorkedExample(
+      id: 'booleanOrChain',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Disjunction across comparisons',
+      description: '(5 > 3) or (1 == 2) — the first clause is true so the '
+          'whole disjunction is true.',
+      expression: '(5 > 3) or (1 == 2)',
+    ),
+
     // === Statistics ==========================================================
     WorkedExample(
       id: 'compoundInterest',

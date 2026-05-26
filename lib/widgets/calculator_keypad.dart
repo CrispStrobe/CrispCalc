@@ -165,6 +165,20 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'nextprime',
     'prevprime',
     'factorint',
+    // Round 112 (P7): relational + logical operators. Inserts the
+    // ASCII form with surrounding spaces so the round-110 / 111
+    // preprocessor can lower them into SymEngine's Eq/Lt/.../
+    // And/Or/Xor/Not function form before dispatch.
+    '==',
+    '≠',
+    '<',
+    '≤',
+    '>',
+    '≥',
+    'and',
+    'or',
+    'not',
+    'xor',
   ];
 
   List<String> _keysFor(_PaneKind kind) {

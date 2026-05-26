@@ -790,6 +790,42 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('I');
         break;
 
+      // === Round 112 (P7): relational + logical operator keys ===
+      // The button labels use mathematical symbols (≠, ≤, ≥); the
+      // inserted text is the ASCII form the round-110 / 111
+      // preprocessor recognizes. Word operators get surrounding
+      // spaces so they don't jam against adjacent identifiers.
+      case '==':
+        _latexController.insert(' == ');
+        break;
+      case '≠':
+        _latexController.insert(' != ');
+        break;
+      case '<':
+        _latexController.insert(' < ');
+        break;
+      case '≤':
+        _latexController.insert(' <= ');
+        break;
+      case '>':
+        _latexController.insert(' > ');
+        break;
+      case '≥':
+        _latexController.insert(' >= ');
+        break;
+      case 'and':
+        _latexController.insert(' and ');
+        break;
+      case 'or':
+        _latexController.insert(' or ');
+        break;
+      case 'not':
+        _latexController.insert('not ');
+        break;
+      case 'xor':
+        _latexController.insert(' xor ');
+        break;
+
       default:
         _latexController.insert(value);
         break;
