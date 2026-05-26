@@ -11,8 +11,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../engine/app_state.dart';
+import '../engine/scene_3d/intersections.dart';
 import '../engine/scene_3d/scene_object.dart';
 import '../localization/app_localizations.dart';
+import '../widgets/scene_3d_intersections_panel.dart';
 import '../widgets/scene_3d_object_dialogs.dart';
 import '../widgets/scene_3d_painter.dart';
 
@@ -140,11 +142,50 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
     }
   }
 
+  /// Compute every pairwise intersection of visible objects. Cheap
+  /// to recompute on each build for V1 — handful of objects, all
+  /// closed-form math. Returned in (objectA, objectB, result) tuples
+  /// so the panel can show the labels alongside the analytical
+  /// description and the painter can highlight matching geometry.
+  List<IntersectionEntry> _computeIntersections(List<SceneObject> objects) {
+    final visible = objects.where((o) => o.visible).toList();
+    final results = <IntersectionEntry>[];
+    for (var i = 0; i < visible.length; i++) {
+      for (var j = i + 1; j < visible.length; j++) {
+        final res = intersect(visible[i], visible[j]);
+        if (res == null) continue;
+        results.add(IntersectionEntry(
+          a: visible[i],
+          b: visible[j],
+          result: res,
+        ));
+      }
+    }
+    return results;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final scene = _appState.scene3D;
     final wide = MediaQuery.of(context).size.width >= 720;
+    final intersections = _computeIntersections(scene.objects);
+    final intersectionResults =
+        intersections.map((e) => e.result).toList(growable: false);
+
+    final sidePanel = Column(
+      children: [
+        Expanded(
+          flex: 3,
+          child: _buildObjectPanel(context, t, scene.objects),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          flex: 2,
+          child: Scene3DIntersectionsPanel(entries: intersections),
+        ),
+      ],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -160,20 +201,19 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
       body: wide
           ? Row(
               children: [
-                Expanded(flex: 3, child: _buildViewport(context, t)),
-                SizedBox(
-                  width: 320,
-                  child: _buildObjectPanel(context, t, scene.objects),
+                Expanded(
+                  flex: 3,
+                  child: _buildViewport(context, t, intersectionResults),
                 ),
+                SizedBox(width: 340, child: sidePanel),
               ],
             )
           : Column(
               children: [
-                Expanded(child: _buildViewport(context, t)),
-                SizedBox(
-                  height: 240,
-                  child: _buildObjectPanel(context, t, scene.objects),
+                Expanded(
+                  child: _buildViewport(context, t, intersectionResults),
                 ),
+                SizedBox(height: 280, child: sidePanel),
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
@@ -184,7 +224,11 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
     );
   }
 
-  Widget _buildViewport(BuildContext context, AppLocalizations t) {
+  Widget _buildViewport(
+    BuildContext context,
+    AppLocalizations t,
+    List<Intersection> intersections,
+  ) {
     final scene = _appState.scene3D;
     return Container(
       decoration: BoxDecoration(
@@ -207,7 +251,10 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
           );
         },
         child: CustomPaint(
-          painter: Scene3DPainter(scene: scene),
+          painter: Scene3DPainter(
+            scene: scene,
+            intersections: intersections,
+          ),
           size: Size.infinite,
           child: scene.objects.isEmpty
               ? Center(

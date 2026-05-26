@@ -1810,28 +1810,19 @@ color swatch acting as drag handle. New `Scene3D.with
 ReorderedObjects` + `AppState.reorderSceneObjects` helpers
 (both with engine-level tests).
 
-#### Round A4 — Pairwise intersection algorithms + rendering
+#### Round A4 — Pairwise intersection algorithms + rendering — **SHIPPED**
 
-New `lib/engine/scene_3d/intersections.dart` with
-`Intersection? intersect(SceneObject a, SceneObject b)` dispatcher
-over the kind pairs that have closed-form intersections at V1:
-
-- plane × plane → `LineIntersection` (or `ParallelPlanesResult`)
-- plane × line → `PointIntersection` (or `ParallelLineInPlaneResult`)
-- plane × sphere → `CircleIntersection` (or none)
-- line × line → `PointIntersection` (or `SkewLinesResult` /
-  `IdenticalLinesResult`)
-- line × sphere → `TwoPointsIntersection` (or one / none)
-- sphere × sphere → `CircleIntersection` (or none / contained)
-
-Results panel below the viewport shows the analytical answer
-("Intersection line: P=(1, 0, 0), D=(0, 1, -2)" etc.) and the
-geometry is highlighted in the 3D view (intersection lines drawn
-in a contrasting color, intersection points as small spheres).
-
-Tests: every kind pair gets a "known textbook intersection"
-regression and a "degenerate case" test (parallel, identical,
-non-intersecting).
+Done 2026-05-26 — see HISTORY round 95. Sealed `Intersection`
+hierarchy + `intersect(a, b)` dispatcher over the 6 V1 pairs,
+all closed-form math, tolerance `1e-9`. Painter overlays
+intersection geometry in cyan (point/dot, line segment,
+circle as 48-sample polyline). New `Scene3DIntersectionsPanel`
+beneath the object list shows the analytical answer per pair.
+The screen computes intersections once per build and feeds the
+same list to painter + panel. 24 new tests covering every pair
++ degenerate cases (parallel, skew, coincident, contained,
+tangent, missed, nested). 7 + 16 i18n strings × 4 locales for
+panel chrome + reason keys.
 
 #### Round A5 — Quadrics + plane × quadric → conic projection
 

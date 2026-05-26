@@ -2,6 +2,107 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 95, P9-A4) — Pairwise intersections + results panel
+
+The round that pays off the 3D Scene arc — the module now
+actually does what the original ask described:
+> "see and calculate how they intersect".
+Every pair of visible objects computes a closed-form
+intersection, the analytical result lists in a panel under
+the object list, and the geometry (point / line / circle)
+highlights in cyan over the 3D viewport.
+
+### Engine — `lib/engine/scene_3d/intersections.dart`
+
+Sealed `Intersection` result hierarchy: `PointIntersection`,
+`TwoPointsIntersection`, `LineIntersection`,
+`CircleIntersection`, plus `NoIntersection` / `Coincident
+Intersection` / `ContainedIntersection` for the degenerate
+cases. Each carries a `reasonKey` the UI maps to localized
+text.
+
+`intersect(SceneObject a, SceneObject b) → Intersection?`
+dispatches over the 6 V1 pairs (returns null for unsupported
+quadric / parametric pairs which land in A5 / A6):
+
+- **plane × plane**: direction = `n₁ × n₂`; a point on the
+  line falls out of a 2×2 system in the (n₁, n₂) basis.
+  Parallel-but-distinct vs coincident classified up front.
+- **plane × line**: substitute `p + t·d` into `n·x = d`,
+  solve for t. Direction perpendicular to normal ⇒
+  contained-in-plane or parallel-to-plane.
+- **plane × sphere**: project center onto plane; classify by
+  signed distance vs radius (miss / tangent / circle). The
+  circle's center is the projection point, normal is the
+  plane's unit normal, radius is `√(r² − dist²)`.
+- **line × line**: closest-pair via the 2×2 system, then
+  classify zero distance vs not (intersect / skew /
+  parallel / coincident).
+- **line × sphere**: quadratic in `t` from
+  `|p + t·d − c|² = r²`. Discriminant tells # of solutions.
+- **sphere × sphere**: classic axial-circle method.
+  Tangent / disjoint / nested cases peeled off first.
+
+Tolerance is `1e-9` throughout; tighter would flag genuine
+intersections as "almost parallel", looser would miss real
+near-misses.
+
+### Painter overlay — `Scene3DPainter`
+
+New `intersections: List<Intersection>` field. After drawing
+the regular geometry, the painter dispatches per result type:
+
+- `PointIntersection` / `TwoPointsIntersection` →
+  cyan-filled dot ringed in white so it pops against any
+  background.
+- `LineIntersection` → cyan line, slab-clipped to the view
+  cube (same logic as `LineObject` rendering, inlined since
+  no `LineObject` exists in the scene for this geometry).
+- `CircleIntersection` → 48-sample polyline around the circle
+  in its own normal-aligned (u, v) frame.
+
+Coincident / contained / no-intersection results don't draw
+extra geometry — the panel describes them in text.
+
+### Results panel — `Scene3DIntersectionsPanel`
+
+New widget under the object list (right-side column on wide,
+stacked on narrow). For each non-null pairwise result, one
+ListTile: `<Object A> ∩ <Object B>` + the localized analytical
+description (e.g. `Line: P=(0, 0, 0), D=(0, 1, 0)` or
+`Circle: C=(0.5, 0, 0), r=0.866, n=(1, 0, 0)`).
+
+`Scene3DScreen.build` computes intersections once per build
+and feeds the same list to both painter and panel — single
+source of truth.
+
+### Tests + i18n
+
+24 new tests in `test/scene_3d_intersections_test.dart` —
+every pair gets at least one happy + one degenerate case
+(parallel, skew, coincident, contained, tangent, missed,
+nested). Suite 1491 → 1515.
+
+7 new i18n strings × 4 locales — panel chrome
+(`scene3DIntersectionsEmpty`, `scene3DIntersectionsTitle`)
++ result labels (`intersectionPoint`, `intersectionLine`,
+`intersectionCircle`, `intersectionTwoPoints`) + 16
+reason-key cases (`parallelPlanes`, `coincidentPlanes`,
+`skewLines`, `tangent`, `spheresApart`, …) routed via a
+locale-switched `intersectionReason(key)` method.
+
+### Deferred to A5 / A6
+
+- Quadrics (A5) — the math + rendering for general 3D
+  quadrics plus the plane×quadric → 2D conic bridge that
+  connects back to the existing Conic Section module.
+- Parametric surfaces / curves (A6) — numerical intersection
+  via grid sampling + Newton refinement.
+- Sphere occlusion / depth-sort — the orthographic projection
+  draws back hemisphere over front when seen edge-on. A real
+  Z-buffer or back-to-front sort would fix it; cosmetic only
+  for now.
+
 ## 2026-05-26 (round 94, P9-A3) — Lines + spheres in the 3D Scene
 
 Three new object kinds renderable in the scene module. The

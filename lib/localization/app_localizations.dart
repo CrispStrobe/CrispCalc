@@ -151,6 +151,15 @@ abstract class AppLocalizations {
   String get scene3DSphereRadius;
   String get scene3DSpherePositiveRadius;
 
+  // -- P9-A4: intersections panel --
+  String get scene3DIntersectionsEmpty;
+  String scene3DIntersectionsTitle(int n);
+  String get intersectionPoint;
+  String get intersectionTwoPoints;
+  String get intersectionLine;
+  String get intersectionCircle;
+  String intersectionReason(String key);
+
   String get moduleUnitConverterTitle;
   String get moduleUnitConverterSubtitle;
   // -- Variable / function panel --
@@ -841,6 +850,59 @@ class EnLocalizations implements AppLocalizations {
   String get scene3DSphereRadius => 'Radius';
   @override
   String get scene3DSpherePositiveRadius => 'Radius must be greater than zero';
+
+  // -- P9-A4 --
+  @override
+  String get scene3DIntersectionsEmpty =>
+      'Add two or more objects to see their intersections';
+  @override
+  String scene3DIntersectionsTitle(int n) =>
+      n == 1 ? '1 intersection' : '$n intersections';
+  @override
+  String get intersectionPoint => 'Point';
+  @override
+  String get intersectionTwoPoints => 'Two points';
+  @override
+  String get intersectionLine => 'Line';
+  @override
+  String get intersectionCircle => 'Circle';
+  @override
+  String intersectionReason(String key) {
+    switch (key) {
+      case 'parallelPlanes':
+        return 'Planes are parallel (no intersection)';
+      case 'coincidentPlanes':
+        return 'Planes are coincident';
+      case 'lineParallelToPlane':
+        return 'Line is parallel to plane (no intersection)';
+      case 'lineInPlane':
+        return 'Line lies in the plane';
+      case 'sphereMissesPlane':
+        return 'Plane does not touch the sphere';
+      case 'degeneratePlane':
+        return 'Degenerate plane (zero normal)';
+      case 'parallelLines':
+        return 'Lines are parallel (no intersection)';
+      case 'coincidentLines':
+        return 'Lines are coincident';
+      case 'skewLines':
+        return 'Lines are skew (do not meet)';
+      case 'lineMissesSphere':
+        return 'Line does not touch the sphere';
+      case 'degenerateLine':
+        return 'Degenerate line (zero direction)';
+      case 'spheresApart':
+        return 'Spheres are too far apart';
+      case 'sphereInsideSphere':
+        return 'One sphere lies inside the other';
+      case 'coincidentSpheres':
+        return 'Spheres are identical';
+      case 'numericalFailure':
+        return 'Numerical edge case (try slightly different values)';
+      default:
+        return key;
+    }
+  }
 
   @override
   String get moduleUnitConverterTitle => 'Unit Converter';
@@ -2102,6 +2164,59 @@ class DeLocalizations implements AppLocalizations {
   String get scene3DSphereRadius => 'Radius';
   @override
   String get scene3DSpherePositiveRadius => 'Radius muss größer als null sein';
+
+  // -- P9-A4 --
+  @override
+  String get scene3DIntersectionsEmpty =>
+      'Zwei oder mehr Objekte hinzufügen, um Schnittmengen zu sehen';
+  @override
+  String scene3DIntersectionsTitle(int n) =>
+      n == 1 ? '1 Schnittmenge' : '$n Schnittmengen';
+  @override
+  String get intersectionPoint => 'Punkt';
+  @override
+  String get intersectionTwoPoints => 'Zwei Punkte';
+  @override
+  String get intersectionLine => 'Gerade';
+  @override
+  String get intersectionCircle => 'Kreis';
+  @override
+  String intersectionReason(String key) {
+    switch (key) {
+      case 'parallelPlanes':
+        return 'Ebenen sind parallel (kein Schnitt)';
+      case 'coincidentPlanes':
+        return 'Ebenen fallen zusammen';
+      case 'lineParallelToPlane':
+        return 'Gerade verläuft parallel zur Ebene (kein Schnitt)';
+      case 'lineInPlane':
+        return 'Gerade liegt in der Ebene';
+      case 'sphereMissesPlane':
+        return 'Ebene berührt die Kugel nicht';
+      case 'degeneratePlane':
+        return 'Degenerierte Ebene (Nullnormalvektor)';
+      case 'parallelLines':
+        return 'Geraden sind parallel (kein Schnitt)';
+      case 'coincidentLines':
+        return 'Geraden fallen zusammen';
+      case 'skewLines':
+        return 'Geraden sind windschief (treffen sich nicht)';
+      case 'lineMissesSphere':
+        return 'Gerade berührt die Kugel nicht';
+      case 'degenerateLine':
+        return 'Degenerierte Gerade (Nullrichtung)';
+      case 'spheresApart':
+        return 'Kugeln liegen zu weit auseinander';
+      case 'sphereInsideSphere':
+        return 'Eine Kugel liegt in der anderen';
+      case 'coincidentSpheres':
+        return 'Kugeln sind identisch';
+      case 'numericalFailure':
+        return 'Numerischer Grenzfall (leicht andere Werte versuchen)';
+      default:
+        return key;
+    }
+  }
 
   @override
   String get moduleUnitConverterTitle => 'Einheitenumrechner';
@@ -3508,6 +3623,59 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get scene3DSpherePositiveRadius =>
       'Le rayon doit être strictement positif';
+
+  // -- P9-A4 --
+  @override
+  String get scene3DIntersectionsEmpty =>
+      'Ajoutez deux objets ou plus pour voir leurs intersections';
+  @override
+  String scene3DIntersectionsTitle(int n) =>
+      n == 1 ? '1 intersection' : '$n intersections';
+  @override
+  String get intersectionPoint => 'Point';
+  @override
+  String get intersectionTwoPoints => 'Deux points';
+  @override
+  String get intersectionLine => 'Droite';
+  @override
+  String get intersectionCircle => 'Cercle';
+  @override
+  String intersectionReason(String key) {
+    switch (key) {
+      case 'parallelPlanes':
+        return 'Plans parallèles (aucune intersection)';
+      case 'coincidentPlanes':
+        return 'Plans confondus';
+      case 'lineParallelToPlane':
+        return 'Droite parallèle au plan (aucune intersection)';
+      case 'lineInPlane':
+        return 'Droite contenue dans le plan';
+      case 'sphereMissesPlane':
+        return 'Le plan ne touche pas la sphère';
+      case 'degeneratePlane':
+        return 'Plan dégénéré (vecteur normal nul)';
+      case 'parallelLines':
+        return 'Droites parallèles (aucune intersection)';
+      case 'coincidentLines':
+        return 'Droites confondues';
+      case 'skewLines':
+        return 'Droites non coplanaires (ne se rencontrent pas)';
+      case 'lineMissesSphere':
+        return 'La droite ne touche pas la sphère';
+      case 'degenerateLine':
+        return 'Droite dégénérée (direction nulle)';
+      case 'spheresApart':
+        return 'Sphères trop éloignées';
+      case 'sphereInsideSphere':
+        return 'Une sphère est contenue dans l\'autre';
+      case 'coincidentSpheres':
+        return 'Sphères identiques';
+      case 'numericalFailure':
+        return 'Cas numérique limite (essayer d\'autres valeurs)';
+      default:
+        return key;
+    }
+  }
 
   @override
   String get moduleUnitConverterTitle => 'Convertisseur d\'unités';
@@ -4918,6 +5086,59 @@ class EsLocalizations implements AppLocalizations {
   String get scene3DSphereRadius => 'Radio';
   @override
   String get scene3DSpherePositiveRadius => 'El radio debe ser mayor que cero';
+
+  // -- P9-A4 --
+  @override
+  String get scene3DIntersectionsEmpty =>
+      'Añade dos o más objetos para ver sus intersecciones';
+  @override
+  String scene3DIntersectionsTitle(int n) =>
+      n == 1 ? '1 intersección' : '$n intersecciones';
+  @override
+  String get intersectionPoint => 'Punto';
+  @override
+  String get intersectionTwoPoints => 'Dos puntos';
+  @override
+  String get intersectionLine => 'Recta';
+  @override
+  String get intersectionCircle => 'Círculo';
+  @override
+  String intersectionReason(String key) {
+    switch (key) {
+      case 'parallelPlanes':
+        return 'Planos paralelos (sin intersección)';
+      case 'coincidentPlanes':
+        return 'Planos coincidentes';
+      case 'lineParallelToPlane':
+        return 'Recta paralela al plano (sin intersección)';
+      case 'lineInPlane':
+        return 'La recta está contenida en el plano';
+      case 'sphereMissesPlane':
+        return 'El plano no toca la esfera';
+      case 'degeneratePlane':
+        return 'Plano degenerado (vector normal cero)';
+      case 'parallelLines':
+        return 'Rectas paralelas (sin intersección)';
+      case 'coincidentLines':
+        return 'Rectas coincidentes';
+      case 'skewLines':
+        return 'Rectas alabeadas (no se encuentran)';
+      case 'lineMissesSphere':
+        return 'La recta no toca la esfera';
+      case 'degenerateLine':
+        return 'Recta degenerada (dirección cero)';
+      case 'spheresApart':
+        return 'Las esferas están demasiado separadas';
+      case 'sphereInsideSphere':
+        return 'Una esfera está contenida en la otra';
+      case 'coincidentSpheres':
+        return 'Esferas idénticas';
+      case 'numericalFailure':
+        return 'Caso numérico límite (prueba con otros valores)';
+      default:
+        return key;
+    }
+  }
 
   @override
   String get moduleUnitConverterTitle => 'Conversor de unidades';

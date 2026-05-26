@@ -14,13 +14,26 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../engine/plane_math.dart' show Vector3;
+import '../engine/scene_3d/intersections.dart';
 import '../engine/scene_3d/scene_object.dart';
 import '../engine/scene_3d/scene_state.dart';
+
+/// Color used for the intersection highlight overlay. Cyan reads
+/// well against every palette color used for objects themselves.
+const Color kIntersectionColor = Color(0xFF00E5FF);
 
 class Scene3DPainter extends CustomPainter {
   final Scene3D scene;
 
-  Scene3DPainter({required this.scene});
+  /// Intersection results to draw on top of the regular geometry.
+  /// Computed by the screen + handed in so the screen can also feed
+  /// the same list into the results panel (single source of truth).
+  final List<Intersection> intersections;
+
+  Scene3DPainter({
+    required this.scene,
+    this.intersections = const [],
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -61,6 +74,28 @@ class Scene3DPainter extends CustomPainter {
         case ParametricSurfaceObject _:
         case ParametricCurveObject _:
           // Rendering for these kinds lands in A5 / A6.
+          break;
+      }
+    }
+
+    // P9-A4: intersection-highlight overlay. Drawn after the
+    // regular geometry so the highlights sit on top.
+    for (final result in intersections) {
+      switch (result) {
+        case PointIntersection pi:
+          _drawPoint(canvas, pi.point, project, range);
+        case TwoPointsIntersection ti:
+          _drawPoint(canvas, ti.a, project, range);
+          _drawPoint(canvas, ti.b, project, range);
+        case LineIntersection li:
+          _drawIntersectionLine(canvas, li, project, range);
+        case CircleIntersection ci:
+          _drawIntersectionCircle(canvas, ci, project);
+        case NoIntersection _:
+        case CoincidentIntersection _:
+        case ContainedIntersection _:
+          // Nothing extra to highlight — the results panel
+          // describes these cases in text form.
           break;
       }
     }
@@ -380,9 +415,129 @@ class Scene3DPainter extends CustomPainter {
     canvas.drawCircle(project(c.x, c.y, c.z), 3.0, Paint()..color = color);
   }
 
+  // ----------------------------------------------------------------
+  // P9-A4: intersection highlight overlays
+  // ----------------------------------------------------------------
+
+  void _drawPoint(
+    Canvas canvas,
+    Vector3 p,
+    Offset Function(double, double, double) project,
+    double range,
+  ) {
+    // Skip points that sit well outside the view cube — drawing them
+    // at the projected screen position would float a bright dot
+    // somewhere disconnected from the visible geometry.
+    if (p.x.abs() > range * 1.5 ||
+        p.y.abs() > range * 1.5 ||
+        p.z.abs() > range * 1.5) {
+      return;
+    }
+    final centerScreen = project(p.x, p.y, p.z);
+    // Filled cyan dot + a white ring so it pops against any
+    // background.
+    canvas.drawCircle(
+      centerScreen,
+      6.0,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = Colors.white,
+    );
+    canvas.drawCircle(
+      centerScreen,
+      4.5,
+      Paint()..color = kIntersectionColor,
+    );
+  }
+
+  void _drawIntersectionLine(
+    Canvas canvas,
+    LineIntersection li,
+    Offset Function(double, double, double) project,
+    double range,
+  ) {
+    // Reuse the slab-clipping logic from _drawLine. Inlined here so
+    // the line-of-intersection draws even when no LineObject was
+    // created for it.
+    final p = li.point;
+    final d = li.direction;
+    final dLen2 = d.dot(d);
+    if (dLen2 == 0) return;
+    double tMin = double.negativeInfinity;
+    double tMax = double.infinity;
+    bool clipAxis(double pi, double di) {
+      if (di.abs() < 1e-12) return pi.abs() <= range;
+      final t1 = (-range - pi) / di;
+      final t2 = (range - pi) / di;
+      final lo = t1 < t2 ? t1 : t2;
+      final hi = t1 < t2 ? t2 : t1;
+      if (lo > tMin) tMin = lo;
+      if (hi < tMax) tMax = hi;
+      return tMin <= tMax;
+    }
+
+    if (!clipAxis(p.x, d.x) || !clipAxis(p.y, d.y) || !clipAxis(p.z, d.z)) {
+      return;
+    }
+    final a = Vector3(p.x + tMin * d.x, p.y + tMin * d.y, p.z + tMin * d.z);
+    final b = Vector3(p.x + tMax * d.x, p.y + tMax * d.y, p.z + tMax * d.z);
+
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..color = kIntersectionColor;
+    canvas.drawLine(project(a.x, a.y, a.z), project(b.x, b.y, b.z), stroke);
+  }
+
+  void _drawIntersectionCircle(
+    Canvas canvas,
+    CircleIntersection ci,
+    Offset Function(double, double, double) project,
+  ) {
+    final n = ci.normal;
+    final nLen2 = n.dot(n);
+    if (nLen2 < 1e-12 || ci.radius <= 0) return;
+    final nLen = math.sqrt(nLen2);
+    // Build an orthonormal frame (u, v) in the circle plane.
+    final seed =
+        (n.x.abs() < 0.9) ? const Vector3(1, 0, 0) : const Vector3(0, 1, 0);
+    final proj = seed.dot(n) / nLen2;
+    final uRaw = Vector3(
+      seed.x - proj * n.x,
+      seed.y - proj * n.y,
+      seed.z - proj * n.z,
+    );
+    final uLen = math.sqrt(uRaw.dot(uRaw));
+    if (uLen == 0) return;
+    final u = Vector3(uRaw.x / uLen, uRaw.y / uLen, uRaw.z / uLen);
+    final vRaw = n.cross(u);
+    final v = Vector3(vRaw.x / nLen, vRaw.y / nLen, vRaw.z / nLen);
+
+    const samples = 48;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = kIntersectionColor;
+
+    Offset? prev;
+    for (var i = 0; i <= samples; i++) {
+      final theta = 2 * math.pi * i / samples;
+      final ct = math.cos(theta);
+      final st = math.sin(theta);
+      final x = ci.center.x + ci.radius * (u.x * ct + v.x * st);
+      final y = ci.center.y + ci.radius * (u.y * ct + v.y * st);
+      final z = ci.center.z + ci.radius * (u.z * ct + v.z * st);
+      final screen = project(x, y, z);
+      if (prev != null) canvas.drawLine(prev, screen, stroke);
+      prev = screen;
+    }
+  }
+
   @override
   bool shouldRepaint(covariant Scene3DPainter old) =>
       old.scene != scene ||
+      old.intersections != intersections ||
       old.scene.azimuth != scene.azimuth ||
       old.scene.elevation != scene.elevation ||
       old.scene.zoom != scene.zoom ||
