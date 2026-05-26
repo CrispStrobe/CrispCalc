@@ -1912,14 +1912,41 @@ Adv tab already groups precision-arc + ntheory in one place,
 so the boolean keys slot into the same tab without a new
 section. Full suite: 1856 → 1880 pass.
 
-##### Round 113 — Notepad integration
+##### Round 113 — Notepad integration ✅
 
-Notepad lines can now contain predicates. A line like
-`isOK = isprime(2^31 - 1) and (2^31 - 1) < 10^10` resolves
-to `false` (M31 > 10^10), and the result chip renders red.
-Downstream lines referencing `isOK` see a boolean value;
-arithmetic with a boolean coerces to 0/1 (or errors —
-decision for round 113).
+Notepad lines can now contain predicates and have the result
+chip render the same way the calculator history does. Lifted
+the calculator-local `_buildBooleanChip` to a new shared
+`lib/widgets/boolean_chip.dart` (`BooleanChip`) and wired it
+into `notepad_screen.dart::_buildResult` — the existing
+`normalizeBooleanResult` already lowercases SymEngine's
+`True`/`False` before the value reaches the cached result, so
+the chip path keys on `res.trim() == 'true'` / `'false'`. The
+calculator's `_buildBooleanChip` now just `Align`-wraps the
+shared widget (right-anchored inside the history column);
+notepad embeds the chip directly into its already-end-aligned
+result column.
+
+Font sizes differ across the two surfaces: calculator history
+uses 18 (matching the surrounding result text), notepad uses
+16. The shared widget defaults to 18 and exposes a `fontSize`
+parameter for the notepad embed.
+
+**Arithmetic-with-boolean coercion** (the open V1 decision):
+no proactive coercion. If SymEngine's `evaluate` returns a
+symbolic form for `1 + (2 == 2)`, the user sees the symbolic
+form; if it returns an error, the user sees the error. The
+chip path is purely a display layer over already-normalized
+boolean strings — it doesn't touch the engine's typing
+behaviour. Promoting bool→int or refusing the operation can
+be revisited if a real user surface demands it; without that
+signal, we'd be building speculative behaviour.
+
+`tryFoldIfConditional` was already shared (Round 111b) so
+`if(cond, t, e)` works in notepad lines too. Full suite: 1898
+→ 1905 pass (+4 widget tests for `BooleanChip`, +3 notepad
+screen tests verifying chip render on `true`/`false` and
+absence on numeric results).
 
 ##### Round 114 — Reference + help-mode wiring
 

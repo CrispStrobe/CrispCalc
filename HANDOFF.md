@@ -376,6 +376,38 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   for end users. CI / scripted runs still reach the same
   battery via the `CRISPCALC_DIAGNOSTIC=matrix` env-var hook
   at startup.
+- **Round 110 (P7 kickoff)** — Relational operators. Paren-
+  depth-0 longest-match rewrite of `==` / `!=` / `<=` / `>=` /
+  `<` / `>` into SymEngine's `Eq` / `Ne` / `Le` / `Ge` / `Lt` /
+  `Gt`. Calculator + notepad assignment regexes tightened with
+  `=(?!=)`. New `normalizeBooleanResult` lowercases
+  `True`/`False`. Calc history renders bool results as a
+  colored chip via `_buildBooleanChip`.
+- **Round 111** — Logical operators. `preprocessLogicalOperators`
+  is a two-phase walk: phase A recurses into parens, phase B
+  splits at depth 0 in precedence order (`or` < `xor` < `and`)
+  and checks for leading `not`, then falls through to the
+  relational rewrite at the leaf. Python-style precedence.
+  Chained collapse to n-ary `And` / `Or` / `Xor`.
+- **Round 111b** — `if(cond, t, e)` Dart-side fold +
+  paren-descent comma-split fix. `tryFoldIfConditional` detects
+  `if(...)` spanning the whole input, runs the condition
+  through the engine, and returns the chosen branch. The
+  descent into paren-groups now splits the inner content by
+  top-level commas before recursing — fixes the latent
+  `Min(2 == 2, x + 1)` mangling.
+- **Round 112** — Adv-keypad keys + worked examples. Ten new
+  Adv keys (`==` `≠` `<` `≤` `>` `≥` `and` `or` `not` `xor`)
+  with glyph labels + ASCII insertion. Four boolean worked-
+  examples entries in the `numberTheory` category, localized
+  en/de/fr/es. Plus the `if` key in 111b.
+- **Round 113** — Notepad boolean integration. Lifted
+  `_buildBooleanChip` to a shared `lib/widgets/boolean_chip.dart`
+  (`BooleanChip`); notepad's `_buildResult` now renders the
+  chip when the cached result is `true` / `false`. Closes
+  P7's engine + UI layers (only Round 114 — Function Reference
+  catalog + help-mode wiring — remains, and that's gated on
+  P6 round 97).
 - **Docs P6 / P7 / P8 (no round numbers)** — 565 lines of
   PLAN.md added: discoverability + help-system overhaul (P6,
   rounds 91-105), boolean type + relational/logical operators
@@ -790,10 +822,12 @@ the round table). What's left:
    E.1 (Paste-FlatZinc tab) → E.4 (Notepad ↔ FlatZinc).
    PLAN.md → search `CSP Round E`. HANDOFF_NEXT.md has the
    ordered recipe.
-2. **Round 110 — Booleans (P7).** Calculator preprocessor:
-   `a == b` → `Eq(a, b)`, `a and b` → `And(a, b)`, etc.
-   `true`/`false` render as colored chips in history.
-   PLAN P7 has the full 5-round breakdown.
+2. **P7 — Booleans.** Rounds 110 + 111 + 111b + 112 + 113 all
+   shipped (relational + logical preprocessors, `if(...)` fold,
+   Adv-keypad keys, worked examples, notepad chip rendering).
+   Only Round 114 (Function Reference + help-mode wiring for
+   the new operators) remains, and it's gated on P6 round 97
+   landing first. PLAN P7 has the full breakdown.
 3. **P9 follow-ups** (the 3D Scene module is V1-complete but
    has three deferred polish rounds):
    - **A5d** — Raw-coefficient quadric input + painter
