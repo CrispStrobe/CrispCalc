@@ -1,15 +1,18 @@
 # CrispCalc — handover for the next session
 
-Pickup note from the **2026-05-26 (late) session** that
-finished P7 and shipped all three sub-rounds of P6's
-worked-examples discoverability arc. Today's rounds:
+Pickup note from the **2026-05-26 (late) session**. Closed P7
+end-to-end and shipped four sub-rounds of P6 (worked-examples
+discoverability + Function Reference scaffolding). Today's
+rounds:
 
 - **110, 111, 111b, 112, 113** — P7 booleans (relational +
   logical operators, `if(...)` fold, Adv-keypad keys, worked
   examples, notepad chip rendering).
-- **93, 94, 95** — P6 worked-examples discoverability (icon
-  on Calculator + Notepad, surface-scoped filtering, per-
-  module pre-loading via parameterised sentinels).
+- **93, 94, 95** — P6 worked-examples discoverability (icon on
+  Calculator + Notepad, surface-scoped filtering, per-module
+  pre-loading via parameterised sentinels).
+- **96** — P6 Function Reference scaffolding (model + dialog +
+  3-entry seed).
 
 `HANDOFF.md` remains the load-bearing pattern reference.
 
@@ -33,10 +36,10 @@ remind yourself the user wants main.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | (this session — Round 95 + docs) |
-| **Tests** | **1931 pass** (1810 → 1832 → 1856 → 1880 → 1898 → 1905 → 1911 → 1931 across rounds 110/111/112/111b/113/93+94/95) — `flutter analyze` clean |
+| **main HEAD** | (this session — Round 96 + docs) |
+| **Tests** | **1944 pass** (1810 → 1832 → 1856 → 1880 → 1898 → 1905 → 1911 → 1931 → 1944) — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (FlatZinc frontend + QuickXplain MUS) |
-| **CI** | Round 95 push not yet observed; previous pushes were green |
+| **CI** | Round 96 push not yet observed; previous pushes were green |
 
 Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone).
 
@@ -44,54 +47,67 @@ Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone
 
 | Round | What |
 |---|---|
-| **Round 110** | Relational-operator preprocessor (P7 kickoff). `preprocessRelationalOperators` does a paren-depth-0 scan + longest-match rewrite of `==` `!=` `<=` `>=` `<` `>` into SymEngine's `Eq` `Ne` `Le` `Ge` `Lt` `Gt`. Calculator + notepad assignment regexes tightened with `=(?!=)`. New `normalizeBooleanResult` lowercases `True`/`False`. Calculator history renders bool results as a colored chip. 22 tests. |
-| **Round 111** | Logical-operator preprocessor. Two-phase walk that recurses into parens then splits at depth 0 in precedence order. Python-style precedence; chained collapse to n-ary `And`/`Or`/`Xor`. 24 tests. |
-| **Round 112** | Adv-keypad keys + worked examples for P7. Ten new keys + 4 boolean worked-examples entries. |
-| **Round 111b** | `if(cond, t, e)` Dart-side fold + paren-descent comma split. `tryFoldIfConditional` reads the condition through the engine and returns the chosen branch. Descent now splits inner-paren content by top-level commas before recursing. 18 tests. |
-| **Round 113** | Notepad boolean integration via shared `BooleanChip` widget. V1 stance: no arithmetic-with-boolean coercion. 7 tests. |
-| **Round 93** | Worked Examples library out of Settings — `menu_book_outlined` IconButton on Calculator top toolbar + Notepad AppBar. Settings card subtitle updated. |
-| **Round 94** | Surface-scoped filtering. `WorkedExamplesSurface` enum (`calculator`/`notepad`). Notepad allowlist: `{calculus, algebra, linearAlgebra, numberTheory}`. |
-| **Round 95** | Per-module pre-loading via parameterised sentinels. New AppState slots (`pendingSudokuPresetId`, `pendingStatisticsTab`), receiver drain on Sudoku + Statistics, dialog parser extension for `open:<module>?key=value`. `killerSudoku` upgraded to `open:sudoku?preset=killer9x9`; new `statsHypothesisTests` → `open:statistics?tab=tests`. V1 stops at tab-pick; Statistics input pre-fill is a future extension. 14+ tests. |
+| **Round 110** | Relational-operator preprocessor (P7 kickoff). |
+| **Round 111** | Logical-operator preprocessor (two-phase walk; n-ary And/Or/Xor). |
+| **Round 112** | Adv-keypad keys + worked examples for P7. |
+| **Round 111b** | `if(cond, t, e)` Dart-side fold + paren-descent comma split. |
+| **Round 113** | Notepad boolean integration via shared `BooleanChip`. |
+| **Round 93** | Worked Examples library out of Settings — `menu_book_outlined` icon on Calculator top toolbar + Notepad AppBar. |
+| **Round 94** | Surface-scoped filtering. `WorkedExamplesSurface` enum, notepad allowlist. |
+| **Round 95** | Per-module pre-loading via parameterised sentinels. New AppState slots, receivers on Sudoku + Statistics. |
+| **Round 96** | Function Reference scaffolding. New `FunctionRef` model + 9-category enum + 3-entry seed list (`solve` / `isprime` / `pi_precision`). New `FunctionReferenceDialog` widget mirroring worked-examples layout but with ExpansionTile rows for the detail panel. "Try in Calculator" deep-link reuses `AppState.requestInsertExpression`. "See worked example" cross-link wired via a new `workedExampleId` field on `FunctionRef`. Reach-point in Settings (Round 101 will surface it via help-mode toggle). 11 i18n strings × 4 locales. 13 tests (+7 catalogue invariants, +6 dialog widget). |
 
 ## Pickup points — next strategic slot
 
-P7 done. P6 rounds 93+94+95 shipped. Order below is roughly
-by follow-on value.
+P6 rounds 93-96 done; Round 97 is the natural next slot.
 
-1. **Round 96 — Function Reference data model + scaffolding**.
-   New `lib/engine/function_reference.dart` with `FunctionRef`
-   + `FunctionRefCategory` enum (9 categories). Plus a
-   `FunctionReferenceDialog` widget mirroring the worked-
-   examples layout. Cards link to a "Try in Calculator" deep-
-   link (`AppState.pendingInsertExpression`) and a "See worked
-   example" cross-link. This is the foundation for rounds
-   97-100.
+1. **Round 97 — CAS function entries (the meat)**.
+   ~15 entries for the CAS category alone: `solve`,
+   `expand`, `simplify`, `factor`, `diff`, `integrate`,
+   `subst`, `limit`, `series`, `taylor`, `gcd`, `lcm`,
+   `factorial`, `fibonacci`, plus the precision-arc set.
+   Each gets 2-3 examples + the "how SymEngine implements
+   this" one-paragraph explanation. PLAN says these
+   explanations are NOT the math itself — they're "in
+   CrispCalc, `solve(x^2 - 1, x)` returns `[-1, 1]`; the
+   underlying call is SymEngine's `solve_poly()`...".
+   - Round 96 already shipped `solve` and `pi_precision`
+     entries; Round 97 fills in the rest and may upgrade
+     these two with richer prose.
+   - PLAN P7 Round 114 (relational + logical operator
+     entries + truth-table help mode) is a separate slice;
+     it depends on Round 97 landing first.
 
-2. **Round 97 — CAS function entries (the meat)**.
-   ~15 entries for the CAS category alone: `solve`, `expand`,
-   `simplify`, `factor`, `diff`, `integrate`, `subst`,
-   `limit`, `series`, `taylor`, `gcd`, `lcm`, `factorial`,
-   `fibonacci`, + precision-arc set.
+2. **Round 98 — Matrix + linear algebra entries**.
+   `det`, `inv`, `transpose`, `rref`, `Matrix([[…]])`
+   syntax, eigenvalues (if shipped). ~8 entries.
 
-3. **Round 114 — P7 Function Reference + help-mode wiring**
-   (depends on Round 97 landing first).
+3. **Round 99 — Statistics + Constraints + Sudoku entries**.
+   ~15 more entries covering the module functions.
 
-4. **Rounds 98-100** — Matrix + statistics + constraints +
-   sudoku entries + i18n pass.
+4. **Round 100 — i18n pass (~30k words)**. Triage:
+   100a EN-only refinements, 100b DE, 100c FR+ES.
 
-5. **Round 95 follow-up — Statistics input pre-fill**. The V1
-   stops at tab-pick; if a real demand surfaces, the
-   `pendingStatisticsTab` slot could grow to carry a JSON-ish
-   payload with sample-data overrides. Defer until needed.
+5. **Round 101 — Help-mode design + state**.
+   `_helpMode` toggle on Calculator + Notepad AppBars
+   (using `Icons.help_outline` — reserved for this).
+   `HelpModeNotifier` in AppState.
 
-6. **CSP Round E.5** (deferred) — bundle `dart_csp_fzn` CLI
-   as a MiniZinc solver. Blocked on P4 distribution pipeline.
+6. **Rounds 102-104** — Help popovers on the keypad,
+   history rows, and notepad lines.
 
-7. **P9 follow-ups** (A5d / A7 / A8) — 3D Scene polish.
+7. **Round 95 follow-up** — Statistics input pre-fill.
+   `pendingStatisticsTab` slot could grow to a richer
+   payload. Defer until demand surfaces.
 
-8. **Precision arc round 4** (`modpow` / `modinv` / `totient` /
-   `jacobi`) — multi-repo. See `HANDOFF_PRECISION.md`. Cross-
-   repo arc; ask before starting.
+8. **CSP Round E.5** (deferred) — `dart_csp_fzn` CLI as a
+   MiniZinc solver. Blocked on P4 distribution pipeline.
+
+9. **P9 follow-ups** (A5d / A7 / A8) — 3D Scene polish.
+
+10. **Precision arc round 4** (`modpow` / `modinv` /
+    `totient` / `jacobi`) — multi-repo. Cross-repo arc; ask
+    before starting.
 
 ## Known issues / context
 
@@ -99,41 +115,37 @@ by follow-on value.
 
 - **Symbolic `if(...)` doesn't render usefully.** When the
   condition stays symbolic, `tryFoldIfConditional` returns
-  null and the original `if(...)` form flows to SymEngine,
-  which doesn't understand it. Acceptable V1.
-- **Bool-chip detection is a string match** on `'true'`/
+  null. Acceptable V1.
+- **Bool-chip detection is a string match** on `'true'` /
   `'false'`. `normalizeBooleanResult` runs before the cache
-  write so the lowercase form reaches the chip path.
-- **Arithmetic-with-boolean is uncoerced.** Documented in
-  PLAN P7 Round 113.
-- **`if(cond, t, e)` requires the engine.** Headless tests
-  use a stub evaluator.
+  write.
+- **Arithmetic-with-boolean is uncoerced.** PLAN P7 R113.
 
-### P6 (rounds 93-95)
+### P6 (rounds 93-96)
 
-- **Calculator top toolbar now always renders** (was guarded
-  by `history.isNotEmpty`). Needed so the worked-examples
-  icon is reachable from cold start.
-- **`menu_book_outlined`, not `help_outline`.** Round 101's
-  future help-mode toggle will use `help_outline`.
-- **`numberTheory`** is in the notepad allowlist beyond
-  PLAN's `{calculus, algebra, linearAlgebra}` spec — P7 +
-  precision arc both ship `numberTheory` entries that work
-  inline in notepad.
-- **Round 95 sentinel parser is lenient.** Unknown keys are
-  silently ignored — `open:sudoku?foo=bar` opens Sudoku with
-  no pre-load. Typos in catalog entries degrade gracefully
-  rather than crashing.
+- **Calculator top toolbar always renders** (was guarded by
+  `history.isNotEmpty`).
+- **`menu_book_outlined`, not `help_outline`** — the latter
+  is reserved for Round 101.
+- **Round 95 sentinel parser is lenient**: unknown keys
+  silently ignored.
 - **Statistics pre-load is tab-pick only.** Input fields use
-  their built-in default sample data; no AppState payload for
-  overriding them yet. A future round can extend
-  `_pendingStatisticsTab` to a richer payload if needed.
-- **Sudoku initState writes to `late` fields directly.** Dart's
-  `late` semantics: assigning before reading skips the
-  initialiser, which is what we want — `_clueIndexes` /
-  `_baseCells` / `_displayed` get the killer-preset values
-  before the first build. Not using `setState` in `initState`
-  per Flutter convention.
+  built-in defaults.
+- **`FunctionRef.workedExampleId` is an id pointer**, not a
+  structured cross-link. Round 97 can grow this if needed.
+- **Function Reference rows use ExpansionTile** (inline
+  detail) instead of a side-by-side master/detail layout.
+  Reasoning: at 560×480 the dialog isn't wide enough to
+  split. If a wider-screen mode is wanted later, the row
+  can detect `MediaQuery.size.width` and switch layouts.
+- **Action buttons use `Wrap` (not `Row`)** in the row's
+  detail area. The widget tester reproduced an overflow on
+  the narrow dialog; `Wrap` reflows the buttons onto a
+  second line at narrow widths.
+- **`_openWorkedExample` is minimal-viable** — pops the
+  Function Reference dialog and opens Worked Examples, but
+  doesn't pre-filter to the linked entry. Future round: add
+  an `initialSearch` param to `WorkedExamplesDialog`.
 
 ## Hygiene reminders
 
@@ -150,36 +162,26 @@ by follow-on value.
 
 - Boolean preprocessor: `lib/utils/expression_preprocessing_utils.dart`
 - Shared boolean chip widget: `lib/widgets/boolean_chip.dart`
-- **Worked Examples dialog**: `lib/widgets/worked_examples_dialog.dart`
-  (Round 94: `WorkedExamplesSurface` enum + `surface:` ctor
-   parameter + `_allowedCategories()`; Round 95: sentinel
-   parser with `?key=value` suffix in `_insert`)
-- **AppState pending slots**: `lib/engine/app_state.dart`
-  (Round 95: `_pendingSudokuPresetId`,
-   `_pendingStatisticsTab`)
+- Worked Examples dialog: `lib/widgets/worked_examples_dialog.dart`
+- **Function Reference model**: `lib/engine/function_reference.dart`
+  (Round 96: `FunctionRef`, `FunctionRefCategory`,
+   `FunctionRefExample`, `FunctionReferences.all`)
+- **Function Reference dialog**: `lib/widgets/function_reference_dialog.dart`
+  (Round 96: search + chip row + ExpansionTile rows + Try-in-
+   Calculator + See-worked-example)
+- AppState pending slots: `lib/engine/app_state.dart`
 - Calculator: `lib/screens/calculator_screen.dart`
 - Notepad: `lib/screens/notepad_screen.dart`
-- **Sudoku receiver**: `lib/screens/sudoku_screen.dart`
-  (Round 95: new `initState` drains the preset slot before
-   first build)
-- **Statistics receiver**: `lib/screens/statistics_screen.dart`
-  (Round 95: `initState` sets `_tabs.index` from the pending
-   tab slot)
+- Sudoku receiver: `lib/screens/sudoku_screen.dart`
+- Statistics receiver: `lib/screens/statistics_screen.dart`
 - Calculator keypad: `lib/widgets/calculator_keypad.dart`
 - Notepad classifier: `lib/engine/notepad_evaluator.dart`
 - Worked-examples catalog: `lib/engine/worked_examples.dart`
-  (Round 95: `killerSudoku` and new `statsHypothesisTests`
-   entry)
 - Localization: `lib/localization/app_localizations.dart`
-- Tests this session: `test/relational_preprocessor_test.dart`,
-  `test/logical_preprocessor_test.dart`,
-  `test/worked_examples_test.dart`,
-  `test/boolean_chip_test.dart`,
-  `test/notepad_screen_test.dart`,
-  `test/worked_examples_dialog_test.dart`,
-  `test/ui_flows_test.dart`,
-  `test/app_state_test.dart` (Round 95 slot tests),
-  `test/round_95_pre_load_test.dart` (Round 95 receivers +
-   sentinel dispatch)
+  (Round 96: 11 new strings × 4 locales)
+- Tests this session: see HISTORY for the full list. The
+  Round-96 additions are `function_reference_test.dart`
+  (catalogue invariants) and `function_reference_dialog_test.dart`
+  (widget behaviour).
 
 Good luck.

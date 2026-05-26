@@ -104,9 +104,10 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1931 (1810 → 1832 → 1856 → 1880 → 1898 →
-1905 → 1911 → 1931 across P7 rounds 110/111/112/111b/113 and P6
-rounds 93+94+95). All green; CI 6-job matrix on every main push.
+**Tests at session end**: 1944 (1810 → 1832 → 1856 → 1880 → 1898 →
+1905 → 1911 → 1931 → 1944 across P7 rounds 110/111/112/111b/113
+and P6 rounds 93+94+95+96). All green; CI 6-job matrix on every
+main push.
 
 **Working mode change (2026-05-26 EOD)**: parallel-arc work is paused.
 All edits now go directly on `main` in `/Volumes/backups/code/CrispCalc`.
@@ -433,6 +434,18 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   `open:sudoku?preset=killer9x9`; new `statsHypothesisTests`
   entry points at `open:statistics?tab=tests`. V1 stops at
   tab-pick — pre-filling Statistics input fields is deferred.
+- **Round 96** — Function Reference scaffolding (P6 96-100
+  kickoff). New `lib/engine/function_reference.dart` with
+  `FunctionRef` / `FunctionRefCategory` (9 categories) /
+  `FunctionRefExample` + a 3-entry seed list. New
+  `lib/widgets/function_reference_dialog.dart` mirrors the
+  worked-examples dialog layout but uses `ExpansionTile`
+  rows that expand inline to show examples, see-also pills,
+  and `Try in Calculator` / `See worked example` buttons.
+  Reach-point in Settings (Round 101 will surface it via
+  the future help-mode toggle). 11 new i18n strings × 4
+  locales. The `FunctionRef.workedExampleId` field is added
+  beyond PLAN's sketch to make the cross-link concrete.
 - **Docs P6 / P7 / P8 (no round numbers)** — 565 lines of
   PLAN.md added: discoverability + help-system overhaul (P6,
   rounds 91-105), boolean type + relational/logical operators
@@ -863,14 +876,15 @@ the round table). What's left:
    - **A8** — Back-to-front sorting for proper occlusion.
      Cosmetic for now: the back hemisphere of a sphere draws
      over the front when seen edge-on.
-4. **P6 — Discoverability + help (15-round arc, ~⅕ shipped).**
-   Rounds 93 + 94 + 95 shipped today — Worked Examples icon
-   on Calculator + Notepad, surface-scoped filtering, and
+4. **P6 — Discoverability + help (15-round arc, ~¼ shipped).**
+   Rounds 93 + 94 + 95 + 96 shipped today — Worked Examples
+   icon on Calculator + Notepad, surface-scoped filtering,
    per-module pre-loading via parameterised
-   `open:<module>?key=value` sentinels. Next from P6: the
-   Round 96-100 Function Reference arc (50+ entries × 4
-   locales, biggest content round so far). Re-read PLAN P6
-   before committing to the next slice.
+   `open:<module>?key=value` sentinels, and the Function
+   Reference scaffolding (model + dialog + 3-entry seed).
+   Next from P6: Round 97 fills the CAS category with ~15
+   entries (the largest content round so far in the P6 arc).
+   Re-read PLAN P6 §96-100 before committing.
 
 ### Bigger strategic next: discoverability + help (P6, rounds 91-105)
 

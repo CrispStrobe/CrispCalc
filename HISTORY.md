@@ -2,6 +2,105 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 96) — Function Reference scaffolding
+
+Opens the rounds-96-100 Function Reference arc with a minimal
+data model + dialog + 3-entry seed list. Round 97 grows the
+catalogue; Round 96 is "build the rails".
+
+### Data model
+
+`lib/engine/function_reference.dart` carries three types:
+
+- `FunctionRefCategory` — 9 values exactly matching PLAN's
+  spec: `cas`, `numberTheory`, `precision`, `matrix`,
+  `graphing`, `statistics`, `constraints`, `sudoku`, `units`.
+- `FunctionRefExample` — `(input, expected, hint)` triple
+  rendered in the detail panel.
+- `FunctionRef` — `id` + `category` + `signature` +
+  `shortDescription` + `examples` list + `seeAlso` list of
+  other ids + an optional `workedExampleId` pointer into
+  `WorkedExamples.all` for the "See worked example"
+  cross-link.
+
+The `workedExampleId` field is added beyond PLAN's sketch
+because PLAN's "See worked example" cross-link needed *some*
+way to refer to a worked-examples entry; an id pointer is
+the smallest unit that works. The dialog only renders the
+cross-link button when the id resolves, so the field can be
+omitted on entries that don't need it.
+
+Seed list: 3 entries — `solve` (CAS), `isprime` (number
+theory), `pi_precision` (precision). Just enough to validate
+model → dialog → tests end-to-end before Round 97's bulk
+content lands.
+
+### Dialog
+
+`lib/widgets/function_reference_dialog.dart` mirrors the
+worked-examples dialog layout (560×480 AlertDialog, search
+field, horizontal category-chip row, scrollable list) but
+each row is an `ExpansionTile` rather than a plain ListTile.
+Tapping expands inline to show:
+
+- All `FunctionRefExample` triples — input rendered as
+  selectable monospace text with a per-row copy icon;
+  `→ expected`; hint as italic small text.
+- A "See also:" pill row with the linked ids.
+- A `Wrap` of two action buttons: "Try in Calculator" (only
+  renders when `examples` is non-empty) calls
+  `AppState.requestInsertExpression(examples.first.input)`
+  and pops the dialog; "See worked example" (only renders
+  when `workedExampleId` resolves) pops the dialog and
+  opens `WorkedExamplesDialog` (V1 minimum — pre-filtering
+  to the linked entry can be a future addition once
+  `WorkedExamplesDialog` exposes an `initialSearch` param).
+
+`Wrap` (not `Row`) for the button area because the widget
+tester reproduced a ~90px horizontal overflow on the
+narrow dialog at the default 1280-wide canvas; `Wrap`
+reflows onto a second line cleanly.
+
+Detail-inline (ExpansionTile) rather than side-by-side
+master/detail because the dialog content is 560×480 —
+splitting it leaves both columns cramped on the narrow
+breakpoint. Mobile-first; if a wider-screen mode is wanted
+later, the row can branch on `MediaQuery.size.width` and
+switch layouts.
+
+### Reach-point
+
+For Round 96 the dialog is reached via a new tile in the
+Settings list (`Icons.functions` leading, between the
+existing Worked Examples and Help tiles). Round 101's
+help-mode toggle will surface it inline from Calculator +
+Notepad.
+
+### Localization
+
+11 new strings × 4 locales: dialog title / search hint /
+empty / "See also:" / "Try in Calculator" / "See worked
+example" / Settings tile title + subtitle / each + 9
+category labels.
+
+### Tests
+
+- 7 catalogue invariants in `function_reference_test.dart`:
+  non-empty + cap, unique snake_case ids, signature +
+  shortDescription always set, `seeAlso` ids resolve
+  (lenient — unknown ids will be tightened in Round 97),
+  `workedExampleId` resolves in `WorkedExamples.all` when
+  set, example inputs + expecteds non-empty, enum has all
+  9 PLAN-spec values.
+- 6 widget tests in
+  `function_reference_dialog_test.dart`: title + chips,
+  seed entries visible, search filters, expand reveals
+  examples + button, "Try in Calculator" tap stashes onto
+  AppState, "See worked example" button surfaces when the
+  WE id resolves.
+
+Suite 1931 → 1944.
+
 ## 2026-05-26 (P6 Round 95) — Examples open the right module (parameterised sentinels)
 
 Closes the discovery loop opened by rounds 93+94: worked

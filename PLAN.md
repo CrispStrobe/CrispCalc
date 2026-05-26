@@ -1562,9 +1562,52 @@ test counts).
 
 #### Rounds 96-100: Function Reference surface
 
-##### Round 96 — Data model + scaffolding
+##### Round 96 — Data model + scaffolding ✅
 
-New `lib/engine/function_reference.dart` with:
+Shipped. `lib/engine/function_reference.dart` carries the
+`FunctionRef` / `FunctionRefCategory` / `FunctionRefExample`
+trio plus a 3-entry seed list (`solve` / `isprime` /
+`pi_precision`) chosen to validate the full
+catalogue → dialog → tests pipeline before Round 97 grows
+it. Categories follow the PLAN spec exactly (9 values).
+
+The `FunctionRef` model has one addition over the PLAN
+sketch: a `workedExampleId: String?` field. PLAN's "See
+worked example" cross-link needed a way to refer to a
+worked-examples entry, and an id pointer is the smallest
+unit that does the job. The dialog looks it up in
+`WorkedExamples.all` and only renders the button when the
+id resolves; a future round can grow this to a structured
+cross-link without touching the schema.
+
+`lib/widgets/function_reference_dialog.dart` mirrors
+`WorkedExamplesDialog` (search field, category-chip row,
+scrollable list) but each row is an `ExpansionTile` rather
+than a plain ListTile. Tapping expands inline to show the
+2–3 examples + see-also pill row + action buttons ("Try in
+Calculator" and "See worked example"). "Try in Calculator"
+uses the existing `AppState.requestInsertExpression` slot —
+same path the worked-examples dialog uses for non-sentinel
+expressions.
+
+V1 keeps detail inline (ExpansionTile) rather than a side-
+by-side master / detail layout because the dialog content
+is 560×480; splitting it would leave both columns cramped
+on the narrow breakpoint.
+
+Reach-point: a Settings tile (`Icons.functions` leading) for
+Round 96. Round 101's help-mode toggle will surface the
+dialog inline from Calculator + Notepad.
+
+Localization: 11 new strings (title / search hint / empty /
+see also / two button labels / one settings tile + subtitle
+/ each + 9 category labels) shipped across en/de/fr/es.
+
+Suite 1931 → 1944 (+7 catalogue invariants in
+`function_reference_test.dart`, +6 dialog widget tests in
+`function_reference_dialog_test.dart`).
+
+PLAN sketch (kept for reference):
 
 ```dart
 class FunctionRef {
