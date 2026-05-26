@@ -29,7 +29,11 @@
 // `sqrt(2, N)`, `EulerGamma(N)`, `factorint`, `nextprime`,
 // `prevprime`. PLAN names `series` / `taylor` too — those aren't
 // in the bridge yet (no SymEngine `series_expansion` binding),
-// so they're deferred. Rounds 98-99 grow matrix / stats /
+// so they're deferred. Round 98 fills the matrix category:
+// `Matrix(...)` literal syntax, `det`, `inv`, `transpose`,
+// `rref`, plus a combined matrix-arithmetic entry. Eigenvalues
+// are NOT shipped (PLAN's "if shipped" carve-out) and are
+// deferred until a bridge binding exists. Round 99 grows stats /
 // constraints categories.
 
 import 'worked_examples.dart' show WorkedExample;
@@ -690,6 +694,199 @@ class FunctionReferences {
         ),
       ],
       seeAlso: ['pi_precision', 'e_precision', 'sqrt_precision'],
+    ),
+    // === Matrix / linear algebra =============================================
+    FunctionRef(
+      id: 'matrix_literal',
+      category: FunctionRefCategory.matrix,
+      signature: 'Matrix([[a, b, ...], [c, d, ...], ...])',
+      shortDescription:
+          'Matrix literal: a list of rows, each row a list of cell '
+          'expressions. Cells can be numbers, fractions, or symbolic.',
+      examples: [
+        FunctionRefExample(
+          input: 'Matrix([[1, 2], [3, 4]])',
+          expected: 'Matrix([[1, 2], [3, 4]])',
+          hint: 'In CrispCalc, the `Matrix(...)` literal is recognised by the '
+              'matrix evaluator before the engine sees the expression. The '
+              'underlying call is SymEngine\'s `DenseMatrix` constructor — '
+              'the row/col layout is fixed at construction.',
+        ),
+        FunctionRefExample(
+          input: 'Matrix([[1/2, 0], [0, 1/3]])',
+          expected: 'Matrix([[1/2, 0], [0, 1/3]])',
+          hint: 'Cells stay symbolic — rationals don\'t collapse to floats. '
+              'Same goes for free symbols: `Matrix([[a, b], [c, d]])` is '
+              'accepted and propagated through `det` / `inv` / `rref`.',
+        ),
+        FunctionRefExample(
+          input: 'Matrix([[1, 2, 3], [4, 5, 6]])',
+          expected: 'Matrix([[1, 2, 3], [4, 5, 6]])',
+          hint: 'Non-square matrices are fine for `transpose` and `rref` but '
+              'will fail for `det` / `inv`, which require square input.',
+        ),
+      ],
+      seeAlso: ['det', 'inv', 'transpose', 'rref'],
+    ),
+    FunctionRef(
+      id: 'det',
+      category: FunctionRefCategory.matrix,
+      signature: 'det(Matrix(...))',
+      shortDescription:
+          'Determinant of a square matrix. Returns a symbolic scalar.',
+      examples: [
+        FunctionRefExample(
+          input: 'det(Matrix([[1, 2], [3, 4]]))',
+          expected: '-2',
+          hint: 'In CrispCalc, `det(M)` evaluates as a single scalar. The '
+              'underlying call is SymEngine\'s `DenseMatrix::det()`, which '
+              'uses the Bareiss fraction-free algorithm — exact for '
+              'symbolic / rational entries, no float blow-up.',
+        ),
+        FunctionRefExample(
+          input: 'det(Matrix([[1, 2, 3], [0, 1, 4], [5, 6, 0]]))',
+          expected: '1',
+          hint: 'Classic 3×3 textbook example — Laplace cofactor expansion '
+              'gives the same answer in 6 terms.',
+        ),
+        FunctionRefExample(
+          input: 'det(Matrix([[a, b], [c, d]]))',
+          expected: 'a*d - b*c',
+          hint: 'Symbolic entries pass through unchanged. Bareiss keeps the '
+              'result as a SymEngine `Add` rather than a float.',
+        ),
+      ],
+      seeAlso: ['inv', 'transpose', 'rref', 'matrix_literal'],
+      workedExampleId: 'matrixDet',
+    ),
+    FunctionRef(
+      id: 'inv',
+      category: FunctionRefCategory.matrix,
+      signature: 'inv(Matrix(...))',
+      shortDescription:
+          'Inverse of a square non-singular matrix. Errors when `det = 0`.',
+      examples: [
+        FunctionRefExample(
+          input: 'inv(Matrix([[4, 7], [2, 6]]))',
+          expected: 'Matrix([[3/5, -7/10], [-1/5, 2/5]])',
+          hint: 'In CrispCalc, `inv(M)` returns `adj(M)/det(M)`. The '
+              'underlying call is SymEngine\'s `DenseMatrix::inv()`, which '
+              'uses Gauss–Jordan elimination over the rationals — entries '
+              'come back as exact fractions, not floats.',
+        ),
+        FunctionRefExample(
+          input: 'inv(Matrix([[1, 0], [0, 1]]))',
+          expected: 'Matrix([[1, 0], [0, 1]])',
+          hint: 'Identity matrix is self-inverse — a quick smoke test that '
+              'the bridge round-trips correctly.',
+        ),
+        FunctionRefExample(
+          input: 'inv(Matrix([[1, 2], [2, 4]]))',
+          expected: 'Error: inv failed: singular matrix',
+          hint: 'Singular input (det = 0) errors out cleanly rather than '
+              'returning bogus large numbers. The error chip surfaces in '
+              'the calculator history.',
+        ),
+      ],
+      seeAlso: ['det', 'rref', 'transpose', 'matrix_literal'],
+      workedExampleId: 'matrixInverse',
+    ),
+    FunctionRef(
+      id: 'transpose',
+      category: FunctionRefCategory.matrix,
+      signature: 'transpose(Matrix(...))',
+      shortDescription:
+          'Transpose: swap rows and columns. Works on rectangular matrices.',
+      examples: [
+        FunctionRefExample(
+          input: 'transpose(Matrix([[1, 2], [3, 4]]))',
+          expected: 'Matrix([[1, 3], [2, 4]])',
+          hint: 'In CrispCalc, `transpose(M)` is implemented Dart-side because '
+              'the bridge doesn\'t expose a transpose entry point. We '
+              'allocate a fresh `SymEngineMatrix` with swapped dimensions '
+              'and copy cells element-by-element.',
+        ),
+        FunctionRefExample(
+          input: 'transpose(Matrix([[1, 2, 3], [4, 5, 6]]))',
+          expected: 'Matrix([[1, 4], [2, 5], [3, 6]])',
+          hint: 'Rectangular input: a 2×3 becomes a 3×2 — useful for paired '
+              'sample data layouts.',
+        ),
+        FunctionRefExample(
+          input: 'transpose(transpose(Matrix([[1, 2], [3, 4]])))',
+          expected: 'Matrix([[1, 2], [3, 4]])',
+          hint: 'Idempotent under two applications. Verifies the cell-swap '
+              'preserves the symbolic content untouched.',
+        ),
+      ],
+      seeAlso: ['det', 'inv', 'rref', 'matrix_literal'],
+    ),
+    FunctionRef(
+      id: 'rref',
+      category: FunctionRefCategory.matrix,
+      signature: 'rref(Matrix(...))',
+      shortDescription:
+          'Reduced row echelon form via Gauss–Jordan elimination. Works '
+          'over symbolic / rational entries.',
+      examples: [
+        FunctionRefExample(
+          input: 'rref(Matrix([[1, 2, 5], [3, 4, 11]]))',
+          expected: 'Matrix([[1, 0, -1], [0, 1, 3]])',
+          hint: 'In CrispCalc, `rref` runs Gauss–Jordan in Dart and calls '
+              'SymEngine\'s `simplify()` per cell update. The bridge '
+              'doesn\'t expose `rref` directly, so the algorithm walks '
+              'columns left-to-right, scales the pivot row, then '
+              'eliminates the column above and below.',
+        ),
+        FunctionRefExample(
+          input: 'rref(Matrix([[1, 2], [2, 4]]))',
+          expected: 'Matrix([[1, 2], [0, 0]])',
+          hint: 'Rank-deficient input: the second row reduces to all zeros. '
+              'Useful for spotting linear dependence visually.',
+        ),
+        FunctionRefExample(
+          input: 'rref(Matrix([[2, 4], [0, 6]]))',
+          expected: 'Matrix([[1, 0], [0, 1]])',
+          hint: 'Pivot scaling normalises leading entries to 1. Symbolic '
+              'non-zero detection is the soft spot — see the algorithm '
+              'note in `matrix_evaluator.dart`.',
+        ),
+      ],
+      seeAlso: ['det', 'inv', 'transpose', 'matrix_literal'],
+      workedExampleId: 'rref',
+    ),
+    FunctionRef(
+      id: 'matrix_arithmetic',
+      category: FunctionRefCategory.matrix,
+      signature: 'Matrix(...) + / - / *  Matrix(...)',
+      shortDescription:
+          'Element-wise addition / subtraction and matrix multiplication '
+          'on `Matrix(...)` literals.',
+      examples: [
+        FunctionRefExample(
+          input: 'Matrix([[1, 2], [3, 4]]) + Matrix([[5, 6], [7, 8]])',
+          expected: 'Matrix([[6, 8], [10, 12]])',
+          hint: 'In CrispCalc, matrix binary ops are dispatched by the '
+              'matrix evaluator when both operands parse as `Matrix(...)` '
+              'literals. The underlying call is SymEngine\'s `add_dense_'
+              'dense`; subtraction goes through `add_dense_dense` with '
+              'an element-wise negation of the right-hand side.',
+        ),
+        FunctionRefExample(
+          input: 'Matrix([[1, 2], [3, 4]]) * Matrix([[1, 0], [0, 1]])',
+          expected: 'Matrix([[1, 2], [3, 4]])',
+          hint: 'Multiplication is the standard row-by-column dot product '
+              'via SymEngine\'s `mul_dense_dense`. Right-multiplication '
+              'by the identity is a sanity check.',
+        ),
+        FunctionRefExample(
+          input: 'Matrix([[1, 2], [3, 4]]) - Matrix([[1, 1], [1, 1]])',
+          expected: 'Matrix([[0, 1], [2, 3]])',
+          hint: 'Subtraction is element-wise; dimension mismatch errors '
+              'cleanly with `Error: matrix - failed: …`.',
+        ),
+      ],
+      seeAlso: ['det', 'inv', 'matrix_literal'],
     ),
   ];
 }

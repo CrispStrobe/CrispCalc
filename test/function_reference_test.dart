@@ -96,6 +96,27 @@ void main() {
       }
     });
 
+    test('round 98: catalogue covers the matrix / linear-algebra slate', () {
+      // PLAN P6 §98 names det / inv / transpose / rref / Matrix(...)
+      // syntax plus eigenvalues (the last "if shipped" — bridge has
+      // no binding, so it stays deferred). Round 98 also folds the
+      // matrix binary ops (+ / - / *) into one `matrix_arithmetic`
+      // entry rather than spawning three near-duplicate rows.
+      final ids = {for (final e in FunctionReferences.all) e.id};
+      const expectedMatrix = {
+        'matrix_literal',
+        'det',
+        'inv',
+        'transpose',
+        'rref',
+        'matrix_arithmetic',
+      };
+      for (final id in expectedMatrix) {
+        expect(ids, contains(id),
+            reason: 'Round 98 matrix slate missing "$id"');
+      }
+    });
+
     test('workedExampleId, when present, resolves to WorkedExamples.all', () {
       final weIds = {for (final w in WorkedExamples.all) w.id};
       for (final e in FunctionReferences.all) {
