@@ -180,6 +180,11 @@ class ExpressionPreprocessingUtils {
   }
 
   static String extractNumericFromSolveResult(String solveResult) {
+    // Multi-solution result like "x = 1, x = 2" — the regex
+    // anchored at end would happily extract "2" from the last
+    // `x = N` chunk, which would be misleading (which solution?).
+    // Bail when the result has multiple solutions.
+    if (solveResult.contains(',')) return solveResult;
     final match =
         RegExp(r'[a-zA-Z]\s*=\s*([+-]?[\d.]+)\s*$').firstMatch(solveResult);
     if (match != null && !match.group(1)!.contains(',')) {
@@ -419,9 +424,13 @@ class ExpressionPreprocessingUtils {
         .replaceAll(RegExp(r'\s*\+\s*0\.0\s*\*\s*I\s*\*\s*\d+'), '')
         .replaceAll(RegExp(r'^\s*0(\.0*)?\s*\*\s*I\s*$'), '0');
 
-    // I -> i for display.
+    // I -> i for display. Use replaceAllMapped — Dart's plain
+    // `replaceAll(RegExp, String)` doesn't interpret `\1`-style
+    // back-references; pass-through would otherwise emit the
+    // literal text `\1i` instead of the captured digits.
     normalized = normalized
-        .replaceAll(RegExp(r'(\d+)\s*\*\s*I\b'), r'\1i')
+        .replaceAllMapped(
+            RegExp(r'(\d+)\s*\*\s*I\b'), (m) => '${m.group(1)}i')
         .replaceAll(RegExp(r'\bI\b'), 'i');
 
     // Normalize spacing.
@@ -438,10 +447,16 @@ class ExpressionPreprocessingUtils {
     // unary `-` glued to its operand.
     normalized = normalized
         .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll(RegExp(r'\s*\+\s*'), ' + ')
+        .replaceAll(RegExp(r'\s*\+\s*'), ' + ');
+    // Use a lookahead for the trailing `\S` so it isn't consumed.
+    // The old form `(\S)\s*-\s*(\S)` would gobble the right
+    // operand and leave a chained `a-b-c` half-spaced as
+    // `a - b-c` — the `b` was consumed by the first match and
+    // the next iteration's start position skipped past it.
+    normalized = normalized
         .replaceAllMapped(
-          RegExp(r'(\S)\s*-\s*(\S)'),
-          (m) => '${m[1]} - ${m[2]}',
+          RegExp(r'(\S)\s*-\s*(?=\S)'),
+          (m) => '${m[1]} - ',
         )
         .replaceAll(RegExp(r'\s*\*\s*'), '*')
         .trim();
@@ -459,9 +474,13 @@ class ExpressionPreprocessingUtils {
         .replaceAll('**3', '³')
         .replaceAllMapped(RegExp(r'\*\*(\d+)'), (m) => '^${m.group(1)}');
 
-    // Drop the `*` between coefficient and single-letter variable.
+    // Drop the `*` between a coefficient and a single-letter
+    // variable. The negative lookahead must include `[a-zA-Z]` so
+    // multi-letter idents (`2*sin`, `3*cos`) keep their `*` —
+    // otherwise `sin` reads as the letter `s` followed by `in` and
+    // we strip the join, mangling `2*sin` → `2sin`.
     normalized = normalized.replaceAllMapped(
-      RegExp(r'(\d+)\s*\*\s*([a-zA-Z])(?!\*)'),
+      RegExp(r'(\d+)\s*\*\s*([a-zA-Z])(?![a-zA-Z\*])'),
       (m) => '${m.group(1)}${m.group(2)}',
     );
 
