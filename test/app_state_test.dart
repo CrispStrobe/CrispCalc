@@ -189,4 +189,45 @@ void main() {
       s.consumePendingStatisticsTab();
     });
   });
+
+  // Round 101 (P6): app-wide help-mode flag — used by HelpTarget on
+  // Calculator + Notepad to render a dotted-outline affordance. Tap
+  // handling for the actual popovers lands in Rounds 102-104.
+  group('helpMode', () {
+    setUp(() => AppState().setHelpMode(false));
+
+    test('defaults to false', () {
+      expect(AppState().helpMode, isFalse);
+    });
+
+    test('setHelpMode flips the flag and notifies', () {
+      final s = AppState();
+      var calls = 0;
+      void listener() => calls++;
+      s.addListener(listener);
+      s.setHelpMode(true);
+      expect(s.helpMode, isTrue);
+      expect(calls, equals(1));
+      s.removeListener(listener);
+    });
+
+    test('setHelpMode is a no-op when the value is unchanged', () {
+      final s = AppState();
+      s.setHelpMode(true);
+      var calls = 0;
+      void listener() => calls++;
+      s.addListener(listener);
+      s.setHelpMode(true);
+      expect(calls, equals(0));
+      s.removeListener(listener);
+    });
+
+    test('toggleHelpMode flips the flag', () {
+      final s = AppState();
+      s.toggleHelpMode();
+      expect(s.helpMode, isTrue);
+      s.toggleHelpMode();
+      expect(s.helpMode, isFalse);
+    });
+  });
 }

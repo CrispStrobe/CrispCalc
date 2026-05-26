@@ -178,6 +178,14 @@ class AppState extends ChangeNotifier {
   bool _autoBindSolve = false;
   bool get autoBindSolve => _autoBindSolve;
 
+  /// Round 101 (P6): app-wide help mode. When true, target widgets
+  /// on Calculator + Notepad render a dotted-blue outline as an
+  /// affordance hint; tap handling is layered on in Rounds 102-104.
+  /// Ephemeral — not persisted across launches (help mode is a
+  /// momentary exploration state, not a sticky preference).
+  bool _helpMode = false;
+  bool get helpMode => _helpMode;
+
   /// Read persisted settings into memory. Must be awaited before runApp.
   /// Pass `force: true` (from tests) to re-read prefs after they've been
   /// mocked with new values — production callers should leave this alone.
@@ -192,6 +200,7 @@ class AppState extends ChangeNotifier {
     _exactIntegerMode = true;
     _onboardingDismissed = false;
     _autoBindSolve = false;
+    _helpMode = false;
     history.clear();
     userVariables.clear();
     userFunctions.clear();
@@ -447,6 +456,14 @@ class AppState extends ChangeNotifier {
     _prefs?.setBool(_kAutoBindSolve, enabled);
     notifyListeners();
   }
+
+  void setHelpMode(bool enabled) {
+    if (_helpMode == enabled) return;
+    _helpMode = enabled;
+    notifyListeners();
+  }
+
+  void toggleHelpMode() => setHelpMode(!_helpMode);
 
   void setUserFunction(UserFunction fn) {
     userFunctions[fn.name] = fn;

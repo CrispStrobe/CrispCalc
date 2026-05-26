@@ -1740,16 +1740,29 @@ i18n round to date — 50+ entries × ~150 words each × 4 locales
 
 #### Rounds 101-104: Help overlay system
 
-##### Round 101 — Help-mode design + state
+##### Round 101 — Help-mode design + state — **SHIPPED 2026-05-26**
 
-Each screen's `_ScreenState` gains a `_helpMode: bool`. AppBar
-gets a `(?)` IconButton that toggles. New `HelpModeNotifier`
-in AppState so we can show / hide help mode across screens
-consistently (Calculator + Notepad share). Visual: when
-`_helpMode` is true, target widgets get a dotted blue outline.
+State landed on AppState itself (`bool helpMode` +
+`setHelpMode` + `toggleHelpMode`) rather than as a separate
+`HelpModeNotifier` class — AppState is already a
+ChangeNotifier and a singleton, so the extra layer would have
+been overhead. Intentionally **not persisted** across launches
+(help mode is a momentary exploration state, not a sticky
+preference).
 
-Round 101 ships just the toggle + outline — no popovers yet.
-Establishes the pattern.
+`HelpTarget` widget (`lib/widgets/help_target.dart`) wraps a
+child and paints a dotted-blue outline via an inline
+`CustomPainter` when helpMode is on; pass-through when off.
+AppBar toggles on both Calculator and Notepad (`Icons.help` /
+`Icons.help_outline` swap). Demonstration wrappers applied to
+Calculator history rows and Notepad line rows so the toggle
+has a visible effect.
+
+Two new i18n strings × 4 locales:
+`helpModeEnableTooltip` / `helpModeDisableTooltip`. New tests:
+4 AppState helpMode unit tests + 3 HelpTarget widget tests.
+1955 → 1962. Round 102 will hang per-button popovers off
+HelpTarget wrappers on the Adv-tab keypad.
 
 ##### Round 102 — Help popovers on Calculator keypad
 

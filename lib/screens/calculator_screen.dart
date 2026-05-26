@@ -13,6 +13,7 @@ import '../engine/calculator_engine.dart';
 // Widget imports
 import '../widgets/boolean_chip.dart';
 import '../widgets/calculator_keypad.dart';
+import '../widgets/help_target.dart';
 import '../widgets/latex_input_field.dart';
 import '../widgets/memory_dialogs.dart';
 import '../widgets/function_picker_dialogs.dart';
@@ -2093,6 +2094,29 @@ class CalculatorScreenState extends State<CalculatorScreen>
                             builder: (_) => const WorkedExamplesDialog(),
                           ),
                         ),
+                        // Round 101 (P6): help-mode toggle. Filled icon
+                        // + colored when active. Wrapping HelpTarget /
+                        // popovers land in Rounds 102-104.
+                        ListenableBuilder(
+                          listenable: _appState,
+                          builder: (context, _) {
+                            final on = _appState.helpMode;
+                            final t = AppLocalizations.of(context);
+                            return IconButton(
+                              icon: Icon(
+                                on ? Icons.help : Icons.help_outline,
+                                size: 20,
+                                color: on
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                              ),
+                              tooltip: on
+                                  ? t.helpModeDisableTooltip
+                                  : t.helpModeEnableTooltip,
+                              onPressed: _appState.toggleHelpMode,
+                            );
+                          },
+                        ),
                         if (_appState.history.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Text(
@@ -2260,64 +2284,66 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                   final shownResult = isBigInt
                                       ? ExactInteger.abbreviate(entry.result)
                                       : display;
-                                  return GestureDetector(
-                                    onTap: isBigInt
-                                        ? () => _copyBigIntegerToClipboard(
-                                            context, entry.result)
-                                        : null,
-                                    onLongPress: () =>
-                                        _showHistoryEntryMenu(context, entry),
-                                    onSecondaryTap: () =>
-                                        _showHistoryEntryMenu(context, entry),
-                                    behavior: HitTestBehavior.opaque,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        _buildExpressionDisplay(
-                                            entry.expression),
-                                        const SizedBox(height: 4),
-                                        if (boolChip != null && !isError)
-                                          _buildBooleanChip(context, boolChip)
-                                        else
-                                          Text(
-                                            isError
-                                                ? display
-                                                : '= $shownResult',
-                                            style: TextStyle(
-                                              fontSize: isError
-                                                  ? 16
-                                                  : (isBigInt ? 18 : 28),
-                                              color: isError
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .error
-                                                  : Colors.blue[300],
-                                              fontStyle: isError
-                                                  ? FontStyle.italic
-                                                  : FontStyle.normal,
-                                            ),
-                                            textAlign: TextAlign.right,
-                                            softWrap: true,
-                                          ),
-                                        if (isBigInt)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 2),
-                                            child: Text(
-                                              '${tt.exactIntegerBadge(digitCount)} · ${tt.exactIntegerTapToCopy}',
+                                  return HelpTarget(
+                                    child: GestureDetector(
+                                      onTap: isBigInt
+                                          ? () => _copyBigIntegerToClipboard(
+                                              context, entry.result)
+                                          : null,
+                                      onLongPress: () =>
+                                          _showHistoryEntryMenu(context, entry),
+                                      onSecondaryTap: () =>
+                                          _showHistoryEntryMenu(context, entry),
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          _buildExpressionDisplay(
+                                              entry.expression),
+                                          const SizedBox(height: 4),
+                                          if (boolChip != null && !isError)
+                                            _buildBooleanChip(context, boolChip)
+                                          else
+                                            Text(
+                                              isError
+                                                  ? display
+                                                  : '= $shownResult',
                                               style: TextStyle(
-                                                fontSize: 11,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.6),
-                                                fontStyle: FontStyle.italic,
+                                                fontSize: isError
+                                                    ? 16
+                                                    : (isBigInt ? 18 : 28),
+                                                color: isError
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .error
+                                                    : Colors.blue[300],
+                                                fontStyle: isError
+                                                    ? FontStyle.italic
+                                                    : FontStyle.normal,
                                               ),
                                               textAlign: TextAlign.right,
+                                              softWrap: true,
                                             ),
-                                          ),
-                                      ],
+                                          if (isBigInt)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                '${tt.exactIntegerBadge(digitCount)} · ${tt.exactIntegerTapToCopy}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   );
                                 }),

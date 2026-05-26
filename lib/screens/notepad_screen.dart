@@ -38,6 +38,7 @@ import '../utils/expression_preprocessing_utils.dart';
 import '../utils/latex_conversion_utils.dart';
 import '../utils/math_display_utils.dart';
 import '../widgets/boolean_chip.dart';
+import '../widgets/help_target.dart';
 import '../widgets/notepad_manager_dialog.dart';
 import '../widgets/store_result_dialogs.dart';
 import '../widgets/worked_examples_dialog.dart';
@@ -993,6 +994,22 @@ class _NotepadScreenState extends State<NotepadScreen> {
           ),
         ),
       ),
+      // Round 101 (P6): help-mode toggle. Mirrors the Calculator
+      // AppBar control so the affordance carries across surfaces.
+      ListenableBuilder(
+        listenable: _appState,
+        builder: (context, _) {
+          final on = _appState.helpMode;
+          return IconButton(
+            icon: Icon(
+              on ? Icons.help : Icons.help_outline,
+              color: on ? Theme.of(context).colorScheme.primary : null,
+            ),
+            tooltip: on ? t.helpModeDisableTooltip : t.helpModeEnableTooltip,
+            onPressed: _appState.toggleHelpMode,
+          );
+        },
+      ),
       if (doc != null)
         IconButton(
           icon: const Icon(Icons.add),
@@ -1198,25 +1215,27 @@ class _NotepadLineRow extends StatelessWidget {
       return Padding(
         key: ValueKey('row-${line.id}'),
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _DragHandle(index: index),
-            Expanded(
-              flex: 3,
-              child: _buildInputField(context),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: _NotepadResultColumn(
-                line: line,
-                isPending: isPending,
-                onScrollToLineId: onScrollToLineId,
+        child: HelpTarget(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _DragHandle(index: index),
+              Expanded(
+                flex: 3,
+                child: _buildInputField(context),
               ),
-            ),
-            _DeleteButton(onPressed: onDelete),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: _NotepadResultColumn(
+                  line: line,
+                  isPending: isPending,
+                  onScrollToLineId: onScrollToLineId,
+                ),
+              ),
+              _DeleteButton(onPressed: onDelete),
+            ],
+          ),
         ),
       );
     }
@@ -1225,29 +1244,31 @@ class _NotepadLineRow extends StatelessWidget {
     return Padding(
       key: ValueKey('row-${line.id}'),
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DragHandle(index: index),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildInputField(context),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4, bottom: 4),
-                  child: _NotepadResultColumn(
-                    line: line,
-                    isPending: isPending,
-                    onScrollToLineId: onScrollToLineId,
-                    alignStart: true,
+      child: HelpTarget(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DragHandle(index: index),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildInputField(context),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4, bottom: 4),
+                    child: _NotepadResultColumn(
+                      line: line,
+                      isPending: isPending,
+                      onScrollToLineId: onScrollToLineId,
+                      alignStart: true,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          _DeleteButton(onPressed: onDelete),
-        ],
+            _DeleteButton(onPressed: onDelete),
+          ],
+        ),
       ),
     );
   }

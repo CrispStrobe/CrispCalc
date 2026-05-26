@@ -515,6 +515,13 @@ abstract class AppLocalizations {
   String get clearFunctionSlotTooltip;
   String get deleteMemorySlotTooltip;
 
+  // -- Help mode (Round 101 / P6) --
+  /// Tooltip on the AppBar `(?)` toggle when help mode is off.
+  String get helpModeEnableTooltip;
+
+  /// Tooltip on the AppBar `(?)` toggle when help mode is on.
+  String get helpModeDisableTooltip;
+
   // -- Worked examples library --
   String get workedExamplesTitle;
   String get workedExamplesSearchHint;
@@ -1729,6 +1736,12 @@ class EnLocalizations implements AppLocalizations {
   String get clearFunctionSlotTooltip => 'Clear function slot';
   @override
   String get deleteMemorySlotTooltip => 'Delete memory slot';
+
+  @override
+  String get helpModeEnableTooltip =>
+      'Help mode: tap any control for an explanation';
+  @override
+  String get helpModeDisableTooltip => 'Exit help mode';
 
   @override
   String get workedExamplesTitle => 'Worked examples';
@@ -3204,6 +3217,12 @@ class DeLocalizations implements AppLocalizations {
   String get clearFunctionSlotTooltip => 'Funktion löschen';
   @override
   String get deleteMemorySlotTooltip => 'Speicherplatz löschen';
+
+  @override
+  String get helpModeEnableTooltip =>
+      'Hilfemodus: jedes Bedienelement antippen für eine Erklärung';
+  @override
+  String get helpModeDisableTooltip => 'Hilfemodus beenden';
 
   @override
   String get workedExamplesTitle => 'Beispielaufgaben';
@@ -4872,6 +4891,12 @@ class FrLocalizations implements AppLocalizations {
   String get deleteMemorySlotTooltip => 'Supprimer l\'emplacement mémoire';
 
   @override
+  String get helpModeEnableTooltip =>
+      'Mode aide : touchez n\'importe quel contrôle pour une explication';
+  @override
+  String get helpModeDisableTooltip => 'Quitter le mode aide';
+
+  @override
   String get workedExamplesTitle => 'Exemples résolus';
   @override
   String get workedExamplesSearchHint => 'Rechercher des exemples…';
@@ -6535,6 +6560,12 @@ class EsLocalizations implements AppLocalizations {
   String get clearFunctionSlotTooltip => 'Borrar función';
   @override
   String get deleteMemorySlotTooltip => 'Eliminar espacio de memoria';
+
+  @override
+  String get helpModeEnableTooltip =>
+      'Modo ayuda: toca cualquier control para ver una explicación';
+  @override
+  String get helpModeDisableTooltip => 'Salir del modo ayuda';
 
   @override
   String get workedExamplesTitle => 'Ejemplos resueltos';

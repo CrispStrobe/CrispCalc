@@ -2,6 +2,69 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 101) — Help-mode toggle + dotted-outline affordance
+
+Scaffolds the help-mode infrastructure the rest of P6 (rounds
+102-105) hangs popovers off. Round 101 ships **just** the toggle
+state + the visual affordance, per spec — no popovers yet.
+
+### `AppState.helpMode`
+
+New ephemeral bool on `AppState` (`lib/engine/app_state.dart`)
+with `setHelpMode(bool)` and `toggleHelpMode()`. Intentionally
+not persisted across launches — help mode is a momentary
+exploration state, not a sticky preference (contrasts with
+`autoBindSolve`, which IS a sticky behavioral preference).
+Reset to `false` in `load()` alongside the other defaults.
+
+### `HelpTarget` widget
+
+New `lib/widgets/help_target.dart`. Wraps a child; subscribes to
+`AppState` via `ListenableBuilder`; when `helpMode` is on, paints
+a dotted blue outline (theme primary color, 1.4px stroke, 4/3
+dash/gap) around the child via a small inline `CustomPainter`
+that walks the rounded-rect path with `Path.computeMetrics`. No
+new dependency — the dotted pattern is ~30 lines. When off,
+returns the child unwrapped (zero layout cost).
+
+### AppBar toggles
+
+Calculator (`lib/screens/calculator_screen.dart` top toolbar,
+next to the menu_book_outlined `(?)` icon from Round 93) and
+Notepad (`lib/screens/notepad_screen.dart` `_buildActions`) both
+gain an `Icons.help_outline` IconButton wired through a
+`ListenableBuilder` so the icon flips to filled (`Icons.help`)
++ primary color when active. Tooltip alternates between
+`helpModeEnableTooltip` and `helpModeDisableTooltip` (two new
+i18n strings × 4 locales).
+
+### Demonstration wrappers
+
+`HelpTarget` applied to:
+- Calculator history rows (the `GestureDetector` returning the
+  expression/result Column at the bottom of the history
+  `ListView.builder` — this is Round 103's planned popover
+  target)
+- Notepad line rows (both the side-by-side and stacked
+  `_NotepadLineRow` branches — Round 104's planned popover
+  target)
+
+Blank Notepad rows skip the outline (no meaningful target).
+Adv-tab keypad buttons stay un-wrapped for now; Round 102 wraps
+those when it adds the per-button popovers.
+
+### Tests
+
+`test/app_state_test.dart` gains a 4-test `helpMode` group
+(defaults to false, set+notify, no-op when unchanged, toggle
+flips). `test/help_target_test.dart` is new: 3 widget tests
+verifying the painter doesn't appear when off, does appear when
+on, and rebuilds correctly when toggled. CustomPaint finders
+scoped via `find.descendant(of: HelpTarget, ...)` so they don't
+match the Material framework's own internal CustomPaints.
+
+1955 → 1962 tests; `flutter analyze` clean.
+
 ## 2026-05-26 (P6 Round 99) — Function Reference stats / constraints / sudoku entries
 
 Fills the remaining three module-surface categories with 19
