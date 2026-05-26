@@ -164,6 +164,69 @@ class CryptarithmResult {
       CryptarithmResult._(assignment: const {}, error: message);
 }
 
+/// One row of a minimal-unsatisfiable-subset rendering. Carries the
+/// user-meaningful label that was attached when the constraint was
+/// posted (or a derived fallback when none was set) plus the
+/// constraint kind / variables for context. Round E.2.
+class MusEntry {
+  /// User-facing description. Either the `label:` threaded into the
+  /// `addX` call (DSL source line, "constraint #N", etc.) or, when
+  /// the constraint had no label, a derived `kind(variables)` string.
+  final String label;
+
+  /// dart_csp coarse-grained kind label — `'binary'`, `'linearEquals'`,
+  /// `'allDifferent'`, `'cumulative'`, etc. Useful for grouping /
+  /// iconography in the UI.
+  final String kind;
+
+  /// Variables this constraint scopes, in posting order.
+  final List<String> variables;
+
+  const MusEntry({
+    required this.label,
+    required this.kind,
+    required this.variables,
+  });
+}
+
+/// Result envelope for the explanation pass.
+///
+/// Three steady-state shapes:
+///   * `error != null` — couldn't build the model (parse error,
+///     unknown var name, etc.). The UI surfaces [error] verbatim.
+///   * `wasSatisfiable == true` — QuickXplain decided the model is
+///     actually satisfiable. Either the user clicked Explain on a
+///     run that had hit `maxSolutions` capping, or there's a flake
+///     between solver runs. UI shows a "model is satisfiable" hint.
+///   * `entries` populated — the MUS itself. Typically 2–6 entries
+///     for hand-authored constraint sets.
+class CspMusResult {
+  final List<MusEntry> entries;
+  final String? error;
+  final bool wasSatisfiable;
+
+  const CspMusResult._({
+    required this.entries,
+    required this.error,
+    required this.wasSatisfiable,
+  });
+
+  factory CspMusResult.ok(List<MusEntry> entries) =>
+      CspMusResult._(entries: entries, error: null, wasSatisfiable: false);
+
+  factory CspMusResult.satisfiable() => const CspMusResult._(
+        entries: [],
+        error: null,
+        wasSatisfiable: true,
+      );
+
+  factory CspMusResult.failure(String message) => CspMusResult._(
+        entries: const [],
+        error: message,
+        wasSatisfiable: false,
+      );
+}
+
 class CspSolver {
   /// Solves a small Diophantine-style problem. [variables] maps each
   /// variable name to its inclusive `[min..max]` integer range.
@@ -986,4 +1049,432 @@ class CspSolver {
           'Optimizer failed: ${_friendlyError(e)}');
     }
   }
+
+  // === Round E.2 — QuickXplain MUS explanation ============================
+
+  /// Re-build the Diophantine model with `label:` threaded through
+  /// every `add*` call, then ask dart_csp's QuickXplain pass for a
+  /// minimal-unsatisfiable subset.
+  ///
+  /// Mirrors the argument shape of [solveDiophantine] so the UI can
+  /// call this with the same inputs the user already submitted. Has
+  /// no shared state with the original solve — that solve's Problem
+  /// is long gone by the time the user clicks Explain, and rebuilding
+  /// is cheap for problems at this scale (CSP homework size).
+  ///
+  /// The label format mirrors the input's structure:
+  ///   - User-supplied string constraints → `C${i+1}: <text>`.
+  ///   - `noOverlap` overlays → `noOverlap #${k}`.
+  ///   - `cumulative` overlays → `cumulative #${k}`.
+  ///
+  /// Returns `CspMusResult.satisfiable()` when QuickXplain reports
+  /// no MUS (i.e. the model is satisfiable — e.g. the caller hit
+  /// `maxSolutions` and only thought it was unsat).
+  static Future<CspMusResult> explainDiophantine({
+    required Map<String, ({int min, int max})> variables,
+    required List<String> constraints,
+    List<NoOverlapGroup> noOverlap = const [],
+    List<CumulativeGroup> cumulative = const [],
+  }) async {
+    if (variables.isEmpty) {
+      return CspMusResult.failure('No variables declared.');
+    }
+    final problem = csp.Problem();
+    try {
+      for (final entry in variables.entries) {
+        final (min: lo, max: hi) = entry.value;
+        if (hi < lo) {
+          return CspMusResult.failure(
+              'Variable ${entry.key}: range max ($hi) < min ($lo).');
+        }
+        problem.addRangeVariable(entry.key, lo, hi);
+      }
+      final knownVars = variables.keys.toSet();
+      for (var i = 0; i < constraints.length; i++) {
+        final c = constraints[i];
+        final label = 'C${i + 1}: $c';
+        final linear = _tryParseLinear(c, knownVars);
+        if (linear != null) {
+          final (:vars, :coeffs, :op, :bound) = linear;
+          switch (op) {
+            case '==':
+              problem.addLinearEquals(vars, coeffs, bound, label: label);
+              break;
+            case '<=':
+              problem.addLinearLeq(vars, coeffs, bound, label: label);
+              break;
+            case '>=':
+              problem.addLinearGeq(vars, coeffs, bound, label: label);
+              break;
+            case '<':
+              problem.addLinearLeq(vars, coeffs, bound - 1, label: label);
+              break;
+            case '>':
+              problem.addLinearGeq(vars, coeffs, bound + 1, label: label);
+              break;
+          }
+          continue;
+        }
+        problem.addStringConstraint(c, label: label);
+      }
+      for (var k = 0; k < noOverlap.length; k++) {
+        final g = noOverlap[k];
+        problem.addNoOverlap(g.starts, g.durations,
+            label: 'noOverlap #${k + 1}');
+      }
+      for (var k = 0; k < cumulative.length; k++) {
+        final g = cumulative[k];
+        problem.addCumulative(g.starts, g.durations, g.demands, g.capacity,
+            label: 'cumulative #${k + 1}');
+      }
+    } catch (e) {
+      return CspMusResult.failure(
+          'Failed to build the constraint model: ${_friendlyError(e)}');
+    }
+
+    return _runQuickXplain(problem);
+  }
+
+  /// Same shape as [explainDiophantine] but for the DSL. Re-parses
+  /// the source, labels each constraint by the originating DSL line,
+  /// then runs QuickXplain. `allDifferent(...)` lines expand to
+  /// pairwise `!=` constraints that all share one DSL-source label
+  /// so the MUS reads `allDifferent(x, y, z)` once even when the
+  /// conflict touches several of the pairwise refs.
+  static Future<CspMusResult> explainDsl(String input) async {
+    final parsed = _parseDslForExplain(input);
+    if (parsed.error != null) return CspMusResult.failure(parsed.error!);
+    final problem = csp.Problem();
+    try {
+      for (final entry in parsed.variables.entries) {
+        final (min: lo, max: hi) = entry.value;
+        problem.addRangeVariable(entry.key, lo, hi);
+      }
+      final knownVars = parsed.variables.keys.toSet();
+      for (final c in parsed.constraints) {
+        final label = c.label;
+        final linear = _tryParseLinear(c.text, knownVars);
+        if (linear != null) {
+          final (:vars, :coeffs, :op, :bound) = linear;
+          switch (op) {
+            case '==':
+              problem.addLinearEquals(vars, coeffs, bound, label: label);
+              break;
+            case '<=':
+              problem.addLinearLeq(vars, coeffs, bound, label: label);
+              break;
+            case '>=':
+              problem.addLinearGeq(vars, coeffs, bound, label: label);
+              break;
+            case '<':
+              problem.addLinearLeq(vars, coeffs, bound - 1, label: label);
+              break;
+            case '>':
+              problem.addLinearGeq(vars, coeffs, bound + 1, label: label);
+              break;
+          }
+          continue;
+        }
+        problem.addStringConstraint(c.text, label: label);
+      }
+      for (var k = 0; k < parsed.noOverlap.length; k++) {
+        final g = parsed.noOverlap[k];
+        problem.addNoOverlap(g.starts, g.durations,
+            label: 'noOverlap #${k + 1}');
+      }
+      for (var k = 0; k < parsed.cumulative.length; k++) {
+        final g = parsed.cumulative[k];
+        problem.addCumulative(g.starts, g.durations, g.demands, g.capacity,
+            label: 'cumulative #${k + 1}');
+      }
+    } catch (e) {
+      return CspMusResult.failure(
+          'Failed to build the constraint model: ${_friendlyError(e)}');
+    }
+    return _runQuickXplain(problem);
+  }
+
+  /// Cryptarithm-shaped MUS. Re-parses the puzzle and rebuilds the
+  /// model with three label families: `'allDifferent letters'`,
+  /// `'no leading zero on $WORD'` (one per multi-letter word), and
+  /// `'digit-place equality'` (the single linear equation that ties
+  /// the words together).
+  static Future<CspMusResult> explainCryptarithm(String expression) async {
+    final parsed = _parseCryptarithmExpression(expression);
+    if (parsed == null) {
+      return CspMusResult.failure(
+          'Expected `WORD1 + WORD2 = WORD3` (only + / - supported).');
+    }
+    final (:lhsA, :op, :lhsB, :rhs) = parsed;
+    final words = [lhsA, lhsB, rhs];
+    final letters = <String>{
+      for (final w in words)
+        for (final ch in w.split('')) ch,
+    }.toList();
+    if (letters.length > 10) {
+      return CspMusResult.failure(
+          'Cryptarithm has ${letters.length} distinct letters; '
+          'at most 10 fit into digits 0..9.');
+    }
+    final problem = csp.Problem();
+    for (final l in letters) {
+      problem.addVariable(l, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    }
+    problem.addAllDifferent(letters, label: 'allDifferent letters');
+    for (final w in words) {
+      if (w.length > 1) {
+        problem.addStringConstraint('${w[0]} != 0',
+            label: 'no leading zero on $w');
+      }
+    }
+    final coefs = <String, int>{};
+    void accumulate(String word, int sign) {
+      for (var i = 0; i < word.length; i++) {
+        final letter = word[i];
+        final place = _intPow(10, word.length - 1 - i);
+        coefs[letter] = (coefs[letter] ?? 0) + sign * place;
+      }
+    }
+
+    accumulate(lhsA, 1);
+    accumulate(lhsB, op == '-' ? -1 : 1);
+    accumulate(rhs, -1);
+    final orderedLetters = <String>[];
+    final orderedCoeffs = <num>[];
+    for (final entry in coefs.entries) {
+      if (entry.value == 0) continue;
+      orderedLetters.add(entry.key);
+      orderedCoeffs.add(entry.value);
+    }
+    problem.addLinearEquals(orderedLetters, orderedCoeffs, 0,
+        label: 'digit-place equality');
+    return _runQuickXplain(problem);
+  }
+
+  /// FlatZinc MUS. Builds the model through dart_csp's FlatZinc
+  /// frontend, then runs QuickXplain. The FlatZinc lowering doesn't
+  /// (yet) thread user-supplied labels through, so the returned
+  /// [MusEntry.label] is derived from `kind(vars)` — still useful
+  /// for the user to localize the conflict to specific constraint
+  /// kinds + variable scopes.
+  static Future<CspMusResult> explainFlatZinc(String source) async {
+    csp.LoweredModel lowered;
+    try {
+      lowered = csp.FlatZinc.build(source);
+    } catch (e) {
+      return CspMusResult.failure(
+          'Failed to parse FlatZinc: ${_friendlyError(e)}');
+    }
+    return _runQuickXplain(lowered.problem);
+  }
+
+  /// Shared QuickXplain runner. Catches engine errors, translates
+  /// the dart_csp `ConstraintRef` list into our UI-facing
+  /// [MusEntry] shape (deriving a label from `kind(vars)` when the
+  /// ref has none), and folds the satisfiable-after-all case into
+  /// [CspMusResult.satisfiable].
+  static Future<CspMusResult> _runQuickXplain(csp.Problem problem) async {
+    try {
+      final mus = await problem.findMinimalUnsatisfiableSubsetQuickXplain();
+      if (mus == null) {
+        // dart_csp returns null when the problem is satisfiable
+        // (no MUS exists) — the user clicked Explain on a flaky
+        // unsat or on a result that was capped at maxSolutions.
+        return CspMusResult.satisfiable();
+      }
+      // Deduplicate by ref.id so a binary constraint's forward +
+      // reverse arcs don't double-list. (dart_csp already does
+      // this; belt-and-suspenders against future refactors.)
+      final seen = <String>{};
+      final entries = <MusEntry>[];
+      for (final ref in mus) {
+        if (!seen.add(ref.id)) continue;
+        entries.add(MusEntry(
+          label: ref.label ?? '${ref.kind}(${ref.variables.join(', ')})',
+          kind: ref.kind,
+          variables: List<String>.unmodifiable(ref.variables),
+        ));
+      }
+      return CspMusResult.ok(entries);
+    } catch (e) {
+      return CspMusResult.failure('QuickXplain failed: ${_friendlyError(e)}');
+    }
+  }
+
+  /// Re-parses a DSL source for the MUS path. Returns a struct
+  /// carrying [variables], a list of `(text, label)` constraints,
+  /// and the scheduling overlays — exactly what `_runQuickXplain`
+  /// needs to rebuild a labeled Problem. Synthesizes labels from
+  /// the source line + the DSL keyword (`allDifferent` lines
+  /// produce one shared label across all pairwise expansions).
+  /// Parse errors live in [error]; everything else is unset when
+  /// [error] is non-null.
+  static _DslExplainParse _parseDslForExplain(String input) {
+    final vars = <String, ({int min, int max})>{};
+    final constraintEntries = <_LabeledConstraint>[];
+    final noOverlap = <NoOverlapGroup>[];
+    final cumulative = <CumulativeGroup>[];
+    // The DSL doesn't have an explain-time objective notion — the
+    // synthetic __obj__ binding isn't a "real" constraint and
+    // there's no value in including it in a MUS. The original
+    // optimization path also folds the objective into __obj__ so
+    // the existing happy-path code can't be reused cleanly; the
+    // parser here intentionally ignores `minimize` / `maximize`.
+
+    final lines = input.split('\n');
+    for (var lineNum = 0; lineNum < lines.length; lineNum++) {
+      var line = lines[lineNum].trim();
+      final hash = line.indexOf('#');
+      if (hash >= 0) line = line.substring(0, hash).trim();
+      if (line.isEmpty) continue;
+
+      // Skip minimize/maximize for the explain pass.
+      if (RegExp(r'^(minimize|maximize)\s+').hasMatch(line)) continue;
+
+      final varsMatch =
+          RegExp(r'^vars\s*:\s*(.+?)\s+in\s+(-?\d+)\s*\.\.\s*(-?\d+)$')
+              .firstMatch(line);
+      if (varsMatch != null) {
+        final names = varsMatch
+            .group(1)!
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        final lo = int.parse(varsMatch.group(2)!);
+        final hi = int.parse(varsMatch.group(3)!);
+        for (final name in names) {
+          vars[name] = (min: lo, max: hi);
+        }
+        continue;
+      }
+
+      final allDiffMatch =
+          RegExp(r'^allDifferent\s*\(\s*([^)]*)\s*\)$').firstMatch(line);
+      if (allDiffMatch != null) {
+        final names = allDiffMatch
+            .group(1)!
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        final groupLabel = 'allDifferent(${names.join(', ')})';
+        for (var i = 0; i < names.length; i++) {
+          for (var j = i + 1; j < names.length; j++) {
+            constraintEntries.add(_LabeledConstraint(
+              text: '${names[i]} != ${names[j]}',
+              label: groupLabel,
+            ));
+          }
+        }
+        continue;
+      }
+
+      final noOverlapMatch =
+          RegExp(r'^noOverlap\s*\(\s*([^)]*)\s*\)$').firstMatch(line);
+      if (noOverlapMatch != null) {
+        final inner = noOverlapMatch.group(1)!.trim();
+        final starts = <String>[];
+        final durations = <int>[];
+        for (final raw in inner.split(',')) {
+          final pair = raw.trim();
+          final m = RegExp(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+)$')
+              .firstMatch(pair);
+          if (m == null) continue;
+          starts.add(m.group(1)!);
+          durations.add(int.parse(m.group(2)!));
+        }
+        if (starts.isNotEmpty) {
+          noOverlap.add((starts: starts, durations: durations));
+        }
+        continue;
+      }
+
+      final cumulativeMatch =
+          RegExp(r'^cumulative\s*\(\s*([^)]*)\s*\)$').firstMatch(line);
+      if (cumulativeMatch != null) {
+        final inner = cumulativeMatch.group(1)!.trim();
+        final parts = inner.split(';');
+        if (parts.length == 2) {
+          final taskList = parts[0].trim();
+          final capacityClause = parts[1].trim();
+          final capMatch =
+              RegExp(r'^capacity\s*=\s*(-?\d+)$').firstMatch(capacityClause);
+          if (capMatch != null) {
+            final capacity = int.parse(capMatch.group(1)!);
+            final starts = <String>[];
+            final durations = <int>[];
+            final demands = <int>[];
+            for (final raw in taskList.split(',')) {
+              final pair = raw.trim();
+              final m = RegExp(
+                      r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+)\s*@\s*(-?\d+)$')
+                  .firstMatch(pair);
+              if (m == null) continue;
+              starts.add(m.group(1)!);
+              durations.add(int.parse(m.group(2)!));
+              demands.add(int.parse(m.group(3)!));
+            }
+            if (starts.isNotEmpty) {
+              cumulative.add((
+                starts: starts,
+                durations: durations,
+                demands: demands,
+                capacity: capacity,
+              ));
+            }
+          }
+        }
+        continue;
+      }
+
+      constraintEntries.add(_LabeledConstraint(
+        text: line,
+        label: 'line ${lineNum + 1}: $line',
+      ));
+    }
+
+    if (vars.isEmpty) {
+      return _DslExplainParse._error('No variables declared in the DSL '
+          'program. Use `vars: x, y in 1..9`.');
+    }
+
+    return _DslExplainParse._(
+      variables: vars,
+      constraints: constraintEntries,
+      noOverlap: noOverlap,
+      cumulative: cumulative,
+      error: null,
+    );
+  }
+}
+
+class _LabeledConstraint {
+  final String text;
+  final String label;
+  const _LabeledConstraint({required this.text, required this.label});
+}
+
+class _DslExplainParse {
+  final Map<String, ({int min, int max})> variables;
+  final List<_LabeledConstraint> constraints;
+  final List<NoOverlapGroup> noOverlap;
+  final List<CumulativeGroup> cumulative;
+  final String? error;
+
+  const _DslExplainParse._({
+    required this.variables,
+    required this.constraints,
+    required this.noOverlap,
+    required this.cumulative,
+    required this.error,
+  });
+
+  factory _DslExplainParse._error(String message) => _DslExplainParse._(
+        variables: const {},
+        constraints: const [],
+        noOverlap: const [],
+        cumulative: const [],
+        error: message,
+      );
 }

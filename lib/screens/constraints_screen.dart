@@ -105,6 +105,11 @@ class _DiophantineTabState extends State<_DiophantineTab> {
       TextEditingController(text: '2*x + 3*y == 30\nx <= y');
   DiophantineResult? _result;
   bool _solving = false;
+  // Round E.2: MUS state. Cleared whenever a fresh solve runs so the
+  // user doesn't see a stale conflict tied to inputs that have since
+  // changed. Populated by `_explain`.
+  CspMusResult? _mus;
+  bool _explaining = false;
 
   @override
   void dispose() {
@@ -155,13 +160,48 @@ class _DiophantineTabState extends State<_DiophantineTab> {
         .where((l) => l.isNotEmpty)
         .toList();
 
-    setState(() => _solving = true);
+    setState(() {
+      _solving = true;
+      _mus = null;
+    });
     final r = await CspSolver.solveDiophantine(
         variables: variables, constraints: constraints);
     if (!mounted) return;
     setState(() {
       _solving = false;
       _result = r;
+    });
+  }
+
+  Future<void> _explain() async {
+    // Re-parse the live inputs so the MUS reflects whatever's in the
+    // textareas right now (which may differ from the last solve if
+    // the user edited but hasn't re-solved). Parse errors fall
+    // through to a no-op — the user has a stale result and the
+    // standard solve-time error path will take over on next Solve.
+    final variables = <String, ({int min, int max})>{};
+    for (final line in _varsCtl.text
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)) {
+      final v = _parseVarLine(line);
+      if (v == null) return;
+      variables[v.name] = (min: v.min, max: v.max);
+    }
+    final constraints = _constraintsCtl.text
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    setState(() => _explaining = true);
+    final r = await CspSolver.explainDiophantine(
+      variables: variables,
+      constraints: constraints,
+    );
+    if (!mounted) return;
+    setState(() {
+      _explaining = false;
+      _mus = r;
     });
   }
 
@@ -212,6 +252,14 @@ class _DiophantineTabState extends State<_DiophantineTab> {
           if (_result != null) ...[
             const SizedBox(height: 16),
             _ResultBlock(result: _result!),
+            if (_result!.ok && _result!.solutions.isEmpty) ...[
+              const SizedBox(height: 12),
+              _ExplainSection(
+                isLoading: _explaining,
+                result: _mus,
+                onExplain: _explain,
+              ),
+            ],
           ],
         ],
       ),
@@ -552,6 +600,8 @@ class _CryptarithmTabState extends State<_CryptarithmTab> {
   final _ctl = TextEditingController(text: 'SEND + MORE = MONEY');
   CryptarithmResult? _result;
   bool _solving = false;
+  CspMusResult? _mus;
+  bool _explaining = false;
 
   @override
   void dispose() {
@@ -560,12 +610,25 @@ class _CryptarithmTabState extends State<_CryptarithmTab> {
   }
 
   Future<void> _solve() async {
-    setState(() => _solving = true);
+    setState(() {
+      _solving = true;
+      _mus = null;
+    });
     final r = await CspSolver.solveCryptarithm(_ctl.text);
     if (!mounted) return;
     setState(() {
       _solving = false;
       _result = r;
+    });
+  }
+
+  Future<void> _explain() async {
+    setState(() => _explaining = true);
+    final r = await CspSolver.explainCryptarithm(_ctl.text);
+    if (!mounted) return;
+    setState(() {
+      _explaining = false;
+      _mus = r;
     });
   }
 
@@ -604,6 +667,16 @@ class _CryptarithmTabState extends State<_CryptarithmTab> {
           if (_result != null) ...[
             const SizedBox(height: 16),
             _CryptarithmResultBlock(result: _result!),
+            // Surface Explain only on the "no assignment" case, not
+            // on shape-parse errors where the model wasn't built.
+            if (!_result!.ok && _result!.error!.contains('No assignment')) ...[
+              const SizedBox(height: 12),
+              _ExplainSection(
+                isLoading: _explaining,
+                result: _mus,
+                onExplain: _explain,
+              ),
+            ],
           ],
         ],
       ),
@@ -748,6 +821,8 @@ minimize makespan''',
   final _ctl = TextEditingController(text: _gallery.first.program);
   DiophantineResult? _result;
   bool _solving = false;
+  CspMusResult? _mus;
+  bool _explaining = false;
 
   @override
   void initState() {
@@ -770,6 +845,7 @@ minimize makespan''',
     setState(() {
       _ctl.text = programText;
       _result = null;
+      _mus = null;
     });
   }
 
@@ -780,12 +856,25 @@ minimize makespan''',
   }
 
   Future<void> _solve() async {
-    setState(() => _solving = true);
+    setState(() {
+      _solving = true;
+      _mus = null;
+    });
     final r = await CspSolver.solveDsl(_ctl.text);
     if (!mounted) return;
     setState(() {
       _solving = false;
       _result = r;
+    });
+  }
+
+  Future<void> _explain() async {
+    setState(() => _explaining = true);
+    final r = await CspSolver.explainDsl(_ctl.text);
+    if (!mounted) return;
+    setState(() {
+      _explaining = false;
+      _mus = r;
     });
   }
 
@@ -853,6 +942,14 @@ minimize makespan''',
           if (_result != null) ...[
             const SizedBox(height: 16),
             _ResultBlock(result: _result!),
+            if (_result!.ok && _result!.solutions.isEmpty) ...[
+              const SizedBox(height: 12),
+              _ExplainSection(
+                isLoading: _explaining,
+                result: _mus,
+                onExplain: _explain,
+              ),
+            ],
           ],
         ],
       ),
@@ -965,6 +1062,8 @@ solve satisfy;
   bool _solving = false;
   String? _output;
   String? _error;
+  CspMusResult? _mus;
+  bool _explaining = false;
 
   @override
   void dispose() {
@@ -977,6 +1076,7 @@ solve satisfy;
       _ctl.text = source;
       _output = null;
       _error = null;
+      _mus = null;
     });
   }
 
@@ -986,6 +1086,7 @@ solve satisfy;
       _solving = true;
       _output = null;
       _error = null;
+      _mus = null;
     });
     String? out;
     String? err;
@@ -999,6 +1100,16 @@ solve satisfy;
       _solving = false;
       _output = out;
       _error = err;
+    });
+  }
+
+  Future<void> _explain() async {
+    setState(() => _explaining = true);
+    final r = await CspSolver.explainFlatZinc(_ctl.text);
+    if (!mounted) return;
+    setState(() {
+      _explaining = false;
+      _mus = r;
     });
   }
 
@@ -1071,6 +1182,14 @@ solve satisfy;
           if (_output != null) ...[
             const SizedBox(height: 16),
             _FlatZincOutputBlock(text: _output!),
+            if (_output!.contains('=====UNSATISFIABLE=====')) ...[
+              const SizedBox(height: 12),
+              _ExplainSection(
+                isLoading: _explaining,
+                result: _mus,
+                onExplain: _explain,
+              ),
+            ],
           ],
         ],
       ),
@@ -1167,6 +1286,161 @@ class _FlatZincOutputBlock extends StatelessWidget {
           child: SelectableText(
             text,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// === Round E.2 — shared "Explain failure" / MUS rendering =================
+
+/// Stateless renderer for the QuickXplain MUS panel. Shown by every
+/// tab when its solve concluded with no solutions / unsatisfiable.
+/// State (the result + busy flag) lives in the parent tab; the
+/// onExplain callback runs the actual `CspSolver.explain*` call.
+class _ExplainSection extends StatelessWidget {
+  final bool isLoading;
+  final CspMusResult? result;
+  final VoidCallback onExplain;
+
+  const _ExplainSection({
+    required this.isLoading,
+    required this.result,
+    required this.onExplain,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    if (result == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          onPressed: isLoading ? null : onExplain,
+          icon: isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.search, size: 18),
+          label: Text(t.constraintsExplainFailure),
+        ),
+      );
+    }
+    return _MusBlock(result: result!);
+  }
+}
+
+class _MusBlock extends StatelessWidget {
+  final CspMusResult result;
+  const _MusBlock({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    if (result.error != null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline, color: scheme.onErrorContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(result.error!,
+                  style: TextStyle(color: scheme.onErrorContainer)),
+            ),
+          ],
+        ),
+      );
+    }
+    if (result.wasSatisfiable) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_outline,
+                color: scheme.onSecondaryContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(t.constraintsExplainSatisfiable,
+                  style: TextStyle(color: scheme.onSecondaryContainer)),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(t.constraintsExplainHeader,
+            style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          t.constraintsExplainEntryCount(result.entries.length),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final entry in result.entries)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 3, right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scheme.tertiaryContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          entry.kind,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: scheme.onTertiaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: SelectableText(
+                          entry.label,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ],

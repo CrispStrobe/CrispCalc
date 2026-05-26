@@ -487,6 +487,10 @@ abstract class AppLocalizations {
   String constraintsFlatZincExhaustiveN(int n);
   String get constraintsFlatZincUnsatisfiable;
   String constraintsFlatZincExampleTitle(String id);
+  String get constraintsExplainFailure;
+  String get constraintsExplainHeader;
+  String get constraintsExplainSatisfiable;
+  String constraintsExplainEntryCount(int n);
   String get constraintsDiophantineIntro;
   String get constraintsCryptarithmIntro;
   String get constraintsVariablesLabel;
@@ -1636,6 +1640,17 @@ class EnLocalizations implements AppLocalizations {
     }
     return id;
   }
+
+  @override
+  String get constraintsExplainFailure => 'Explain failure';
+  @override
+  String get constraintsExplainHeader => 'Minimal conflict (QuickXplain)';
+  @override
+  String get constraintsExplainSatisfiable =>
+      'No conflict — the model is actually satisfiable.';
+  @override
+  String constraintsExplainEntryCount(int n) =>
+      n == 1 ? '1 conflicting constraint' : '$n conflicting constraints';
 
   @override
   String get constraintsDiophantineIntro =>
@@ -3059,6 +3074,18 @@ class DeLocalizations implements AppLocalizations {
     }
     return id;
   }
+
+  @override
+  String get constraintsExplainFailure => 'Konflikt erklären';
+  @override
+  String get constraintsExplainHeader => 'Minimaler Konflikt (QuickXplain)';
+  @override
+  String get constraintsExplainSatisfiable =>
+      'Kein Konflikt — das Modell ist tatsächlich erfüllbar.';
+  @override
+  String constraintsExplainEntryCount(int n) => n == 1
+      ? '1 widersprüchliche Bedingung'
+      : '$n widersprüchliche Bedingungen';
 
   @override
   String get constraintsDiophantineIntro =>
@@ -4625,6 +4652,17 @@ class FrLocalizations implements AppLocalizations {
   }
 
   @override
+  String get constraintsExplainFailure => "Expliquer l'échec";
+  @override
+  String get constraintsExplainHeader => 'Conflit minimal (QuickXplain)';
+  @override
+  String get constraintsExplainSatisfiable =>
+      'Aucun conflit — le modèle est en fait satisfaisable.';
+  @override
+  String constraintsExplainEntryCount(int n) =>
+      n == 1 ? '1 contrainte conflictuelle' : '$n contraintes conflictuelles';
+
+  @override
   String get constraintsDiophantineIntro =>
       'Déclare des variables entières bornées, liste les contraintes '
       'à satisfaire — le solveur énumère toutes les solutions '
@@ -6184,6 +6222,17 @@ class EsLocalizations implements AppLocalizations {
     }
     return id;
   }
+
+  @override
+  String get constraintsExplainFailure => 'Explicar el fallo';
+  @override
+  String get constraintsExplainHeader => 'Conflicto mínimo (QuickXplain)';
+  @override
+  String get constraintsExplainSatisfiable =>
+      'Sin conflicto — el modelo es en realidad satisfacible.';
+  @override
+  String constraintsExplainEntryCount(int n) =>
+      n == 1 ? '1 restricción en conflicto' : '$n restricciones en conflicto';
 
   @override
   String get constraintsDiophantineIntro =>
