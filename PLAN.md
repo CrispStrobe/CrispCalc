@@ -1775,20 +1775,45 @@ etc., then evaluate through the existing `basic_parse` +
 
 ### Rounds 110+ — Boolean roadmap
 
-##### Round 110 — Relational operators
+##### Round 110 — Relational operators ✅
 
-Calculator preprocessor learns to rewrite:
-- `a == b` → `Eq(a, b)`
-- `a != b` → `Ne(a, b)`
-- `a < b` → `Lt(a, b)` (and `<=` / `>` / `>=` similarly)
+Done 2026-05-26. New
+`ExpressionPreprocessingUtils.preprocessRelationalOperators` does
+a paren-depth-0 scan + longest-match rewrite (`==`, `!=`, `<=`,
+`>=` ahead of `<`, `>`) and lowers each into SymEngine's named
+function form: `2 == 2` → `Eq(2, 2)`, `x + 1 < 5` → `Lt(x + 1, 5)`,
+etc. `=` alone is left untouched so the assignment + bare-equation
+solver routes still fire. Constant operands fold to SymEngine's
+`True` / `False`; symbolic operands stay as the function form
+(`Eq(x, 1)`).
 
-Each evaluates to `true` / `false` when both sides are
-constants; stays symbolic otherwise. SymEngine handles the
-symbolic case (`x == y` stays unresolved).
+The calculator's assignment regex tightened from `=\s*` to
+`=(?!=)\s*` so `name == value` no longer captures as an
+assignment with body `= value`. Notepad's `_assignmentRegex` got
+the same `(?!=)` fix; new test pins the classify behavior for
+`x == 1` / `x <= 5` / `x != y`.
 
-Output formatting: `true` and `false` render as colored chips
-in the history (green / red) — same visual pattern as the
-round-87b Sudoku win chip.
+Calculator + notepad dispatch both call the rewrite right after
+LaTeX conversion + inline-derivative expansion, so the rest of
+the pipeline (precision pre-pass, unit eval, CAS dispatch,
+generic `evaluate`) sees the `Eq(...)` / `Lt(...)` form. The
+boolean result strings (`True` / `False`) flow through a new
+`normalizeBooleanResult` that lowercases them to `true` / `false`
+for display consistency with the round-89 `isprime` output.
+
+Calculator history rows render `true` / `false` results as a
+colored chip (secondaryContainer / errorContainer pair) via a
+new `_buildBooleanChip` helper — matches the round-87b Sudoku
+win-chip visuals. Notepad keeps the plain-text rendering for
+round 110; the chip surfacing in notepad result cells is part
+of round 113.
+
+22 new tests in `test/relational_preprocessor_test.dart` covering
+shape rewrites (one per operator), non-matches (plain arithmetic,
+single `=`, parenthesized relationals, empty operands), the
+first-top-level-operator-wins behavior, the boolean-result
+normalizer, and the notepad classify tightening. Full suite:
+1810 → 1832 pass.
 
 ##### Round 111 — Logical operators + connectives
 
