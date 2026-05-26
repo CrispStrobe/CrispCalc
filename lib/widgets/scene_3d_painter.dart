@@ -70,10 +70,11 @@ class Scene3DPainter extends CustomPainter {
           _drawLine(canvas, l, project, range, scene);
         case SphereObject s:
           _drawSphere(canvas, s, project);
-        case QuadricObject _:
+        case QuadricObject q:
+          _drawQuadric(canvas, q, project);
         case ParametricSurfaceObject _:
         case ParametricCurveObject _:
-          // Rendering for these kinds lands in A5 / A6.
+          // Rendering for these kinds lands in A6.
           break;
       }
     }
@@ -416,6 +417,201 @@ class Scene3DPainter extends CustomPainter {
   }
 
   // ----------------------------------------------------------------
+  // P9-A5: quadric rendering. Each preset kind has an
+  // axis-aligned parametric form r(u, v) that we sample on a
+  // grid and draw as a wireframe. Quadrics without a preset
+  // (raw-coefficient input — not yet wired in V1) are skipped;
+  // a marching-cubes-style isosurface extractor is the
+  // upgrade path.
+  // ----------------------------------------------------------------
+
+  void _drawQuadric(
+    Canvas canvas,
+    QuadricObject q,
+    Offset Function(double, double, double) project,
+  ) {
+    final preset = q.preset;
+    if (preset == null) return;
+    final color = Color(q.color);
+
+    Vector3 r(double u, double v) => _quadricSample(preset, u, v);
+
+    // Per-kind (u, v) range. Use enough samples to keep curves
+    // smooth at the typical zoom level — performance is fine for
+    // a handful of objects.
+    const int uSteps = 24;
+    const int vSteps = 24;
+    final ranges = _quadricParametricRange(preset);
+    final uMin = ranges.uMin;
+    final uMax = ranges.uMax;
+    final vMin = ranges.vMin;
+    final vMax = ranges.vMax;
+    final closedU = ranges.closedU;
+    final closedV = ranges.closedV;
+
+    // Sample the grid into a flat array of Offsets.
+    final pts = List<List<Offset>>.generate(uSteps + 1, (i) {
+      final u = uMin + (uMax - uMin) * i / uSteps;
+      return List<Offset>.generate(vSteps + 1, (j) {
+        final v = vMin + (vMax - vMin) * j / vSteps;
+        final p = r(u, v);
+        return project(p.x, p.y, p.z);
+      });
+    });
+
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.9
+      ..color = color.withValues(alpha: 0.75);
+
+    // u-direction curves (constant v).
+    for (var j = 0; j <= vSteps; j++) {
+      for (var i = 0; i < uSteps; i++) {
+        canvas.drawLine(pts[i][j], pts[i + 1][j], stroke);
+      }
+      if (closedU) {
+        canvas.drawLine(pts[uSteps][j], pts[0][j], stroke);
+      }
+    }
+    // v-direction curves (constant u).
+    for (var i = 0; i <= uSteps; i++) {
+      for (var j = 0; j < vSteps; j++) {
+        canvas.drawLine(pts[i][j], pts[i][j + 1], stroke);
+      }
+      if (closedV) {
+        canvas.drawLine(pts[i][vSteps], pts[i][0], stroke);
+      }
+    }
+
+    // Center dot for orientation.
+    final cp = project(preset.center.x, preset.center.y, preset.center.z);
+    canvas.drawCircle(cp, 2.5, Paint()..color = color);
+  }
+
+  /// (u, v) parametric range + whether each parameter wraps. The
+  /// painter draws closing segments when the range wraps so e.g.
+  /// the ellipsoid forms a continuous mesh around the longitude.
+  _QuadricGridSpec _quadricParametricRange(QuadricPreset preset) {
+    final t = preset.tExtent;
+    switch (preset.kind) {
+      case QuadricKind.ellipsoid:
+        return const _QuadricGridSpec(
+          uMin: -math.pi / 2, uMax: math.pi / 2, // latitude
+          vMin: 0, vMax: 2 * math.pi, // longitude
+          closedU: false, closedV: true,
+        );
+      case QuadricKind.ellipticCone:
+        return _QuadricGridSpec(
+          uMin: -t, uMax: t, // axis t (cone has two nappes)
+          vMin: 0, vMax: 2 * math.pi, // around-axis
+          closedU: false, closedV: true,
+        );
+      case QuadricKind.ellipticCylinder:
+        return _QuadricGridSpec(
+          uMin: -t, uMax: t, // along z
+          vMin: 0, vMax: 2 * math.pi, // around-axis
+          closedU: false, closedV: true,
+        );
+      case QuadricKind.ellipticParaboloid:
+        return _QuadricGridSpec(
+          uMin: 0, uMax: t, // radial coord (z = c·u²)
+          vMin: 0, vMax: 2 * math.pi,
+          closedU: false, closedV: true,
+        );
+      case QuadricKind.hyperboloid1Sheet:
+        return _QuadricGridSpec(
+          uMin: -t, uMax: t, // sinh parameter
+          vMin: 0, vMax: 2 * math.pi,
+          closedU: false, closedV: true,
+        );
+      case QuadricKind.hyperboloid2Sheets:
+        // Drawn as two sheets — sample u from 0 to t, but flip the
+        // z sign on alternate halves. We do a single grid and use
+        // the trick that the parametric form gives both sheets by
+        // sweeping u over [-t, t] with a discontinuity at 0.
+        return _QuadricGridSpec(
+          uMin: -t,
+          uMax: t,
+          vMin: 0,
+          vMax: 2 * math.pi,
+          closedU: false,
+          closedV: true,
+        );
+    }
+  }
+
+  /// Parametric sample for a quadric preset. Coordinates are
+  /// pre-translated by `preset.center` so the wireframe sits
+  /// at the right world location.
+  Vector3 _quadricSample(QuadricPreset preset, double u, double v) {
+    final cx = preset.center.x;
+    final cy = preset.center.y;
+    final cz = preset.center.z;
+    final a = preset.a;
+    final b = preset.b;
+    final c = preset.c;
+    switch (preset.kind) {
+      case QuadricKind.ellipsoid:
+        // u = latitude (-π/2..π/2), v = longitude (0..2π).
+        final cosU = math.cos(u);
+        return Vector3(
+          cx + a * cosU * math.cos(v),
+          cy + b * cosU * math.sin(v),
+          cz + c * math.sin(u),
+        );
+      case QuadricKind.ellipticCone:
+        // u = axis parameter (-t..t), v = around-axis (0..2π).
+        return Vector3(
+          cx + a * u * math.cos(v),
+          cy + b * u * math.sin(v),
+          cz + c * u,
+        );
+      case QuadricKind.ellipticCylinder:
+        // u = along z (-t..t), v = around (0..2π).
+        return Vector3(
+          cx + a * math.cos(v),
+          cy + b * math.sin(v),
+          cz + u,
+        );
+      case QuadricKind.ellipticParaboloid:
+        // u = radial (0..t), v = around (0..2π).
+        // z/c = (x/a)² + (y/b)²  →  pick x = a·u·cos v, y = b·u·sin v,
+        // z = c·u².
+        return Vector3(
+          cx + a * u * math.cos(v),
+          cy + b * u * math.sin(v),
+          cz + c * u * u,
+        );
+      case QuadricKind.hyperboloid1Sheet:
+        // (x/a)² + (y/b)² − (z/c)² = 1
+        // Parametrise as x = a·cosh(u)·cos(v), y = b·cosh(u)·sin(v),
+        // z = c·sinh(u). u over (-t..t) gives the whole sheet.
+        final coshU = (math.exp(u) + math.exp(-u)) / 2;
+        final sinhU = (math.exp(u) - math.exp(-u)) / 2;
+        return Vector3(
+          cx + a * coshU * math.cos(v),
+          cy + b * coshU * math.sin(v),
+          cz + c * sinhU,
+        );
+      case QuadricKind.hyperboloid2Sheets:
+        // (z/c)² − (x/a)² − (y/b)² = 1
+        // Parametrise as x = a·sinh(u)·cos(v), y = b·sinh(u)·sin(v),
+        // z = ±c·cosh(u). Sweep u from -t..t and pick the sign by
+        // sign(u) — the two sheets connect at the discontinuity.
+        // Visual artifact at u=0 is acceptable for V1; cleanup is
+        // an A5 polish item.
+        final abs = u.abs();
+        final coshU = (math.exp(abs) + math.exp(-abs)) / 2;
+        final sinhU = (math.exp(abs) - math.exp(-abs)) / 2;
+        return Vector3(
+          cx + a * sinhU * math.cos(v),
+          cy + b * sinhU * math.sin(v),
+          cz + c * coshU * (u < 0 ? -1 : 1),
+        );
+    }
+  }
+
+  // ----------------------------------------------------------------
   // P9-A4: intersection highlight overlays
   // ----------------------------------------------------------------
 
@@ -542,4 +738,20 @@ class Scene3DPainter extends CustomPainter {
       old.scene.elevation != scene.elevation ||
       old.scene.zoom != scene.zoom ||
       old.scene.range != scene.range;
+}
+
+/// (u, v) grid descriptor for a parametric quadric. `closedU` /
+/// `closedV` say whether the parameter wraps so the painter can
+/// draw the closing segment.
+class _QuadricGridSpec {
+  final double uMin, uMax, vMin, vMax;
+  final bool closedU, closedV;
+  const _QuadricGridSpec({
+    required this.uMin,
+    required this.uMax,
+    required this.vMin,
+    required this.vMax,
+    required this.closedU,
+    required this.closedV,
+  });
 }

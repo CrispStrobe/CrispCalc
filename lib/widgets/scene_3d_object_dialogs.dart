@@ -444,6 +444,187 @@ Future<SphereObject?> showSphereEditorDialog(
   return saved;
 }
 
+/// Show the Add/Edit Quadric dialog. Preset-based: the user picks
+/// a kind (ellipsoid / cone / cylinder / paraboloid /
+/// hyperboloid-1-sheet / hyperboloid-2-sheets) + center + semi-
+/// axes (a, b, c). The dialog builds the [QuadricPreset]; the
+/// caller stores the resulting [QuadricObject] which also carries
+/// the derived 10-coefficient canonical form for downstream math.
+Future<QuadricObject?> showQuadricEditorDialog(
+  BuildContext context, {
+  QuadricObject? existing,
+  int defaultColor = 0xFF8E24AA,
+}) async {
+  final t = AppLocalizations.of(context);
+  final initialPreset = existing?.preset ??
+      const QuadricPreset(
+        kind: QuadricKind.ellipsoid,
+        center: Vector3(0, 0, 0),
+        a: 2,
+        b: 2,
+        c: 2,
+      );
+  final labelCtrl =
+      TextEditingController(text: existing?.label ?? t.quadricKindEllipsoid);
+  final cx = TextEditingController(text: initialPreset.center.x.toString());
+  final cy = TextEditingController(text: initialPreset.center.y.toString());
+  final cz = TextEditingController(text: initialPreset.center.z.toString());
+  final aCtrl = TextEditingController(text: initialPreset.a.toString());
+  final bCtrl = TextEditingController(text: initialPreset.b.toString());
+  final cCtrl = TextEditingController(text: initialPreset.c.toString());
+  var kind = initialPreset.kind;
+  var color = existing?.color ?? defaultColor;
+  final formKey = GlobalKey<FormState>();
+
+  final saved = await showDialog<QuadricObject>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(builder: (ctx, setStateDlg) {
+        return AlertDialog(
+          title: Text(
+              existing == null ? t.scene3DAddQuadric : t.scene3DEditQuadric),
+          content: SizedBox(
+            width: 400,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.scene3DQuadricKind,
+                        style: Theme.of(ctx).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<QuadricKind>(
+                      initialValue: kind,
+                      isExpanded: true,
+                      items: [
+                        for (final k in QuadricKind.values)
+                          DropdownMenuItem(
+                            value: k,
+                            child:
+                                Text(_quadricKindLabel(k, t), softWrap: false),
+                          ),
+                      ],
+                      onChanged: (k) {
+                        if (k == null) return;
+                        setStateDlg(() => kind = k);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: labelCtrl,
+                      decoration: InputDecoration(
+                        labelText: t.scene3DObjectLabel,
+                        isDense: true,
+                      ),
+                      validator: (s) => (s?.trim().isEmpty ?? true)
+                          ? t.scene3DLabelRequired
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(t.scene3DSphereCenter,
+                        style: Theme.of(ctx).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Expanded(child: _coef(cx, 'x', t)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _coef(cy, 'y', t)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _coef(cz, 'z', t)),
+                    ]),
+                    const SizedBox(height: 12),
+                    Text(t.scene3DQuadricSemiAxes,
+                        style: Theme.of(ctx).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Expanded(child: _coef(aCtrl, 'a', t)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _coef(bCtrl, 'b', t)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _coef(cCtrl, 'c', t)),
+                    ]),
+                    const SizedBox(height: 16),
+                    Text(t.scene3DColor,
+                        style: Theme.of(ctx).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final swatch in kSceneObjectPalette)
+                        _ColorSwatch(
+                          color: Color(swatch),
+                          selected: color == swatch,
+                          onTap: () => setStateDlg(() => color = swatch),
+                        ),
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(t.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                final a = double.tryParse(aCtrl.text.trim()) ?? 1;
+                final b = double.tryParse(bCtrl.text.trim()) ?? 1;
+                final c = double.tryParse(cCtrl.text.trim()) ?? 1;
+                if (a <= 0 || b <= 0 || c <= 0) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content: Text(t.scene3DQuadricPositiveSemiAxes),
+                    duration: const Duration(seconds: 2),
+                  ));
+                  return;
+                }
+                final preset = QuadricPreset(
+                  kind: kind,
+                  center: Vector3(
+                    double.tryParse(cx.text.trim()) ?? 0,
+                    double.tryParse(cy.text.trim()) ?? 0,
+                    double.tryParse(cz.text.trim()) ?? 0,
+                  ),
+                  a: a,
+                  b: b,
+                  c: c,
+                );
+                Navigator.of(ctx).pop(QuadricObject.fromPreset(
+                  id: existing?.id ?? generateSceneObjectId(),
+                  label: labelCtrl.text.trim(),
+                  color: color,
+                  visible: existing?.visible ?? true,
+                  preset: preset,
+                ));
+              },
+              child: Text(existing == null ? t.scene3DAdd : t.scene3DSave),
+            ),
+          ],
+        );
+      });
+    },
+  );
+  return saved;
+}
+
+String _quadricKindLabel(QuadricKind k, AppLocalizations t) {
+  switch (k) {
+    case QuadricKind.ellipsoid:
+      return t.quadricKindEllipsoid;
+    case QuadricKind.ellipticCone:
+      return t.quadricKindCone;
+    case QuadricKind.ellipticCylinder:
+      return t.quadricKindCylinder;
+    case QuadricKind.ellipticParaboloid:
+      return t.quadricKindParaboloid;
+    case QuadricKind.hyperboloid1Sheet:
+      return t.quadricKindHyperboloid1;
+    case QuadricKind.hyperboloid2Sheets:
+      return t.quadricKindHyperboloid2;
+  }
+}
+
 class _ColorSwatch extends StatelessWidget {
   final Color color;
   final bool selected;

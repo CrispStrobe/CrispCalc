@@ -1824,24 +1824,33 @@ same list to painter + panel. 24 new tests covering every pair
 tangent, missed, nested). 7 + 16 i18n strings × 4 locales for
 panel chrome + reason keys.
 
-#### Round A5 — Quadrics + plane × quadric → conic projection
+#### Round A5 — Quadrics (preset-based) — **SHIPPED**
 
-Quadric add dialog: 10 coefficients OR a preset picker
-(ellipsoid `(x/a)²+(y/b)²+(z/c)²=1`, paraboloid, hyperboloid,
-cone, cylinder). Renderer samples a 32×32 parametric grid for the
-preset classes and falls back to a marching-cubes-style isosurface
-extraction for general quadrics.
+Done 2026-05-26 — see HISTORY round 96. Six preset kinds
+(ellipsoid, elliptic cone / cylinder / paraboloid,
+one-sheet + two-sheet hyperboloid) added via a preset-picker
+dialog. QuadricObject gains optional `preset` metadata
+(kind + center + semi-axes); `QuadricObject.fromPreset`
+derives the 10 generic coefficients (canonical math
+representation stays the source of truth). Painter
+dispatches on `preset.kind` to draw a 24×24 parametric
+wireframe; `_QuadricGridSpec` carries per-kind (u, v)
+ranges + wrap flags. FAB chooser sheet gains a Quadric
+option; edit / visibility / panel subtitle all learn the
+new kind. 11 i18n strings × 4 locales. 5 new tests for the
+preset → coefficient pipeline.
 
-Plane × quadric intersection: substitute the plane equation into
-the quadric and reduce to a 2D conic in the plane's local frame
-— **this is the meaningful bridge to the existing Conic Section
-module**. Result panel shows the conic classification (ellipse /
-parabola / hyperbola / degenerate) AND the conic is rendered as
-a highlighted curve in the 3D view.
+#### Round A5b — Plane × quadric → conic projection (queued)
 
-The Conic Section module gets an "Open in 3D Scene" button that
-creates a plane-perpendicular-to-z-axis intersecting an
-appropriate quadric so the user can rotate and inspect it.
+Substitute the plane equation into the quadric and reduce
+to a 2D conic in the plane's local frame. The meaningful
+bridge to the existing Conic Section module — once shipped,
+the Conic Section screen gets an "Open in 3D Scene" entry
+point that creates a plane intersecting an appropriate
+quadric so the user can rotate and inspect it. Raw-
+coefficient quadric input also lands here, since the
+canonical 10-coefficient form is what the intersection
+math wants directly.
 
 #### Round A6 — Parametric surfaces + curves
 

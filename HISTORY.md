@@ -2,6 +2,90 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 96, P9-A5) — Quadrics (preset-based)
+
+Six new renderable object kinds in the 3D Scene module:
+ellipsoid, elliptic cone, elliptic cylinder, elliptic
+paraboloid, one-sheet hyperboloid, two-sheet hyperboloid.
+Add via the FAB sheet (now four options) → preset picker
+dialog → renders as a parametric wireframe in the viewport.
+The existing intersection pipeline isn't wired to quadrics
+yet (the math is more involved — A5b).
+
+### What's new
+
+`lib/engine/scene_3d/scene_object.dart`:
+- `QuadricKind` enum — six axis-aligned canonical forms.
+- `QuadricPreset` class — semantic metadata (kind, center,
+  semi-axes a/b/c, axis extent `tExtent`). JSON
+  round-trippable. `toGenericCoefficients()` derives the
+  10 generic coefficients accounting for translation by
+  `center` (no cross terms since presets are axis-aligned,
+  just linear + constant shifts).
+- `QuadricObject` gains optional `preset` field +
+  `fromPreset(...)` factory. The 10 coefficients remain
+  the canonical math representation; preset is additive
+  metadata enabling parametric rendering + dialog
+  round-trip on edit. JSON serializes both.
+
+`lib/widgets/scene_3d_object_dialogs.dart`:
+- New `showQuadricEditorDialog` — kind dropdown + center +
+  semi-axes + label + color. Rejects non-positive
+  semi-axes.
+
+`lib/widgets/scene_3d_painter.dart`:
+- `_drawQuadric` dispatches on `preset.kind`. Each kind has
+  an axis-aligned parametric form r(u, v) sampled on a
+  24×24 grid; the painter draws u- and v-direction curves.
+  `_QuadricGridSpec` per-kind helper carries (u, v) ranges
+  + whether each parameter wraps so closing segments draw
+  on the around-axis sweep.
+- Parametric forms:
+  - **Ellipsoid**: spherical coords scaled by (a, b, c).
+  - **Cone**: `(a·u·cos v, b·u·sin v, c·u)` — both nappes.
+  - **Cylinder**: `(a·cos v, b·sin v, u)` over u ∈ [-t, t].
+  - **Paraboloid**: `(a·u·cos v, b·u·sin v, c·u²)`.
+  - **Hyperboloid (1 sheet)**:
+    `(a·cosh u·cos v, b·cosh u·sin v, c·sinh u)`.
+  - **Hyperboloid (2 sheets)**:
+    `(a·sinh|u|·cos v, b·sinh|u|·sin v, ±c·cosh|u|)` with
+    sign from `sign(u)` — both sheets in one u-sweep.
+
+`lib/screens/scene_3d_screen.dart`:
+- FAB chooser sheet gains a Quadric option.
+- Edit dispatch, visibility toggle, and panel subtitle all
+  learn QuadricObject. Subtitle renders e.g.
+  `Ellipsoid a=2, b=3, c=4`.
+
+### i18n
+
+11 new strings × 4 locales: `scene3DAddQuadric`,
+`scene3DEditQuadric`, `scene3DQuadricKind`,
+`scene3DQuadricSemiAxes`, `scene3DQuadricPositiveSemiAxes`,
+plus the six `quadricKind*` labels.
+
+### Tests
+
+5 new tests in `test/scene_3d_test.dart` covering the
+preset → coefficient pipeline: unit ellipsoid yields
+`A=B=C=1, J=-1`, translated ellipsoid has zero `evaluate`
+at surface samples, cone produces the right `C` sign +
+passes through origin, paraboloid evaluates to zero on
+surface samples, full JSON round-trip preserves preset
+metadata. Suite jump 1515 → 1659 also picks up ~140 tests
+from in-flight parallel work.
+
+### Deferred to A5b
+
+- Plane × quadric → conic intersection (substitute plane
+  equation into the quadric, reduce to a 2D conic in the
+  plane's local frame). Connects the new module back to
+  the existing Conic Section analyzer.
+- "Open in 3D Scene" entry on `ConicSectionScreen`.
+- Raw-coefficient input mode (no preset).
+- Hyperboloid-2-sheets cosmetic gap at u=0 (the two
+  sheets connect at the discontinuity; no math bug).
+
 ## 2026-05-26 (round 95, P9-A4) — Pairwise intersections + results panel
 
 The round that pays off the 3D Scene arc — the module now

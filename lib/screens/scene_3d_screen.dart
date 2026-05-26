@@ -79,6 +79,15 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
                 if (s != null) _appState.addOrUpdateSceneObject(s);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.bubble_chart_outlined),
+              title: Text(t.scene3DAddQuadric),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final q = await showQuadricEditorDialog(context);
+                if (q != null) _appState.addOrUpdateSceneObject(q);
+              },
+            ),
           ],
         ),
       ),
@@ -96,7 +105,9 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
       case SphereObject s:
         final updated = await showSphereEditorDialog(context, existing: s);
         if (updated != null) _appState.addOrUpdateSceneObject(updated);
-      case QuadricObject _:
+      case QuadricObject q:
+        final updated = await showQuadricEditorDialog(context, existing: q);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
       case ParametricSurfaceObject _:
       case ParametricCurveObject _:
         break;
@@ -135,7 +146,24 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
           center: s.center,
           radius: s.radius,
         ));
-      case QuadricObject _:
+      case QuadricObject q:
+        _appState.addOrUpdateSceneObject(QuadricObject(
+          id: q.id,
+          label: q.label,
+          color: q.color,
+          visible: visible,
+          cA: q.cA,
+          cB: q.cB,
+          cC: q.cC,
+          cD: q.cD,
+          cE: q.cE,
+          cF: q.cF,
+          cG: q.cG,
+          cH: q.cH,
+          cI: q.cI,
+          cJ: q.cJ,
+          preset: q.preset,
+        ));
       case ParametricSurfaceObject _:
       case ParametricCurveObject _:
         break;
@@ -377,8 +405,10 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
         return '${_pt(l.point)} + t·${_pt(l.direction)}';
       case SphereObject s:
         return '|x − ${_pt(s.center)}| = ${_fmt(s.radius)}';
-      case QuadricObject _:
-        return 'Quadric';
+      case QuadricObject q:
+        final p = q.preset;
+        if (p == null) return 'Quadric (custom)';
+        return '${_kindShortName(p.kind)} a=${_fmt(p.a)}, b=${_fmt(p.b)}, c=${_fmt(p.c)}';
       case ParametricSurfaceObject _:
         return 'Parametric surface';
       case ParametricCurveObject _:
@@ -390,6 +420,23 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
     // Vector3 from plane_math, but typed dynamic here so this method
     // doesn't have to import it just for formatting.
     return '(${_fmt(v.x as double)}, ${_fmt(v.y as double)}, ${_fmt(v.z as double)})';
+  }
+
+  static String _kindShortName(QuadricKind k) {
+    switch (k) {
+      case QuadricKind.ellipsoid:
+        return 'Ellipsoid';
+      case QuadricKind.ellipticCone:
+        return 'Cone';
+      case QuadricKind.ellipticCylinder:
+        return 'Cylinder';
+      case QuadricKind.ellipticParaboloid:
+        return 'Paraboloid';
+      case QuadricKind.hyperboloid1Sheet:
+        return 'Hyperboloid (1)';
+      case QuadricKind.hyperboloid2Sheets:
+        return 'Hyperboloid (2)';
+    }
   }
 
   static String _fmt(double v) {

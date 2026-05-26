@@ -197,6 +197,113 @@ void main() {
       final restored = SceneObject.fromJson(original.toJson()) as QuadricObject;
       expect(restored.equalsByGeometry(original), isTrue);
     });
+
+    test('fromPreset(unit ellipsoid) sits on the unit sphere coefficients', () {
+      // (x/1)² + (y/1)² + (z/1)² = 1  ⇒  A=B=C=1, J=-1.
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'Sphere',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipsoid,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      expect(q.cA, closeTo(1, 1e-12));
+      expect(q.cB, closeTo(1, 1e-12));
+      expect(q.cC, closeTo(1, 1e-12));
+      expect(q.cJ, closeTo(-1, 1e-12));
+      expect(q.evaluate(1, 0, 0), closeTo(0, 1e-12));
+      expect(q.evaluate(0, 1, 0), closeTo(0, 1e-12));
+      expect(q.evaluate(0, 0, 1), closeTo(0, 1e-12));
+    });
+
+    test('fromPreset(translated ellipsoid) keeps surface points on surface',
+        () {
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'E',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipsoid,
+          center: Vector3(1, 2, 3),
+          a: 2,
+          b: 3,
+          c: 4,
+        ),
+      );
+      // Sample points on the surface: (1+2, 2, 3), (1, 2+3, 3), (1, 2, 3+4).
+      expect(q.evaluate(3, 2, 3), closeTo(0, 1e-9));
+      expect(q.evaluate(1, 5, 3), closeTo(0, 1e-9));
+      expect(q.evaluate(1, 2, 7), closeTo(0, 1e-9));
+    });
+
+    test('fromPreset(cone) has the right signature coefficients', () {
+      // (x/a)² + (y/b)² − (z/c)² = 0
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'C',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipticCone,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      expect(q.cC, closeTo(-1, 1e-12));
+      expect(q.cJ, closeTo(0, 1e-12));
+      // Origin sits on the cone.
+      expect(q.evaluate(0, 0, 0), closeTo(0, 1e-12));
+      // (1, 0, 1) sits on the cone (1 + 0 - 1 = 0).
+      expect(q.evaluate(1, 0, 1), closeTo(0, 1e-12));
+    });
+
+    test('fromPreset(paraboloid) evaluates to zero on the surface', () {
+      // z/c = (x/a)² + (y/b)²
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'P',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipticParaboloid,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      // (1, 0, 1), (0, 1, 1), (2, 0, 4) all sit on the surface.
+      expect(q.evaluate(1, 0, 1), closeTo(0, 1e-12));
+      expect(q.evaluate(0, 1, 1), closeTo(0, 1e-12));
+      expect(q.evaluate(2, 0, 4), closeTo(0, 1e-12));
+    });
+
+    test('JSON round-trip preserves the preset metadata when present', () {
+      final original = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'Egg',
+        color: 0xFFAB47BC,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipsoid,
+          center: Vector3(1, 2, 3),
+          a: 2,
+          b: 3,
+          c: 4,
+        ),
+      );
+      final restored = SceneObject.fromJson(original.toJson()) as QuadricObject;
+      expect(restored.preset, isNotNull);
+      expect(restored.preset!.kind, QuadricKind.ellipsoid);
+      expect(restored.preset!.a, 2);
+      expect(restored.preset!.b, 3);
+      expect(restored.preset!.c, 4);
+      expect(restored.preset!.center, const Vector3(1, 2, 3));
+    });
   });
 
   group('ParametricSurfaceObject', () {

@@ -293,16 +293,198 @@ class SphereObject extends SceneObject {
       other is SphereObject && other.center == center && other.radius == radius;
 }
 
+/// Canonical preset shapes for a 3D quadric. Each kind has an
+/// axis-aligned parametric form the renderer can sample directly,
+/// avoiding the need for a marching-cubes-style isosurface pass for
+/// the cases that matter in V1.
+enum QuadricKind {
+  /// `(x/a)² + (y/b)² + (z/c)² = 1`
+  ellipsoid,
+
+  /// `(x/a)² + (y/b)² − (z/c)² = 0` (double-napped cone through origin)
+  ellipticCone,
+
+  /// `(x/a)² + (y/b)² = 1`, extended along z within ±tExtent.
+  ellipticCylinder,
+
+  /// `z/c = (x/a)² + (y/b)²` (paraboloid opening +z when c > 0).
+  ellipticParaboloid,
+
+  /// `(x/a)² + (y/b)² − (z/c)² = 1` (one connected sheet).
+  hyperboloid1Sheet,
+
+  /// `(z/c)² − (x/a)² − (y/b)² = 1` (two disconnected sheets, ±z).
+  hyperboloid2Sheets,
+}
+
+/// Optional preset metadata attached to a [QuadricObject]. Captures
+/// the semantic input from the Add Quadric dialog so we can:
+/// (1) render via parametric sampling instead of isosurface
+///     extraction, (2) round-trip the dialog when editing, and
+/// (3) describe the object in the panel as "Ellipsoid (a=2, b=3,
+/// c=4) at (1, 0, 0)" instead of just "Quadric". Round-A5 quadrics
+/// always have a preset; raw-coefficient input is a later round.
+class QuadricPreset {
+  final QuadricKind kind;
+  final Vector3 center;
+  final double a;
+  final double b;
+  final double c;
+
+  /// Axis extent for the unbounded kinds (cone / cylinder /
+  /// paraboloid / hyperboloid). The renderer clamps the
+  /// parametric `t` range to ±tExtent so the wireframe doesn't
+  /// shoot to infinity.
+  final double tExtent;
+
+  const QuadricPreset({
+    required this.kind,
+    required this.center,
+    required this.a,
+    required this.b,
+    required this.c,
+    this.tExtent = 3.0,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'k': kind.name,
+        'cx': center.x,
+        'cy': center.y,
+        'cz': center.z,
+        'a': a,
+        'b': b,
+        'c': c,
+        't': tExtent,
+      };
+
+  factory QuadricPreset.fromJson(Map<String, dynamic> j) => QuadricPreset(
+        kind: QuadricKind.values.firstWhere(
+          (v) => v.name == j['k'],
+          orElse: () => QuadricKind.ellipsoid,
+        ),
+        center: Vector3(
+          (j['cx'] as num?)?.toDouble() ?? 0,
+          (j['cy'] as num?)?.toDouble() ?? 0,
+          (j['cz'] as num?)?.toDouble() ?? 0,
+        ),
+        a: (j['a'] as num?)?.toDouble() ?? 1,
+        b: (j['b'] as num?)?.toDouble() ?? 1,
+        c: (j['c'] as num?)?.toDouble() ?? 1,
+        tExtent: (j['t'] as num?)?.toDouble() ?? 3.0,
+      );
+
+  /// Derive the 10 generic quadric coefficients for this preset so
+  /// the canonical [QuadricObject] storage stays the source of
+  /// truth for the math (plane×quadric intersection in A5b will
+  /// operate on these). The forms below are all axis-aligned and
+  /// then translated by [center].
+  ///
+  /// For axis-aligned `(x/a)² + (y/b)² + (z/c)² = 1` we have
+  /// `A=1/a², B=1/b², C=1/c², D=E=F=0, G=H=I=0, J=-1`.
+  /// Translating by `c=(cx,cy,cz)` sends `x → x-cx` etc., which
+  /// adds linear + constant terms but no cross-terms.
+  ({
+    double cA,
+    double cB,
+    double cC,
+    double cD,
+    double cE,
+    double cF,
+    double cG,
+    double cH,
+    double cI,
+    double cJ
+  }) toGenericCoefficients() {
+    // Per-axis quadratic coefficients in the axis-aligned form.
+    final inv2A = 1.0 / (a * a);
+    final inv2B = 1.0 / (b * b);
+    final inv2C = 1.0 / (c * c);
+    final double aA;
+    final double aB;
+    final double aC;
+    final double aG; // linear in z for paraboloid
+    final double aJ; // constant
+    switch (kind) {
+      case QuadricKind.ellipsoid:
+        aA = inv2A;
+        aB = inv2B;
+        aC = inv2C;
+        aG = 0;
+        aJ = -1;
+      case QuadricKind.ellipticCone:
+        aA = inv2A;
+        aB = inv2B;
+        aC = -inv2C;
+        aG = 0;
+        aJ = 0;
+      case QuadricKind.ellipticCylinder:
+        aA = inv2A;
+        aB = inv2B;
+        aC = 0;
+        aG = 0;
+        aJ = -1;
+      case QuadricKind.ellipticParaboloid:
+        // (x/a)² + (y/b)² − z/c = 0
+        aA = inv2A;
+        aB = inv2B;
+        aC = 0;
+        aG = -1.0 / c;
+        aJ = 0;
+      case QuadricKind.hyperboloid1Sheet:
+        aA = inv2A;
+        aB = inv2B;
+        aC = -inv2C;
+        aG = 0;
+        aJ = -1;
+      case QuadricKind.hyperboloid2Sheets:
+        aA = -inv2A;
+        aB = -inv2B;
+        aC = inv2C;
+        aG = 0;
+        aJ = -1;
+    }
+    // Translate by center: replace x→x-cx, y→y-cy, z→z-cz. With no
+    // cross terms (D=E=F=0) the substitution is:
+    //   aA (x-cx)² + aB (y-cy)² + aC (z-cz)² + aG (z-cz) + aJ
+    // = aA x² + aB y² + aC z²
+    //   − 2 aA cx · x − 2 aB cy · y − (2 aC cz + aG) · z
+    //   + aA cx² + aB cy² + aC cz² + aG (-cz) + aJ
+    final cx = center.x, cy = center.y, cz = center.z;
+    return (
+      cA: aA,
+      cB: aB,
+      cC: aC,
+      cD: 0,
+      cE: 0,
+      cF: 0,
+      cG: -2 * aA * cx,
+      cH: -2 * aB * cy,
+      cI: -2 * aC * cz + aG,
+      cJ: aA * cx * cx + aB * cy * cy + aC * cz * cz - aG * cz + aJ,
+    );
+  }
+}
+
 /// General 3D quadric surface:
 /// `A x² + B y² + C z² + D xy + E xz + F yz + G x + H y + I z + J = 0`.
 /// Covers ellipsoids, paraboloids, hyperboloids (1- and 2-sheet),
-/// cones, cylinders, and degenerate cases. Classification happens
-/// downstream (round A5).
+/// cones, cylinders, and degenerate cases.
+///
+/// Round A5 adds the optional [preset] metadata so quadrics created
+/// via the Add Quadric dialog can be re-rendered via parametric
+/// sampling (instead of isosurface extraction) and round-trip the
+/// dialog inputs on edit. The 10 coefficients remain the canonical
+/// math representation.
 class QuadricObject extends SceneObject {
   /// Coefficients in the order they appear in the canonical form.
   /// Stored individually rather than as a Map so JSON keys are
   /// stable and renaming a single field is a compile error.
   final double cA, cB, cC, cD, cE, cF, cG, cH, cI, cJ;
+
+  /// Preset that produced this quadric, when one was used. Null
+  /// when the user input raw coefficients directly (deferred to a
+  /// later round).
+  final QuadricPreset? preset;
 
   const QuadricObject({
     required super.id,
@@ -319,7 +501,37 @@ class QuadricObject extends SceneObject {
     required this.cH,
     required this.cI,
     required this.cJ,
+    this.preset,
   }) : super(kind: SceneObjectKind.quadric);
+
+  /// Build a quadric from preset metadata. Both the [preset] and
+  /// the derived [coefficients] are stored.
+  factory QuadricObject.fromPreset({
+    required String id,
+    required String label,
+    required int color,
+    bool visible = true,
+    required QuadricPreset preset,
+  }) {
+    final c = preset.toGenericCoefficients();
+    return QuadricObject(
+      id: id,
+      label: label,
+      color: color,
+      visible: visible,
+      cA: c.cA,
+      cB: c.cB,
+      cC: c.cC,
+      cD: c.cD,
+      cE: c.cE,
+      cF: c.cF,
+      cG: c.cG,
+      cH: c.cH,
+      cI: c.cI,
+      cJ: c.cJ,
+      preset: preset,
+    );
+  }
 
   /// Evaluate the quadric polynomial at (x, y, z). Zero means the
   /// point is on the surface.
@@ -352,6 +564,7 @@ class QuadricObject extends SceneObject {
         'qh': cH,
         'qi': cI,
         'qj': cJ,
+        if (preset != null) 'p': preset!.toJson(),
       };
 
   factory QuadricObject.fromJson(Map<String, dynamic> j) => QuadricObject(
@@ -369,6 +582,9 @@ class QuadricObject extends SceneObject {
         cH: (j['qh'] as num?)?.toDouble() ?? 0,
         cI: (j['qi'] as num?)?.toDouble() ?? 0,
         cJ: (j['qj'] as num?)?.toDouble() ?? 0,
+        preset: j['p'] is Map
+            ? QuadricPreset.fromJson(Map<String, dynamic>.from(j['p'] as Map))
+            : null,
       );
 
   @override

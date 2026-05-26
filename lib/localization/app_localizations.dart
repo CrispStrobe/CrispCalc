@@ -160,6 +160,19 @@ abstract class AppLocalizations {
   String get intersectionCircle;
   String intersectionReason(String key);
 
+  // -- P9-A5: quadrics --
+  String get scene3DAddQuadric;
+  String get scene3DEditQuadric;
+  String get scene3DQuadricKind;
+  String get scene3DQuadricSemiAxes;
+  String get scene3DQuadricPositiveSemiAxes;
+  String get quadricKindEllipsoid;
+  String get quadricKindCone;
+  String get quadricKindCylinder;
+  String get quadricKindParaboloid;
+  String get quadricKindHyperboloid1;
+  String get quadricKindHyperboloid2;
+
   String get moduleUnitConverterTitle;
   String get moduleUnitConverterSubtitle;
   // -- Variable / function panel --
@@ -903,6 +916,31 @@ class EnLocalizations implements AppLocalizations {
         return key;
     }
   }
+
+  // -- P9-A5 --
+  @override
+  String get scene3DAddQuadric => 'Add quadric';
+  @override
+  String get scene3DEditQuadric => 'Edit quadric';
+  @override
+  String get scene3DQuadricKind => 'Type';
+  @override
+  String get scene3DQuadricSemiAxes => 'Semi-axes';
+  @override
+  String get scene3DQuadricPositiveSemiAxes =>
+      'Semi-axes must be positive (a, b, c > 0)';
+  @override
+  String get quadricKindEllipsoid => 'Ellipsoid';
+  @override
+  String get quadricKindCone => 'Elliptic cone';
+  @override
+  String get quadricKindCylinder => 'Elliptic cylinder';
+  @override
+  String get quadricKindParaboloid => 'Elliptic paraboloid';
+  @override
+  String get quadricKindHyperboloid1 => 'Hyperboloid (1 sheet)';
+  @override
+  String get quadricKindHyperboloid2 => 'Hyperboloid (2 sheets)';
 
   @override
   String get moduleUnitConverterTitle => 'Unit Converter';
@@ -2217,6 +2255,31 @@ class DeLocalizations implements AppLocalizations {
         return key;
     }
   }
+
+  // -- P9-A5 --
+  @override
+  String get scene3DAddQuadric => 'Quadrik hinzufügen';
+  @override
+  String get scene3DEditQuadric => 'Quadrik bearbeiten';
+  @override
+  String get scene3DQuadricKind => 'Typ';
+  @override
+  String get scene3DQuadricSemiAxes => 'Halbachsen';
+  @override
+  String get scene3DQuadricPositiveSemiAxes =>
+      'Halbachsen müssen positiv sein (a, b, c > 0)';
+  @override
+  String get quadricKindEllipsoid => 'Ellipsoid';
+  @override
+  String get quadricKindCone => 'Elliptischer Kegel';
+  @override
+  String get quadricKindCylinder => 'Elliptischer Zylinder';
+  @override
+  String get quadricKindParaboloid => 'Elliptisches Paraboloid';
+  @override
+  String get quadricKindHyperboloid1 => 'Einschaliges Hyperboloid';
+  @override
+  String get quadricKindHyperboloid2 => 'Zweischaliges Hyperboloid';
 
   @override
   String get moduleUnitConverterTitle => 'Einheitenumrechner';
@@ -3676,6 +3739,31 @@ class FrLocalizations implements AppLocalizations {
         return key;
     }
   }
+
+  // -- P9-A5 --
+  @override
+  String get scene3DAddQuadric => 'Ajouter une quadrique';
+  @override
+  String get scene3DEditQuadric => 'Modifier la quadrique';
+  @override
+  String get scene3DQuadricKind => 'Type';
+  @override
+  String get scene3DQuadricSemiAxes => 'Demi-axes';
+  @override
+  String get scene3DQuadricPositiveSemiAxes =>
+      'Les demi-axes doivent être strictement positifs (a, b, c > 0)';
+  @override
+  String get quadricKindEllipsoid => 'Ellipsoïde';
+  @override
+  String get quadricKindCone => 'Cône elliptique';
+  @override
+  String get quadricKindCylinder => 'Cylindre elliptique';
+  @override
+  String get quadricKindParaboloid => 'Paraboloïde elliptique';
+  @override
+  String get quadricKindHyperboloid1 => 'Hyperboloïde (1 nappe)';
+  @override
+  String get quadricKindHyperboloid2 => 'Hyperboloïde (2 nappes)';
 
   @override
   String get moduleUnitConverterTitle => 'Convertisseur d\'unités';
@@ -5139,6 +5227,31 @@ class EsLocalizations implements AppLocalizations {
         return key;
     }
   }
+
+  // -- P9-A5 --
+  @override
+  String get scene3DAddQuadric => 'Añadir cuádrica';
+  @override
+  String get scene3DEditQuadric => 'Editar cuádrica';
+  @override
+  String get scene3DQuadricKind => 'Tipo';
+  @override
+  String get scene3DQuadricSemiAxes => 'Semiejes';
+  @override
+  String get scene3DQuadricPositiveSemiAxes =>
+      'Los semiejes deben ser positivos (a, b, c > 0)';
+  @override
+  String get quadricKindEllipsoid => 'Elipsoide';
+  @override
+  String get quadricKindCone => 'Cono elíptico';
+  @override
+  String get quadricKindCylinder => 'Cilindro elíptico';
+  @override
+  String get quadricKindParaboloid => 'Paraboloide elíptico';
+  @override
+  String get quadricKindHyperboloid1 => 'Hiperboloide (1 hoja)';
+  @override
+  String get quadricKindHyperboloid2 => 'Hiperboloide (2 hojas)';
 
   @override
   String get moduleUnitConverterTitle => 'Conversor de unidades';
