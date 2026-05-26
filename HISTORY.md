@@ -2,6 +2,38 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (P6 Round 96 follow-up) — `initialSearch` deep-link
+
+Tightens the See-worked-example cross-link shipped in Round
+96. The V1 cross-link just popped the Function Reference and
+opened the Worked Examples dialog with no pre-filter — the
+user had to find the linked entry manually. This follow-up
+makes the cross-link actually deep-link.
+
+`WorkedExamplesDialog` gains an `initialSearch: String?`
+ctor param. When set, `initState` writes the value into the
+search controller before the first build, and the existing
+filter pipeline does the rest. The filter now also matches
+against `e.id` (lowercased), which is the locale-independent
+identifier — important because the dialog renders translated
+titles + descriptions, so a deep-link that passes an English
+title would miss when the user is in a German locale, but a
+deep-link that passes the id always works.
+
+`FunctionReferenceDialog._openWorkedExample` now passes the
+linked `workedExampleId` as `initialSearch`. End result:
+tapping "See worked example" on a Function Reference row
+opens Worked Examples filtered to exactly the linked entry,
+regardless of UI language.
+
+Five new tests: pre-fill, list filter (only linked entry
+visible), id-substring search, empty-initialSearch no-op,
+and a full end-to-end FunctionRef → WE cross-link test that
+verifies the linked entry's expression appears and unrelated
+ones don't.
+
+Suite 1944 → 1949.
+
 ## 2026-05-26 (P6 Round 96) — Function Reference scaffolding
 
 Opens the rounds-96-100 Function Reference arc with a minimal

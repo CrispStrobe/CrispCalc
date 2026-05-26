@@ -37,7 +37,7 @@ remind yourself the user wants main.
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **main HEAD** | (this session — Round 96 + docs) |
-| **Tests** | **1944 pass** (1810 → 1832 → 1856 → 1880 → 1898 → 1905 → 1911 → 1931 → 1944) — `flutter analyze` clean |
+| **Tests** | **1949 pass** (1810 → 1832 → 1856 → 1880 → 1898 → 1905 → 1911 → 1931 → 1944 → 1949) — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (FlatZinc frontend + QuickXplain MUS) |
 | **CI** | Round 96 push not yet observed; previous pushes were green |
 
@@ -56,6 +56,7 @@ Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone
 | **Round 94** | Surface-scoped filtering. `WorkedExamplesSurface` enum, notepad allowlist. |
 | **Round 95** | Per-module pre-loading via parameterised sentinels. New AppState slots, receivers on Sudoku + Statistics. |
 | **Round 96** | Function Reference scaffolding. New `FunctionRef` model + 9-category enum + 3-entry seed list (`solve` / `isprime` / `pi_precision`). New `FunctionReferenceDialog` widget mirroring worked-examples layout but with ExpansionTile rows for the detail panel. "Try in Calculator" deep-link reuses `AppState.requestInsertExpression`. "See worked example" cross-link wired via a new `workedExampleId` field on `FunctionRef`. Reach-point in Settings (Round 101 will surface it via help-mode toggle). 11 i18n strings × 4 locales. 13 tests (+7 catalogue invariants, +6 dialog widget). |
+| **Round 96 follow-up** | Tightened the See-worked-example cross-link. `WorkedExamplesDialog` gained an `initialSearch: String?` ctor param (pre-fills the search field on open) + id-based filter search (locale-independent). `FunctionReferenceDialog._openWorkedExample` now passes the linked id as `initialSearch`, so the cross-link surfaces exactly the related entry filtered. 5 tests (+4 dialog initialSearch, +1 end-to-end cross-link). |
 
 ## Pickup points — next strategic slot
 
@@ -142,10 +143,11 @@ P6 rounds 93-96 done; Round 97 is the natural next slot.
   detail area. The widget tester reproduced an overflow on
   the narrow dialog; `Wrap` reflows the buttons onto a
   second line at narrow widths.
-- **`_openWorkedExample` is minimal-viable** — pops the
-  Function Reference dialog and opens Worked Examples, but
-  doesn't pre-filter to the linked entry. Future round: add
-  an `initialSearch` param to `WorkedExamplesDialog`.
+- **`_openWorkedExample` is now deep-linked** — pops the
+  Function Reference dialog and opens Worked Examples
+  filtered down to exactly the linked entry. Done in the
+  Round 96 follow-up via the new `initialSearch` ctor param
+  on `WorkedExamplesDialog` + id-based filter search.
 
 ## Hygiene reminders
 

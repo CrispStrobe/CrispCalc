@@ -1607,6 +1607,28 @@ Suite 1931 → 1944 (+7 catalogue invariants in
 `function_reference_test.dart`, +6 dialog widget tests in
 `function_reference_dialog_test.dart`).
 
+###### Round 96 follow-up: `initialSearch` cross-link ✅
+
+Shipped immediately after Round 96 lands. The original V1
+cross-link in `FunctionReferenceDialog._openWorkedExample`
+just opened `WorkedExamplesDialog` with no pre-filter — the
+user had to spot the linked entry by hand. This follow-up:
+
+- Adds `initialSearch: String?` to `WorkedExamplesDialog`'s
+  ctor and pre-fills the search controller in `initState`.
+- Adds `e.id.toLowerCase().contains(query)` to the dialog's
+  filter so locale-independent id deep-links work
+  (titles/descriptions are translated, ids aren't).
+- Threads the workedExampleId through
+  `_openWorkedExample` as the `initialSearch`.
+
+Result: tapping "See worked example" on a Function Reference
+row now opens Worked Examples filtered down to exactly the
+linked entry, regardless of UI locale.
+
+Suite 1944 → 1949 (+5 tests: pre-fill, list filter, id-
+search, empty no-op, end-to-end cross-link).
+
 PLAN sketch (kept for reference):
 
 ```dart

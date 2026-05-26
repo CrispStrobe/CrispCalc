@@ -104,10 +104,10 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1944 (1810 → 1832 → 1856 → 1880 → 1898 →
-1905 → 1911 → 1931 → 1944 across P7 rounds 110/111/112/111b/113
-and P6 rounds 93+94+95+96). All green; CI 6-job matrix on every
-main push.
+**Tests at session end**: 1949 (1810 → 1832 → 1856 → 1880 → 1898 →
+1905 → 1911 → 1931 → 1944 → 1949 across P7 rounds 110/111/112/111b/113,
+P6 rounds 93+94+95+96, and the Round 96 follow-up). All green;
+CI 6-job matrix on every main push.
 
 **Working mode change (2026-05-26 EOD)**: parallel-arc work is paused.
 All edits now go directly on `main` in `/Volumes/backups/code/CrispCalc`.
@@ -446,6 +446,13 @@ project depends on it via a git ref pin in `pubspec.yaml`.
   the future help-mode toggle). 11 new i18n strings × 4
   locales. The `FunctionRef.workedExampleId` field is added
   beyond PLAN's sketch to make the cross-link concrete.
+- **Round 96 follow-up** — Tightened the
+  See-worked-example cross-link. `WorkedExamplesDialog`
+  gained an `initialSearch: String?` ctor param + id-based
+  filter search (id is locale-independent so deep-links
+  work across UI languages). `FunctionReferenceDialog`
+  threads the linked id through so tapping the cross-link
+  surfaces exactly the linked entry filtered.
 - **Docs P6 / P7 / P8 (no round numbers)** — 565 lines of
   PLAN.md added: discoverability + help-system overhaul (P6,
   rounds 91-105), boolean type + relational/logical operators
