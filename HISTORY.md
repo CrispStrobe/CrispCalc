@@ -2,6 +2,71 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 92, P9-A1) — 3D Scene engine scaffolding
+
+User asked for a real 3D Scene module that supersedes the
+text-only Plane Analyzer + Conic Section modules: define
+multiple 3D objects (planes, lines, spheres, quadrics,
+parametric surfaces / curves), render them together, compute
+intersections. See PLAN P9 for the full A1-A6 round plan.
+
+Round A1 is the engine foundation only — no UI, no rendering,
+no intersection algorithms yet. Pure-Dart data classes so the
+geometry model can be reviewed in isolation before the renderer
++ scene screen + intersection math build on top.
+
+### What's new
+
+`lib/engine/scene_3d/scene_object.dart` — sealed `SceneObject`
+hierarchy:
+
+- `PlaneObject` (coordinate form `ax + by + cz = d`, with a
+  `fromParametric` builder that derives the normal from `u × v`
+  and rejects parallel directions);
+- `LineObject` (point + direction, with `throughPoints`);
+- `SphereObject` (center + radius);
+- `QuadricObject` (10 coefficients of
+  `Ax² + By² + Cz² + Dxy + Exz + Fyz + Gx + Hy + Iz + J = 0`,
+  with an `evaluate(x, y, z)` predicate so we can check whether
+  a point sits on the surface);
+- `ParametricSurfaceObject` (expression strings for `x(u,v)`,
+  `y(u,v)`, `z(u,v)` + parameter ranges + sample steps);
+- `ParametricCurveObject` (one-parameter analogue).
+
+Every object carries `id` (stable for editing), `label`
+(user-facing), ARGB `color` (int — engine layer doesn't depend
+on `flutter/material`), `visible` toggle. Compact JSON keys
+match the `CalculationEntry` / `NotepadLine` storage style.
+`SceneObject.fromJson` is a kind-dispatch; each subclass owns
+its own `toJson` / `fromJson`.
+
+`lib/engine/scene_3d/scene_state.dart` — `Scene3D` container:
+ordered `List<SceneObject>` + viewport state (azimuth, elevation,
+zoom, range) with the same default angles as Graphing3DScreen so
+the new module feels visually familiar. Immutable `withObject` /
+`withoutObject` helpers (replace-by-id semantics, mirrors the
+notepad doc shape).
+
+`Vector3` reused from `plane_math.dart` so the existing Plane
+Analyzer and the new module share one vector type. If the scene
+math grows into matrices, the PLAN A6 notes flag extracting
+both into `lib/engine/scene_3d/vector_math.dart`.
+
+### Tests
+
+19 new tests in `test/scene_3d_test.dart` covering: coordinate-
+form storage; `contains()` recognition for a known plane;
+`fromParametric` matching the analyzer math + rejecting parallel
+directions; `throughPoints` direction derivation + coincident-
+point rejection; `QuadricObject.evaluate` zero-on-unit-sphere;
+JSON round-trip for every kind; `Scene3D.withObject` append +
+replace-in-place; `withoutObject` remove-by-id; full `Scene3D`
+JSON round-trip including viewport; `generateSceneObjectId`
+uniqueness across 500 calls.
+
+Suite 1465 → 1484. AppState wiring + persistence deferred to
+A2 where it fits with the UI mount/edit lifecycle.
+
 ## 2026-05-25 (round 91) — Right-click "Store as variable / function"
 
 Calculator history rows and Notepad result cells gain two new

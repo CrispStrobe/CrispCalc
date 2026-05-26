@@ -1731,6 +1731,162 @@ that leaked into Settings.
 
 ---
 
+## P9 — 3D Scene module (May 2026)
+
+User feedback (2026-05-26): the existing **Planes** and **Conic
+Sections** modules are text-input analyzers — Planes prints a
+coefficient breakdown, Conic Sections classifies the curve, neither
+renders anything. We want a real 3D scene where the user can
+define multiple objects (planes, lines, spheres, quadrics,
+parametric surfaces / curves), see them rendered together, and
+compute / visualize pairwise intersections.
+
+### Approach
+
+A new **top-level Analysis-hub module** ("3D Scene" / "3D-Szene")
+that supersedes Planes. The existing Plane Analyzer + Conic
+Sections stay as cheap quick-analyzers (and remain reachable for a
+deprecation cycle), but the new module is where users go when they
+need to *see* multiple objects + intersections.
+
+Built on the existing Graphing3D rotation/projection machinery
+(`_Surface3DPainter` in `graphing_3d_screen.dart` rounds 33+):
+hand-rolled rotation matrices, orthographic projection, height-
+tinted wireframes. The renderer learns to draw additional object
+kinds; the controller manages a list of objects + viewport state.
+
+### Round-by-round plan
+
+#### Round A1 — Engine scaffolding — **SHIPPED**
+
+Done 2026-05-26 — see HISTORY round 92. New `lib/engine/scene_3d/`
+package:
+
+- `scene_object.dart` — sealed `SceneObject` + concrete
+  `PlaneObject` (coord form `ax+by+cz=d`), `LineObject` (point +
+  direction), `SphereObject` (center + radius), `QuadricObject`
+  (10 coefficients), `ParametricSurfaceObject` (r(u,v)),
+  `ParametricCurveObject` (r(t)). Each carries id + label +
+  ARGB color + visibility. Compact JSON keys for prefs.
+- `scene_state.dart` — `Scene3D` container with ordered objects +
+  viewport (azimuth, elevation, zoom, range). `withObject` /
+  `withoutObject` for immutable mutations.
+
+Pure-Dart, no UI changes. 19 new tests covering construction,
+geometry invariants (plane.contains, line.throughPoints,
+quadric.evaluate), and JSON round-trip across all six kinds. Total
+suite 1465 → 1484.
+
+#### Round A2 — Scene screen + 3D viewport + plane rendering
+
+New `Scene3DScreen` in `lib/screens/scene_3d_screen.dart`,
+registered as an Analysis-hub module card. Layout: object list on
+the left (or top on narrow), viewport on the right (or bottom),
+add-object FAB. Wire `Scene3D` persistence into `AppState` (one
+"current scene" key + a map of named scenes, mirrors the notepad
+docs pattern from Phase 1).
+
+Renderer: extract `_Surface3DPainter`'s rotation/projection helpers
+into a reusable `Scene3DRenderer` and call them from a new painter
+that iterates `Scene3D.objects`. Planes render as bordered
+parallelograms (sample on a 16×16 u/v grid within the view
+range, draw outline + a few interior cross-lines so depth is
+readable).
+
+Add-Plane dialog: coord-form `a, b, c, d` + label + color picker.
+
+i18n: new strings — `module3DScene`, `scene3DAddPlane`,
+`scene3DAddLine`, `scene3DAddSphere`, `scene3DEdit`,
+`scene3DDelete`, `scene3DHide`, `scene3DShow`, etc.
+
+#### Round A3 — Lines + spheres in the viewport
+
+Add-Line dialog: point + direction OR two points. Renders as a
+colored line segment clipped to the view range, with a small arrow
+glyph indicating direction.
+
+Add-Sphere dialog: center + radius. Renders as latitude/longitude
+wireframe (`_latRings × _lonSegments`, default 16×24). Depth-cued
+opacity so the back hemisphere fades.
+
+Object list grows a leading color swatch + drag-handle for
+re-ordering (mirrors the notepad line list).
+
+#### Round A4 — Pairwise intersection algorithms + rendering
+
+New `lib/engine/scene_3d/intersections.dart` with
+`Intersection? intersect(SceneObject a, SceneObject b)` dispatcher
+over the kind pairs that have closed-form intersections at V1:
+
+- plane × plane → `LineIntersection` (or `ParallelPlanesResult`)
+- plane × line → `PointIntersection` (or `ParallelLineInPlaneResult`)
+- plane × sphere → `CircleIntersection` (or none)
+- line × line → `PointIntersection` (or `SkewLinesResult` /
+  `IdenticalLinesResult`)
+- line × sphere → `TwoPointsIntersection` (or one / none)
+- sphere × sphere → `CircleIntersection` (or none / contained)
+
+Results panel below the viewport shows the analytical answer
+("Intersection line: P=(1, 0, 0), D=(0, 1, -2)" etc.) and the
+geometry is highlighted in the 3D view (intersection lines drawn
+in a contrasting color, intersection points as small spheres).
+
+Tests: every kind pair gets a "known textbook intersection"
+regression and a "degenerate case" test (parallel, identical,
+non-intersecting).
+
+#### Round A5 — Quadrics + plane × quadric → conic projection
+
+Quadric add dialog: 10 coefficients OR a preset picker
+(ellipsoid `(x/a)²+(y/b)²+(z/c)²=1`, paraboloid, hyperboloid,
+cone, cylinder). Renderer samples a 32×32 parametric grid for the
+preset classes and falls back to a marching-cubes-style isosurface
+extraction for general quadrics.
+
+Plane × quadric intersection: substitute the plane equation into
+the quadric and reduce to a 2D conic in the plane's local frame
+— **this is the meaningful bridge to the existing Conic Section
+module**. Result panel shows the conic classification (ellipse /
+parabola / hyperbola / degenerate) AND the conic is rendered as
+a highlighted curve in the 3D view.
+
+The Conic Section module gets an "Open in 3D Scene" button that
+creates a plane-perpendicular-to-z-axis intersecting an
+appropriate quadric so the user can rotate and inspect it.
+
+#### Round A6 — Parametric surfaces + curves
+
+Add-Surface dialog: `x(u,v)`, `y(u,v)`, `z(u,v)` expressions +
+u/v ranges + sample step counts. Expressions evaluated via the
+same SymEngine pipeline the 2D + existing 3D screens use.
+
+Add-Curve dialog: `x(t)`, `y(t)`, `z(t)` + t range + steps. Renders
+as a polyline of `steps` segments, height-tinted by z.
+
+Intersections involving parametric objects use numerical
+sampling (find closest pair on a fine grid, refine with Newton
+near the minimum). Documented as approximate; the closed-form
+algorithms in A4/A5 remain authoritative for non-parametric pairs.
+
+### Cross-cutting concerns
+
+- **Performance**: rendering N objects on every rotation frame
+  is fine for N ≤ ~10 with current grid sizes. Past that we'll
+  need per-object dirty flags + cached projected-vertex lists
+  (similar to round 120's LaTeX cache). Defer until measured.
+- **Coordinates**: shared `Vector3` from `plane_math.dart`. If
+  the new module's needs grow (e.g. matrices for projections),
+  extract `Vector3` + a `Matrix3` to `lib/engine/scene_3d/
+  vector_math.dart` and have `plane_math.dart` re-export.
+- **i18n**: each round adds 5-15 new strings × 4 locales. The
+  existing locale-coverage test enforces non-empty values.
+- **Deprecating PlaneAnalysisScreen**: kept through A1-A6.
+  After A6 ships, add a "(?)" notice on the old module pointing
+  at the new one; remove a release later (it's a small file,
+  not load-bearing).
+
+---
+
 ## Out of scope this round
 
 - C++ implementation of symbolic `limit` and `integrate`.
