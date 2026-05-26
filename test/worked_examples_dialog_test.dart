@@ -82,7 +82,9 @@ void main() {
       // A units example shouldn't appear in the list.
       expect(find.text('100 km/h in mph'), findsNothing);
       // A constraints `open:` sentinel shouldn't appear either.
-      expect(find.text('open:sudoku'), findsNothing);
+      // Round 95 upgraded `open:sudoku` to `open:sudoku?preset=killer9x9`
+      // but the constraints category is still hidden from notepad.
+      expect(find.text('open:sudoku?preset=killer9x9'), findsNothing);
       expect(find.text('open:constraints'), findsNothing);
     });
 

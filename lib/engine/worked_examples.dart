@@ -267,6 +267,20 @@ class WorkedExamples {
       // calculator-evaluable.
       expression: '0.5 + 0.5*sin(1.96)',
     ),
+    // Round 95: `open:statistics?tab=tests` lands the user on the
+    // Tests tab pre-selected so they can see the t-test / ANOVA /
+    // chi-square / Wilcoxon scaffolding without hunting for it.
+    // Default sample data is already populated by the controllers.
+    WorkedExample(
+      id: 'statsHypothesisTests',
+      category: WorkedExampleCategory.statistics,
+      title: 'Hypothesis tests workspace',
+      description:
+          'Opens the Statistics module on the Tests tab — one-sample t, '
+          'two-sample t (Welch), paired t, ANOVA, chi-square, and '
+          'Wilcoxon — with default sample data pre-filled.',
+      expression: 'open:statistics?tab=tests',
+    ),
 
     // === Units / conversions =================================================
     WorkedExample(
@@ -289,13 +303,16 @@ class WorkedExamples {
     // the dialog detects and dispatches to a Navigator push of the
     // appropriate module screen. Surfaces our CSP / Killer Sudoku
     // capabilities in the same place users go for math examples.
+    // Round 95: `open:sudoku?preset=<id>` pre-loads the named puzzle
+    // (id matches `SudokuPresets.all`) so the user lands on the
+    // puzzle without going through the dropdown.
     WorkedExample(
       id: 'killerSudoku',
       category: WorkedExampleCategory.constraints,
       title: 'Killer Sudoku (9×9)',
       description:
-          'Opens the Sudoku module — pick "9×9 Killer" from the puzzle list.',
-      expression: 'open:sudoku',
+          'Opens the Sudoku module pre-loaded with the 9×9 Killer preset.',
+      expression: 'open:sudoku?preset=killer9x9',
     ),
     WorkedExample(
       id: 'constraintEditor',

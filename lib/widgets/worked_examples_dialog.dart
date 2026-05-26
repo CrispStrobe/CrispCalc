@@ -12,6 +12,7 @@ import '../engine/app_state.dart';
 import '../engine/worked_examples.dart';
 import '../localization/app_localizations.dart';
 import '../screens/constraints_screen.dart';
+import '../screens/statistics_screen.dart';
 import '../screens/sudoku_screen.dart';
 
 /// Round 94 (P6): which surface opened the dialog. Drives category
@@ -242,12 +243,39 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
   /// calculator expressions but module-navigation requests. Close
   /// the dialog and push the requested module screen instead of
   /// touching the AppState insert slot.
+  ///
+  /// Round 95: `open:<module>` now accepts an optional `?key=value`
+  /// suffix that stashes a pre-load id on the appropriate AppState
+  /// pending slot before the module screen is pushed. Recognised:
+  ///   - `open:sudoku?preset=<id>`     → SudokuPresets.all[id]
+  ///   - `open:statistics?tab=<id>`    → 'descriptive' / 'regression'
+  ///                                     / 'distributions' / 'tests'
+  ///
+  /// Unknown keys are silently ignored — the module still opens, just
+  /// without the pre-load — so a typo in a catalog entry degrades
+  /// gracefully rather than crashing the dialog.
   void _insert(BuildContext context, String expression) {
     if (expression.startsWith('open:')) {
-      final module = expression.substring('open:'.length);
+      final spec = expression.substring('open:'.length);
+      final qIdx = spec.indexOf('?');
+      final module = qIdx < 0 ? spec : spec.substring(0, qIdx);
+      final argString = qIdx < 0 ? null : spec.substring(qIdx + 1);
+      final args = <String, String>{};
+      if (argString != null) {
+        for (final pair in argString.split('&')) {
+          final eq = pair.indexOf('=');
+          if (eq > 0) {
+            args[pair.substring(0, eq)] = pair.substring(eq + 1);
+          }
+        }
+      }
       Navigator.of(context).pop();
       switch (module) {
         case 'sudoku':
+          final preset = args['preset'];
+          if (preset != null) {
+            AppState().requestLoadSudokuPreset(preset);
+          }
           Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => const SudokuScreen(),
           ));
@@ -255,6 +283,15 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
         case 'constraints':
           Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => const ConstraintsScreen(),
+          ));
+          break;
+        case 'statistics':
+          final tab = args['tab'];
+          if (tab != null) {
+            AppState().requestLoadStatisticsTab(tab);
+          }
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => const StatisticsScreen(),
           ));
           break;
       }

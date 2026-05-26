@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../engine/app_state.dart';
 import '../engine/distributions.dart';
 import '../engine/hypothesis_tests.dart';
 import '../engine/statistics.dart';
@@ -30,6 +31,24 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
+    // Round 95 (P6): drain a pending tab id stashed by a
+    // worked-example `open:statistics?tab=<id>` sentinel. Unknown
+    // ids fall through to the default (Descriptive) tab.
+    final pendingTab = AppState().consumePendingStatisticsTab();
+    switch (pendingTab) {
+      case 'descriptive':
+        _tabs.index = 0;
+        break;
+      case 'regression':
+        _tabs.index = 1;
+        break;
+      case 'distributions':
+        _tabs.index = 2;
+        break;
+      case 'tests':
+        _tabs.index = 3;
+        break;
+    }
   }
 
   @override

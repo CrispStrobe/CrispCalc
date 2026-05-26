@@ -3258,6 +3258,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Zinseszins';
       case 'zScore':
         return 'Z-Wert nachschlagen';
+      case 'statsHypothesisTests':
+        return 'Hypothesentests-Bereich';
       case 'unitConversion':
         return 'Einheitenumrechnung inline';
       case 'compositeDim':
@@ -3270,7 +3272,7 @@ class DeLocalizations implements AppLocalizations {
   String? workedExampleDescription(String id) {
     switch (id) {
       case 'killerSudoku':
-        return 'Öffnet das Sudoku-Modul — "9×9 Killer" aus der Rätselliste wählen.';
+        return 'Öffnet das Sudoku-Modul mit dem 9×9-Killer-Voreinstellung.';
       case 'constraintEditor':
         return 'Öffnet das Bedingungsmodul — Variablen deklarieren, Bedingungen hinzufügen, lösen.';
       case 'dslMagicSquare':
@@ -3350,6 +3352,10 @@ class DeLocalizations implements AppLocalizations {
       case 'zScore':
         return 'Zum Statistik-Reiter → Verteilungen wechseln, um Φ(1,96) '
             '≈ 0,975 zu berechnen.';
+      case 'statsHypothesisTests':
+        return 'Öffnet das Statistik-Modul direkt auf dem Tests-Reiter — '
+            'Einstichproben-t, Zweistichproben-t (Welch), gepaart, ANOVA, '
+            'Chi-Quadrat und Wilcoxon — mit vorbefüllten Beispieldaten.';
       case 'unitConversion':
         return '100 km/h in mph umgerechnet — V2 inline-Parser.';
       case 'compositeDim':
@@ -4883,6 +4889,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Intérêts composés';
       case 'zScore':
         return 'Lecture d\'un score Z';
+      case 'statsHypothesisTests':
+        return 'Espace tests d\'hypothèse';
       case 'unitConversion':
         return 'Conversion d\'unités en ligne';
       case 'compositeDim':
@@ -4895,7 +4903,7 @@ class FrLocalizations implements AppLocalizations {
   String? workedExampleDescription(String id) {
     switch (id) {
       case 'killerSudoku':
-        return 'Ouvre le module Sudoku — choisir « 9×9 Killer » dans la liste.';
+        return 'Ouvre le module Sudoku préchargé avec la grille 9×9 Killer.';
       case 'constraintEditor':
         return 'Ouvre le module Contraintes — déclarer des variables, ajouter des contraintes, résoudre.';
       case 'dslMagicSquare':
@@ -4975,6 +4983,11 @@ class FrLocalizations implements AppLocalizations {
       case 'zScore':
         return 'Aller dans l\'écran Statistiques → Distributions pour '
             'calculer Φ(1,96) ≈ 0,975.';
+      case 'statsHypothesisTests':
+        return 'Ouvre le module Statistiques directement sur l\'onglet '
+            'Tests — t à un échantillon, t à deux échantillons (Welch), '
+            'apparié, ANOVA, khi-deux et Wilcoxon — avec des données '
+            'd\'exemple préchargées.';
       case 'unitConversion':
         return '100 km/h converti en mph — analyseur inline V2.';
       case 'compositeDim':
@@ -6504,6 +6517,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Interés compuesto';
       case 'zScore':
         return 'Consulta de puntuación Z';
+      case 'statsHypothesisTests':
+        return 'Espacio de pruebas de hipótesis';
       case 'unitConversion':
         return 'Conversión de unidades en línea';
       case 'compositeDim':
@@ -6516,7 +6531,7 @@ class EsLocalizations implements AppLocalizations {
   String? workedExampleDescription(String id) {
     switch (id) {
       case 'killerSudoku':
-        return 'Abre el módulo Sudoku — elige «9×9 Killer» en la lista.';
+        return 'Abre el módulo Sudoku precargado con la cuadrícula 9×9 Killer.';
       case 'constraintEditor':
         return 'Abre el módulo Restricciones — declara variables, agrega restricciones, resuelve.';
       case 'dslMagicSquare':
@@ -6597,6 +6612,11 @@ class EsLocalizations implements AppLocalizations {
       case 'zScore':
         return 'Ve a la pantalla Estadística → Distribuciones para '
             'calcular Φ(1,96) ≈ 0,975.';
+      case 'statsHypothesisTests':
+        return 'Abre el módulo Estadística directamente en la pestaña '
+            'Pruebas — t de una muestra, t de dos muestras (Welch), '
+            'pareada, ANOVA, chi-cuadrado y Wilcoxon — con datos de '
+            'ejemplo precargados.';
       case 'unitConversion':
         return '100 km/h convertido a mph — analizador inline V2.';
       case 'compositeDim':

@@ -661,6 +661,51 @@ class AppState extends ChangeNotifier {
     return value;
   }
 
+  /// Round 95 (P6): pending "open the Sudoku module and load this
+  /// preset" signal. Set by the worked-examples dialog when an
+  /// `open:sudoku?preset=<id>` sentinel is tapped; drained by
+  /// `_SudokuScreenState.initState`. The value is one of the ids in
+  /// `SudokuPresets.all` (e.g. `killer9x9`). Mirrors
+  /// [_pendingDslProgramId].
+  String? _pendingSudokuPresetId;
+  String? get pendingSudokuPresetId => _pendingSudokuPresetId;
+
+  void requestLoadSudokuPreset(String id) {
+    _pendingSudokuPresetId = id;
+    notifyListeners();
+  }
+
+  String? consumePendingSudokuPresetId() {
+    final value = _pendingSudokuPresetId;
+    if (value != null) {
+      _pendingSudokuPresetId = null;
+    }
+    return value;
+  }
+
+  /// Round 95 (P6): pending "open the Statistics module on a
+  /// specific tab" signal. Set by the worked-examples dialog when an
+  /// `open:statistics?tab=<id>` sentinel is tapped; drained by
+  /// `_StatisticsScreenState.initState`. Valid ids are
+  /// `descriptive` / `regression` / `distributions` / `tests`.
+  /// V1 stops at tab-pick — pre-filling input fields is a future
+  /// extension.
+  String? _pendingStatisticsTab;
+  String? get pendingStatisticsTab => _pendingStatisticsTab;
+
+  void requestLoadStatisticsTab(String id) {
+    _pendingStatisticsTab = id;
+    notifyListeners();
+  }
+
+  String? consumePendingStatisticsTab() {
+    final value = _pendingStatisticsTab;
+    if (value != null) {
+      _pendingStatisticsTab = null;
+    }
+    return value;
+  }
+
   /// Parameter values per graph slot. Keyed by slot index, then by
   /// parameter name. Used by the graphing screen's slider panel: any
   /// identifier in a function string that isn't `x` (or a reserved

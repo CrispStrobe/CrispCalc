@@ -58,17 +58,24 @@ void main() {
     test('round 69: constraints category surfaces Killer + DSL entries', () {
       final byId = {for (final e in WorkedExamples.all) e.id: e};
       expect(byId['killerSudoku']?.category, WorkedExampleCategory.constraints);
-      expect(byId['killerSudoku']?.expression, 'open:sudoku');
+      // Round 95: killerSudoku upgraded from bare `open:sudoku` to
+      // `open:sudoku?preset=killer9x9` so the puzzle is pre-loaded.
+      // The starts-with check stays robust to the parameter suffix.
+      expect(byId['killerSudoku']?.expression, startsWith('open:sudoku'));
       expect(byId['constraintEditor']?.category,
           WorkedExampleCategory.constraints);
       expect(byId['constraintEditor']?.expression, 'open:constraints');
     });
 
-    test('round 69: every open: sentinel targets a known module', () {
-      const knownModules = {'sudoku', 'constraints'};
+    test('round 69 / 95: every open: sentinel targets a known module', () {
+      // Round 95 extended the syntax to `open:<module>?<key>=<value>`.
+      // The module name is the part before the `?` (if any).
+      const knownModules = {'sudoku', 'constraints', 'statistics'};
       for (final e in WorkedExamples.all) {
         if (!e.expression.startsWith('open:')) continue;
-        final module = e.expression.substring('open:'.length);
+        final spec = e.expression.substring('open:'.length);
+        final qIdx = spec.indexOf('?');
+        final module = qIdx < 0 ? spec : spec.substring(0, qIdx);
         expect(knownModules, contains(module),
             reason: '${e.id} targets unknown module "$module"');
       }

@@ -135,4 +135,58 @@ void main() {
       s.removeListener(listener);
     });
   });
+
+  group('Round 95: pending sudoku preset slot', () {
+    test('starts empty', () {
+      // Defensive: another test could leak. Drain first.
+      AppState().consumePendingSudokuPresetId();
+      expect(AppState().pendingSudokuPresetId, isNull);
+    });
+
+    test('request → read → consume → null', () {
+      final s = AppState();
+      s.requestLoadSudokuPreset('killer9x9');
+      expect(s.pendingSudokuPresetId, 'killer9x9');
+      expect(s.consumePendingSudokuPresetId(), 'killer9x9');
+      expect(s.pendingSudokuPresetId, isNull);
+      expect(s.consumePendingSudokuPresetId(), isNull);
+    });
+
+    test('request notifies listeners', () {
+      final s = AppState();
+      var calls = 0;
+      void listener() => calls++;
+      s.addListener(listener);
+      s.requestLoadSudokuPreset('small4x4Easy');
+      expect(calls, greaterThanOrEqualTo(1));
+      s.removeListener(listener);
+      s.consumePendingSudokuPresetId();
+    });
+  });
+
+  group('Round 95: pending statistics tab slot', () {
+    test('starts empty', () {
+      AppState().consumePendingStatisticsTab();
+      expect(AppState().pendingStatisticsTab, isNull);
+    });
+
+    test('request → read → consume → null', () {
+      final s = AppState();
+      s.requestLoadStatisticsTab('tests');
+      expect(s.pendingStatisticsTab, 'tests');
+      expect(s.consumePendingStatisticsTab(), 'tests');
+      expect(s.pendingStatisticsTab, isNull);
+    });
+
+    test('request notifies listeners', () {
+      final s = AppState();
+      var calls = 0;
+      void listener() => calls++;
+      s.addListener(listener);
+      s.requestLoadStatisticsTab('regression');
+      expect(calls, greaterThanOrEqualTo(1));
+      s.removeListener(listener);
+      s.consumePendingStatisticsTab();
+    });
+  });
 }

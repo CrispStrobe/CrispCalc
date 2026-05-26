@@ -20,6 +20,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../engine/app_state.dart';
 import '../engine/sudoku.dart';
 import '../localization/app_localizations.dart';
 import '../widgets/sudoku_grid.dart';
@@ -32,6 +33,10 @@ class SudokuScreen extends StatefulWidget {
 }
 
 class _SudokuScreenState extends State<SudokuScreen> {
+  // Round 95 (P6): the field initialiser stays on `standard9x9Easy`
+  // so the existing "open without args" entry point is unchanged.
+  // `initState` may overwrite this if the user got here via an
+  // `open:sudoku?preset=<id>` worked-example sentinel.
   SudokuPuzzle _puzzle = SudokuPresets.standard9x9Easy;
   // Clues are captured at puzzle load so the visualizer can tell
   // user/preset values apart from solver-filled ones. Round 87:
@@ -146,6 +151,28 @@ class _SudokuScreenState extends State<SudokuScreen> {
       _advancedCandidates = null;
     });
     _maybeRecomputeAdvanced();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Round 95 (P6): drain a pending sudoku preset id stashed by
+    // a worked-example `open:sudoku?preset=<id>` sentinel. Match
+    // against `SudokuPresets.all` and replace the default puzzle
+    // before the first build. Unknown ids degrade gracefully —
+    // the field initialiser's standard9x9Easy stays in effect.
+    final pendingPreset = AppState().consumePendingSudokuPresetId();
+    if (pendingPreset != null) {
+      for (final entry in SudokuPresets.all) {
+        if (entry.id == pendingPreset) {
+          _puzzle = entry.puzzle;
+          _baseCells = List<int>.from(_puzzle.cells);
+          _clueIndexes = _captureClueIndexes(_puzzle);
+          _displayed = List<int>.from(_puzzle.cells);
+          break;
+        }
+      }
+    }
   }
 
   @override
