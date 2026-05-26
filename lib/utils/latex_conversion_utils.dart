@@ -41,19 +41,31 @@ class LatexConversionUtils {
       return 'd/d${m.group(1)}(${m.group(2)})';
     });
 
-    // Handle differentiation with \left( … \right) — the keypad's
-    // d/dx button now emits this form so the parens scale with the
-    // fraction height: \frac{d}{dx}\left(expr\right) -> d/dx(expr)
+    // Handle differentiation with \left( … \right) or \Bigl( … \Bigr) —
+    // the keypad's d/dx button emits the \Bigl form (fixed-size
+    // delimiter that renders cleanly even with empty contents,
+    // unlike \left/\right). Both forms strip down to plain
+    // d/dx(expr) for the engine.
     result = result.replaceAllMapped(
         RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\left\((.*?)\\right\)'), (m) {
       return 'd/d${m.group(1)}(${m.group(2)})';
     });
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\Bigl\((.*?)\\Bigr\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
 
-    // Generic \left( / \right) — strip the scaling commands and keep
-    // the bare parens for any other usage in the input.
+    // Generic sized-delimiter strip — keep just the underlying
+    // bracket character. Covers anything pasted in or future
+    // templates that use the LaTeX sizing commands.
     result = result.replaceAll(r'\left(', '(').replaceAll(r'\right)', ')');
     result = result.replaceAll(r'\left[', '[').replaceAll(r'\right]', ']');
     result = result.replaceAll(r'\left\{', '{').replaceAll(r'\right\}', '}');
+    result = result
+        .replaceAll(r'\bigl(', '(').replaceAll(r'\bigr)', ')')
+        .replaceAll(r'\Bigl(', '(').replaceAll(r'\Bigr)', ')')
+        .replaceAll(r'\biggl(', '(').replaceAll(r'\biggr)', ')')
+        .replaceAll(r'\Biggl(', '(').replaceAll(r'\Biggr)', ')');
 
     // === STEP 2: Handle function notation with braces ===
 

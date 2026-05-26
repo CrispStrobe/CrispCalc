@@ -565,13 +565,13 @@ class CalculatorScreenState extends State<CalculatorScreen>
         break;
 
       case 'd/dx':
-        // Plain `()` after `\frac{d}{dx}` looks slightly small
-        // next to the stacked fraction, but `\left( … \right)`
-        // can't render with empty contents — flutter_math_fork
-        // throws and the whole input goes blank. The parens fill
-        // out and start to look right as soon as the user types
-        // any character inside.
-        _latexController.insert(r'\frac{d}{dx}()', cursorOffsetFromEnd: -1);
+        // `\Bigl( … \Bigr)` is a fixed-size delimiter pair that's
+        // taller than baseline parens — visually matches the
+        // stacked fraction height. Unlike `\left( … \right)` it
+        // renders with empty contents, so the keypad button can
+        // insert it before the user has typed anything inside.
+        _latexController.insert(r'\frac{d}{dx}\Bigl(\Bigr)',
+            cursorOffsetFromEnd: -5);
         break;
 
       case 'd/dx⌄':
