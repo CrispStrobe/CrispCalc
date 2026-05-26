@@ -92,6 +92,8 @@ class Scene3DPainter extends CustomPainter {
           _drawIntersectionLine(canvas, li, project, range);
         case CircleIntersection ci:
           _drawIntersectionCircle(canvas, ci, project);
+        case ConicSectionIntersection cs:
+          _drawIntersectionConic(canvas, cs, project, scene.range);
         case NoIntersection _:
         case CoincidentIntersection _:
         case ContainedIntersection _:
@@ -727,6 +729,113 @@ class Scene3DPainter extends CustomPainter {
       final screen = project(x, y, z);
       if (prev != null) canvas.drawLine(prev, screen, stroke);
       prev = screen;
+    }
+  }
+
+  /// P9-A5b: plane × quadric → 2D conic in the plane's local
+  /// frame. Render via marching-squares-style sampling: evaluate
+  /// the implicit form `A·s² + B·s·t + C·t² + D·s + E·t + F = 0`
+  /// on a grid in (s, t), find zero-crossings between adjacent
+  /// cells, and draw line segments approximating the curve. Each
+  /// (s, t) gets mapped back to 3D via `worldAt(s, t)` for the
+  /// final projection.
+  ///
+  /// The plane-local sampling extent is `±range` (the scene's
+  /// viewport range) so the rendered conic matches what the user
+  /// sees of the plane patch + quadric wireframe.
+  void _drawIntersectionConic(
+    Canvas canvas,
+    ConicSectionIntersection cs,
+    Offset Function(double, double, double) project,
+    double range,
+  ) {
+    const int n = 64;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = kIntersectionColor;
+    final step = (2 * range) / n;
+
+    // Precompute F at every grid corner.
+    final values = List<List<double>>.generate(
+      n + 1,
+      (i) {
+        final s = -range + i * step;
+        return List<double>.generate(n + 1, (j) {
+          final t = -range + j * step;
+          return cs.evaluate(s, t);
+        });
+      },
+    );
+
+    // Linear interpolation along an edge: find where F goes
+    // through zero between two corners.
+    Offset lerp3D(
+        double s1, double t1, double f1, double s2, double t2, double f2) {
+      final w = f1 / (f1 - f2);
+      final s = s1 + w * (s2 - s1);
+      final t = t1 + w * (t2 - t1);
+      final p = cs.worldAt(s, t);
+      return project(p.x, p.y, p.z);
+    }
+
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        final s0 = -range + i * step;
+        final s1 = s0 + step;
+        final t0 = -range + j * step;
+        final t1 = t0 + step;
+        final f00 = values[i][j];
+        final f10 = values[i + 1][j];
+        final f11 = values[i + 1][j + 1];
+        final f01 = values[i][j + 1];
+
+        // Build the 4-bit case index in standard marching-squares
+        // order. Bit i is set when corner i is "outside" (F > 0).
+        var idx = 0;
+        if (f00 > 0) idx |= 1;
+        if (f10 > 0) idx |= 2;
+        if (f11 > 0) idx |= 4;
+        if (f01 > 0) idx |= 8;
+
+        // Reject all-same cases (no crossing).
+        if (idx == 0 || idx == 15) continue;
+
+        // Compute edge intersections only for edges where F
+        // actually changes sign. Edges indexed: 0=bottom (s0..s1,
+        // t0), 1=right (s1, t0..t1), 2=top (s0..s1, t1), 3=left
+        // (s0, t0..t1).
+        Offset? edge(int e) {
+          switch (e) {
+            case 0:
+              if (f00 * f10 > 0) return null;
+              return lerp3D(s0, t0, f00, s1, t0, f10);
+            case 1:
+              if (f10 * f11 > 0) return null;
+              return lerp3D(s1, t0, f10, s1, t1, f11);
+            case 2:
+              if (f01 * f11 > 0) return null;
+              return lerp3D(s0, t1, f01, s1, t1, f11);
+            case 3:
+              if (f00 * f01 > 0) return null;
+              return lerp3D(s0, t0, f00, s0, t1, f01);
+          }
+          return null;
+        }
+
+        // 15 case mask -> pairs of edges to connect. Saddle
+        // cases (5, 10) get two segments; everything else is one.
+        // We just collect all valid edge points and pair them
+        // sequentially — simple and adequate for V1.
+        final pts = <Offset>[];
+        for (final e in [0, 1, 2, 3]) {
+          final p = edge(e);
+          if (p != null) pts.add(p);
+        }
+        for (var k = 0; k + 1 < pts.length; k += 2) {
+          canvas.drawLine(pts[k], pts[k + 1], stroke);
+        }
+      }
     }
   }
 

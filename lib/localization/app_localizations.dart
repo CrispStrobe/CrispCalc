@@ -912,6 +912,21 @@ class EnLocalizations implements AppLocalizations {
         return 'Spheres are identical';
       case 'numericalFailure':
         return 'Numerical edge case (try slightly different values)';
+      // P9-A5b: plane × quadric → conic.
+      case 'circle':
+        return 'Circle';
+      case 'ellipse':
+        return 'Ellipse';
+      case 'parabola':
+        return 'Parabola';
+      case 'hyperbola':
+        return 'Hyperbola';
+      case 'degenerateConic':
+        return 'Degenerate conic (pair of lines or a point)';
+      case 'noConic':
+        return 'Plane misses the quadric';
+      case 'planeOnQuadric':
+        return 'Plane lies on the quadric';
       default:
         return key;
     }
@@ -2251,6 +2266,21 @@ class DeLocalizations implements AppLocalizations {
         return 'Kugeln sind identisch';
       case 'numericalFailure':
         return 'Numerischer Grenzfall (leicht andere Werte versuchen)';
+      // P9-A5b: plane × quadric → conic.
+      case 'circle':
+        return 'Kreis';
+      case 'ellipse':
+        return 'Ellipse';
+      case 'parabola':
+        return 'Parabel';
+      case 'hyperbola':
+        return 'Hyperbel';
+      case 'degenerateConic':
+        return 'Degenerierter Kegelschnitt (Geradenpaar oder Punkt)';
+      case 'noConic':
+        return 'Ebene verfehlt die Quadrik';
+      case 'planeOnQuadric':
+        return 'Ebene liegt auf der Quadrik';
       default:
         return key;
     }
@@ -3735,6 +3765,21 @@ class FrLocalizations implements AppLocalizations {
         return 'Sphères identiques';
       case 'numericalFailure':
         return 'Cas numérique limite (essayer d\'autres valeurs)';
+      // P9-A5b: plan × quadrique → conique.
+      case 'circle':
+        return 'Cercle';
+      case 'ellipse':
+        return 'Ellipse';
+      case 'parabola':
+        return 'Parabole';
+      case 'hyperbola':
+        return 'Hyperbole';
+      case 'degenerateConic':
+        return 'Conique dégénérée (paire de droites ou point)';
+      case 'noConic':
+        return 'Le plan ne touche pas la quadrique';
+      case 'planeOnQuadric':
+        return 'Le plan repose sur la quadrique';
       default:
         return key;
     }
@@ -5223,6 +5268,21 @@ class EsLocalizations implements AppLocalizations {
         return 'Esferas idénticas';
       case 'numericalFailure':
         return 'Caso numérico límite (prueba con otros valores)';
+      // P9-A5b: plano × cuádrica → cónica.
+      case 'circle':
+        return 'Círculo';
+      case 'ellipse':
+        return 'Elipse';
+      case 'parabola':
+        return 'Parábola';
+      case 'hyperbola':
+        return 'Hipérbola';
+      case 'degenerateConic':
+        return 'Cónica degenerada (par de rectas o un punto)';
+      case 'noConic':
+        return 'El plano no toca la cuádrica';
+      case 'planeOnQuadric':
+        return 'El plano descansa sobre la cuádrica';
       default:
         return key;
     }

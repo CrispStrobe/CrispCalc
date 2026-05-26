@@ -1840,17 +1840,24 @@ option; edit / visibility / panel subtitle all learn the
 new kind. 11 i18n strings × 4 locales. 5 new tests for the
 preset → coefficient pipeline.
 
-#### Round A5b — Plane × quadric → conic projection (queued)
+#### Round A5b — Plane × quadric → conic projection — **SHIPPED**
 
-Substitute the plane equation into the quadric and reduce
-to a 2D conic in the plane's local frame. The meaningful
-bridge to the existing Conic Section module — once shipped,
-the Conic Section screen gets an "Open in 3D Scene" entry
-point that creates a plane intersecting an appropriate
-quadric so the user can rotate and inspect it. Raw-
-coefficient quadric input also lands here, since the
-canonical 10-coefficient form is what the intersection
-math wants directly.
+Done 2026-05-26 — see HISTORY round 97. New
+`ConicSectionIntersection` result type carries the plane's
+local frame + the 6 conic coefficients + the `ConicKind`
+classification (via the existing `analyzeConic`). Dispatcher
+handles `(plane, quadric)` and the swapped pair. Painter
+renders the curve via marching-squares on a 64×64
+plane-local grid (each crossing maps back to 3D via the
+`ConicSectionIntersection.worldAt` helper). Panel shows the
+classification + the 6 coefficients so the user can paste
+them into the existing Conic Section analyzer.
+
+Deferred to A5c: "Open in 3D Scene" entry on the Conic
+Section module; raw-coefficient quadric input mode; full
+degenerate-conic detection on `conic_math` (the 3×3
+determinant catches the pair-of-parallel-lines case that
+the discriminant alone misclassifies as a parabola).
 
 #### Round A6 — Parametric surfaces + curves
 

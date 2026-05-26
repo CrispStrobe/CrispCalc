@@ -2,6 +2,99 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 97, P9-A5b) — Plane × quadric → conic section
+
+The bridge between the new 3D Scene module and the existing
+Conic Section analyzer. A plane intersecting a quadric in the
+scene now (1) computes the 6 conic coefficients in the plane's
+local frame, (2) routes them through the existing
+`analyzeConic` for classification, and (3) renders the
+resulting curve in 3D via marching-squares sampling of the
+implicit form.
+
+### Engine
+
+`lib/engine/scene_3d/intersections.dart`:
+
+- New `ConicSectionIntersection` result type carrying the
+  plane's local frame `(origin, u, v)` + the 6 plane-local
+  coefficients `(cA…cF)` + the `ConicKind` classification.
+  Has `evaluate(s, t)` for implicit-form sampling and
+  `worldAt(s, t)` to map a plane-local 2D point back to 3D.
+- New `_planeQuadric(p, q)` algorithm. Builds the quadric's
+  symmetric matrix `M`, linear vector `b`, constant `c`,
+  then substitutes `x = origin + s·u + t·v` to derive the 6
+  plane-local coefficients in closed form:
+  - `A = uᵀ·M·u`
+  - `B = 2 uᵀ·M·v`
+  - `C = vᵀ·M·v`
+  - `D = 2 uᵀ·M·origin + bᵀ·u`
+  - `E = 2 vᵀ·M·origin + bᵀ·v`
+  - `F = originᵀ·M·origin + bᵀ·origin + c`
+  Dispatcher learns the `(plane, quadric)` and
+  `(quadric, plane)` cases.
+- Classification leverages the existing
+  `analyzeConic(A, B, C, D, E, F)` from
+  `lib/engine/conic_math.dart` so the new module doesn't
+  duplicate logic that already classifies ellipse / parabola
+  / hyperbola / circle / degenerate.
+
+### Painter
+
+`lib/widgets/scene_3d_painter.dart`:
+
+- New `_drawIntersectionConic(canvas, cs, project, range)`.
+  Marching-squares sampling: a 64×64 grid in the plane's
+  local (s, t) frame; for each cell evaluate the implicit
+  form at the four corners, detect zero-crossings on the
+  edges, draw line segments via linear interpolation. Each
+  (s, t) crossing maps back to 3D via `cs.worldAt(s, t)`
+  for the final projection. Cyan highlight matches the
+  existing intersection overlay color.
+
+### Results panel
+
+`lib/widgets/scene_3d_intersections_panel.dart`:
+
+- `_describe` learns `ConicSectionIntersection`: renders as
+  the localized conic kind ("Ellipse" / "Parabola" / etc.)
+  on the first line, plus the 6 coefficients `A=…  B=…  C=…
+  D=…  E=…  F=…` on the next two lines so the user can
+  paste them straight into the existing Conic Section
+  analyzer.
+- Subtitle `maxLines` bumped from 1 to 4 so the multi-line
+  conic description fits.
+
+### i18n
+
+7 new `intersectionReason` cases × 4 locales: `circle`,
+`ellipse`, `parabola`, `hyperbola`, `degenerateConic`,
+`noConic`, `planeOnQuadric`. The existing
+`intersectionReason(key)` switch grows; no new top-level
+keys.
+
+### Tests
+
+4 new tests in `test/scene_3d_intersections_test.dart`
+cover plane × quadric: horizontal plane through equator of
+unit sphere yields a circle (8 sample points on F=0),
+plane through axis of cylinder yields a curve through
+x=±1 (math correctness; classification is the existing
+analyzer's responsibility), horizontal plane above origin ×
+cone yields ellipse/circle, swapped arg order works. Suite
+1659 → 1663.
+
+### Deferred to A5c
+
+- "Open in 3D Scene" entry on `ConicSectionScreen` (creates
+  a plane intersecting a matching quadric so the user can
+  rotate and inspect the conic in 3D).
+- Raw-coefficient quadric input mode.
+- Full degenerate-conic detection on `analyzeConic` (use
+  the 3×3 determinant to catch the pair-of-parallel-lines
+  case the discriminant alone can't distinguish from a
+  parabola).
+
 ## 2026-05-26 (round 96, P9-A5) — Quadrics (preset-based)
 
 Six new renderable object kinds in the 3D Scene module:

@@ -1,8 +1,12 @@
-// P9-A4: tests for pairwise intersections. One happy + at least
-// one degenerate case per pair. Pure-Dart math — no widget tree.
+// P9-A4 + A5b: tests for pairwise intersections. One happy + at
+// least one degenerate case per pair. Pure-Dart math — no widget
+// tree.
+
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:crisp_calc/engine/conic_math.dart' show ConicKind;
 import 'package:crisp_calc/engine/plane_math.dart' show Vector3;
 import 'package:crisp_calc/engine/scene_3d/intersections.dart';
 import 'package:crisp_calc/engine/scene_3d/scene_object.dart';
@@ -268,23 +272,115 @@ void main() {
 
   group('dispatcher', () {
     test('returns null for unsupported pairs (quadric × anything)', () {
-      const q = QuadricObject(
-        id: 'q',
-        label: 'Q',
+      const ps = ParametricSurfaceObject(
+        id: 'ps',
+        label: 'PS',
         color: 0,
-        cA: 1,
-        cB: 1,
-        cC: 1,
-        cD: 0,
-        cE: 0,
-        cF: 0,
-        cG: 0,
-        cH: 0,
-        cI: 0,
-        cJ: -1,
+        exprX: 'u',
+        exprY: 'v',
+        exprZ: '0',
       );
-      expect(intersect(q, plane(0, 0, 1, 0)), isNull);
-      expect(intersect(plane(0, 0, 1, 0), q), isNull);
+      expect(intersect(ps, plane(0, 0, 1, 0)), isNull);
+      expect(intersect(plane(0, 0, 1, 0), ps), isNull);
+    });
+  });
+
+  group('plane × quadric (P9-A5b)', () {
+    test('horizontal plane through equator of unit sphere → circle', () {
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'Sphere',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipsoid,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      final result = intersect(plane(0, 0, 1, 0), q);
+      expect(result, isA<ConicSectionIntersection>());
+      final cs = result! as ConicSectionIntersection;
+      expect(
+        cs.conicKind == ConicKind.circle || cs.conicKind == ConicKind.ellipse,
+        isTrue,
+        reason: 'unit sphere ∩ z=0 should classify as circle/ellipse',
+      );
+      // 8 points around the unit circle should sit on F(s, t) = 0.
+      for (var i = 0; i < 8; i++) {
+        final theta = 2 * math.pi * i / 8;
+        expect(cs.evaluate(math.cos(theta), math.sin(theta)), closeTo(0, 1e-9));
+      }
+    });
+
+    test('plane through axis of cylinder → curve through x=±1', () {
+      // Cylinder x² + y² = 1 cut by plane y=0 gives the
+      // degenerate pair of lines x=±1. analyzeConic classifies
+      // by discriminant alone (which can't distinguish this
+      // case from a true parabola — full degenerate detection
+      // via the 3×3 determinant is a future enhancement on
+      // conic_math), so we don't pin a specific kind here. The
+      // math itself is verified by sampling: F(±1, t) is zero
+      // for any t along the cylinder axis.
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'Cyl',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipticCylinder,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      final result = intersect(plane(0, 1, 0, 0), q);
+      expect(result, isA<ConicSectionIntersection>());
+      final cs = result! as ConicSectionIntersection;
+      expect(cs.evaluate(1, 0), closeTo(0, 1e-9));
+      expect(cs.evaluate(-1, 0), closeTo(0, 1e-9));
+      expect(cs.evaluate(1, 5), closeTo(0, 1e-9));
+      expect(cs.evaluate(-1, -3), closeTo(0, 1e-9));
+    });
+
+    test('horizontal plane above origin × cone → ellipse / circle', () {
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'Cone',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipticCone,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      final result = intersect(plane(0, 0, 1, 2), q);
+      expect(result, isA<ConicSectionIntersection>());
+      final cs = result! as ConicSectionIntersection;
+      expect(
+        cs.conicKind == ConicKind.circle || cs.conicKind == ConicKind.ellipse,
+        isTrue,
+      );
+    });
+
+    test('swapped arg order works', () {
+      final q = QuadricObject.fromPreset(
+        id: 'q',
+        label: 'S',
+        color: 0,
+        preset: const QuadricPreset(
+          kind: QuadricKind.ellipsoid,
+          center: Vector3(0, 0, 0),
+          a: 1,
+          b: 1,
+          c: 1,
+        ),
+      );
+      final result = intersect(q, plane(0, 0, 1, 0));
+      expect(result, isA<ConicSectionIntersection>());
     });
   });
 }

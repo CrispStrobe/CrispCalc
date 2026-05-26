@@ -14,6 +14,7 @@
 
 import 'dart:math' as math;
 
+import '../conic_math.dart' show ConicKind, analyzeConic;
 import '../plane_math.dart' show Vector3;
 import 'scene_object.dart';
 
@@ -97,6 +98,68 @@ class ContainedIntersection extends Intersection {
   ContainedIntersection(this.reasonKey);
 }
 
+/// P9-A5b: plane × quadric. Result is a 2D conic curve sitting
+/// in the cutting plane. The 6 coefficients
+/// `As² + Bst + Ct² + Ds + Et + F = 0` describe the curve in the
+/// plane's local frame `x = origin + s·u + t·v`. The plane's
+/// frame is carried alongside so the painter can render the
+/// curve back in 3D.
+class ConicSectionIntersection extends Intersection {
+  final Vector3 origin;
+  final Vector3 u;
+  final Vector3 v;
+  final double cA, cB, cC, cD, cE, cF;
+
+  /// Classification from the existing [analyzeConic] pipeline so
+  /// the panel can render "Ellipse" / "Parabola" / "Hyperbola"
+  /// / "Circle" without re-classifying.
+  final ConicKind conicKind;
+
+  ConicSectionIntersection({
+    required this.origin,
+    required this.u,
+    required this.v,
+    required this.cA,
+    required this.cB,
+    required this.cC,
+    required this.cD,
+    required this.cE,
+    required this.cF,
+    required this.conicKind,
+  });
+
+  /// Evaluate the implicit conic at plane-local (s, t). Zero means
+  /// the point lies on the curve.
+  double evaluate(double s, double t) =>
+      cA * s * s + cB * s * t + cC * t * t + cD * s + cE * t + cF;
+
+  /// Map a plane-local (s, t) back to a 3D world coordinate via
+  /// `origin + s·u + t·v`.
+  Vector3 worldAt(double s, double t) => Vector3(
+        origin.x + s * u.x + t * v.x,
+        origin.y + s * u.y + t * v.y,
+        origin.z + s * u.z + t * v.z,
+      );
+
+  @override
+  String get reasonKey {
+    switch (conicKind) {
+      case ConicKind.circle:
+        return 'circle';
+      case ConicKind.ellipse:
+        return 'ellipse';
+      case ConicKind.parabola:
+        return 'parabola';
+      case ConicKind.hyperbola:
+        return 'hyperbola';
+      case ConicKind.degenerate:
+        return 'degenerateConic';
+      case ConicKind.notAConic:
+        return 'noConic';
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
@@ -124,6 +187,9 @@ Intersection? intersect(SceneObject a, SceneObject b) {
       return _lineSphere(l, s);
     case (SphereObject s1, SphereObject s2):
       return _sphereSphere(s1, s2);
+    case (PlaneObject p, QuadricObject q):
+    case (QuadricObject q, PlaneObject p):
+      return _planeQuadric(p, q);
     default:
       return null;
   }
@@ -378,6 +444,112 @@ Intersection _sphereSphere(SphereObject s1, SphereObject s2) {
     s1.center.z + a * unitDelta.z,
   );
   return CircleIntersection(circleCenter, unitDelta, h);
+}
+
+// ---------------------------------------------------------------------------
+// Plane × quadric — produces a 2D conic in the plane's local frame
+// ---------------------------------------------------------------------------
+
+Intersection _planeQuadric(PlaneObject p, QuadricObject q) {
+  // Build the quadric's symmetric matrix M (upper triangle), linear
+  // vector b, and constant c so that Q(x) = xᵀ M x + bᵀ x + c.
+  // Off-diagonal entries of M are half the cross-term coefficients
+  // (because xᵀ M x writes 2·M[i][j] when i≠j).
+  final mDiag = [q.cA, q.cB, q.cC];
+  final m01 = q.cD / 2;
+  final m02 = q.cE / 2;
+  final m12 = q.cF / 2;
+  final bx = q.cG, by = q.cH, bz = q.cI;
+  final cConst = q.cJ;
+
+  // Plane frame: pick an orthonormal (u, v) spanning the plane plus
+  // the closest-to-origin point. Same approach as the painter uses
+  // for plane rendering.
+  final n = p.normal;
+  final nLen2 = n.dot(n);
+  if (nLen2 < _eps) return NoIntersection('degeneratePlane');
+  final origin = Vector3(
+    n.x * p.d / nLen2,
+    n.y * p.d / nLen2,
+    n.z * p.d / nLen2,
+  );
+  final seed =
+      (n.x.abs() < 0.9) ? const Vector3(1, 0, 0) : const Vector3(0, 1, 0);
+  final proj = seed.dot(n) / nLen2;
+  final uRaw = Vector3(
+    seed.x - proj * n.x,
+    seed.y - proj * n.y,
+    seed.z - proj * n.z,
+  );
+  final uLen = math.sqrt(uRaw.dot(uRaw));
+  if (uLen < _eps) return NoIntersection('degeneratePlane');
+  final u = Vector3(uRaw.x / uLen, uRaw.y / uLen, uRaw.z / uLen);
+  final vRaw = n.cross(u);
+  final vLen = math.sqrt(vRaw.dot(vRaw));
+  final v = Vector3(vRaw.x / vLen, vRaw.y / vLen, vRaw.z / vLen);
+
+  // M·w (general 3×3 symmetric matrix-vector product) for some
+  // vector w. Returned as a 3-element list to keep allocations
+  // minimal.
+  List<double> mDotW(double wx, double wy, double wz) => [
+        mDiag[0] * wx + m01 * wy + m02 * wz,
+        m01 * wx + mDiag[1] * wy + m12 * wz,
+        m02 * wx + m12 * wy + mDiag[2] * wz,
+      ];
+
+  // Plane-local coefficients via substitution x = origin + s·u + t·v
+  // (derivation in the round 96 commit body — quick recap below):
+  //   A = uᵀ M u
+  //   B = 2 uᵀ M v
+  //   C = vᵀ M v
+  //   D = 2 uᵀ M origin + bᵀ u
+  //   E = 2 vᵀ M origin + bᵀ v
+  //   F = originᵀ M origin + bᵀ origin + c
+  double dot3(List<double> a, double x, double y, double z) =>
+      a[0] * x + a[1] * y + a[2] * z;
+
+  final mU = mDotW(u.x, u.y, u.z);
+  final mV = mDotW(v.x, v.y, v.z);
+  final mO = mDotW(origin.x, origin.y, origin.z);
+
+  final cAA = dot3(mU, u.x, u.y, u.z);
+  final cBB = 2 * dot3(mU, v.x, v.y, v.z);
+  final cCC = dot3(mV, v.x, v.y, v.z);
+  final cDD = 2 * dot3(mU, origin.x, origin.y, origin.z) +
+      (bx * u.x + by * u.y + bz * u.z);
+  final cEE = 2 * dot3(mV, origin.x, origin.y, origin.z) +
+      (bx * v.x + by * v.y + bz * v.z);
+  final cFF = dot3(mO, origin.x, origin.y, origin.z) +
+      (bx * origin.x + by * origin.y + bz * origin.z) +
+      cConst;
+
+  // Edge case: all six coefficients are ~0 → plane lies on the
+  // quadric (e.g. plane tangent to a degenerate cone of revolution).
+  // Treat as "contained" — painter draws nothing extra, panel
+  // describes it.
+  if (cAA.abs() < _eps &&
+      cBB.abs() < _eps &&
+      cCC.abs() < _eps &&
+      cDD.abs() < _eps &&
+      cEE.abs() < _eps &&
+      cFF.abs() < _eps) {
+    return ContainedIntersection('planeOnQuadric');
+  }
+
+  final analysis = analyzeConic(cAA, cBB, cCC, cDD, cEE, cFF);
+
+  return ConicSectionIntersection(
+    origin: origin,
+    u: u,
+    v: v,
+    cA: cAA,
+    cB: cBB,
+    cC: cCC,
+    cD: cDD,
+    cE: cEE,
+    cF: cFF,
+    conicKind: analysis.kind,
+  );
 }
 
 // ---------------------------------------------------------------------------

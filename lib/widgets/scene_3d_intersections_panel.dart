@@ -80,6 +80,8 @@ class Scene3DIntersectionsPanel extends StatelessWidget {
                     fontSize: 11,
                     fontFamily: 'monospace',
                   ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
                 ),
               );
             },
@@ -107,6 +109,13 @@ String _describe(Intersection result, AppLocalizations t) {
     case CircleIntersection c:
       return '${t.intersectionCircle}: C=${_pt(c.center)}, '
           'r=${_fmt(c.radius)}, n=${_pt(c.normal)}';
+    case ConicSectionIntersection cs:
+      // Headline = conic kind; second line = the 6 coefficients
+      // in the plane's local frame so users can paste them into
+      // the existing Conic Section module.
+      return '${t.intersectionReason(cs.reasonKey)}\n'
+          'A=${_fmt(cs.cA)} B=${_fmt(cs.cB)} C=${_fmt(cs.cC)}\n'
+          'D=${_fmt(cs.cD)} E=${_fmt(cs.cE)} F=${_fmt(cs.cF)}';
     case CoincidentIntersection r:
       return t.intersectionReason(r.reasonKey);
     case ContainedIntersection r:
