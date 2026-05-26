@@ -1149,6 +1149,118 @@ extends the Sudoku/CSP engine layer directly.
   instead of just "No solution found". ~2 days incl. UX
   iteration.
 
+##### CSP Round E — FlatZinc frontend + MUS (May 2026 dart_csp HEAD)
+
+The pinned `dart_csp` (`e3cce21`, May 25) lags by ~15 commits behind
+the upstream HEAD which has landed two major features:
+
+1. **FlatZinc frontend** (`8520461`) — a drop-in parser + lowering
+   + runner for the FlatZinc format that MiniZinc compiles to.
+   Every major constraint-programming solver (Choco, Gecode,
+   Chuffed, OR-Tools, JaCoP) integrates at the FlatZinc level, so
+   any `.mzn` model in existence becomes runnable on dart_csp via
+   `mzn2fzn`. Ships with a `dart_csp_fzn` CLI binary and an
+   `.msc` solver-config snippet so dart_csp can register as a
+   MiniZinc backend.
+2. **QuickXplain MUS** (`66b1a31` + `47beb59` + `a483980`) — Junker
+   2004 minimal-unsatisfiable-subset extraction, with per-call
+   constraint labels (`ConstraintRef`) so MUS output reads like
+   "rows-distinct, columns-distinct, killer-cage-A clash" rather
+   than internal constraint indices. The piece that turns the
+   PLAN's Round-D `cbjExplain` item into a real feature.
+
+###### Prerequisite — bump the dart_csp pin
+
+- [ ] **Bump pubspec `dart_csp.ref:` from `e3cce21` to a HEAD SHA**
+  carrying both features. Smoke-test the existing
+  `csp_solver_test.dart` + `sudoku_test.dart` suite (≥ 100 tests
+  on the wrapper) since the explain/MUS commits touched the
+  `Problem` API surface. The FlatZinc + explain features are
+  additive — no breaking changes expected from a read of the
+  changelog — but verify before merging.
+
+###### CSP Round E — what to ship on top
+
+- [ ] **Round E.1 — "Paste FlatZinc" tab** in `ConstraintsScreen`.
+  New 4th tab (Diophantine / Cryptarithm / Free-form DSL /
+  FlatZinc). Plain textarea + Solve button. Calls
+  `FlatZinc.solve(source)` and prints the standard FlatZinc output
+  format in the result block. Optional `-a` / `--all-solutions`
+  toggle. Single biggest-reach extension we can ship — gives
+  CrispCalc access to the MiniZinc Challenge corpus and every
+  textbook FlatZinc example without writing a new parser. Two
+  gallery entries: NQueens-4 + Bin-packing (both ~10-line
+  models). ~half a day incl. result rendering.
+
+- [ ] **Round E.2 — "Why no solution?" panel using QuickXplain
+  MUS**. When a Diophantine / DSL / FlatZinc problem returns no
+  solution, run QuickXplain over the labeled constraints, show
+  the user the minimal subset that conflicts. Renders inline in
+  the result block with an "Explain failure" button (skippable
+  for happy paths — running QuickXplain isn't free). Requires
+  threading `ConstraintRef` labels through every `addConstraint`
+  / `addLinearEquals` / `addAllDifferent` call in
+  `lib/engine/csp_solver.dart`. ~1 day.
+
+- [ ] **Round E.3 — DSL → FlatZinc export**. "Export as FlatZinc"
+  button on the DSL tab's result panel. Emits a `.fzn` text the
+  user can paste into Choco, Gecode, OR-Tools, MiniZinc IDE for
+  cross-solver verification or for serious problems CrispCalc's
+  in-process search can't crack. Maps the existing DSL AST to
+  FlatZinc declarations — algebraic since both share variables,
+  linear constraints, `allDifferent`, `noOverlap` (FlatZinc's
+  `disjunctive`), `cumulative`. ~half a day.
+
+- [ ] **Round E.4 — Notepad ↔ FlatZinc integration** *(novel)*.
+  CrispCalc's Notepad is text-based and lines are addressable.
+  Plumbing the FlatZinc frontend INTO the Notepad turns it into
+  the first calculator-grade notepad with first-class constraint
+  problems alongside symbolic math. Two flavors:
+
+  - **Inline `fzn:` line directive** (smaller). A notepad line
+    that starts with `fzn:` treats the rest of the line (or a
+    fenced ```fzn …``` block) as FlatZinc source, runs the
+    solver, and exposes each output variable into the
+    document-local scope. The numbered alias `lineN` resolves
+    to the full solution map (rendered as `{x=3, y=4}`).
+    Subsequent lines can reference `x` and `y` directly:
+    ```
+    fzn: var 0..10: x; var 0..10: y;
+         constraint x + y == 7; constraint x < y;
+         solve satisfy;
+    x * 2 + y           # auto-uses x=1, y=6 (or whichever first soln)
+    ```
+    Fits the existing line-evaluator architecture (Phase 3's
+    `NotepadEvaluator`) cleanly — the dispatcher just gets a
+    new pre-pass that routes `fzn:`-prefixed bodies. ~1 day
+    incl. error chip + multi-solution disambiguation.
+
+  - **Constraint-block as a multi-line cell** (larger).
+    Extend the line model to support multi-line cells (one
+    cell containing the whole `.fzn` source) with a header
+    `// CSP block`. Cell result is the assignment + optional
+    objective, exposed to downstream cells as named variables.
+    Closest analog: a Jupyter cell. Requires data-model
+    changes (one cell ≠ one line) so plumb through Phase 1's
+    `NotepadDocument`. ~2–3 days, but it's the more natural
+    fit for non-trivial CSP problems users would actually
+    paste in.
+
+  - **Why this matters strategically** — calculator apps don't
+    do constraint problems. Notebooks don't ship a CAS *and*
+    constraint solver in the same surface. The combo isn't a
+    polished feature elsewhere; landing it would give
+    CrispCalc a defensible "what is this app even" answer for
+    discovery.
+
+- [ ] **Round E.5 — Bundle `dart_csp_fzn` as a MiniZinc solver**.
+  Distribution play: ship the compiled CLI + `.msc` config in
+  the macOS/Linux app bundles so MiniZinc Challenge entrants
+  can register CrispCalc's solver from their existing MiniZinc
+  setups. Niche but visible to the CP community. Requires the
+  P4 distribution pipeline (Apple Developer enrollment +
+  notarization) to land first. Deferred until P4 unblocks.
+
 #### Precision & number theory (native libs already linked)
 
 The SymEngine xcframework we ship on iOS/macOS bundles **GMP**
