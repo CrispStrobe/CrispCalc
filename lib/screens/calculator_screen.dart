@@ -157,28 +157,29 @@ class CalculatorScreenState extends State<CalculatorScreen>
     return MathDisplayUtils.toHistoryDisplayLatex(text);
   }
 
-  // Round 120: per-expression LaTeX render cache. `Math.tex` parses
-  // LaTeX, builds an AST, and lays out glyphs; toggling the
-  // ASCII↔LaTeX history switch or typing into the search filter used
-  // to re-run that pipeline for every visible history row on every
-  // rebuild (100+ entries × layout-on-main-thread = the "very very
-  // long" toggle the user reported). The cache is a plain
-  // insertion-ordered Map used as an LRU: hits move the key to MRU,
-  // overflow evicts the oldest. Keyed by expression because
-  // `_buildExpressionDisplay` only depends on the expression and the
-  // text style is static. Cap of 500 keeps memory bounded for very
-  // long sessions; entries past the cap re-layout on demand.
+  // Round 120: per-expression LaTeX *string* cache. The previous
+  // version cached the `Math.tex` widget instance itself, which
+  // triggered "Duplicate GlobalKey detected" whenever the same
+  // expression appeared twice in the visible history tree —
+  // flutter_math_fork's internal `Consumer<FlutterMathMode>` carries
+  // a GlobalKey that can only be in one place at a time.
+  //
+  // Cache the *output of `_toLatex`* (the expensive regex
+  // preprocessing) and build a fresh `Math.tex` widget on each
+  // call. The widget's layout cost is non-trivial too but
+  // unavoidable without the GlobalKey trap.
   static const int _kLatexCacheCap = 500;
-  final Map<String, Widget> _latexCache = <String, Widget>{};
+  final Map<String, String> _latexCache = <String, String>{};
 
   Widget _renderCachedLatex(String expression) {
-    final cached = _latexCache.remove(expression);
-    if (cached != null) {
-      _latexCache[expression] = cached;
-      return cached;
+    var latex = _latexCache.remove(expression);
+    latex ??= _toLatex(expression);
+    _latexCache[expression] = latex; // re-insert at MRU position
+    if (_latexCache.length > _kLatexCacheCap) {
+      _latexCache.remove(_latexCache.keys.first);
     }
-    final widget = Math.tex(
-      _toLatex(expression),
+    return Math.tex(
+      latex,
       textStyle: TextStyle(fontSize: 20, color: Colors.grey[500]),
       onErrorFallback: (err) => Text(
         expression,
@@ -186,11 +187,6 @@ class CalculatorScreenState extends State<CalculatorScreen>
         textAlign: TextAlign.right,
       ),
     );
-    _latexCache[expression] = widget;
-    if (_latexCache.length > _kLatexCacheCap) {
-      _latexCache.remove(_latexCache.keys.first);
-    }
-    return widget;
   }
 
   Widget _buildExpressionDisplay(String expression) {
