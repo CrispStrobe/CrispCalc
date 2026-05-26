@@ -565,14 +565,15 @@ class CalculatorScreenState extends State<CalculatorScreen>
         break;
 
       case 'd/dx':
-        // `\Big( … \Big)` — fixed-size delimiter that's taller
-        // than baseline parens. Visually matches the stacked
-        // fraction height and renders cleanly even with empty
-        // contents. The `l`/`r` ("left"/"right") variants
-        // (`\Bigl(\Bigr)`) aren't recognized by flutter_math_fork
-        // — it parses `\Bigl` as `\Big` plus a literal `l`.
-        _latexController.insert(r'\frac{d}{dx}\Big(\Big)',
-            cursorOffsetFromEnd: -5);
+        // `\bigg( … \bigg)` — sized delimiter big enough to
+        // match a numerator-over-denominator `\frac`. `\Big( … \Big)`
+        // was visibly shorter than the fraction. The `l`/`r`
+        // ("left"/"right") variants aren't recognized by
+        // flutter_math_fork (parses `\biggl` as `\bigg` + literal
+        // `l`); `\left( … \right)` would auto-scale but refuses
+        // empty contents.
+        _latexController.insert(r'\frac{d}{dx}\bigg(\bigg)',
+            cursorOffsetFromEnd: -6);
         break;
 
       case 'd/dx⌄':

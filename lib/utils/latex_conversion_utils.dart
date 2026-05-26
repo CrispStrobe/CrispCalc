@@ -58,6 +58,14 @@ class LatexConversionUtils {
         RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\Big\((.*?)\\Big\)'), (m) {
       return 'd/d${m.group(1)}(${m.group(2)})';
     });
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\bigg\((.*?)\\bigg\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
+    result = result.replaceAllMapped(
+        RegExp(r'\\frac\{d\}\{d([a-zA-Z])\}\\Bigg\((.*?)\\Bigg\)'), (m) {
+      return 'd/d${m.group(1)}(${m.group(2)})';
+    });
 
     // Generic sized-delimiter strip — keep just the underlying
     // bracket character. Covers anything pasted in or future
