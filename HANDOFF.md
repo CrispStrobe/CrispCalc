@@ -24,10 +24,10 @@ this file remains the load-bearing pattern catalog.
 
 | Repo                       | Branch | Last shipped |
 | -------------------------- | ------ | ------------ |
-| CrispCalc                  | main   | `2bc60aa` docs: HANDOFF_NEXT (after R100 + Round E PLAN entry) |
+| CrispCalc                  | main   | `82de781` docs: PLAN — Round E prereq + E.1 + E.4-inline shipped |
 | symbolic_math_bridge       | main   | `505074d` round-90 factorint binding (unchanged today) |
 | math-stack-ios-builder     | master | `34ec0fdf` round-90 fmpz_factor wrapper (unchanged) |
-| dart_csp (pinned via pubspec) | main | `e3cce21` (unchanged — Round E plan calls for a bump, not yet done) |
+| dart_csp (pinned via pubspec) | main | `69a9cfb` (bumped 2026-05-26 — FlatZinc frontend + QuickXplain MUS) |
 
 **What shipped this session (newest first):**
 
@@ -104,7 +104,7 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1708 (1465 → 1708 over the two arcs).
+**Tests at session end**: 1730 (1708 → 1730 after Round E.1 + E.4).
 All green; CI 6-job matrix on every main push.
 
 ---
@@ -897,8 +897,9 @@ Specifically:
   via `worked_examples_localization_test.dart`, so the count can
   jump even on docs-only rounds.
 - Pin SHA in §0's main-heads table changes on every dart_csp
-  repin — update the commit ref. Current pin `e3cce21` (Round E
-  plan calls for bumping to a HEAD with FlatZinc + MUS).
+  repin — update the commit ref. Current pin `69a9cfb` (bumped
+  2026-05-26 to a HEAD that carries the FlatZinc frontend + the
+  QuickXplain MUS; smoke-tested by the full 1708-test suite).
 - Lessons from new rounds belong in §4 as new sub-sections;
   cross-cutting patterns belong in §5.
 - §6 is the moving part — strike completed picks, surface new
