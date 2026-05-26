@@ -30,8 +30,8 @@ remind yourself the user wants main.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | `c8ccd6c` Round 91 (P6) precision-arc parser binding |
-| **Tests** | **1780 pass** (1708 → 1780 across Round E.1 + E.2 + E.3 + E.4-inline + Round 91) — `flutter analyze` clean |
+| **main HEAD** | `c53bb2c` Round 92 (P6) Adv-keypad + worked-examples for precision arc |
+| **Tests** | **1810 pass** (1708 → 1810 across Round E.1 + E.2 + E.3 + E.4-inline + Round 91 + Round 92) — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (HEAD with FlatZinc frontend + QuickXplain MUS) |
 | **CI** | Round-91 push at `c8ccd6c` not yet observed; previous push was green |
 
@@ -51,28 +51,26 @@ Only dirty file is `.claude/scheduled_tasks.lock` (harness state — leave alone
 | Docs | `ff7d645` | PLAN.md E.2 + E.3 marks. |
 | Docs | `23ef461` | HANDOFF refresh (after E.2 + E.3). |
 | **Round 91** | `c8ccd6c` | Precision-arc parser binding — `pi(N)` / `e(N)` / `EulerGamma(N)` / `sqrt(2,N)` / `isprime(n)` / `nextprime(n)` / `prevprime(n)` / `factorint(n)` now route to the round-85/86/89/90 wrappers from calculator + notepad input. factorint formats as `2³ · 3² · 5` with Unicode superscripts. 18 tests. |
+| **Round 92** | `c53bb2c` | Adv-keypad buttons + worked-examples surfacing for the same 8 functions. Seven new Adv-tab keys (π(N), e(N), γ(N), √(2,N), nextprime, prevprime, factorint; existing `prime` covers isprime); each inserts a template with cursor between parens. Five new worked-examples entries (piPrecision, ePrecision, factorint360, nextprime1000, mersenneM31) localized en/de/fr/es. Catalog cap raised 30→40. |
 
 ## Pickup points — next strategic slot
 
-With Round E complete (modulo E.5 distribution play) and Round 91
-landed, the natural follow-ons:
+With Round E complete (modulo E.5 distribution play) and the
+precision-arc surfacing landed (rounds 91 + 92), the natural
+follow-ons:
 
-1. **Round 92 — Adv-keypad buttons + worked-examples entries** for
-   the same eight precision functions. Makes them *discoverable*
-   in the UI now that they're parsable. PLAN P6 round 92 has the
-   full list: π(N), e(N), √2(N), γ(N), isprime, nextprime,
-   prevprime, factorint as keypad buttons + 5-8 catalog entries
-   in `lib/engine/worked_examples.dart`. Small round.
-2. **Round 110 — Booleans (P7 kickoff)**. Preprocessor maps
+1. **Round 110 — Booleans (P7 kickoff)**. Preprocessor maps
    `a == b` → `Eq(a, b)`, `a and b` → `And(a, b)`, etc.;
-   `true` / `false` render as colored chips in history.
-3. **P6 rounds 93-95 — Move Worked Examples out of Settings**.
+   `true` / `false` render as colored chips in history. P7's
+   5-round arc; round 110 is the engine-only piece.
+2. **P6 rounds 93-95 — Move Worked Examples out of Settings**.
    `(?)` icon on Calculator + Notepad opens the existing dialog;
-   the entry stays in Settings as a soft link. Three small rounds.
-4. **CSP Round E.5** (deferred) — bundle `dart_csp_fzn` CLI as a
+   the Settings entry stays as a soft link. Three small rounds
+   building on the round-92 catalog growth.
+3. **CSP Round E.5** (deferred) — bundle `dart_csp_fzn` CLI as a
    MiniZinc solver. Blocked on P4 distribution pipeline.
-5. **P9 follow-ups** (A5d / A7 / A8) — 3D Scene polish.
-6. **Precision arc round 4** (`modpow` / `modinv` / `totient` /
+4. **P9 follow-ups** (A5d / A7 / A8) — 3D Scene polish.
+5. **Precision arc round 4** (`modpow` / `modinv` / `totient` /
    `jacobi`) — multi-repo. See `HANDOFF_PRECISION.md`. The user
    paused parallel work; this would be a cross-repo arc, ask
    before starting.

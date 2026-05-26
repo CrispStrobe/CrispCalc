@@ -24,7 +24,7 @@ this file remains the load-bearing pattern catalog.
 
 | Repo                       | Branch | Last shipped |
 | -------------------------- | ------ | ------------ |
-| CrispCalc                  | main   | `c8ccd6c` Round 91 (P6) precision-arc parser binding |
+| CrispCalc                  | main   | `c53bb2c` Round 92 (P6) Adv-keypad buttons + worked-examples for precision arc |
 | symbolic_math_bridge       | main   | `505074d` round-90 factorint binding (unchanged today) |
 | math-stack-ios-builder     | master | `34ec0fdf` round-90 fmpz_factor wrapper (unchanged) |
 | dart_csp (pinned via pubspec) | main | `69a9cfb` (bumped 2026-05-26 — FlatZinc frontend + QuickXplain MUS) |
@@ -104,9 +104,9 @@ so the bridge's `copy_xcframeworks.sh` finds xcframework outputs
 in the precision worktree. Repoint if you switch math-stack
 worktrees.
 
-**Tests at session end**: 1780 (1708 → 1780 across Round E.1 + E.2
-+ E.3 + E.4-inline + Round 91 precision-arc binding). All green;
-CI 6-job matrix on every main push.
+**Tests at session end**: 1810 (1708 → 1810 across Round E.1 + E.2
++ E.3 + E.4-inline + Round 91 precision-arc binding + Round 92
+keypad/catalog). All green; CI 6-job matrix on every main push.
 
 **Working mode change (2026-05-26 EOD)**: parallel-arc work is paused.
 All edits now go directly on `main` in `/Volumes/backups/code/CrispCalc`.

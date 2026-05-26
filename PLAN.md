@@ -1452,22 +1452,26 @@ separators (`factorint(360) → 2³ · 3² · 5`). Empty result
 dispatch, non-matches, error paths, and the formatter. Full
 suite: 1780 pass.
 
-##### Round 92 — Adv keypad buttons + worked-examples entries
+##### Round 92 — Adv keypad buttons + worked-examples entries ✅
 
-- Adv tab gains a new "Number theory & precision" subsection
-  with 8 buttons: π(N), e(N), √2(N), γ(N), isprime, nextprime,
-  prevprime, factorint. Each inserts a template with cursor
-  positioned between the parens.
-- 5-8 new `WorkedExample` catalog entries in
-  `lib/engine/worked_examples.dart`:
-  - "π to 100 digits" → `pi(100)`
-  - "Factorize 360" → `factorint(360)`
-  - "Is 2⁶⁴ + 1 prime?" → `isprime(2^64+1)`
-  - "Next prime after 1000" → `nextprime(1000)`
-  - "Mersenne M31" → `factorint(2^31-1)` (shows it's prime →
-    single record)
-- New `WorkedExampleCategory.precision` (or fold into
-  `numberTheory`).
+Done 2026-05-26 — commit `c53bb2c`. Seven new Adv-tab keys
+(π(N), e(N), γ(N), √(2,N), nextprime, prevprime, factorint) added
+to `_advKeys` + dispatch cases in `calculator_screen.dart`. The
+existing `prime` button continues to handle isprime, so the eighth
+function is already covered. Each new key inserts a template with
+the cursor positioned between the parens.
+
+Five new `WorkedExample` entries in the numberTheory category:
+`piPrecision` (π to 100 digits), `ePrecision` (e to 50 digits),
+`factorint360` (prime factorization → Unicode superscript demo),
+`nextprime1000`, `mersenneM31` (factorint(2^31 - 1) shows the
+eighth Mersenne prime as a single factor). Titles + descriptions
+localized en/de/fr/es; the catalog cap test was raised 30 → 40
+to fit the new batch. Full suite: 1810 pass.
+
+Folded into the existing `numberTheory` category rather than
+introducing a separate `precision` category — keeps the dialog's
+category-chip row compact.
 
 #### Rounds 93-95: Move worked examples out of Settings
 
