@@ -691,4 +691,81 @@ cumulative(s1=2@2, s2=2@2; capacity=3)
       expect(r.error, contains('distinct letters'));
     });
   });
+
+  // -----------------------------------------------------------------
+  // Round D / Gantt — ganttTasks + ganttCapacity threading
+  // -----------------------------------------------------------------
+
+  group('DiophantineResult.ganttTasks — schedule metadata', () {
+    test('non-scheduling Diophantine: ganttTasks empty', () async {
+      final r = await CspSolver.solveDiophantine(
+        variables: {
+          'x': (min: 0, max: 10),
+          'y': (min: 0, max: 10),
+        },
+        constraints: ['x + y == 7'],
+      );
+      expect(r.ok, isTrue);
+      expect(r.ganttTasks, isEmpty);
+      expect(r.ganttCapacity, isNull);
+    });
+
+    test('DSL noOverlap: ganttTasks populated with durations', () async {
+      final r = await CspSolver.solveDsl('''
+vars: s1, s2, s3 in 0..10
+noOverlap(s1=4, s2=3, s3=2)
+''');
+      expect(r.ok, isTrue);
+      expect(r.ganttTasks.length, 3);
+      expect(r.ganttTasks[0].startVar, 's1');
+      expect(r.ganttTasks[0].duration, 4);
+      expect(r.ganttTasks[0].demand, isNull);
+      expect(r.ganttTasks.every((t) => t.groupIndex == 0), isTrue);
+      expect(r.ganttCapacity, isNull);
+    });
+
+    test('DSL cumulative: demand + capacity surfaced', () async {
+      final r = await CspSolver.solveDsl('''
+vars: s1, s2, s3 in 0..10
+cumulative(s1=2@2, s2=3@1, s3=4@1; capacity=2)
+''');
+      expect(r.ok, isTrue);
+      expect(r.ganttTasks.length, 3);
+      expect(r.ganttTasks[0].demand, 2);
+      expect(r.ganttTasks[1].demand, 1);
+      expect(r.ganttTasks[2].demand, 1);
+      expect(r.ganttCapacity, 2);
+    });
+
+    test('mixed noOverlap + cumulative get distinct group indices', () async {
+      final r = await CspSolver.solveDsl('''
+vars: a1, a2, b1, b2 in 0..20
+noOverlap(a1=3, a2=4)
+cumulative(b1=2@2, b2=3@1; capacity=2)
+''');
+      expect(r.ok, isTrue);
+      expect(r.ganttTasks.length, 4);
+      expect(r.ganttTasks[0].groupIndex, 0);
+      expect(r.ganttTasks[1].groupIndex, 0);
+      expect(r.ganttTasks[2].groupIndex, 1);
+      expect(r.ganttTasks[3].groupIndex, 1);
+      expect(r.ganttCapacity, 2);
+    });
+
+    test('optimization result also carries ganttTasks', () async {
+      final r = await CspSolver.solveDsl('''
+vars: s1, s2 in 0..10
+vars: makespan in 0..10
+noOverlap(s1=3, s2=4)
+s1 + 3 <= makespan
+s2 + 4 <= makespan
+minimize makespan
+''');
+      expect(r.ok, isTrue);
+      expect(r.objective, isNotNull);
+      expect(r.ganttTasks.length, 2);
+      expect(r.ganttTasks[0].duration, 3);
+      expect(r.ganttTasks[1].duration, 4);
+    });
+  });
 }
