@@ -1,9 +1,12 @@
 // test/function_reference_test.dart
 //
-// Round 96 (P6): catalogue invariants for FunctionReferences.all.
-// These tests guard the data model contract so Rounds 97-100 can
-// add entries without re-deriving the rules. Anything that should
-// hold for every entry lives here.
+// P6 catalogue invariants for FunctionReferences.all. These tests
+// guard the data model contract so the catalogue can grow without
+// re-deriving the rules.
+//
+// Round 96 shipped the scaffolding + 3 seed entries; Round 97
+// extends CAS + precision so the catalogue now resolves all of
+// its own seeAlso pointers — the v1 carve-out is removed.
 
 import 'package:crisp_calc/engine/function_reference.dart';
 import 'package:crisp_calc/engine/worked_examples.dart';
@@ -40,18 +43,56 @@ void main() {
     });
 
     test('seeAlso ids resolve to other catalogue entries', () {
+      // Round 97 tightens this from the v1 carve-out: every seeAlso
+      // target must now resolve to a catalogue entry. Rounds 98-99
+      // add matrix / stats / constraints; any new seeAlso pointer
+      // either targets an existing entry or is added in the same
+      // round as its target.
       final byId = {for (final e in FunctionReferences.all) e.id: e};
       for (final e in FunctionReferences.all) {
         for (final other in e.seeAlso) {
-          // V1 carve-out: an entry may reference an id that hasn't
-          // been written yet (Round 97 will add more entries that
-          // back-fill the seeAlso targets). Skip the assertion for
-          // unknown ids — Round 97 will tighten this once the
-          // catalogue is fleshed out.
-          if (!byId.containsKey(other)) continue;
           expect(byId, contains(other),
               reason: '${e.id} → seeAlso "$other" points at an unknown entry');
         }
+      }
+    });
+
+    test('round 97: catalogue covers the PLAN P6 §97 CAS slate', () {
+      // PLAN §97 names ~15 CAS entries; `series` and `taylor` are
+      // deferred (no SymEngine series_expansion binding yet) so the
+      // expected list omits them. Anything else dropping from the
+      // catalogue should be intentional and tracked here.
+      final ids = {for (final e in FunctionReferences.all) e.id};
+      const expectedCas = {
+        'solve',
+        'expand',
+        'simplify',
+        'factor',
+        'diff',
+        'integrate',
+        'subst',
+        'limit',
+        'gcd',
+        'lcm',
+        'factorial',
+        'fibonacci',
+      };
+      for (final id in expectedCas) {
+        expect(ids, contains(id), reason: 'Round 97 CAS slate missing "$id"');
+      }
+    });
+
+    test('round 97: precision arc covers all five MPFR/FLINT entries', () {
+      final ids = {for (final e in FunctionReferences.all) e.id};
+      const expectedPrecision = {
+        'pi_precision',
+        'e_precision',
+        'sqrt_precision',
+        'eulergamma_precision',
+      };
+      for (final id in expectedPrecision) {
+        expect(ids, contains(id),
+            reason: 'Round 97 precision arc missing "$id"');
       }
     });
 

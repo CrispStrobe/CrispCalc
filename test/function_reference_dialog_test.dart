@@ -59,11 +59,37 @@ void main() {
         (tester) async {
       await _showDialog(tester);
 
-      // Round 96 ships three seed entries; verify each renders
-      // its signature in the row.
+      // Round 96 shipped these three seed entries. Round 97 grew
+      // the catalogue past one screen of rows — solve still appears
+      // at the top of the list, but isprime / pi(N) sit below the
+      // fold and need a search filter to surface them.
       expect(find.text('solve(equation, variable)'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'isprime');
+      await tester.pumpAndSettle();
       expect(find.text('isprime(n)'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'pi_precision');
+      await tester.pumpAndSettle();
       expect(find.text('pi(N)'), findsOneWidget);
+    });
+
+    testWidgets('round 97: CAS-filtered list shows expand + diff entries',
+        (tester) async {
+      await _showDialog(tester);
+
+      // Pick the CAS chip — `find.text('CAS')` finds the chip label.
+      // `findsWidgets` not `findsOneWidget` because the chip label
+      // and any matching list-row content could co-exist.
+      final casChip = find.text('CAS').first;
+      await tester.tap(casChip);
+      await tester.pumpAndSettle();
+
+      // Round 97 fills in the CAS category. Spot-check two of the
+      // newly-added signatures so a regression that drops them is
+      // caught here.
+      expect(find.text('expand(expression)'), findsOneWidget);
+      expect(find.text('diff(expression, variable)'), findsOneWidget);
     });
 
     testWidgets('search filters by id/signature/description', (tester) async {
@@ -119,6 +145,12 @@ void main() {
         (tester) async {
       await _showDialog(tester);
 
+      // Round 97 grew the catalogue past one screen of rows, so
+      // pi(N) may sit below the fold. Filter via the search field
+      // to bring it back to the top before expanding.
+      await tester.enterText(find.byType(TextField), 'pi_precision');
+      await tester.pumpAndSettle();
+
       // `pi(N)` has workedExampleId = 'piPrecision' which exists
       // in WorkedExamples.all, so the button must appear.
       await tester.tap(find.text('pi(N)'));
@@ -130,6 +162,11 @@ void main() {
         'Round 96 follow-up: See-worked-example cross-link pre-filters WE dialog',
         (tester) async {
       await _showDialog(tester);
+
+      // Filter to surface pi(N) (Round 97: more rows than the
+      // dialog viewport).
+      await tester.enterText(find.byType(TextField), 'pi_precision');
+      await tester.pumpAndSettle();
 
       // Expand the pi(N) row so the cross-link button is visible.
       await tester.tap(find.text('pi(N)'));
