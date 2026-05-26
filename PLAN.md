@@ -1796,18 +1796,19 @@ line / sphere / quadric / parametric drawing. A shared
 projection helper deferred until A3 has settled the rendering
 surface.
 
-#### Round A3 — Lines + spheres in the viewport
+#### Round A3 — Lines + spheres in the viewport — **SHIPPED**
 
-Add-Line dialog: point + direction OR two points. Renders as a
-colored line segment clipped to the view range, with a small arrow
-glyph indicating direction.
-
-Add-Sphere dialog: center + radius. Renders as latitude/longitude
-wireframe (`_latRings × _lonSegments`, default 16×24). Depth-cued
-opacity so the back hemisphere fades.
-
-Object list grows a leading color swatch + drag-handle for
-re-ordering (mirrors the notepad line list).
+Done 2026-05-26 — see HISTORY round 94. Painter learned
+`_drawLine` (slab-clipped against the view cube + screen-
+space arrow tip) and `_drawSphere` (8-ring × 16-meridian
+wireframe with depth-cued opacity for the back hemisphere).
+Add-Line dialog supports both point+direction and two-points
+input modes; Add-Sphere validates radius > 0. The FAB switched
+from a plane-only button to an "Add object" chooser sheet, and
+the object panel became a `ReorderableListView` with the
+color swatch acting as drag handle. New `Scene3D.with
+ReorderedObjects` + `AppState.reorderSceneObjects` helpers
+(both with engine-level tests).
 
 #### Round A4 — Pairwise intersection algorithms + rendering
 

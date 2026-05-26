@@ -556,6 +556,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Reorder the scene object list (drag-handle interactions on
+  /// the Scene3D panel). Follows [ReorderableListView]'s newIndex
+  /// convention; no-op on out-of-bounds indices.
+  void reorderSceneObjects(int oldIndex, int newIndex) {
+    final next = _scene3D.withReorderedObjects(oldIndex, newIndex);
+    if (identical(next.objects, _scene3D.objects)) return;
+    _scene3D = next;
+    _persistScene3D();
+    notifyListeners();
+  }
+
   /// Reset the viewport to the default starting orientation.
   void resetSceneViewport() {
     _scene3D.azimuth = kDefaultSceneAzimuth;

@@ -42,36 +42,97 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _addPlane() async {
-    final added = await showPlaneEditorDialog(context);
-    if (added != null) {
-      _appState.addOrUpdateSceneObject(added);
-    }
+  Future<void> _showAddSheet() async {
+    final t = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.view_in_ar),
+              title: Text(t.scene3DAddPlane),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final p = await showPlaneEditorDialog(context);
+                if (p != null) _appState.addOrUpdateSceneObject(p);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.timeline),
+              title: Text(t.scene3DAddLine),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final l = await showLineEditorDialog(context);
+                if (l != null) _appState.addOrUpdateSceneObject(l);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.circle_outlined),
+              title: Text(t.scene3DAddSphere),
+              onTap: () async {
+                Navigator.of(sheetCtx).pop();
+                final s = await showSphereEditorDialog(context);
+                if (s != null) _appState.addOrUpdateSceneObject(s);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Future<void> _editPlane(PlaneObject existing) async {
-    final updated = await showPlaneEditorDialog(context, existing: existing);
-    if (updated != null) {
-      _appState.addOrUpdateSceneObject(updated);
+  Future<void> _editObject(SceneObject obj) async {
+    switch (obj) {
+      case PlaneObject p:
+        final updated = await showPlaneEditorDialog(context, existing: p);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
+      case LineObject l:
+        final updated = await showLineEditorDialog(context, existing: l);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
+      case SphereObject s:
+        final updated = await showSphereEditorDialog(context, existing: s);
+        if (updated != null) _appState.addOrUpdateSceneObject(updated);
+      case QuadricObject _:
+      case ParametricSurfaceObject _:
+      case ParametricCurveObject _:
+        break;
     }
   }
 
   void _toggleVisibility(SceneObject obj) {
+    final visible = !obj.visible;
     switch (obj) {
       case PlaneObject p:
         _appState.addOrUpdateSceneObject(PlaneObject(
           id: p.id,
           label: p.label,
           color: p.color,
-          visible: !p.visible,
+          visible: visible,
           a: p.a,
           b: p.b,
           c: p.c,
           d: p.d,
         ));
-      // Other kinds get the toggle wiring in A3 / A5 / A6.
-      case LineObject _:
-      case SphereObject _:
+      case LineObject l:
+        _appState.addOrUpdateSceneObject(LineObject(
+          id: l.id,
+          label: l.label,
+          color: l.color,
+          visible: visible,
+          point: l.point,
+          direction: l.direction,
+        ));
+      case SphereObject s:
+        _appState.addOrUpdateSceneObject(SphereObject(
+          id: s.id,
+          label: s.label,
+          color: s.color,
+          visible: visible,
+          center: s.center,
+          radius: s.radius,
+        ));
       case QuadricObject _:
       case ParametricSurfaceObject _:
       case ParametricCurveObject _:
@@ -117,8 +178,8 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
-        label: Text(t.scene3DAddPlane),
-        onPressed: _addPlane,
+        label: Text(t.scene3DAddObject),
+        onPressed: _showAddSheet,
       ),
     );
   }
@@ -185,22 +246,29 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
         ),
       );
     }
-    return ListView.separated(
+    return ReorderableListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: objects.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      buildDefaultDragHandles: false,
+      onReorder: (oldIndex, newIndex) {
+        _appState.reorderSceneObjects(oldIndex, newIndex);
+      },
       itemBuilder: (ctx, i) {
         final obj = objects[i];
         return ListTile(
-          leading: Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: Color(obj.color),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: obj.visible ? Colors.transparent : Colors.grey,
-                width: 1.5,
+          key: ValueKey(obj.id),
+          leading: ReorderableDragStartListener(
+            index: i,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Color(obj.color),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: obj.visible ? Colors.transparent : Colors.grey,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -228,9 +296,7 @@ class _Scene3DScreenState extends State<Scene3DScreen> {
               IconButton(
                 icon: const Icon(Icons.edit, size: 20),
                 tooltip: t.scene3DEdit,
-                onPressed: () {
-                  if (obj is PlaneObject) _editPlane(obj);
-                },
+                onPressed: () => _editObject(obj),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),

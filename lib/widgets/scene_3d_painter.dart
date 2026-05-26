@@ -53,12 +53,14 @@ class Scene3DPainter extends CustomPainter {
       switch (obj) {
         case PlaneObject p:
           _drawPlane(canvas, p, project, range);
-        case LineObject _:
-        case SphereObject _:
+        case LineObject l:
+          _drawLine(canvas, l, project, range, scene);
+        case SphereObject s:
+          _drawSphere(canvas, s, project);
         case QuadricObject _:
         case ParametricSurfaceObject _:
         case ParametricCurveObject _:
-          // Rendering for these kinds lands in A3 / A5 / A6.
+          // Rendering for these kinds lands in A5 / A6.
           break;
       }
     }
@@ -173,6 +175,209 @@ class Scene3DPainter extends CustomPainter {
     canvas.drawPath(path, edge);
     final cDot = cornerAt(0, 0);
     canvas.drawCircle(cDot, 3.5, Paint()..color = color);
+  }
+
+  // ----------------------------------------------------------------
+  // Line rendering — clip the infinite line `point + t · direction`
+  // to a bounding cube of side 2·range and draw the resulting
+  // segment. A small filled circle marks the stored anchor point so
+  // the user can see where the parametric origin sits; a tiny arrow
+  // glyph at the +direction end indicates orientation.
+  // ----------------------------------------------------------------
+
+  void _drawLine(
+    Canvas canvas,
+    LineObject line,
+    Offset Function(double, double, double) project,
+    double range,
+    Scene3D scene,
+  ) {
+    final p = line.point;
+    final d = line.direction;
+    final dLen2 = d.dot(d);
+    if (dLen2 == 0) return;
+
+    // Slab clipping against the axis-aligned bounding cube
+    // [-range, range]^3. For each axis i, the line enters/exits when
+    //   p[i] + t · d[i] ∈ [-range, range].
+    // Track the intersection of all three slab intervals.
+    double tMin = double.negativeInfinity;
+    double tMax = double.infinity;
+    bool clipAxis(double pi, double di) {
+      if (di.abs() < 1e-12) {
+        // Direction is parallel to this slab — line lies inside if
+        // the anchor sits in range, otherwise no intersection.
+        return pi.abs() <= range;
+      }
+      final t1 = (-range - pi) / di;
+      final t2 = (range - pi) / di;
+      final lo = t1 < t2 ? t1 : t2;
+      final hi = t1 < t2 ? t2 : t1;
+      if (lo > tMin) tMin = lo;
+      if (hi < tMax) tMax = hi;
+      return tMin <= tMax;
+    }
+
+    if (!clipAxis(p.x, d.x) || !clipAxis(p.y, d.y) || !clipAxis(p.z, d.z)) {
+      return; // Line misses the view cube entirely.
+    }
+
+    final a = Vector3(
+      p.x + tMin * d.x,
+      p.y + tMin * d.y,
+      p.z + tMin * d.z,
+    );
+    final b = Vector3(
+      p.x + tMax * d.x,
+      p.y + tMax * d.y,
+      p.z + tMax * d.z,
+    );
+
+    final color = Color(line.color);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = color;
+
+    canvas.drawLine(project(a.x, a.y, a.z), project(b.x, b.y, b.z), stroke);
+
+    // Anchor dot — only when the anchor is actually inside the view
+    // cube; otherwise it'd float at a confusing screen position.
+    if (p.x.abs() <= range && p.y.abs() <= range && p.z.abs() <= range) {
+      canvas.drawCircle(
+        project(p.x, p.y, p.z),
+        3.0,
+        Paint()..color = color,
+      );
+    }
+
+    // Arrow glyph at the +direction end of the visible segment.
+    // Draw a small triangle perpendicular to the screen-space line
+    // direction so the arrow stays legible regardless of viewing
+    // angle.
+    final endScreen = project(b.x, b.y, b.z);
+    final beforeEnd = project(
+      p.x + (tMax - 0.1) * d.x,
+      p.y + (tMax - 0.1) * d.y,
+      p.z + (tMax - 0.1) * d.z,
+    );
+    final dirScreen = endScreen - beforeEnd;
+    final mag =
+        math.sqrt(dirScreen.dx * dirScreen.dx + dirScreen.dy * dirScreen.dy);
+    if (mag > 1) {
+      final ux = dirScreen.dx / mag;
+      final uy = dirScreen.dy / mag;
+      const size = 8.0;
+      final left = endScreen +
+          Offset(-ux * size - uy * size * 0.5, -uy * size + ux * size * 0.5);
+      final right = endScreen +
+          Offset(-ux * size + uy * size * 0.5, -uy * size - ux * size * 0.5);
+      final arrow = Path()
+        ..moveTo(endScreen.dx, endScreen.dy)
+        ..lineTo(left.dx, left.dy)
+        ..lineTo(right.dx, right.dy)
+        ..close();
+      canvas.drawPath(arrow, Paint()..color = color);
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Sphere rendering — latitude / longitude wireframe. Depth-cued
+  // opacity (back hemisphere fades) so the sphere reads as 3D
+  // without doing real hidden-line removal.
+  // ----------------------------------------------------------------
+
+  void _drawSphere(
+    Canvas canvas,
+    SphereObject sphere,
+    Offset Function(double, double, double) project,
+  ) {
+    final r = sphere.radius;
+    if (r <= 0) return;
+    final c = sphere.center;
+    final color = Color(sphere.color);
+
+    const int latRings = 8; // horizontal rings (excluding poles)
+    const int lonSegments = 16; // vertical "orange-slice" segments
+    const int samples = 32; // points per ring/meridian curve
+
+    // Screen-space depth for a world-space point along the camera's
+    // forward axis. Same rotation as project()'s but we want the
+    // perpendicular-to-screen component to drive opacity.
+    final cosA = math.cos(scene.azimuth);
+    final sinA = math.sin(scene.azimuth);
+    final cosE = math.cos(scene.elevation);
+    final sinE = math.sin(scene.elevation);
+    double depthAt(double x, double y, double z) {
+      // The view axis (the dropped coordinate in our ortho
+      // projection) is: rotate around z by azimuth, then around x'
+      // by elevation; the depth direction is the post-rotation
+      // y2 = y1*sinE + z*cosE. Positive = farther from viewer.
+      final y1 = x * sinA + y * cosA;
+      return y1 * sinE + z * cosE;
+    }
+
+    Paint paintFor(double depth, double maxDepth) {
+      // Back hemisphere (depth > 0) fades to ~25% opacity.
+      final t = (depth / maxDepth).clamp(-1.0, 1.0); // -1 (front) .. +1 (back)
+      final alpha = 1.0 - (t.clamp(0.0, 1.0)) * 0.75;
+      return Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = color.withValues(alpha: alpha);
+    }
+
+    // Latitude rings (constant φ).
+    for (var i = 1; i < latRings; i++) {
+      final phi = math.pi * i / latRings - math.pi / 2; // -π/2..+π/2
+      final cphi = math.cos(phi);
+      final sphi = math.sin(phi);
+      Offset? prev;
+      double prevDepth = 0;
+      for (var j = 0; j <= samples; j++) {
+        final theta = 2 * math.pi * j / samples;
+        final x = c.x + r * cphi * math.cos(theta);
+        final y = c.y + r * cphi * math.sin(theta);
+        final z = c.z + r * sphi;
+        final screen = project(x, y, z);
+        final d = depthAt(x - c.x, y - c.y, z - c.z);
+        if (prev != null) {
+          final paint = paintFor((prevDepth + d) / 2, r);
+          canvas.drawLine(prev, screen, paint);
+        }
+        prev = screen;
+        prevDepth = d;
+      }
+    }
+
+    // Longitude meridians (constant θ).
+    for (var j = 0; j < lonSegments; j++) {
+      final theta = 2 * math.pi * j / lonSegments;
+      final ct = math.cos(theta);
+      final st = math.sin(theta);
+      Offset? prev;
+      double prevDepth = 0;
+      for (var i = 0; i <= samples; i++) {
+        final phi = math.pi * i / samples - math.pi / 2;
+        final cphi = math.cos(phi);
+        final sphi = math.sin(phi);
+        final x = c.x + r * cphi * ct;
+        final y = c.y + r * cphi * st;
+        final z = c.z + r * sphi;
+        final screen = project(x, y, z);
+        final d = depthAt(x - c.x, y - c.y, z - c.z);
+        if (prev != null) {
+          final paint = paintFor((prevDepth + d) / 2, r);
+          canvas.drawLine(prev, screen, paint);
+        }
+        prev = screen;
+        prevDepth = d;
+      }
+    }
+
+    // Center dot so coincident / nested spheres remain
+    // distinguishable.
+    canvas.drawCircle(project(c.x, c.y, c.z), 3.0, Paint()..color = color);
   }
 
   @override

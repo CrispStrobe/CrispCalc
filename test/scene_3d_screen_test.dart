@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:crisp_calc/engine/app_state.dart';
+import 'package:crisp_calc/engine/plane_math.dart' show Vector3;
 import 'package:crisp_calc/engine/scene_3d/scene_object.dart';
 import 'package:crisp_calc/localization/app_localizations.dart';
 import 'package:crisp_calc/screens/scene_3d_screen.dart';
@@ -59,6 +60,60 @@ void main() {
     await pumpScene(tester);
     expect(find.text('X = 0'), findsOneWidget);
     expect(find.text('No objects yet'), findsNothing);
+  });
+
+  testWidgets('line + sphere added via AppState appear in the panel',
+      (tester) async {
+    AppState().addOrUpdateSceneObject(const LineObject(
+      id: 'l1',
+      label: 'X axis',
+      color: 0xFF43A047,
+      point: Vector3(0, 0, 0),
+      direction: Vector3(1, 0, 0),
+    ));
+    AppState().addOrUpdateSceneObject(const SphereObject(
+      id: 's1',
+      label: 'Unit sphere',
+      color: 0xFFFB8C00,
+      center: Vector3(0, 0, 0),
+      radius: 1,
+    ));
+    await pumpScene(tester);
+    expect(find.text('X axis'), findsOneWidget);
+    expect(find.text('Unit sphere'), findsOneWidget);
+  });
+
+  testWidgets('reorderSceneObjects shuffles panel entries', (tester) async {
+    AppState().addOrUpdateSceneObject(const PlaneObject(
+      id: 'p1',
+      label: 'First',
+      color: 0xFFE53935,
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 0,
+    ));
+    AppState().addOrUpdateSceneObject(const PlaneObject(
+      id: 'p2',
+      label: 'Second',
+      color: 0xFF1E88E5,
+      a: 0,
+      b: 1,
+      c: 0,
+      d: 0,
+    ));
+    await pumpScene(tester);
+    // Initial order — both visible. (Specific position assertions
+    // would couple to the panel layout; ordering is exercised in the
+    // engine-level tests.)
+    expect(find.text('First'), findsOneWidget);
+    expect(find.text('Second'), findsOneWidget);
+
+    // Move 'First' (index 0) past the end (newIndex=2 == length).
+    AppState().reorderSceneObjects(0, 2);
+    await tester.pumpAndSettle();
+    expect(AppState().scene3D.objects.map((o) => o.label).toList(),
+        ['Second', 'First']);
   });
 
   testWidgets('removeSceneObject empties the panel', (tester) async {

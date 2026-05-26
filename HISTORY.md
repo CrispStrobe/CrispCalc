@@ -2,6 +2,93 @@
 
 Completed work, newest first.
 
+## 2026-05-26 (round 94, P9-A3) — Lines + spheres in the 3D Scene
+
+Three new object kinds renderable in the scene module. The
+Add FAB now opens a chooser sheet (Plane / Line / Sphere)
+instead of being plane-only, and the object panel switched to
+a `ReorderableListView` so the user can drag-handle reorder
+items.
+
+### Line rendering
+
+`Scene3DPainter._drawLine` slab-clips the infinite parametric
+line `point + t · direction` against the view cube
+`[-range, range]³`, draws the visible segment in the object's
+color, marks the stored anchor point with a small dot (only
+when the anchor sits inside the view cube — otherwise it'd
+float at a confusing screen position), and tips the +direction
+end with a screen-space arrow triangle. The arrow stays the
+same size regardless of viewing angle, so orientation reads
+cleanly even when the line is nearly edge-on to the camera.
+
+### Sphere rendering
+
+`Scene3DPainter._drawSphere` draws a lat/long wireframe (8
+latitude rings × 16 longitude meridians, 32 samples per
+curve). Depth-cued: each ring/meridian segment computes its
+post-rotation perpendicular-to-screen depth and fades the
+stroke alpha so the back hemisphere reads as "behind"
+without doing actual hidden-line removal.
+
+### Add dialogs
+
+- **Add/Edit Line** (`showLineEditorDialog`) — segmented
+  Point+Direction / Two Points input mode toggle (the
+  underlying storage is always point+direction; two-points
+  derives `dir = q - p`). Rejects zero direction vector via
+  a clear snackbar.
+- **Add/Edit Sphere** (`showSphereEditorDialog`) — center +
+  radius. Radius validator requires `> 0` (the engine model
+  allows radius=0 as a degenerate point, but it's not useful
+  from the UI).
+
+Both share the same color picker + label validator pattern as
+the plane dialog.
+
+### Drag-reorder
+
+Object panel switched from `ListView.separated` to
+`ReorderableListView.builder`. The leading color-swatch becomes
+the drag handle via `ReorderableDragStartListener` —
+`buildDefaultDragHandles: false` keeps it from also showing a
+default handle on the trailing side.
+
+New engine helpers:
+- `Scene3D.withReorderedObjects(int oldIndex, int newIndex)` —
+  follows `ReorderableListView` index conventions; no-op on
+  out-of-bounds.
+- `AppState.reorderSceneObjects(int oldIndex, int newIndex)` —
+  thin wrapper, persists immediately.
+
+### i18n
+
+15 new strings × 4 locales (en/de/fr/es):
+`scene3DAddObject`, `scene3DAddLine`, `scene3DEditLine`,
+`scene3DAddSphere`, `scene3DEditSphere`,
+`scene3DLinePointDir`, `scene3DLineTwoPoints`,
+`scene3DLinePoint`, `scene3DLineDirection`,
+`scene3DLineFirstPoint`, `scene3DLineSecondPoint`,
+`scene3DLineZeroDirection`, `scene3DSphereCenter`,
+`scene3DSphereRadius`, `scene3DSpherePositiveRadius`.
+
+### Tests
+
+4 new tests: 2 engine-level (reorder happy path + out-of-bounds
+no-op) and 2 widget-level (line + sphere appear in the panel
+when added via AppState; reorder shuffles the panel order).
+Suite 1487 → 1491.
+
+### Deferred to A4
+
+- Pairwise intersection algorithms (plane×plane, plane×line,
+  line×sphere, sphere×sphere, etc.) — the engine math + a
+  results panel that displays the analytical answer + a
+  highlighted geometry overlay in the viewport.
+- The shared `Scene3DProjection` extract is still pending —
+  A4's intersection-line drawing will want the projection
+  helper, so we extract there rather than in A3.
+
 ## 2026-05-26 (round 93, P9-A2) — 3D Scene screen + viewport + plane rendering
 
 First *visible* slice of the 3D Scene arc. New

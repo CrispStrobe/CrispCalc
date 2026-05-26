@@ -287,6 +287,31 @@ void main() {
       expect(s.objects.first.label, 'P-edited');
     });
 
+    test('withReorderedObjects moves item to a new position', () {
+      const a =
+          PlaneObject(id: 'a', label: 'A', color: 0, a: 1, b: 0, c: 0, d: 1);
+      const b =
+          PlaneObject(id: 'b', label: 'B', color: 0, a: 0, b: 1, c: 0, d: 2);
+      const c =
+          PlaneObject(id: 'c', label: 'C', color: 0, a: 0, b: 0, c: 1, d: 3);
+      final s = Scene3D.empty().withObject(a).withObject(b).withObject(c);
+      // Move A (index 0) to end. ReorderableListView semantics:
+      // newIndex = objects.length (insert after the removed slot).
+      final moved = s.withReorderedObjects(0, 3);
+      expect(moved.objects.map((o) => o.id).toList(), ['b', 'c', 'a']);
+      // Move C back to the front (oldIndex=2, newIndex=0).
+      final moved2 = moved.withReorderedObjects(2, 0);
+      expect(moved2.objects.map((o) => o.id).toList(), ['a', 'b', 'c']);
+    });
+
+    test('withReorderedObjects is a no-op on out-of-bounds indices', () {
+      const a =
+          PlaneObject(id: 'a', label: 'A', color: 0, a: 1, b: 0, c: 0, d: 1);
+      final s = Scene3D.empty().withObject(a);
+      expect(identical(s.withReorderedObjects(-1, 0), s), isTrue);
+      expect(identical(s.withReorderedObjects(0, 99), s), isTrue);
+    });
+
     test('withoutObject removes by id', () {
       final p1 = PlaneObject(
           id: generateSceneObjectId(),

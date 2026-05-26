@@ -115,4 +115,27 @@ class Scene3D {
       range: range,
     );
   }
+
+  /// Move the object at [oldIndex] to [newIndex]. Mirrors the
+  /// [ReorderableListView] index semantics: when moving down,
+  /// `newIndex` is the destination after the item is removed (i.e.
+  /// the caller passes a one-past-the-target value). Returns a new
+  /// scene on success, or the same scene on out-of-bounds.
+  Scene3D withReorderedObjects(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= objects.length) return this;
+    if (newIndex < 0 || newIndex > objects.length) return this;
+    final next = List<SceneObject>.from(objects);
+    final item = next.removeAt(oldIndex);
+    final insertAt = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    next.insert(insertAt, item);
+    return Scene3D(
+      id: id,
+      name: name,
+      objects: next,
+      azimuth: azimuth,
+      elevation: elevation,
+      zoom: zoom,
+      range: range,
+    );
+  }
 }

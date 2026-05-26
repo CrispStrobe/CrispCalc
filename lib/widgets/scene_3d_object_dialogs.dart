@@ -1,9 +1,10 @@
-// P9-A2: dialogs for adding / editing scene objects. A2 ships only
-// the Add/Edit Plane dialog; A3 will add the line + sphere dialogs;
-// A5 / A6 follow with quadric + parametric.
+// P9-A2 + A3: dialogs for adding / editing scene objects. A2 ships
+// the Add/Edit Plane dialog; A3 adds Line + Sphere; A5 / A6 follow
+// with quadric + parametric.
 
 import 'package:flutter/material.dart';
 
+import '../engine/plane_math.dart' show Vector3;
 import '../engine/scene_3d/scene_object.dart';
 import '../localization/app_localizations.dart';
 
@@ -163,6 +164,284 @@ Widget _coef(TextEditingController c, String label, AppLocalizations t) {
       return null;
     },
   );
+}
+
+enum _LineInputMode { pointDirection, twoPoints }
+
+/// Show the Add/Edit Line dialog. Returns the new / edited
+/// [LineObject] on save, or null if cancelled. The user can pick
+/// between point+direction and two-points input modes; the
+/// underlying storage is always point+direction (the second mode
+/// derives a direction from `q - p`).
+Future<LineObject?> showLineEditorDialog(
+  BuildContext context, {
+  LineObject? existing,
+  int defaultColor = 0xFF43A047,
+}) async {
+  final t = AppLocalizations.of(context);
+  final labelCtrl = TextEditingController(text: existing?.label ?? 'Line');
+  final px = TextEditingController(text: (existing?.point.x ?? 0).toString());
+  final py = TextEditingController(text: (existing?.point.y ?? 0).toString());
+  final pz = TextEditingController(text: (existing?.point.z ?? 0).toString());
+  final dx =
+      TextEditingController(text: (existing?.direction.x ?? 1).toString());
+  final dy =
+      TextEditingController(text: (existing?.direction.y ?? 0).toString());
+  final dz =
+      TextEditingController(text: (existing?.direction.z ?? 0).toString());
+  var color = existing?.color ?? defaultColor;
+  var mode = _LineInputMode.pointDirection;
+  final formKey = GlobalKey<FormState>();
+
+  final saved = await showDialog<LineObject>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(builder: (ctx, setStateDlg) {
+        return AlertDialog(
+          title: Text(existing == null ? t.scene3DAddLine : t.scene3DEditLine),
+          content: SizedBox(
+            width: 380,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SegmentedButton<_LineInputMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: _LineInputMode.pointDirection,
+                        label: Text(t.scene3DLinePointDir),
+                      ),
+                      ButtonSegment(
+                        value: _LineInputMode.twoPoints,
+                        label: Text(t.scene3DLineTwoPoints),
+                      ),
+                    ],
+                    selected: {mode},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) =>
+                        setStateDlg(() => mode = s.first),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: labelCtrl,
+                    decoration: InputDecoration(
+                      labelText: t.scene3DObjectLabel,
+                      isDense: true,
+                    ),
+                    validator: (s) => (s?.trim().isEmpty ?? true)
+                        ? t.scene3DLabelRequired
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    mode == _LineInputMode.pointDirection
+                        ? t.scene3DLinePoint
+                        : t.scene3DLineFirstPoint,
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Expanded(child: _coef(px, 'x', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(py, 'y', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(pz, 'z', t)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(
+                    mode == _LineInputMode.pointDirection
+                        ? t.scene3DLineDirection
+                        : t.scene3DLineSecondPoint,
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Expanded(child: _coef(dx, 'x', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(dy, 'y', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(dz, 'z', t)),
+                  ]),
+                  const SizedBox(height: 16),
+                  Text(t.scene3DColor,
+                      style: Theme.of(ctx).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final swatch in kSceneObjectPalette)
+                      _ColorSwatch(
+                        color: Color(swatch),
+                        selected: color == swatch,
+                        onTap: () => setStateDlg(() => color = swatch),
+                      ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(t.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                final p = Vector3(
+                  double.tryParse(px.text.trim()) ?? 0,
+                  double.tryParse(py.text.trim()) ?? 0,
+                  double.tryParse(pz.text.trim()) ?? 0,
+                );
+                final second = Vector3(
+                  double.tryParse(dx.text.trim()) ?? 0,
+                  double.tryParse(dy.text.trim()) ?? 0,
+                  double.tryParse(dz.text.trim()) ?? 0,
+                );
+                final dir = mode == _LineInputMode.pointDirection
+                    ? second
+                    : Vector3(second.x - p.x, second.y - p.y, second.z - p.z);
+                if (dir.x == 0 && dir.y == 0 && dir.z == 0) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content: Text(t.scene3DLineZeroDirection),
+                    duration: const Duration(seconds: 2),
+                  ));
+                  return;
+                }
+                Navigator.of(ctx).pop(LineObject(
+                  id: existing?.id ?? generateSceneObjectId(),
+                  label: labelCtrl.text.trim(),
+                  color: color,
+                  visible: existing?.visible ?? true,
+                  point: p,
+                  direction: dir,
+                ));
+              },
+              child: Text(existing == null ? t.scene3DAdd : t.scene3DSave),
+            ),
+          ],
+        );
+      });
+    },
+  );
+  return saved;
+}
+
+/// Show the Add/Edit Sphere dialog. Returns the new / edited
+/// [SphereObject] on save, or null if cancelled.
+Future<SphereObject?> showSphereEditorDialog(
+  BuildContext context, {
+  SphereObject? existing,
+  int defaultColor = 0xFFFB8C00,
+}) async {
+  final t = AppLocalizations.of(context);
+  final labelCtrl = TextEditingController(text: existing?.label ?? 'Sphere');
+  final cx = TextEditingController(text: (existing?.center.x ?? 0).toString());
+  final cy = TextEditingController(text: (existing?.center.y ?? 0).toString());
+  final cz = TextEditingController(text: (existing?.center.z ?? 0).toString());
+  final radius =
+      TextEditingController(text: (existing?.radius ?? 1).toString());
+  var color = existing?.color ?? defaultColor;
+  final formKey = GlobalKey<FormState>();
+
+  final saved = await showDialog<SphereObject>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(builder: (ctx, setStateDlg) {
+        return AlertDialog(
+          title:
+              Text(existing == null ? t.scene3DAddSphere : t.scene3DEditSphere),
+          content: SizedBox(
+            width: 360,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: labelCtrl,
+                    decoration: InputDecoration(
+                      labelText: t.scene3DObjectLabel,
+                      isDense: true,
+                    ),
+                    validator: (s) => (s?.trim().isEmpty ?? true)
+                        ? t.scene3DLabelRequired
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(t.scene3DSphereCenter,
+                      style: Theme.of(ctx).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Expanded(child: _coef(cx, 'x', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(cy, 'y', t)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _coef(cz, 'z', t)),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: radius,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: t.scene3DSphereRadius,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    validator: (s) {
+                      final v = double.tryParse(s?.trim() ?? '');
+                      if (v == null) return t.scene3DCoefInvalid;
+                      if (v <= 0) return t.scene3DSpherePositiveRadius;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(t.scene3DColor,
+                      style: Theme.of(ctx).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final swatch in kSceneObjectPalette)
+                      _ColorSwatch(
+                        color: Color(swatch),
+                        selected: color == swatch,
+                        onTap: () => setStateDlg(() => color = swatch),
+                      ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(t.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                Navigator.of(ctx).pop(SphereObject(
+                  id: existing?.id ?? generateSceneObjectId(),
+                  label: labelCtrl.text.trim(),
+                  color: color,
+                  visible: existing?.visible ?? true,
+                  center: Vector3(
+                    double.tryParse(cx.text.trim()) ?? 0,
+                    double.tryParse(cy.text.trim()) ?? 0,
+                    double.tryParse(cz.text.trim()) ?? 0,
+                  ),
+                  radius: double.tryParse(radius.text.trim()) ?? 1,
+                ));
+              },
+              child: Text(existing == null ? t.scene3DAdd : t.scene3DSave),
+            ),
+          ],
+        );
+      });
+    },
+  );
+  return saved;
 }
 
 class _ColorSwatch extends StatelessWidget {

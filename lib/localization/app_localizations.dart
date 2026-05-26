@@ -133,6 +133,24 @@ abstract class AppLocalizations {
   String get scene3DCoefRequired;
   String get scene3DCoefInvalid;
   String get scene3DPlaneZeroNormal;
+
+  // -- P9-A3: lines + spheres --
+  String get scene3DAddObject;
+  String get scene3DAddLine;
+  String get scene3DEditLine;
+  String get scene3DAddSphere;
+  String get scene3DEditSphere;
+  String get scene3DLinePointDir;
+  String get scene3DLineTwoPoints;
+  String get scene3DLinePoint;
+  String get scene3DLineDirection;
+  String get scene3DLineFirstPoint;
+  String get scene3DLineSecondPoint;
+  String get scene3DLineZeroDirection;
+  String get scene3DSphereCenter;
+  String get scene3DSphereRadius;
+  String get scene3DSpherePositiveRadius;
+
   String get moduleUnitConverterTitle;
   String get moduleUnitConverterSubtitle;
   // -- Variable / function panel --
@@ -790,6 +808,39 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get scene3DPlaneZeroNormal =>
       'Normal vector (a, b, c) must be non-zero';
+
+  // -- P9-A3 --
+  @override
+  String get scene3DAddObject => 'Add object';
+  @override
+  String get scene3DAddLine => 'Add line';
+  @override
+  String get scene3DEditLine => 'Edit line';
+  @override
+  String get scene3DAddSphere => 'Add sphere';
+  @override
+  String get scene3DEditSphere => 'Edit sphere';
+  @override
+  String get scene3DLinePointDir => 'Point + direction';
+  @override
+  String get scene3DLineTwoPoints => 'Two points';
+  @override
+  String get scene3DLinePoint => 'Point';
+  @override
+  String get scene3DLineDirection => 'Direction';
+  @override
+  String get scene3DLineFirstPoint => 'First point';
+  @override
+  String get scene3DLineSecondPoint => 'Second point';
+  @override
+  String get scene3DLineZeroDirection =>
+      'Direction vector must be non-zero (or pick two distinct points)';
+  @override
+  String get scene3DSphereCenter => 'Center';
+  @override
+  String get scene3DSphereRadius => 'Radius';
+  @override
+  String get scene3DSpherePositiveRadius => 'Radius must be greater than zero';
 
   @override
   String get moduleUnitConverterTitle => 'Unit Converter';
@@ -2018,6 +2069,39 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get scene3DPlaneZeroNormal =>
       'Normalenvektor (a, b, c) darf nicht null sein';
+
+  // -- P9-A3 --
+  @override
+  String get scene3DAddObject => 'Objekt hinzufügen';
+  @override
+  String get scene3DAddLine => 'Gerade hinzufügen';
+  @override
+  String get scene3DEditLine => 'Gerade bearbeiten';
+  @override
+  String get scene3DAddSphere => 'Kugel hinzufügen';
+  @override
+  String get scene3DEditSphere => 'Kugel bearbeiten';
+  @override
+  String get scene3DLinePointDir => 'Punkt + Richtung';
+  @override
+  String get scene3DLineTwoPoints => 'Zwei Punkte';
+  @override
+  String get scene3DLinePoint => 'Punkt';
+  @override
+  String get scene3DLineDirection => 'Richtung';
+  @override
+  String get scene3DLineFirstPoint => 'Erster Punkt';
+  @override
+  String get scene3DLineSecondPoint => 'Zweiter Punkt';
+  @override
+  String get scene3DLineZeroDirection =>
+      'Richtungsvektor darf nicht null sein (oder zwei verschiedene Punkte wählen)';
+  @override
+  String get scene3DSphereCenter => 'Mittelpunkt';
+  @override
+  String get scene3DSphereRadius => 'Radius';
+  @override
+  String get scene3DSpherePositiveRadius => 'Radius muss größer als null sein';
 
   @override
   String get moduleUnitConverterTitle => 'Einheitenumrechner';
@@ -3390,6 +3474,40 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get scene3DPlaneZeroNormal =>
       'Le vecteur normal (a, b, c) doit être non nul';
+
+  // -- P9-A3 --
+  @override
+  String get scene3DAddObject => 'Ajouter un objet';
+  @override
+  String get scene3DAddLine => 'Ajouter une droite';
+  @override
+  String get scene3DEditLine => 'Modifier la droite';
+  @override
+  String get scene3DAddSphere => 'Ajouter une sphère';
+  @override
+  String get scene3DEditSphere => 'Modifier la sphère';
+  @override
+  String get scene3DLinePointDir => 'Point + direction';
+  @override
+  String get scene3DLineTwoPoints => 'Deux points';
+  @override
+  String get scene3DLinePoint => 'Point';
+  @override
+  String get scene3DLineDirection => 'Direction';
+  @override
+  String get scene3DLineFirstPoint => 'Premier point';
+  @override
+  String get scene3DLineSecondPoint => 'Second point';
+  @override
+  String get scene3DLineZeroDirection =>
+      'Le vecteur direction doit être non nul (ou choisir deux points distincts)';
+  @override
+  String get scene3DSphereCenter => 'Centre';
+  @override
+  String get scene3DSphereRadius => 'Rayon';
+  @override
+  String get scene3DSpherePositiveRadius =>
+      'Le rayon doit être strictement positif';
 
   @override
   String get moduleUnitConverterTitle => 'Convertisseur d\'unités';
@@ -4767,6 +4885,39 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get scene3DPlaneZeroNormal =>
       'El vector normal (a, b, c) no puede ser cero';
+
+  // -- P9-A3 --
+  @override
+  String get scene3DAddObject => 'Añadir objeto';
+  @override
+  String get scene3DAddLine => 'Añadir recta';
+  @override
+  String get scene3DEditLine => 'Editar recta';
+  @override
+  String get scene3DAddSphere => 'Añadir esfera';
+  @override
+  String get scene3DEditSphere => 'Editar esfera';
+  @override
+  String get scene3DLinePointDir => 'Punto + dirección';
+  @override
+  String get scene3DLineTwoPoints => 'Dos puntos';
+  @override
+  String get scene3DLinePoint => 'Punto';
+  @override
+  String get scene3DLineDirection => 'Dirección';
+  @override
+  String get scene3DLineFirstPoint => 'Primer punto';
+  @override
+  String get scene3DLineSecondPoint => 'Segundo punto';
+  @override
+  String get scene3DLineZeroDirection =>
+      'El vector dirección no puede ser cero (o elige dos puntos distintos)';
+  @override
+  String get scene3DSphereCenter => 'Centro';
+  @override
+  String get scene3DSphereRadius => 'Radio';
+  @override
+  String get scene3DSpherePositiveRadius => 'El radio debe ser mayor que cero';
 
   @override
   String get moduleUnitConverterTitle => 'Conversor de unidades';
