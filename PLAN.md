@@ -1854,15 +1854,38 @@ relational rewrite at the leaf, and defensive handling of
 trailing operators + unbalanced parens. Full suite: 1832 →
 1856 pass.
 
-**Conditional `if(cond, thenExpr, elseExpr)` deferred to
-round 111b.** The PLAN's lowering target is
-`Piecewise((thenExpr, cond), (elseExpr, true))` but SymEngine's
-text parser doesn't have a `Piecewise` entry (only the C++
-class exists), so the function-name route doesn't work. A
-clean 111b will Dart-side-fold the condition first: if it
-evaluates to `True`/`False` we return `thenExpr`/`elseExpr`;
-symbolic conditions stay as the original `if(...)` form. Not
-a blocker for the rest of P7.
+**Conditional `if(cond, thenExpr, elseExpr)` ✅** Shipped 2026-05-26
+as round 111b. New `ExpressionPreprocessingUtils.tryFoldIfConditional`
+takes the expression + an async evaluator, detects an `if(...)`
+call that spans the whole input, preprocesses the condition via
+`preprocessNativeExpression`, and returns the trimmed
+then-/else-branch when the condition folds to `true`/`false`.
+Symbolic conditions return null so the caller leaves the
+original `if(...)` form alone (SymEngine then surfaces the
+error since `Piecewise` isn't in its text parser). Calculator
+routes the condition through `_runEngineOpMaybeAsync` so it
+gets the same worker-isolate amortization as a normal evaluate;
+notepad routes through `EngineService.evaluateAsync` directly.
+
+Round 111b also fixed a latent descent bug: when
+`preprocessLogicalOperators` recursed into a paren-group
+containing top-level commas (`Min(2 == 2, x + 1)` or
+`if(cond, t, e)`), the inner relational scan walked past the
+commas and produced `Min(Eq(2, 2, x + 1))`. The descent now
+splits the inner content by depth-0 commas via the new
+`_splitTopLevelByComma`, rewrites each piece independently,
+and rejoins with `, `. Each part is trimmed during the split
+so the rejoin produces clean single-space separators.
+
+Adv-keypad gains an `if` button (`if(, , )` template with the
+cursor right after `(`); new `booleanIfFold` worked-example
+entry (`if(isprime(7), 100, 200) → 100`) localised across
+en/de/fr/es. The catalog cap test bumped 40 → 50 for the
+P7 boolean batch.
+
+18 new tests in `test/logical_preprocessor_test.dart` (4 for
+the descent fix, 8 for `tryFoldIfConditional`). Full suite:
+1880 → 1898 pass.
 
 ##### Round 112 — Boolean keypad + worked examples ✅ (`if` deferred)
 
