@@ -2681,23 +2681,67 @@ into the existing `SymbolicMathBridge` Dart bindings.
   bridge calls — though the per-platform CI runners would need
   the libs available, which they already would after this round.
 
+### Linkage — how iOS/macOS do it today (confirmed 2026-05-27)
+
+The `symbolic_math_bridge` plugin (`github.com/CrispStrobe/
+symbolic_math_bridge`, pinned at `505074d` in `pubspec.yaml`)
+**static-links** the whole math stack. Both `ios/` and `macos/`
+podspecs declare `s.static_framework = true` and ship five
+`.xcframework` bundles:
+
+- `GMP.xcframework`, `MPFR.xcframework`, `MPC.xcframework`,
+  `FLINT.xcframework` — vendored from upstream source builds
+  (`libgmp.a`, `libmpfr.a`, `libmpc.a`, `libflint.a` per arch).
+- `SymEngineFlutterWrapper.xcframework` — combined SymEngine
+  + wrapper static archive.
+
+`OTHER_LDFLAGS` chains `-lc++ -lsymengine_flutter_wrapper
+-all_load`. The `-all_load` is mandatory: without it the linker
+drops the 45 `flutter_symengine_*` C entry points because they
+look unreferenced (Dart reaches them via
+`DynamicLibrary.process()` at runtime, post-link). The
+`FlutterSymEngineWrapperOnly.xcframework` in the plugin repo
+exists as a release-link-fix experiment (separate the wrapper
+from the SymEngine archive so we can force-load only the
+wrapper symbols, avoiding double-link duplicate-symbol errors);
+it's built but not yet wired in — see HISTORY round 11.
+
 ### Risks / unknowns
 
-- **License compatibility**: SymEngine is MIT, MPFR is LGPL,
-  FLINT is LGPL, GMP is LGPL/GPL. Dynamic linking + permissive
-  shipping is fine for closed binaries (LGPL has the lib-bound
-  exception); static linking would force GPL. The plugin
-  presumably dynamic-links today — confirm before duplicating
-  the pattern on other platforms.
+- **License compatibility**: SymEngine is MIT, FLINT is LGPL-2.1+,
+  MPFR is LGPL-3+, MPC is LGPL-3+, GMP is dual LGPL-3+/GPL-2+.
+  Static linking under LGPL is permitted but imposes obligations
+  (LGPL §6 / §4): ship a license notice, make the LGPL source
+  available, and either also ship object files for re-linking
+  *or* dynamic-link the LGPL components. CrispCalc is itself
+  open source (LICENSE in repo + `assets/licenses/SYMENGINE_STACK.txt`
+  on disk), so the re-link obligation is satisfied implicitly,
+  but the **license-text bundling** still needs an audit pass
+  before cross-platform builds ship — the audit should check
+  that GMP / MPFR / MPC / FLINT license text is reachable from
+  the running app (Settings → About → Licenses, or similar).
+  Same constraints apply to Linux / Windows / Android builds.
+- **Linkage strategy on new platforms**: simplest is to mirror
+  iOS/macOS — vendor `.a` (Linux) / `.lib` (Windows) / `.so`
+  (Android NDK, per ABI) static archives and force-load with the
+  platform's equivalent of `-all_load` (`--whole-archive` on
+  GNU ld, `/WHOLEARCHIVE:` on MSVC). Dynamic linking is an
+  alternative on Linux (use `apt`/`yum`-installed system
+  packages) but introduces version-skew risk between distros
+  and doesn't translate to Android (no system SymEngine
+  available). Recommend: static everywhere, same shape as
+  today's iOS/macOS.
 - **Binary size**: SymEngine + MPFR + FLINT + GMP is ~5-15 MB
   uncompressed per platform; the Android APK will grow
   noticeably. Mitigation: per-ABI splits (`flutter build apk
   --split-per-abi`) so users only download the lib for their
   device.
 - **Worker isolate behavior on Windows**: the existing
-  `EngineService` runs CAS on a worker isolate. Windows DLL
-  loading on isolate creation needs verification; iOS/macOS
-  already handle this.
+  `EngineService` runs CAS on a worker isolate. Windows DLL /
+  static-archive-in-DLL loading on isolate creation needs
+  verification; iOS/macOS already handle this because their
+  `DynamicLibrary.process()` reaches the host process's symbol
+  table directly (no separate dylib).
 
 Tracking here so the next session can pick it up cleanly.
 Likely sequenced R130 → R131 → R132 to amortize learning
