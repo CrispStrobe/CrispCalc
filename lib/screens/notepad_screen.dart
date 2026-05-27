@@ -38,7 +38,9 @@ import '../utils/expression_preprocessing_utils.dart';
 import '../utils/latex_conversion_utils.dart';
 import '../utils/math_display_utils.dart';
 import '../widgets/boolean_chip.dart';
+import '../widgets/function_reference_dialog.dart';
 import '../widgets/help_target.dart';
+import '../widgets/history_help_modal.dart';
 import '../widgets/notepad_manager_dialog.dart';
 import '../widgets/store_result_dialogs.dart';
 import '../widgets/worked_examples_dialog.dart';
@@ -1216,6 +1218,7 @@ class _NotepadLineRow extends StatelessWidget {
         key: ValueKey('row-${line.id}'),
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         child: HelpTarget(
+          onHelpTap: () => _showLineHelp(context),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -1245,6 +1248,7 @@ class _NotepadLineRow extends StatelessWidget {
       key: ValueKey('row-${line.id}'),
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: HelpTarget(
+        onHelpTap: () => _showLineHelp(context),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1269,6 +1273,43 @@ class _NotepadLineRow extends StatelessWidget {
             _DeleteButton(onPressed: onDelete),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Round 104 (P6): help-mode tap on a notepad line opens the shared
+  /// [HistoryRowHelpModal]. Reuses the calculator-history routing
+  /// table; the line's `source` is the expression, and the modal
+  /// surfaces `cachedError` ahead of `cachedResult` so error lines
+  /// still display sensibly. Show-steps is intentionally omitted —
+  /// the notepad row doesn't have a `CalculatorEngine` reference,
+  /// and threading one through is more wiring than the action is
+  /// worth (the user can copy the line into the Calculator and tap
+  /// `solve⌄` / `d/dx⌄` / `∫⌄` to get the same trace).
+  void _showLineHelp(BuildContext context) {
+    final source = line.source.trim();
+    if (source.isEmpty) return;
+    final displayed = line.cachedError ?? line.cachedResult ?? '';
+    final entry = CalculationEntry(
+      expression: source,
+      result: displayed,
+    );
+    final info = detectHistoryHelp(source);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => HistoryRowHelpModal(
+        entry: entry,
+        info: info,
+        onLearnMore: info.refId == null
+            ? null
+            : () {
+                Navigator.of(dialogContext).pop();
+                showDialog<void>(
+                  context: context,
+                  builder: (_) =>
+                      FunctionReferenceDialog(initialSearch: info.refId),
+                );
+              },
       ),
     );
   }

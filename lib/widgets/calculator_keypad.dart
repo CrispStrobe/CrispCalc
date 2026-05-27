@@ -51,6 +51,25 @@ const Map<String, String> _kAdvKeyHelpRefId = {
   'factorint': 'factorint',
 };
 
+/// Round 102b (P6): per-glyph → FunctionRef.id mapping for the CAS
+/// tab. The `⌄` step-trace variants (`solve⌄`, `d/dx⌄`, `∫⌄`),
+/// the `=` / `,` punctuation, and the `f(x)` user-function template
+/// are deliberately absent — they're calculator UX, not engine
+/// surface, and have no FunctionRef row. The Adv tab's
+/// [_kAdvKeyHelpRefId] documents the same convention.
+const Map<String, String> _kCasKeyHelpRefId = {
+  'solve': 'solve',
+  'factor': 'factor',
+  'expand': 'expand',
+  'simplify': 'simplify',
+  'd/dx': 'diff',
+  '∫': 'integrate',
+  'lim': 'limit',
+  'subst': 'subst',
+  'gcd': 'gcd',
+  'lcm': 'lcm',
+};
+
 /// Round 102: shows a small AlertDialog explaining a single
 /// FunctionRef. "Learn more" deep-links to the full
 /// [FunctionReferenceDialog] filtered by id.
@@ -325,7 +344,11 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
               KeypadGrid(
                   buttons: _trigKeys, onButtonPressed: widget.onButtonPressed),
               KeypadGrid(
-                  buttons: _casKeys, onButtonPressed: widget.onButtonPressed),
+                buttons: _casKeys,
+                onButtonPressed: widget.onButtonPressed,
+                helpRefIdFor: (text) => _kCasKeyHelpRefId[text],
+                onHelpTap: (refId) => showKeypadHelpPopover(context, refId),
+              ),
               KeypadGrid(
                 buttons: _advKeys,
                 onButtonPressed: widget.onButtonPressed,
@@ -405,14 +428,22 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
         onInsertExpression: widget.onVariableTap,
       );
     }
-    // Round 102 (P6): Adv pane wires the help-mode popover machinery
-    // through. Other panes (Num / Trig / CAS) are left untouched
+    // Round 102 / 102b (P6): Adv and CAS panes wire the help-mode
+    // popover machinery through. Num + Trig panes are left untouched
     // until a later round catalogues their entries.
     if (kind == _PaneKind.advanced) {
       return KeypadGrid(
         buttons: _advKeys,
         onButtonPressed: widget.onButtonPressed,
         helpRefIdFor: (text) => _kAdvKeyHelpRefId[text],
+        onHelpTap: (refId) => showKeypadHelpPopover(context, refId),
+      );
+    }
+    if (kind == _PaneKind.cas) {
+      return KeypadGrid(
+        buttons: _casKeys,
+        onButtonPressed: widget.onButtonPressed,
+        helpRefIdFor: (text) => _kCasKeyHelpRefId[text],
         onHelpTap: (refId) => showKeypadHelpPopover(context, refId),
       );
     }

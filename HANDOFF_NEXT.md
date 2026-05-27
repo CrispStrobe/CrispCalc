@@ -1,13 +1,10 @@
 # CrispCalc — handover for the next session
 
-Pickup note from the **2026-05-27 (Round 103) session**.
-Shipped the P6 history-row help popover on Calculator — the
-HelpTarget wrappers from Round 101 now have an `onHelpTap`
-that opens an AlertDialog explaining the compute path (engine
-+ FunctionRef line), with deep-links into the Function Reference
-and re-runnable step traces for solve / diff / integrate. Round
-104 (Notepad-line modal) is the natural next step — the
-detection helper from this round is reusable.
+Pickup note from the **2026-05-27 (Rounds 103 + 102b + 104) session**.
+Shipped the P6 help-popover sweep across Calculator history rows
+(R103), CAS-tab keypad buttons (R102b — Adv was already in R102),
+and Notepad lines (R104). All three surfaces now reuse the same
+`HistoryRowHelpModal` + `detectHistoryHelp` routing table.
 
 - **103** — `HistoryRowHelpModal` + `detectHistoryHelp` in
   `lib/widgets/history_help_modal.dart`. Routing table maps
@@ -18,6 +15,20 @@ detection helper from this round is reusable.
   (re-runs `StepEngine.solve / .differentiate / .integrate` and
   pops `StepsDialog`). 4 new i18n strings × 4 locales. +17
   tests (1965 → 1982).
+- **102b** — `_kCasKeyHelpRefId` (10 mappings: solve / factor /
+  expand / simplify / d/dx / ∫ / lim / subst / gcd / lcm) plus
+  `helpRefIdFor` + `onHelpTap` wiring on the CAS pane in both
+  narrow tabbed and wide two-pane layouts. The `⌄` step-trace
+  variants and `=` / `,` / `f(x)` punctuation are deliberately
+  omitted (calculator UX, not engine surface). +2 widget tests
+  (1982 → 1984).
+- **104** — `_NotepadLineRow._showLineHelp` wires `HelpTarget
+  .onHelpTap` on both notepad row layouts to the same
+  `HistoryRowHelpModal`. Constructs a `CalculationEntry` from
+  `line.source` + `cachedError ?? cachedResult ?? ''`. Show-steps
+  intentionally omitted — the row doesn't have a `CalculatorEngine`
+  reference; pasting the line into Calculator + tapping `solve⌄` /
+  `d/dx⌄` / `∫⌄` is the workflow. +2 widget tests (1984 → 1986).
 
 `HANDOFF.md` remains the load-bearing pattern reference.
 
@@ -41,10 +52,10 @@ remind yourself the user wants main.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | R102 pushed at `eda4900`; R103 commit to follow |
-| **Tests** | **1982 pass** (1965 → 1982), 1 pre-existing skip — `flutter analyze` clean |
+| **main HEAD** | R103 at `c226d91`; R102b + R104 commit to follow |
+| **Tests** | **1986 pass** (1965 → 1982 → 1984 → 1986), 1 pre-existing skip — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
-| **CI** | R102 pushed; R97-99 + R101 + R102 status not yet observed |
+| **CI** | R102 pushed; R97-99 + R101 + R102 + R103 status not yet observed |
 
 Only dirty file at session start was `.claude/scheduled_tasks.lock`
 (harness state — left alone).
@@ -54,45 +65,43 @@ Only dirty file at session start was `.claude/scheduled_tasks.lock`
 | Round | What |
 |---|---|
 | **103** | History-row help popover on Calculator. New `lib/widgets/history_help_modal.dart`: `HistoryHelpInfo` + `HistoryStepKind` + `detectHistoryHelp` (pure routing table) + `HistoryRowHelpModal` widget. Wiring on `HelpTarget.onHelpTap` for history rows in `calculator_screen.dart`. Modal explains the engine (`SymEngine.solve`, `MPFR`, `FLINT.ntheory`, `Dart (matrix)` / `Dart (BigInt)`, or fallback `Direct evaluation`), shows the FunctionRef signature + shortDescription, and offers Learn-more (deep-link) plus Show-steps (re-runs `StepEngine`). 4 new i18n strings × 4 locales (`historyHelpTitle`, `historyHelpComputedVia(engine)`, `historyHelpDirectEvaluation`, `historyHelpShowSteps`). +17 tests (1965 → 1982). |
+| **102b** | CAS-tab keypad popovers in `lib/widgets/calculator_keypad.dart`. New `_kCasKeyHelpRefId` map (10 mappings); both narrow tabbed and wide two-pane layouts now wire `helpRefIdFor` + `onHelpTap` on the CAS pane via `showKeypadHelpPopover`. `⌄` step-trace variants and `=` / `,` / `f(x)` punctuation are deliberately omitted — they're calculator UX, not engine surface. +2 widget tests (1982 → 1984). |
+| **104** | Notepad line help popovers. `_NotepadLineRow._showLineHelp` wires `HelpTarget.onHelpTap` on both row layouts (sideBySide + stacked) to the shared `HistoryRowHelpModal`. Reuses `detectHistoryHelp` over `line.source`; result is `cachedError ?? cachedResult ?? ''`. Show-steps suppressed (no engine reference); Learn-more deep-links to `FunctionReferenceDialog`. +2 widget tests (1984 → 1986). |
 
 ## Pickup points — next strategic slot
 
-P6 §103 done. The detection helper from Round 103 is reusable
-for Round 104 — most of the work is just wiring `HelpTarget.onHelpTap`
-on the Notepad line rows.
+P6 §103 + §102b + §104 done. The help-popover sweep across all
+three "row" surfaces is now complete (Calculator history,
+Notepad lines, Calculator keypad CAS + Adv tabs). Next obvious
+moves:
 
-1. **Round 104 — Help on Notepad lines**. Same shape as 103.
-   `HelpTarget` already wraps both row branches (Round 101). The
-   `_NotepadLineRow` has access to the full `NotepadLine.source`
-   and any cached result/error info; pass the source string
-   through `detectHistoryHelp` to derive the same `HistoryHelpInfo`
-   and re-use `HistoryRowHelpModal`. Step-trace re-run also
-   reusable — Notepad has its own engine instance, route via
-   the same `StepEngine` calls. Tests: at least 2 widget-render
-   cases mirroring Round 103.
+1. **Round 105 — Help on Analyze hub modules**. `(?)` button
+   per module screen. See PLAN P6 §105. With history + notepad +
+   keypad covered, the Analyze hub is the largest remaining
+   surface area without help affordances.
 
-2. **Round 102 follow-up — CAS-tab popovers**. Wiring identical
-   to Round 102 Adv tab — add `_kCasKeyHelpRefId` map + wire
-   `helpRefIdFor` / `onHelpTap` in the CAS pane's KeypadGrid
-   constructor (both narrow tabbed and wide two-pane layouts).
-   FunctionRef coverage already exists for solve / factor /
-   expand / simplify / d/dx / ∫ / lim / subst / gcd / lcm.
-   Smaller than a full round; could bundle with Round 104.
-
-3. **Round 100 — Function Reference i18n pass (~30k words)**.
-   Still pending. With Round 103 shipped, the FR strings
+2. **Round 100 — Function Reference i18n pass (~30k words)**.
+   Still pending. With Rounds 103 + 104 shipped, the FR strings
    (`signature`, `shortDescription`) are now visible to users
-   in 5 contexts (FR dialog list, FR dialog detail, keypad
-   popover, deep-linked FR dialog, **history-row popover**).
-   Translating raises the user-visible payoff materially.
+   in **7 contexts** (FR dialog list, FR dialog detail, Adv
+   keypad popover, **CAS keypad popover**, deep-linked FR
+   dialog, **Calculator history popover**, **Notepad line
+   popover**). Translating raises the user-visible payoff
+   materially.
    - **100a**: EN-only refinements / typos / consistency.
    - **100b**: DE.
    - **100c**: FR + ES.
 
-4. **Round 105 — Help on Analyze hub modules**. `(?)` button
-   per module screen. See PLAN P6 §105.
+3. **Round 104 follow-up — Notepad Show-steps wiring**. The
+   modal supports `onShowSteps` but Round 104 omits it because
+   `_NotepadLineRow` doesn't carry a `CalculatorEngine`. To wire
+   it: thread the `_engine` reference from `_NotepadScreenState`
+   down through `_NotepadLineRow` (constructor param), then
+   build an `onShowSteps` closure that calls
+   `StepEngine.solve / .differentiate / .integrate` with the
+   parsed args. Small, mechanical.
 
-5. **Other deferred carry-overs** (unchanged from prior pickup):
+4. **Other deferred carry-overs** (unchanged from prior pickup):
    - Round 95 follow-up — Statistics input pre-fill.
    - Series / taylor entries (P6 §97) — blocked on bridge.
    - Eigenvalues entry (P6 §98) — blocked on bridge.
@@ -133,11 +142,35 @@ on the Notepad line rows.
   (`_showHistoryHelpModal`, `_runStepTraceForHistory`) stays
   private — only the State has the `_engine` instance.
 
+### Round 104 specifically
+
+- **Show-steps omitted on Notepad**. The modal supports
+  `onShowSteps` but Notepad's `_NotepadLineRow` is a
+  StatelessWidget with no `CalculatorEngine` reference. The
+  user's escape hatch is to copy the line into Calculator and
+  tap the `⌄` step-trace button there. Wiring it through is a
+  small follow-up (see pickup §3) — not blocking.
+- **`cachedError` shown ahead of `cachedResult`** in the modal's
+  result line. Error rows therefore still display sensibly
+  ("= Error: parse failed") rather than empty.
+- **Blank lines suppress the popover**. `_showLineHelp` short-
+  circuits on empty `line.source.trim()` so the modal can't open
+  on the blank seed row.
+
+### Round 102b specifically
+
+- **`_kCasKeyHelpRefId` skips `=` / `,` / `f(x)`** by design —
+  punctuation has no FunctionRef row. `solve⌄` / `d/dx⌄` / `∫⌄`
+  are also skipped because the step-trace prompt isn't really a
+  function-reference topic. Tests assert `=` / `,` fall through
+  to normal insert in help mode.
+- **Both layouts wired**: narrow tabbed (CAS at tab index 2) and
+  wide two-pane (`_PaneKind.cas`).
+
 ### Round 102 (carry-over)
 
 - `HelpTarget.onHelpTap` uses an absorbing Stack overlay;
   tests on wrapped widgets need `warnIfMissed: false`.
-- CAS-tab popovers not yet wired (see pickup §2).
 - Help popover content currently English-only for the
   `shortDescription`; after Round 100 lands, popovers will
   resolve through the per-id i18n table.
@@ -196,7 +229,12 @@ on the Notepad line rows.
   (Round 101: outline; Round 102: optional `onHelpTap`
   with absorbing overlay)
 - **Keypad popover**: `lib/widgets/calculator_keypad.dart`
-  (`_kAdvKeyHelpRefId` map + `showKeypadHelpPopover` helper)
+  (`_kAdvKeyHelpRefId` + `_kCasKeyHelpRefId` maps +
+  `showKeypadHelpPopover` helper; both Adv and CAS panes
+  wired in narrow tabbed AND wide two-pane layouts)
+- **Notepad line popover wiring**: `lib/screens/notepad_screen.dart`
+  (`_NotepadLineRow._showLineHelp` — reuses
+  `HistoryRowHelpModal`)
 - **KeypadGrid help wiring**: `lib/widgets/keypad_grid.dart`
   (`helpRefIdFor` + `onHelpTap` ctor params)
 - **FunctionReferenceDialog deep-link**:

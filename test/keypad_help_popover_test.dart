@@ -1,4 +1,8 @@
 // Round 102 (P6): help-mode popover on Adv-tab keypad buttons.
+// Round 102b extends the same wiring to the CAS tab — the
+// `CalculatorKeypad`-level test at the bottom verifies the CAS
+// pane's `solve` button surfaces the SymEngine.solve popover.
+//
 // Wraps each Adv button in a HelpTarget; when helpMode is on and
 // the button has a FunctionRef mapping, a tap opens a small
 // AlertDialog with the signature + short description + "Learn more"
@@ -129,4 +133,84 @@ void main() {
     expect(pressed, equals(['mod']));
     expect(find.byType(AlertDialog), findsNothing);
   });
+
+  // === Round 102b: CAS-tab popover wiring on CalculatorKeypad ============
+
+  testWidgets('CalculatorKeypad: CAS tab `solve` opens the solve popover',
+      (tester) async {
+    final tabController = _DummyTabController(length: 5, initialIndex: 2);
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [AppLocalizationsDelegate()],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(
+        body: Builder(builder: (innerContext) {
+          // Force the narrow tabbed layout so we don't need to deal
+          // with the wide two-pane layout's chip-selector dance.
+          return CalculatorKeypad(
+            tabController: tabController,
+            onButtonPressed: (_) {},
+            localizations: AppLocalizations.of(innerContext),
+            appState: AppState(),
+            onVariableTap: (_) {},
+            forceCompact: true,
+          );
+        }),
+      ),
+    ));
+    // Let TabController land on CAS (index 2).
+    await tester.pumpAndSettle();
+
+    // Help-mode on: tap `solve`. Absorbing-overlay false-alarm
+    // suppressed exactly like the Adv-tab tests.
+    AppState().setHelpMode(true);
+    await tester.pump();
+    await tester.tap(find.text('solve'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    final solveRef = FunctionReferences.all.firstWhere((e) => e.id == 'solve');
+    expect(find.text(solveRef.signature), findsOneWidget);
+    expect(find.text('Learn more'), findsOneWidget);
+  });
+
+  testWidgets('CalculatorKeypad: `=` / `,` CAS punctuation skip the popover',
+      (tester) async {
+    // The `_kCasKeyHelpRefId` map deliberately omits `=` and `,` —
+    // they're not engine surface. Pressing them in help mode should
+    // fall through to the normal insert handler, not open a dialog.
+    final tabController = _DummyTabController(length: 5, initialIndex: 2);
+    final pressed = <String>[];
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [AppLocalizationsDelegate()],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(
+        body: Builder(builder: (innerContext) {
+          return CalculatorKeypad(
+            tabController: tabController,
+            onButtonPressed: pressed.add,
+            localizations: AppLocalizations.of(innerContext),
+            appState: AppState(),
+            onVariableTap: (_) {},
+            forceCompact: true,
+          );
+        }),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    AppState().setHelpMode(true);
+    await tester.pump();
+    await tester.tap(find.text(','));
+    await tester.pump();
+
+    expect(pressed, equals([',']));
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+}
+
+class _DummyTabController extends TabController {
+  _DummyTabController({required super.length, required super.initialIndex})
+      : super(vsync: const TestVSync());
 }
