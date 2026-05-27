@@ -526,6 +526,23 @@ abstract class AppLocalizations {
   /// that deep-links into the full Function Reference dialog.
   String get keypadHelpLearnMore;
 
+  /// Round 103: title of the history-row help modal — "How this was
+  /// computed".
+  String get historyHelpTitle;
+
+  /// Round 103: "Computed via {engine}" — `engine` is a literal label
+  /// like `SymEngine.solve`, `MPFR`, `FLINT.ntheory`, or `Dart`.
+  String historyHelpComputedVia(String engine);
+
+  /// Round 103: fallback line for bare arithmetic rows that don't
+  /// route through any named engine call.
+  String get historyHelpDirectEvaluation;
+
+  /// Round 103: action-button label on the history help modal that
+  /// opens the step-by-step trace dialog (only shown when the call
+  /// has a step trace — solve / diff / integrate).
+  String get historyHelpShowSteps;
+
   // -- Worked examples library --
   String get workedExamplesTitle;
   String get workedExamplesSearchHint;
@@ -1748,6 +1765,15 @@ class EnLocalizations implements AppLocalizations {
   String get helpModeDisableTooltip => 'Exit help mode';
   @override
   String get keypadHelpLearnMore => 'Learn more';
+  @override
+  String get historyHelpTitle => 'How this was computed';
+  @override
+  String historyHelpComputedVia(String engine) => 'Computed via $engine';
+  @override
+  String get historyHelpDirectEvaluation =>
+      'Direct numerical evaluation — no symbolic call involved.';
+  @override
+  String get historyHelpShowSteps => 'Show steps';
 
   @override
   String get workedExamplesTitle => 'Worked examples';
@@ -3231,6 +3257,15 @@ class DeLocalizations implements AppLocalizations {
   String get helpModeDisableTooltip => 'Hilfemodus beenden';
   @override
   String get keypadHelpLearnMore => 'Mehr erfahren';
+  @override
+  String get historyHelpTitle => 'So wurde dies berechnet';
+  @override
+  String historyHelpComputedVia(String engine) => 'Berechnet über $engine';
+  @override
+  String get historyHelpDirectEvaluation =>
+      'Direkte numerische Auswertung — kein symbolischer Aufruf.';
+  @override
+  String get historyHelpShowSteps => 'Schritte anzeigen';
 
   @override
   String get workedExamplesTitle => 'Beispielaufgaben';
@@ -4905,6 +4940,15 @@ class FrLocalizations implements AppLocalizations {
   String get helpModeDisableTooltip => 'Quitter le mode aide';
   @override
   String get keypadHelpLearnMore => 'En savoir plus';
+  @override
+  String get historyHelpTitle => 'Comment ceci a été calculé';
+  @override
+  String historyHelpComputedVia(String engine) => 'Calculé via $engine';
+  @override
+  String get historyHelpDirectEvaluation =>
+      'Évaluation numérique directe — aucun appel symbolique.';
+  @override
+  String get historyHelpShowSteps => 'Afficher les étapes';
 
   @override
   String get workedExamplesTitle => 'Exemples résolus';
@@ -6578,6 +6622,15 @@ class EsLocalizations implements AppLocalizations {
   String get helpModeDisableTooltip => 'Salir del modo ayuda';
   @override
   String get keypadHelpLearnMore => 'Más información';
+  @override
+  String get historyHelpTitle => 'Cómo se calculó esto';
+  @override
+  String historyHelpComputedVia(String engine) => 'Calculado mediante $engine';
+  @override
+  String get historyHelpDirectEvaluation =>
+      'Evaluación numérica directa — sin llamada simbólica.';
+  @override
+  String get historyHelpShowSteps => 'Mostrar pasos';
 
   @override
   String get workedExamplesTitle => 'Ejemplos resueltos';

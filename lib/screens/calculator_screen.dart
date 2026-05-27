@@ -13,7 +13,9 @@ import '../engine/calculator_engine.dart';
 // Widget imports
 import '../widgets/boolean_chip.dart';
 import '../widgets/calculator_keypad.dart';
+import '../widgets/function_reference_dialog.dart';
 import '../widgets/help_target.dart';
+import '../widgets/history_help_modal.dart';
 import '../widgets/latex_input_field.dart';
 import '../widgets/memory_dialogs.dart';
 import '../widgets/function_picker_dialogs.dart';
@@ -1892,6 +1894,95 @@ class CalculatorScreenState extends State<CalculatorScreen>
     );
   }
 
+  /// Round 103 (P6): help-mode tap on a history row opens this modal.
+  /// Detection runs on the readable expression — see [detectHistoryHelp]
+  /// for the routing table. The modal explains the engine used (or the
+  /// "direct evaluation" fallback) and offers a Learn-more deep-link
+  /// into the Function Reference plus, where supported, a step-trace
+  /// dialog re-rendered live from [StepEngine].
+  void _showHistoryHelpModal(BuildContext context, CalculationEntry entry) {
+    final info = detectHistoryHelp(entry.expression);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => HistoryRowHelpModal(
+        entry: entry,
+        info: info,
+        onShowSteps: info.hasSteps
+            ? () {
+                Navigator.of(dialogContext).pop();
+                _runStepTraceForHistory(info);
+              }
+            : null,
+        onLearnMore: info.refId == null
+            ? null
+            : () {
+                Navigator.of(dialogContext).pop();
+                showDialog<void>(
+                  context: context,
+                  builder: (_) =>
+                      FunctionReferenceDialog(initialSearch: info.refId),
+                );
+              },
+      ),
+    );
+  }
+
+  /// Re-runs the appropriate [StepEngine] entry point on the args
+  /// extracted from a history expression and opens [StepsDialog].
+  /// Mirrors the dialog shape used by the explicit `solve⌄` /
+  /// `d/dx⌄` / `∫⌄` keypad buttons, minus the input prompt — values
+  /// come from the history row's parsed call.
+  Future<void> _runStepTraceForHistory(HistoryHelpInfo info) async {
+    if (info.stepExpr == null || info.stepVar == null) return;
+    final t = AppLocalizations.of(context);
+    final preprocessed =
+        ExpressionPreprocessingUtils.preprocessNativeExpression(
+      ExpressionPreprocessingUtils.preprocessExpression(
+          info.stepExpr!, _appState),
+    );
+    final variable = info.stepVar!;
+    final List<MathStep> steps;
+    final String title;
+    final String? headlineLatex;
+    final String subtitle;
+    switch (info.stepKind) {
+      case HistoryStepKind.solve:
+        steps = StepEngine.solve(preprocessed, variable, _engine);
+        title = t.solveStepsTitle;
+        subtitle = t.solveStepsHeader(variable);
+        headlineLatex = preprocessed.contains('=')
+            ? preprocessed.replaceAll('=', r' \,=\, ')
+            : '$preprocessed = 0';
+        break;
+      case HistoryStepKind.diff:
+        steps = StepEngine.differentiate(preprocessed, variable, _engine);
+        title = t.differentiationStepsTitle;
+        subtitle = t.differentiationStepsHeader(variable);
+        headlineLatex = null;
+        break;
+      case HistoryStepKind.integrate:
+        steps = StepEngine.integrate(preprocessed, variable, _engine);
+        title = t.integrationStepsTitle;
+        subtitle = t.integrationStepsHeader(variable);
+        headlineLatex = r'\int ' + _toLatex(preprocessed) + r' \, d' + variable;
+        break;
+      case HistoryStepKind.none:
+        return;
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StepsDialog(
+        title: title,
+        expression: preprocessed,
+        variable: variable,
+        steps: steps,
+        subtitle: subtitle,
+        headlineLatex: headlineLatex,
+      ),
+    );
+  }
+
   /// Park the given expression in the first free Y-slot and switch to
   /// the Graphing tab. Used by both the history context menu and the
   /// variable-viewer function-tile menu.
@@ -2285,6 +2376,8 @@ class CalculatorScreenState extends State<CalculatorScreen>
                                       ? ExactInteger.abbreviate(entry.result)
                                       : display;
                                   return HelpTarget(
+                                    onHelpTap: () =>
+                                        _showHistoryHelpModal(context, entry),
                                     child: GestureDetector(
                                       onTap: isBigInt
                                           ? () => _copyBigIntegerToClipboard(

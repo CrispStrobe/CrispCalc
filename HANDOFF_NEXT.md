@@ -1,20 +1,23 @@
 # CrispCalc — handover for the next session
 
-Pickup note from the **2026-05-26 (Rounds 101 + 102) session**.
-Shipped the P6 help-mode infrastructure (Round 101) and then
-hung actual help popovers off it for the Calculator Adv-tab
-keypad (Round 102). Calc rounds 103 (history-row modals) and
-104 (notepad-line modals) are the natural next steps — the
-HelpTarget wrappers are already in place from Round 101.
+Pickup note from the **2026-05-27 (Round 103) session**.
+Shipped the P6 history-row help popover on Calculator — the
+HelpTarget wrappers from Round 101 now have an `onHelpTap`
+that opens an AlertDialog explaining the compute path (engine
++ FunctionRef line), with deep-links into the Function Reference
+and re-runnable step traces for solve / diff / integrate. Round
+104 (Notepad-line modal) is the natural next step — the
+detection helper from this round is reusable.
 
-- **101** — `AppState.helpMode` + `HelpTarget` widget +
-  AppBar toggles + demo wrappers on history rows / notepad
-  lines. Tests 1955 → 1962.
-- **102** — Adv-tab keypad popovers via `HelpTarget.onHelpTap`
-  + `KeypadGrid.helpRefIdFor`. Maps 15 Adv glyphs to
-  FunctionRef ids. `showKeypadHelpPopover` opens AlertDialog
-  → Learn-more deep-links to `FunctionReferenceDialog(initialSearch:
-  id)`. Tests 1962 → 1965.
+- **103** — `HistoryRowHelpModal` + `detectHistoryHelp` in
+  `lib/widgets/history_help_modal.dart`. Routing table maps
+  ~25 expression prefixes to (engine label, FunctionRef id,
+  optional step kind). `_showHistoryHelpModal` /
+  `_runStepTraceForHistory` on `CalculatorScreenState` wire
+  Learn-more (deep-link `FunctionReferenceDialog`) and Show-steps
+  (re-runs `StepEngine.solve / .differentiate / .integrate` and
+  pops `StepsDialog`). 4 new i18n strings × 4 locales. +17
+  tests (1965 → 1982).
 
 `HANDOFF.md` remains the load-bearing pattern reference.
 
@@ -38,85 +41,58 @@ remind yourself the user wants main.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | R101 pushed at `9673aed`; R102 commit to follow |
-| **Tests** | **1965 pass** (1955 → 1962 → 1965), 1 pre-existing skip — `flutter analyze` clean |
+| **main HEAD** | R102 pushed at `eda4900`; R103 commit to follow |
+| **Tests** | **1982 pass** (1965 → 1982), 1 pre-existing skip — `flutter analyze` clean |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
-| **CI** | R101 pushed; R97-99 + R101 status not yet observed |
+| **CI** | R102 pushed; R97-99 + R101 + R102 status not yet observed |
 
-Only dirty file at start was `.claude/scheduled_tasks.lock`
+Only dirty file at session start was `.claude/scheduled_tasks.lock`
 (harness state — left alone).
 
 ## What this session shipped
 
 | Round | What |
 |---|---|
-| **101** | Help-mode toggle + dotted-outline affordance. `AppState.helpMode` (ephemeral) + `setHelpMode` / `toggleHelpMode`. New `HelpTarget` widget. AppBar toggles on Calculator + Notepad. Demo wrappers on Calculator history rows + Notepad line rows. Two i18n strings × 4 locales. +7 tests. |
-| **102** | Help popovers on Calculator Adv-tab keypad. `HelpTarget.onHelpTap` (absorbing Stack overlay). `KeypadGrid` accepts `helpRefIdFor` + `onHelpTap`. `_kAdvKeyHelpRefId` maps 15 Adv glyphs → FunctionRef ids. `showKeypadHelpPopover` renders AlertDialog → "Learn more" deep-links to `FunctionReferenceDialog(initialSearch: id)` (new ctor param this round). One i18n string × 4 locales. +3 widget tests. |
+| **103** | History-row help popover on Calculator. New `lib/widgets/history_help_modal.dart`: `HistoryHelpInfo` + `HistoryStepKind` + `detectHistoryHelp` (pure routing table) + `HistoryRowHelpModal` widget. Wiring on `HelpTarget.onHelpTap` for history rows in `calculator_screen.dart`. Modal explains the engine (`SymEngine.solve`, `MPFR`, `FLINT.ntheory`, `Dart (matrix)` / `Dart (BigInt)`, or fallback `Direct evaluation`), shows the FunctionRef signature + shortDescription, and offers Learn-more (deep-link) plus Show-steps (re-runs `StepEngine`). 4 new i18n strings × 4 locales (`historyHelpTitle`, `historyHelpComputedVia(engine)`, `historyHelpDirectEvaluation`, `historyHelpShowSteps`). +17 tests (1965 → 1982). |
 
 ## Pickup points — next strategic slot
 
-P6 §101 + §102 done. The HelpTarget wrappers are already on
-Calculator history rows and Notepad line rows from Round 101,
-so Round 103 / 104 are mostly wire-up plus the modal content.
+P6 §103 done. The detection helper from Round 103 is reusable
+for Round 104 — most of the work is just wiring `HelpTarget.onHelpTap`
+on the Notepad line rows.
 
-1. **Round 103 — Help popovers on Calculator history rows**.
-   `HelpTarget` is already wrapped (Round 101). Round 103
-   gives those wrappers an `onHelpTap`:
-   - Inspect `entry.expression` to detect the engine call
-     (regex on `solve(...)` / `integrate(...)` / `diff(...)` /
-     `isprime(...)` / `nextprime(...)` / `factorint(...)` /
-     `pi(N)` / `e(N)` / `sqrt(2,N)` / Welch-test invocations
-     / matrix calls).
-   - Open AlertDialog with:
-     - "Computed via SymEngine.solve" (or MPFR / FLINT / Dart
-       implementation source)
-     - Step trace if available (`step_engine.dart` —
-       differentiation / solve / integrate already emit
-       MathStep lists with localized `StepNote` keys)
-     - "Learn more" → `FunctionReferenceDialog(initialSearch:
-       <id>)`
-   - Fallback for bare-arithmetic results: "Direct evaluation"
-     blurb, no Learn-more link.
-   - Build a small `_HistoryRowHelpModal` widget colocated in
-     `calculator_screen.dart` (private) — single use-site,
-     no need to factor out to lib/widgets/.
-   - Tests: widget tests for at least 2 call kinds (e.g. a
-     `solve(...)` row gives the engine name + step trace; a
-     bare `2+3` row gives the Direct-evaluation fallback).
+1. **Round 104 — Help on Notepad lines**. Same shape as 103.
+   `HelpTarget` already wraps both row branches (Round 101). The
+   `_NotepadLineRow` has access to the full `NotepadLine.source`
+   and any cached result/error info; pass the source string
+   through `detectHistoryHelp` to derive the same `HistoryHelpInfo`
+   and re-use `HistoryRowHelpModal`. Step-trace re-run also
+   reusable — Notepad has its own engine instance, route via
+   the same `StepEngine` calls. Tests: at least 2 widget-render
+   cases mirroring Round 103.
 
-2. **Round 104 — Help on Notepad lines**.
-   Same shape as 103 but for Notepad. `HelpTarget` already
-   wraps both row branches (Round 101). The `_NotepadLineRow`
-   has access to the full `NotepadLine.source` and any cached
-   result / error info, so the detection regex can run on
-   the cleaned source. Long-press on touch / right-click on
-   desktop alternatively.
-
-3. **Round 102 follow-up — CAS-tab popovers**.
-   The CAS pane has `solve`, `factor`, `expand`, `simplify`,
-   `d/dx`, `∫`, `lim`, `subst`, `gcd`, `lcm` — all of which
-   have FunctionRef entries from Round 97. Wiring is identical
-   to Round 102: add `_kCasKeyHelpRefId` map + wire
+2. **Round 102 follow-up — CAS-tab popovers**. Wiring identical
+   to Round 102 Adv tab — add `_kCasKeyHelpRefId` map + wire
    `helpRefIdFor` / `onHelpTap` in the CAS pane's KeypadGrid
    constructor (both narrow tabbed and wide two-pane layouts).
-   Smaller than a full round; could be a 102b commit or
-   bundled with Round 103.
+   FunctionRef coverage already exists for solve / factor /
+   expand / simplify / d/dx / ∫ / lim / subst / gcd / lcm.
+   Smaller than a full round; could bundle with Round 104.
 
-4. **Round 100 — Function Reference i18n pass (~30k words)**.
-   Still pending. With Round 102 shipped, the popover/dialog
-   strings (`signature`, `shortDescription`) are now visible
-   to users in 4 contexts (FR dialog list, FR dialog detail,
-   keypad popover, deep-linked FR dialog). Translating them
-   raises the user-visible payoff materially.
+3. **Round 100 — Function Reference i18n pass (~30k words)**.
+   Still pending. With Round 103 shipped, the FR strings
+   (`signature`, `shortDescription`) are now visible to users
+   in 5 contexts (FR dialog list, FR dialog detail, keypad
+   popover, deep-linked FR dialog, **history-row popover**).
+   Translating raises the user-visible payoff materially.
    - **100a**: EN-only refinements / typos / consistency.
    - **100b**: DE.
    - **100c**: FR + ES.
 
-5. **Round 105 — Help on Analyze hub modules**.
-   `(?)` button per module screen. See PLAN P6 §105.
+4. **Round 105 — Help on Analyze hub modules**. `(?)` button
+   per module screen. See PLAN P6 §105.
 
-6. **Other deferred carry-overs** (unchanged from prior
-   pickup):
+5. **Other deferred carry-overs** (unchanged from prior pickup):
    - Round 95 follow-up — Statistics input pre-fill.
    - Series / taylor entries (P6 §97) — blocked on bridge.
    - Eigenvalues entry (P6 §98) — blocked on bridge.
@@ -129,35 +105,50 @@ so Round 103 / 104 are mostly wire-up plus the modal content.
 
 ## Known issues / context
 
-### Round 102 specifically
+### Round 103 specifically
 
-- **`HelpTarget.onHelpTap` uses an absorbing Stack overlay**:
-  `Positioned.fill` GestureDetector layered above the child
-  swallows the tap. This means flutter widget tests on a
-  wrapped button in help mode emit `tap()` "would not hit
-  test" warnings on the underlying button text — they're false
-  alarms (the gesture lands on the overlay, which is the
-  intent). Tests pass `warnIfMissed: false` to silence.
-- **CAS-tab buttons have FunctionRef coverage** but Round 102
-  scoped to Adv only per PLAN. Wire-up is identical when
-  someone picks up that follow-up.
-- **`FunctionReferenceDialog.initialSearch`** is the deep-link
-  point. The dialog filters by id-substring-match AND signature
-  AND shortDescription, so passing the id works for the keypad
-  case and partial substrings work for fuzzy lookups.
-- **Help popover content is currently English only** for the
-  `shortDescription`. After Round 100 lands, the popover will
-  resolve through the same per-id i18n table.
+- **Detection is by leading prefix only** on the trimmed
+  readable expression. No semantic parse — `solve(x^2-1, x)`
+  matches `solve(` but a contrived nested form like
+  `2 + solve(...)` falls through to direct-evaluation. That's
+  correct: the calculator dispatcher itself doesn't route
+  non-leading function calls to engine handlers either.
+- **Modal `onShowSteps` calls `StepEngine` re-using the same
+  preprocessor as the calculator's input pipeline.** That
+  means `2k + 3` (implicit multiplication) round-trips to
+  `2*k + 3` before the step engine sees it, matching what
+  the live evaluation did.
+- **`pi(N)` vs `pi*2`**: precision-call detection regex
+  requires a leading digit in the first arg (`r'^pi\(\s*\d'`)
+  so call-shape lookalikes that AREN'T precision routes don't
+  false-positive to MPFR.
+- **`sqrt` is dual**: `sqrt(x)` (symbolic) and `sqrt(2, 50)`
+  (precision) — Round 103 only labels the two-arg comma form
+  as MPFR; bare `sqrt(...)` falls through to direct evaluation
+  (matches actual engine routing).
+- **Public exports**: `HistoryHelpInfo`, `HistoryStepKind`,
+  `detectHistoryHelp`, `HistoryRowHelpModal` are all public so
+  the test file can drive both halves without spinning up the
+  full `CalculatorScreen`. The State-side wiring
+  (`_showHistoryHelpModal`, `_runStepTraceForHistory`) stays
+  private — only the State has the `_engine` instance.
+
+### Round 102 (carry-over)
+
+- `HelpTarget.onHelpTap` uses an absorbing Stack overlay;
+  tests on wrapped widgets need `warnIfMissed: false`.
+- CAS-tab popovers not yet wired (see pickup §2).
+- Help popover content currently English-only for the
+  `shortDescription`; after Round 100 lands, popovers will
+  resolve through the per-id i18n table.
 
 ### Round 101 (carry-over)
 
-- **`helpMode` is ephemeral** (not persisted across launches).
-- **The dotted outline adds 4px** when on (zero layout cost
-  when off). `HelpTarget(padding: EdgeInsets.zero)` overrides
-  for tight constraints — Round 102's keypad wrapper uses this.
-- **`CustomPaint` finders in tests** must be scoped via
-  `find.descendant(of: HelpTarget, ...)` — Material framework
-  uses `CustomPaint` internally.
+- `helpMode` is ephemeral (not persisted).
+- Dotted outline adds 4px when on; `HelpTarget(padding:
+  EdgeInsets.zero)` overrides for tight constraints.
+- `CustomPaint` finders in tests must be scoped via
+  `find.descendant(of: HelpTarget, ...)`.
 
 ### P7 (rounds 110-113) — unchanged
 
@@ -193,6 +184,12 @@ so Round 103 / 104 are mostly wire-up plus the modal content.
 
 ## Quick-reference paths
 
+- **History-row help modal**:
+  `lib/widgets/history_help_modal.dart` (Round 103:
+  `HistoryHelpInfo` + `detectHistoryHelp` routing table +
+  `HistoryRowHelpModal` widget)
+- **History-row help wiring**: `lib/screens/calculator_screen.dart`
+  (`_showHistoryHelpModal` + `_runStepTraceForHistory`)
 - **Help-mode state**: `lib/engine/app_state.dart`
   (`helpMode` getter, `setHelpMode`, `toggleHelpMode`)
 - **HelpTarget widget**: `lib/widgets/help_target.dart`
@@ -211,8 +208,8 @@ so Round 103 / 104 are mostly wire-up plus the modal content.
 - Shared boolean chip widget: `lib/widgets/boolean_chip.dart`
 - Worked Examples dialog: `lib/widgets/worked_examples_dialog.dart`
 - **Function Reference model**: `lib/engine/function_reference.dart`
-  (45 entries; `runnable: bool` field; Round 102's popovers
-  read `signature` + `shortDescription` from this catalog)
+  (45 entries; `runnable: bool` field; Round 103's modal
+  reads `signature` + `shortDescription` from this catalog)
 - Hypothesis tests engine: `lib/engine/hypothesis_tests.dart`
 - CSP / DSL engine: `lib/engine/csp_solver.dart`
 - Sudoku engine: `lib/engine/sudoku.dart`
@@ -221,10 +218,15 @@ so Round 103 / 104 are mostly wire-up plus the modal content.
 - Calculator: `lib/screens/calculator_screen.dart`
 - Notepad: `lib/screens/notepad_screen.dart`
 - Calculator keypad: `lib/widgets/calculator_keypad.dart`
+- Step engine: `lib/engine/step_engine.dart`
+  (Round 103's Show-steps button re-runs
+  `StepEngine.solve / .differentiate / .integrate` over
+  args extracted from the history row)
 - Worked-examples catalog: `lib/engine/worked_examples.dart`
 - Localization: `lib/localization/app_localizations.dart`
-  (R101 added `helpModeEnable/Disable`; R102 added
-  `keypadHelpLearnMore`. Round 100 will add per-entry
-  FunctionRef strings.)
+  (R101: `helpModeEnable/Disable`; R102: `keypadHelpLearnMore`;
+  R103: `historyHelpTitle` / `historyHelpComputedVia` /
+  `historyHelpDirectEvaluation` / `historyHelpShowSteps`.
+  Round 100 will add per-entry FunctionRef strings.)
 
 Good luck.
