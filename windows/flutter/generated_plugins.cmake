@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  symbolic_math_bridge
   url_launcher_windows
 )
 
