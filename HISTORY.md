@@ -2,6 +2,169 @@
 
 Completed work, newest first.
 
+## 2026-05-27 (P6 Round 104b) — Notepad Show-steps wiring + shared trace runner
+
+Closes the Round 104 deferral. Notepad rows can now open the
+step-by-step trace dialog the Calculator history popover does.
+
+### Mechanism
+
+- **`runHistoryStepTrace({context, info, engine, appState})`**
+  lifted to a top-level helper in
+  `lib/widgets/history_help_modal.dart`. Imports `StepEngine`,
+  `StepsDialog`, `MathDisplayUtils`, `CalculatorEngine`. The
+  switch on `HistoryStepKind` (solve / diff / integrate / none)
+  + the title / subtitle / headlineLatex setup matches what
+  `CalculatorScreenState._runStepTraceForHistory` had inline.
+- **`CalculatorScreenState._runStepTraceForHistory`** is now a
+  7-line wrapper that delegates to the shared runner.
+- **`_NotepadLineRow`** takes new `engine` + `appState`
+  constructor params, forwarded from `_NotepadScreenState`.
+  `_showLineHelp` passes `onShowSteps` to the modal for
+  `info.hasSteps` rows; tapping the button pops the modal and
+  fires the shared runner.
+
+### Tests
+
+`test/notepad_line_help_test.dart` adds a third widget test:
+help-mode tap on a `solve(x^2 - 1, x)` notepad row surfaces the
+Show-steps action button. The test stops short of tapping it —
+the test VM doesn't load the SymEngine dylib, so the
+fallthrough trace overflows `StepsDialog`'s LaTeX rendering and
+trips a non-fatal layout assertion. The wiring is verified by
+button presence + the parallel factor-row test asserting
+absence; full render coverage lives in the Calculator
+history-row tests where the same runner is exercised.
+
+1991 → 1992 tests; `flutter analyze` clean. Also minor lint
+cleanup in `module_help_dialog_test.dart` (unnecessary import +
+`prefer_const_constructors`).
+
+## 2026-05-27 (P6 Round 105) — Per-module help dialog on Analyze hub screens
+
+Every Analyze-hub module screen now carries a `(?)` AppBar
+action that opens a module-level explainer. Unlike Calculator
++ Notepad's global help-mode toggle pattern (one-shot
+discovery), Round 105's button is a direct affordance — tap,
+read, dismiss — because module-level overviews don't compose
+into per-element popovers.
+
+### Mechanism
+
+- **`lib/engine/module_help_kind.dart`** carries the pure
+  `ModuleHelpKind` enum (8 modules). Lives in `engine/` so
+  `app_localizations.dart` can import it without creating a
+  cycle through `widgets/`.
+- **`lib/widgets/module_help_dialog.dart`** carries
+  `ModuleHelpDialog` (title + 2–3 sentence description +
+  optional Learn-more deep-link) and the drop-in
+  `ModuleHelpButton` for `AppBar.actions`. The Learn-more
+  refId comes from a local `_kModuleRefId` map; 3 modules carry
+  a deep-link (statistics → `welch_t`, constraints →
+  `all_different`, sudoku → `sudoku_regular`), the 5 visual /
+  geometric modules don't (no single FR row summarizes them).
+- **8 module screens** wired with
+  `actions: const [ModuleHelpButton(kind: ...)]` on the
+  `Scaffold`'s `AppBar`: curve_analysis_input, plane_analysis,
+  conic_section, statistics, graphing_3d, scene_3d,
+  constraints, sudoku.
+
+### Tests
+
+`test/module_help_dialog_test.dart` (5 widget tests): dialog
+renders title + description + Learn-more for statistics;
+curveSketching omits Learn-more (no refId); Learn-more
+deep-links the FunctionReferenceDialog with `all_different`
+pre-filled (constraints); `ModuleHelpButton` in an AppBar
+opens the dialog; DE locale spot-check dispatches the
+translated title + description through the per-locale
+override.
+
+19 new i18n strings (1 tooltip + 9 titles + 9 descriptions) ×
+4 locales = 76 translations. 1986 → 1991 tests;
+`flutter analyze` clean.
+
+## 2026-05-27 (P6 Rounds 102b + 104) — CAS keypad popovers + Notepad line popovers
+
+Round 102b extends Round 102's Adv-tab help-popover wiring to
+the CAS tab. Round 104 extends Round 103's history-row modal to
+Notepad lines. Bundled in one commit because the changes were
+small and structurally parallel.
+
+### Round 102b
+
+- **`_kCasKeyHelpRefId`** map covers 10 CAS glyphs (`solve`,
+  `factor`, `expand`, `simplify`, `d/dx`, `∫`, `lim`, `subst`,
+  `gcd`, `lcm` → matching FunctionRef ids). The `⌄`
+  step-trace variants (`solve⌄`, `d/dx⌄`, `∫⌄`) and
+  punctuation (`=`, `,`, `f(x)`) are deliberately omitted —
+  calculator UX, not engine surface.
+- Both narrow tabbed and wide two-pane layouts now wire
+  `helpRefIdFor` + `onHelpTap` on the CAS pane via the
+  existing `showKeypadHelpPopover` helper.
+- 2 widget tests added to `test/keypad_help_popover_test.dart`
+  exercise `CalculatorKeypad`-level CAS wiring (the prior
+  tests pumped `KeypadGrid` directly with a custom map).
+
+### Round 104
+
+- **`_NotepadLineRow._showLineHelp`** wires
+  `HelpTarget.onHelpTap` on both row layouts (sideBySide +
+  stacked) to the shared `HistoryRowHelpModal`.
+- Reuses `detectHistoryHelp` over `line.source`; the result
+  is `cachedError ?? cachedResult ?? ''` so error rows still
+  display sensibly.
+- Show-steps suppressed in Round 104 (no engine reference on
+  the row); Round 104b closes that gap.
+
+2 widget tests in `test/notepad_line_help_test.dart` cover the
+factor / bare-arithmetic split. 1984 → 1986 tests;
+`flutter analyze` clean.
+
+## 2026-05-27 (P6 Round 103) — Help popovers on Calculator history rows
+
+The HelpTarget wrappers from Round 101 now have an `onHelpTap`
+that opens a modal explaining the compute path (engine +
+FunctionRef line), with deep-links into the Function Reference
+and re-runnable step traces for solve / diff / integrate.
+
+### Mechanism
+
+- **`lib/widgets/history_help_modal.dart`** (new) carries:
+  - `HistoryHelpInfo` + `HistoryStepKind` (pure data types)
+  - `detectHistoryHelp(String)` — routing table mapping ~25
+    expression prefixes to (engine label, FunctionRef id,
+    optional step kind). Function-call form (`solve(`,
+    `factor(`, `expand(`, `simplify(`, `diff(`, `integrate(`,
+    `limit(`, `gcd(`, `lcm(`, `isprime(`, `nextprime(`,
+    `prevprime(`, `factorint(`, `Matrix(`, `det(`, `inv(`,
+    `transpose(`, `rref(`, `pi(N)`, `e(N)`, `EulerGamma(N)`,
+    `sqrt(N, M)`, `fib(`, `fibonacci(`) plus two special
+    cases: button-shape derivatives `(d)/(dx)(...)` and bare
+    equations `lhs = rhs`.
+  - `HistoryRowHelpModal` widget — title + entry + engine
+    line + FunctionRef signature + shortDescription + Close
+    + optional Show-steps + optional Learn-more.
+- **`CalculatorScreenState._showHistoryHelpModal`** opens the
+  modal; **`_runStepTraceForHistory`** dispatches
+  `StepEngine.solve / .differentiate / .integrate` (Round 104b
+  refactor lifts this dispatch into a shared helper).
+- **`HelpTarget` onHelpTap wired** on the existing history-row
+  wrapper at `calculator_screen.dart:2287`.
+
+### Tests
+
+`test/history_help_modal_test.dart` (17 widget + unit tests):
+17 routing-table cases covering every detected call kind +
+edge cases (bare arithmetic, digits-only `=`, empty input);
+widget render for solve(...) row, factor(...) row,
+bare-arithmetic row.
+
+4 new i18n strings × 4 locales: `historyHelpTitle`,
+`historyHelpComputedVia(engine)`, `historyHelpDirectEvaluation`,
+`historyHelpShowSteps`. 1965 → 1982 tests; `flutter analyze`
+clean.
+
 ## 2026-05-26 (P6 Round 102) — Help popovers on Calculator Adv-tab keypad
 
 Hangs actual help content off the Round 101 scaffolding. Tapping

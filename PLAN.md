@@ -2607,6 +2607,104 @@ solve it under time pressure when a user opens an issue.
 
 ---
 
+## P11 — SymEngine bridge on all native platforms
+
+CrispCalc's release artifacts split into two tiers today:
+
+- **Full tier (iOS, macOS)** — `flutter_symengine_*` plugin ships
+  compiled libs; full CAS works.
+- **Degraded tier (Linux, Windows, Android)** — same plugin ships
+  no native lib for these platforms; every symbolic call returns
+  "Error: requires native library". The release notes say so
+  explicitly.
+
+After P6 made the help arc surface this fall-back to every user
+who taps a CAS button in help mode ("Computed via SymEngine.X"
+appears regardless of whether the bridge is actually available),
+the gap is now *visible* in a way it wasn't before. P11 closes it.
+
+### Goal
+
+Each of the five primary release targets ships a working
+SymEngine bridge:
+
+| Platform | Native lib | Build system | Effort |
+|---|---|---|---|
+| **macOS** | shipped today | CMake + Xcode | done |
+| **iOS** | shipped today | CMake + Xcode | done |
+| **Linux** | new `.so` (x64; arm64 nice-to-have) | CMake + GCC/Clang | medium |
+| **Windows** | new `.dll` (x64; arm64 nice-to-have) | CMake + MSVC | medium-large |
+| **Android** | new `.so` per ABI (arm64-v8a + armeabi-v7a + x86_64) | NDK CMake + Gradle | large |
+
+SymEngine itself is portable C++ — there's no port work in the
+library; the work is per-platform build + packaging + wiring
+into the existing `SymbolicMathBridge` Dart bindings.
+
+### Suggested round structure
+
+- **R130 — Linux**. Easiest. SymEngine has Ubuntu/Debian packages
+  available; either bundle the precompiled `libsymengine.so` /
+  `libmpfr.so` / `libflint.so` and link, OR build from source
+  via the existing `submodules/symengine` checkout. The plugin's
+  Linux `CMakeLists.txt` would add `add_library` for the bridge
+  C wrapper + link against SymEngine. Risk: GLIBC version pinning
+  for portable Linux artifacts; ship against a sensible baseline
+  (`manylinux2014` style, or Ubuntu 22.04). Update
+  `.github/workflows/release.yml` to call the bridge-build script
+  before `flutter build linux` so the `.so` lands in the bundle
+  alongside the Flutter app.
+- **R131 — Windows**. MSVC + CMake. SymEngine documents the
+  Windows build; expect to patch MPFR / FLINT for MinGW vs MSVC
+  ABI mismatch (or pick one and stick with it — MSVC is more
+  Flutter-native on Windows). Distribute a `.dll` next to the
+  app `.exe`. Larger because the Windows toolchain isn't where
+  most contributors spend their time.
+- **R132 — Android**. NDK build of SymEngine + MPFR + FLINT
+  + GMP for `arm64-v8a` (modern phones) + `armeabi-v7a` (older,
+  optional) + `x86_64` (emulator). Wired into the plugin's
+  `android/build.gradle` as a CMakeLists external native build.
+  Larger still because Android multi-ABI multiplies the build
+  matrix; CI time on a free runner will tick up.
+
+### What unlocks once shipped
+
+- The deeply discoverable help arc (P6) no longer surfaces
+  "Computed via SymEngine.solve" only to have the user discover
+  the call returns an error on their platform. Calculator becomes
+  a real CAS on every supported native target.
+- The PLAN P10 Path A reduced-capability web build becomes the
+  *only* place CAS is unavailable (because dart:ffi can't reach
+  WASM directly without the JS-interop bridge). That's a cleaner
+  message than "works on 2 of 5 platforms".
+- Tests that today log `SymbolicMathBridge unavailable: …
+  symbol not found` in their stderr could start running real
+  bridge calls — though the per-platform CI runners would need
+  the libs available, which they already would after this round.
+
+### Risks / unknowns
+
+- **License compatibility**: SymEngine is MIT, MPFR is LGPL,
+  FLINT is LGPL, GMP is LGPL/GPL. Dynamic linking + permissive
+  shipping is fine for closed binaries (LGPL has the lib-bound
+  exception); static linking would force GPL. The plugin
+  presumably dynamic-links today — confirm before duplicating
+  the pattern on other platforms.
+- **Binary size**: SymEngine + MPFR + FLINT + GMP is ~5-15 MB
+  uncompressed per platform; the Android APK will grow
+  noticeably. Mitigation: per-ABI splits (`flutter build apk
+  --split-per-abi`) so users only download the lib for their
+  device.
+- **Worker isolate behavior on Windows**: the existing
+  `EngineService` runs CAS on a worker isolate. Windows DLL
+  loading on isolate creation needs verification; iOS/macOS
+  already handle this.
+
+Tracking here so the next session can pick it up cleanly.
+Likely sequenced R130 → R131 → R132 to amortize learning
+across rounds.
+
+---
+
 ## Out of scope this round
 
 - C++ implementation of symbolic `limit` and `integrate`.
