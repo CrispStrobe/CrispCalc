@@ -2415,6 +2415,196 @@ other kinds (Newton on a fine grid) deferred to A7.
 
 ---
 
+## P10 — Web deployment for CrispCalc (deferred, ship when ready)
+
+CrispCalc is Flutter-native today; the desktop and mobile builds
+ship a `flutter_symengine_*` dylib that the `SymbolicMathBridge`
+loads via `dart:ffi`. A web build (e.g. behind a Vercel /
+Cloudflare / GitHub Pages URL) compiles Dart to JS/WASM and
+**cannot use `dart:ffi`** — the browser has no `.dylib`/`.so`/
+`.dll` loader. The `flutter_symengine_*` bridge would land on
+its already-handled "unavailable" path and the CAS / precision /
+number-theory features would silently degrade.
+
+Three realistic paths to a real web build, in increasing order of
+work and decreasing order of degradation:
+
+### Path A — Reduced-capability web (low risk, ~1 round)
+
+Just ship `flutter build web` as-is. The bridge falls back; the
+dispatcher already returns "Error: requires native library" for
+every CAS call. What breaks (no FR fallback today):
+
+- **CAS**: `solve`, `factor`, `expand`, `simplify`, `diff`,
+  `integrate`, `limit`, `gcd`, `lcm` (SymEngine)
+- **Precision arc**: `pi(N)`, `e(N)`, `sqrt(2,N)`,
+  `EulerGamma(N)` (MPFR)
+- **Number theory**: `isprime`, `nextprime`, `prevprime`,
+  `factorint` (FLINT)
+
+What still works (pure Dart):
+
+- **Calculator basics**: arithmetic, history, variables, UDFs,
+  notepad
+- **Matrix evaluator**: `Matrix(...)`, `det`, `inv`, `transpose`,
+  `rref`, `dot`, `cross`, `norm`, `unit`
+- **Statistics**: descriptive, regression, distributions,
+  hypothesis tests
+- **CSP / Constraints**: Diophantine, cryptarithm, DSL
+- **Sudoku**: all variants
+- **Unit conversion**, **constants catalog**
+- **Step engine**: Dart-side rule walker (drives the worked
+  examples + Show-steps modal); the *final canonical result*
+  step on each trace would surface the bridge-unavailable error
+  instead of an answer
+
+Scope checklist when this round ships:
+
+- Add a `flutter build web` target to CI + a web-build workflow
+  (`.github/workflows/build-web.yml` mirroring the other
+  per-platform builds).
+- Detect web at runtime (`kIsWeb`) and surface a banner /
+  module-level explainer on Calculator + Notepad: *"Symbolic
+  features (solve, integrate, factorint, …) require the desktop
+  or mobile build."*
+- Per-row error normalization: `_runEngineOpMaybeAsync` returns
+  `Error: requires native library` today; on web, rewrite to the
+  friendlier *"Not available in browser — try the desktop app"*
+  via a `kIsWeb` branch in `EngineErrorFormatter.format`.
+- Disable the Adv-tab precision-arc buttons + CAS keypad buttons
+  on web (or keep them with a help-mode popover explaining the
+  limitation — Round 102 / 102b's wiring is already in place).
+- Add a "Download desktop app" CTA in the AppBar on web.
+
+Hosting: any static host. Vercel / Cloudflare Pages / GitHub
+Pages all serve `build/web/` cleanly. No backend needed.
+
+### Path B — SymEngine via WebAssembly + JS interop (medium risk, ~3-4 rounds)
+
+Compile SymEngine to WASM with emscripten, wrap it with a thin
+JS module, and call into it from Dart via `dart:js_interop`. The
+result: CAS calls work in-browser at near-native speed (single-
+threaded; WASM SIMD is fine for SymEngine's symbolic
+manipulation, less critical than for numerics).
+
+**Prior art**:
+
+- `symengine.wasm` proof-of-concepts exist in the wild (search
+  `symengine emscripten github`). None are official; expect to
+  fork and patch.
+- `flutter_rust_bridge` has shown a pattern for transparently
+  bridging native FFI + WASM-JS interop behind one Dart API —
+  the analogous pattern for the SymEngine bridge would be
+  `SymbolicMathBridge` keeping the same surface, with the
+  `dart:ffi` impl on native and a `dart:js_interop` impl on web.
+
+**Rough scope**:
+
+1. **Bridge surface audit**. Inventory every `flutter_symengine_*`
+   symbol the existing FFI bindings touch (~30 functions). Define
+   the equivalent JS exports from the WASM module so the contract
+   is symmetric.
+2. **Emscripten build**. Patch `submodules/symengine` (or fork)
+   to build a WASM target via emscripten. Pin the SymEngine
+   version; cache the build in CI (it's slow).
+3. **Conditional import**. Split `lib/services/symengine_bridge/`
+   into `bridge_native.dart` (`dart:ffi`) + `bridge_web.dart`
+   (`dart:js_interop`) + a stub `bridge_unsupported.dart`. Top-
+   level `import 'bridge_stub.dart' if (dart.library.io)
+   'bridge_native.dart' if (dart.library.js_interop)
+   'bridge_web.dart';`.
+4. **WASM asset hosting**. The `.wasm` ships in `web/` and is
+   loaded async on app start. Add a splash / loading state to
+   the Calculator while it boots.
+5. **MPFR / FLINT**. Same emscripten treatment, OR drop these
+   on web and accept the precision-arc / number-theory
+   degradation from Path A. They're smaller libs but their
+   binding surface is wider.
+
+**Risks / unknowns**:
+
+- WASM blob size — SymEngine is C++ with template-heavy headers;
+  expect 5-10 MB compressed. May need a "load on first CAS call"
+  pattern to keep cold-start fast.
+- Worker isolation — the existing `EngineService` uses a worker
+  isolate to keep heavy CAS off the UI thread. Browsers offer
+  Web Workers; Flutter web's isolate story is "we lie and run
+  on the main thread" — long CAS calls will jank. Mitigation:
+  defer to `compute()` and accept slower-but-async on web.
+- emscripten + SymEngine's `bindings/c/cwrapper.cpp` may not
+  build cleanly out-of-the-box; budget for patching.
+
+### Path C — Remote bridge service (medium risk, ongoing operational cost)
+
+Run the existing native bridge on a server; the web client RPCs
+into it. Lowest engineering effort to *reach* full CAS in the
+browser, but introduces network latency (every solve / integrate
+becomes ~50-300 ms instead of instant) and an ongoing service to
+keep running.
+
+**Hosting candidates** (free-tier reality, early 2026):
+
+| Service | Free tier | Native bridge fit | Notes |
+|---|---|---|---|
+| **Cloud Run (GCP)** | 2M req / 360k GiB-s / 180k vCPU-s per month *forever*; scales to zero. | Native dylib via container image — supports any base; SymEngine + MPFR + FLINT layered in cleanly. | Probably **free** for personal calculator traffic. Cleanest "real cloud" pick. |
+| **HF Spaces (Docker)** | Free CPU tier: 2 vCPU / 16 GiB RAM for public spaces; sleeps after ~48 h idle, wakes on first request. | First-class Docker support — drop the SymEngine + MPFR + FLINT image straight in. Public URL is the space's. | **Free**, generous CPU budget, lowest setup friction (no GCP account needed). Cold-wake from sleep is the main UX hit. |
+| **AWS Lambda** | 1M req + 400k GB-s *forever*; scales to zero. | Native deps via Lambda Layer or container image. Cold-start hits SymEngine init each invocation. | Probably **free** but operationally fiddlier than Cloud Run. |
+| **Fly.io** | No real free tier since late 2024; pay-as-you-go. | First-class Docker — best path for a native binary. Scales to zero with `auto_stop_machines`. | **~$2-4/mo** for a `shared-cpu-1x` machine. Not free. |
+| **Cloudflare Workers** | Generous free tier. | **Doesn't fit** — Workers can't run native binaries; WASM-only. Would collapse into Path B without the local execution benefit. | Skip. |
+
+**Rough scope**:
+
+1. Wrap the existing FFI bridge in a thin HTTP/JSON server (Dart
+   `shelf`, or rewrite as a Go/Rust binary — Dart's small enough).
+   One endpoint per bridge call (`POST /solve`, `POST /factor`,
+   etc.) with a structured request/response.
+2. Build a Docker image that bundles SymEngine + MPFR + FLINT
+   shared libs. CI publishes to a registry on tag.
+3. `lib/services/symengine_bridge/bridge_remote.dart` — `http`
+   client that mirrors the FFI surface. Conditional import same
+   as Path B.
+4. Add a server-URL setting (`AppState.remoteBridgeUrl`) so
+   self-hosters can point at their own instance.
+5. Rate-limit on the server (something like `shelf_router` +
+   a token bucket per IP) to keep free-tier budget intact.
+6. Web-build CSP / CORS rules so the deployed page can reach
+   the Cloud Run hostname.
+
+**Risks / unknowns**:
+
+- Latency — every CAS call now hits the network. The notepad's
+  300 ms debounce + worker-isolate pipeline assumes local
+  millisecond-scale; would need recalibration.
+- Privacy — user expressions leave the device. Need a clear
+  banner on web ("CAS calls sent to crisp-calc-bridge.run.app").
+- Reliability — service has to stay up. Free tiers will
+  cold-start (~1-3 s warm-up) on the first request after idle.
+- Bot abuse — public CAS endpoint with no auth invites scraping.
+  Rate-limit + maybe a per-session token.
+
+### Recommendation when this rolls around
+
+Ship **Path A** first (it's a tidy ~1-round task and unblocks
+the "try it in the browser" link on the README). Then evaluate
+real web traffic. If users actually use the web version for more
+than the pure-Dart features, choose:
+
+- **Path B** if you want offline-capable web with no server cost
+  long-term. ~3-4 rounds, sizable but bounded.
+- **Path C — Cloud Run** if you want full CAS in-browser sooner
+  with minimal Dart-side work. Operational tax (keeping the
+  service alive, monitoring) trades against the WASM build
+  effort.
+- **Path C — HF Spaces (Docker)** if "free + zero infra account
+  setup" beats "no cold-wake delay". Reasonable starting point
+  for a prototype before deciding whether the bridge needs a
+  dedicated cloud spend.
+
+Tracking this in PLAN so future-us doesn't accidentally try to
+solve it under time pressure when a user opens an issue.
+
+---
+
 ## Out of scope this round
 
 - C++ implementation of symbolic `limit` and `integrate`.
