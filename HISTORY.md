@@ -2,6 +2,78 @@
 
 Completed work, newest first.
 
+## 2026-05-27 (P11 Rounds 131 + 132) — Full SymEngine on Android + Windows
+
+Closes the platform-support gap the P6 help arc made visible: every
+user who taps a CAS button in help mode sees "Computed via
+SymEngine.X" — but until now Linux / Windows / Android users hit
+"Error: requires native library" because the `symbolic_math_bridge`
+plugin only shipped iOS/macOS binaries. v0.4.0 ships working
+SymEngine on Android arm64-v8a and Windows x86_64 too.
+
+### Bridge plugin work (separate repo: `CrispStrobe/symbolic_math_bridge`)
+
+- **R132 — Android arm64-v8a** (7 CI iterations, ~14 min cold-cache
+  build):
+  - `android/` directory: Gradle module, CMakeLists with
+    find_package(SymEngine) + jniLibs fallback, Kotlin plugin glue,
+    JNI force-link C source.
+  - `.github/workflows/build-android.yml`: `ubuntu-latest` + vcpkg
+    manifest install of `symengine[flint,mpfr]` against the
+    `arm64-android-release` triplet, with `VCPKG_CHAINLOAD_TOOLCHAIN_FILE`
+    = NDK's `android.toolchain.cmake` so the consumer build uses the
+    same cross-toolchain vcpkg uses for its port builds.
+  - `android/src/main/jniLibs/arm64-v8a/libsymbolic_math_bridge.so`
+    committed (17 MB stripped ELF, all `flutter_symengine_*` symbols
+    exported via `--whole-archive`).
+- **R131 — Windows x86_64** (4 iterations after pivoting from vcpkg
+  to MSYS2/MinGW64, ~7 min cold-cache build):
+  - First tried vcpkg+MSVC mirroring CrispASR's pattern. 6 attempts
+    all hit the GHA 6-hour Windows runner cap during cold-cache
+    install of boost-math + FLINT + SymEngine. Windows runners are
+    too slow for the template-heavy C++ to fit in budget.
+  - Pivoted to MSYS2/MinGW64. flint/mpfr/gmp/mpc/boost come
+    pre-built from MSYS2 pacman in ~30 sec; only SymEngine itself
+    compiles from source (~3-5 min on MinGW vs hours on MSVC).
+  - `windows/Libraries/symbolic_math_bridge_plugin.dll` committed
+    (5.7 MB stripped PE32+ x86_64, all `flutter_symengine_*`
+    symbols in Export Table verified by `objdump -p`).
+  - Plain C ABI + static-linked MinGW runtime — loadable from
+    MSVC-built Flutter Windows apps via dart:ffi without ABI
+    gymnastics; no libgcc / libstdc++ / libwinpthread sidecar DLLs.
+
+### CrispCalc-side changes
+
+- `pubspec.yaml`: bridge `ref` bumped from `505074d` to `85bfa7e`
+  (bridge 1.1.0 — the merge of r131 + r132 onto bridge main).
+  Version bumped to 0.4.0+1.
+- `PLAN.md` P11 updated to mark R131 + R132 SHIPPED; R130 (Linux)
+  is now the remaining tier-1 platform. Cross-cutting decisions
+  from R131 + R132 documented for future R130 work.
+
+### What v0.4.0 unlocks
+
+| Platform | Pre-v0.4.0 | Post-v0.4.0 |
+|---|---|---|
+| iOS | full CAS | full CAS |
+| macOS | full CAS | full CAS |
+| Android | degraded (FFI error) | **full CAS via libsymbolic_math_bridge.so** |
+| Windows | degraded (FFI error) | **full CAS via symbolic_math_bridge_plugin.dll** |
+| Linux | degraded (FFI error) | degraded (R130 TBD) |
+
+The help-mode popover's "Computed via SymEngine.X" line stops being
+a confidence-trick on Android and Windows.
+
+### Smoke-tested vs not
+
+- ✅ Compile + link in CI for both platforms
+- ✅ All `flutter_symengine_*` symbols present in the binary's export
+  table (verified by `llvm-nm` on Android, `objdump -p` on Windows)
+- ✅ CrispCalc `flutter analyze` clean against the new bridge pin
+- ⚠ End-to-end runtime FFI call (load DLL, invoke function, observe
+  result) from a real Flutter Android device or Windows desktop —
+  **not yet validated**, requires physical hardware. Followup.
+
 ## 2026-05-27 (P6 Round 104b) — Notepad Show-steps wiring + shared trace runner
 
 Closes the Round 104 deferral. Notepad rows can now open the

@@ -2609,62 +2609,94 @@ solve it under time pressure when a user opens an issue.
 
 ## P11 — SymEngine bridge on all native platforms
 
-CrispCalc's release artifacts split into two tiers today:
+### Status (2026-05-27)
 
-- **Full tier (iOS, macOS)** — `flutter_symengine_*` plugin ships
-  compiled libs; full CAS works.
-- **Degraded tier (Linux, Windows, Android)** — same plugin ships
-  no native lib for these platforms; every symbolic call returns
-  "Error: requires native library". The release notes say so
-  explicitly.
+**R131 (Windows) + R132 (Android) SHIPPED in bridge 1.1.0** — see
+[`bridge-1.1.0 CHANGELOG`](https://github.com/CrispStrobe/symbolic_math_bridge/blob/main/CHANGELOG.md).
+CrispCalc pubspec.yaml ref bumped to `85bfa7e` (the bridge's main HEAD
+post-merge). Per-platform iteration logs in
+[`ANDROID_STATUS.md`](https://github.com/CrispStrobe/symbolic_math_bridge/blob/main/ANDROID_STATUS.md)
++ [`WINDOWS_STATUS.md`](https://github.com/CrispStrobe/symbolic_math_bridge/blob/main/WINDOWS_STATUS.md)
+inside the bridge repo.
 
-After P6 made the help arc surface this fall-back to every user
-who taps a CAS button in help mode ("Computed via SymEngine.X"
-appears regardless of whether the bridge is actually available),
-the gap is now *visible* in a way it wasn't before. P11 closes it.
+R130 (Linux) is the remaining tier-1 platform — outline below.
 
-### Goal
+| Platform | Native lib | Status |
+|---|---|---|
+| macOS | `.xcframework` bundles | ✓ shipped (pre-session) |
+| iOS | `.xcframework` bundles | ✓ shipped (pre-session) |
+| **Android arm64-v8a** | `libsymbolic_math_bridge.so` (17 MB) | **✓ R132 SHIPPED** |
+| **Windows x86_64** | `symbolic_math_bridge_plugin.dll` (5.7 MB) | **✓ R131 SHIPPED** |
+| Linux x86_64 | `libsymbolic_math_bridge.so` (TBD) | R130, not started |
+| Android x86_64 / armeabi-v7a | extend matrix | deferred |
+| Windows ARM64 | extend matrix | deferred (Copilot+ PCs) |
 
-Each of the five primary release targets ships a working
-SymEngine bridge:
+### What R131 + R132 changed about the original plan
 
-| Platform | Native lib | Build system | Effort |
-|---|---|---|---|
-| **macOS** | shipped today | CMake + Xcode | done |
-| **iOS** | shipped today | CMake + Xcode | done |
-| **Linux** | new `.so` (x64; arm64 nice-to-have) | CMake + GCC/Clang | medium |
-| **Windows** | new `.dll` (x64; arm64 nice-to-have) | CMake + MSVC | medium-large |
-| **Android** | new `.so` per ABI (arm64-v8a + armeabi-v7a + x86_64) | NDK CMake + Gradle | large |
+The original plan above had Android as the "large" effort and
+Windows as "medium-large". Empirically they inverted:
 
-SymEngine itself is portable C++ — there's no port work in the
-library; the work is per-platform build + packaging + wiring
-into the existing `SymbolicMathBridge` Dart bindings.
+- **Android took 7 iterations, ~half a day, but the path scaled
+  cleanly.** vcpkg has an official `symengine` Android triplet
+  (`arm64-android-release`). Plumbing was the work: the
+  `VCPKG_CHAINLOAD_TOOLCHAIN_FILE = NDK toolchain` incantation,
+  `default-features: false` (which still gets re-overridden by the
+  `arb` feature's nested self-dep — drop `arb` entirely), camelcase
+  `find_package(SymEngine)`, conditional `<jni.h>` for the
+  standalone CMake build vs Gradle. Total CI cold-build time
+  ~14 min; cached re-runs ~5 min.
+- **Windows lost the vcpkg+MSVC race to the GHA 6-hour Windows
+  runner cap.** Boost-math + FLINT + SymEngine cold-compile on a
+  free `windows-latest` runner runs past the budget every time
+  (6 attempts, all cancelled at or near 6h). MSYS2/MinGW64 +
+  source-built SymEngine wins by skipping the compile of the
+  heavy deps entirely (flint / mpfr / gmp / mpc / boost are
+  pre-built MSYS2 packages, installed via pacman in ~30 sec).
+  Only SymEngine itself compiles from source (~3-5 min on MinGW
+  vs hours on MSVC). Total ~7 min cold; ~5 min cached.
 
-### Suggested round structure
+### R130 — Linux — next up
 
-- **R130 — Linux**. Easiest. SymEngine has Ubuntu/Debian packages
-  available; either bundle the precompiled `libsymengine.so` /
-  `libmpfr.so` / `libflint.so` and link, OR build from source
-  via the existing `submodules/symengine` checkout. The plugin's
-  Linux `CMakeLists.txt` would add `add_library` for the bridge
-  C wrapper + link against SymEngine. Risk: GLIBC version pinning
-  for portable Linux artifacts; ship against a sensible baseline
-  (`manylinux2014` style, or Ubuntu 22.04). Update
-  `.github/workflows/release.yml` to call the bridge-build script
-  before `flutter build linux` so the `.so` lands in the bundle
-  alongside the Flutter app.
-- **R131 — Windows**. MSVC + CMake. SymEngine documents the
-  Windows build; expect to patch MPFR / FLINT for MinGW vs MSVC
-  ABI mismatch (or pick one and stick with it — MSVC is more
-  Flutter-native on Windows). Distribute a `.dll` next to the
-  app `.exe`. Larger because the Windows toolchain isn't where
-  most contributors spend their time.
-- **R132 — Android**. NDK build of SymEngine + MPFR + FLINT
-  + GMP for `arm64-v8a` (modern phones) + `armeabi-v7a` (older,
-  optional) + `x86_64` (emulator). Wired into the plugin's
-  `android/build.gradle` as a CMakeLists external native build.
-  Larger still because Android multi-ABI multiplies the build
-  matrix; CI time on a free runner will tick up.
+Should follow the Android pattern most closely. Linux is what
+`ubuntu-latest` IS, so no chainload toolchain needed; vcpkg
+should just work for the host triplet.
+
+- `ubuntu-latest` runner with same `autoconf-archive`,
+  `libtool` apt-installs.
+- `linux/vcpkg.json` declaring `symengine[flint,mpfr]` with
+  `default-features: false`.
+- `linux/CMakeLists.txt` mirroring `android/CMakeLists.txt`,
+  swapping NDK paths for host gcc/clang.
+- `.github/workflows/build-linux.yml` mirroring
+  `build-android.yml`, dropping the chainload step.
+- Risk: GLIBC version pinning. Ship against a sensible baseline
+  (the runner ships Ubuntu 22.04; that's a reasonable minimum).
+- Output: `linux/Libraries/libsymbolic_math_bridge.so` per the
+  iOS/Windows convention.
+
+Expected: 1 day of work, ~5-10 min cold-cache CI build.
+
+### Cross-cutting decisions made in R131 + R132
+
+- **vcpkg port quirk**: symengine's `arb` feature has a nested
+  `symengine[flint]` dep that re-enables the port's default
+  features (including LLVM). Set `default-features: false` AND
+  drop `arb` from the features list. CrispCalc doesn't use ARB.
+- **Don't pin `builtin-baseline`** unless you also `git fetch`
+  the runner's bundled vcpkg in the workflow. The runner image's
+  vcpkg version drifts; a stale pin makes the build fail in 22
+  seconds.
+- **vcpkg's symengine config exports as `SymEngine`** (camelcase),
+  not `symengine`. `find_package(SymEngine CONFIG QUIET)` +
+  manual `target_include_directories(... ${SYMENGINE_INCLUDE_DIRS})`
+  + `target_link_libraries(... ${SYMENGINE_LIBRARIES})` (config
+  uses legacy variable-style, not IMPORTED target).
+- **MinGW on Windows produces `lib`-prefixed shared libraries by
+  default**. `set_target_properties(... PREFIX "")` drops it.
+- **MinGW DLLs need `-Wl,--export-all-symbols`** if the source
+  doesn't carry `__declspec(dllexport)` decorations — otherwise
+  only proven-externally-referenced symbols land in the Export
+  Table.
 
 ### What unlocks once shipped
 
