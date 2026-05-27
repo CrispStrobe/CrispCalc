@@ -2238,19 +2238,21 @@ hand it directly. Round 124's profiling will answer.
 
 ## Small follow-ups (debt items, ship anytime)
 
-##### "Matrix self-test" should be debug-only
+##### "Matrix self-test" debug-only gate — **SHIPPED**
 
-`main.dart:597` shows the Matrix self-test tile in Settings
-unconditionally. It's a developer diagnostic — it runs
-`SymbolicMathBridge` calls and prints a pass/fail report.
-End users will never need it; a release-build user who taps
-it sees raw bridge output. Wrap in
-`if (kDebugMode) ...` (or the environment-variable check
-already used: `String.fromEnvironment('CRISPCALC_DIAGNOSTIC')
-== 'matrix'`). Five-line fix.
+Done in `f1d084d` ("fix: gate Matrix self-test tile behind
+kDebugMode"). Tile at `main.dart:644-655` is now wrapped in
+`if (kDebugMode) ...` with a docstring pointing at this PLAN
+entry. CI / scripted runs still reach the diagnostic via the
+`CRISPCALC_DIAGNOSTIC=matrix` env var at startup
+(`main.dart:73-79`).
 
-Same audit pass should look for other internal-only entries
-that leaked into Settings.
+Follow-up audit pass (2026-05-27): Settings is clean — all 15
+tiles (language, number format, theme, exact-integer mode,
+auto-bind solve, replay tour, layout info, user functions,
+worked examples, function reference, help, export, import,
+matrix-diagnostics-debug-only, about) are user-facing or
+already gated. No further leaked entries to gate.
 
 ---
 
