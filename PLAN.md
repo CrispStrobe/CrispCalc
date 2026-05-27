@@ -2708,19 +2708,40 @@ it's built but not yet wired in — see HISTORY round 11.
 
 ### Risks / unknowns
 
-- **License compatibility**: SymEngine is MIT, FLINT is LGPL-2.1+,
-  MPFR is LGPL-3+, MPC is LGPL-3+, GMP is dual LGPL-3+/GPL-2+.
-  Static linking under LGPL is permitted but imposes obligations
-  (LGPL §6 / §4): ship a license notice, make the LGPL source
-  available, and either also ship object files for re-linking
-  *or* dynamic-link the LGPL components. CrispCalc is itself
-  open source (LICENSE in repo + `assets/licenses/SYMENGINE_STACK.txt`
-  on disk), so the re-link obligation is satisfied implicitly,
-  but the **license-text bundling** still needs an audit pass
-  before cross-platform builds ship — the audit should check
-  that GMP / MPFR / MPC / FLINT license text is reachable from
-  the running app (Settings → About → Licenses, or similar).
-  Same constraints apply to Linux / Windows / Android builds.
+- **License compatibility** (CrispCalc itself is **AGPL-3.0** —
+  confirmed against `LICENSE`):
+  - **SymEngine — MIT**: permissive, compatible with AGPL-3 in
+    every direction.
+  - **MPFR, MPC — LGPL-3+**: explicitly listed as
+    AGPL-3-compatible by the FSF. ✓
+  - **GMP — dual LGPL-3+ / GPL-2+**: downstream picks. The
+    LGPL-3 leg is AGPL-3-compatible; the GPL-2 leg is not (GPL-2
+    alone has no AGPL clause and isn't upgradable in either
+    direction). Make sure the build picks LGPL-3.
+  - **FLINT — LGPL-2.1+**: LGPL-2.1 by itself is **not directly
+    compatible** with AGPL-3 (AGPL-3 §13 adds requirements
+    LGPL-2.1 doesn't accommodate). Compatibility comes from the
+    "or any later version" upgrade option in LGPL-2.1: downstream
+    can relicense FLINT-via-LGPL-2.1 → LGPL-3 → use under AGPL-3.
+    The build should make this election explicit (a note in
+    `assets/licenses/SYMENGINE_STACK.txt` would do).
+  - **Static linking** imposes LGPL §6 / §4 obligations: ship a
+    license notice, make the LGPL source available, and either
+    ship object files for re-linking *or* dynamic-link the LGPL
+    components. CrispCalc being AGPL-3 + open source covers the
+    re-link obligation implicitly. The **license-text bundling**
+    still needs an audit pass before cross-platform builds ship —
+    confirm GMP / MPFR / MPC / FLINT license text is reachable
+    from Settings → About → Licenses (or similar).
+  - **AGPL-3 §13 ("network use")** kicks in only if CrispCalc is
+    deployed as a network-accessed work. The desktop / mobile /
+    APK builds are *not* — they run locally. PLAN P10 Path C
+    (remote bridge service) would activate §13 and require the
+    bridge service's source code to be offered to its users.
+    Since CrispCalc is already open source that's fine; just
+    note it in the service's response headers when it ships.
+  - Same compatibility analysis applies to Linux / Windows /
+    Android builds — same stack, same conclusion.
 - **Linkage strategy on new platforms**: simplest is to mirror
   iOS/macOS — vendor `.a` (Linux) / `.lib` (Windows) / `.so`
   (Android NDK, per ABI) static archives and force-load with the
