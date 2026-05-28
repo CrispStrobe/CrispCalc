@@ -30,6 +30,8 @@ import 'package:flutter/services.dart';
 import '../engine/app_state.dart';
 import '../engine/csp_solver.dart';
 import '../localization/app_localizations.dart';
+import '../widgets/function_ref_help_popover.dart';
+import '../widgets/help_target.dart';
 import '../widgets/module_help_dialog.dart';
 
 class ConstraintsScreen extends StatefulWidget {
@@ -960,6 +962,12 @@ minimize makespan''',
               ),
             ],
           ),
+          // Round 105b (P6): in help mode, reveal a reference row of
+          // the DSL operators. The DSL operators have no standing UI
+          // (they live in the program text), so this row IS their
+          // per-element help surface — each chip opens the Function
+          // Reference popover for that operator.
+          const _DslOperatorHelpRow(),
           if (_result != null) ...[
             const SizedBox(height: 16),
             _ResultBlock(result: _result!),
@@ -978,6 +986,57 @@ minimize makespan''',
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Round 105b (P6): operator reference + help row for the DSL tab.
+/// Hidden outside help mode (the tab's normal UX is unchanged); in
+/// help mode it shows one chip per mini-DSL operator, each opening
+/// that operator's Function Reference popover. This is the DSL's
+/// per-element help surface, since the operators otherwise live only
+/// inside the free-form program text.
+class _DslOperatorHelpRow extends StatelessWidget {
+  const _DslOperatorHelpRow();
+
+  // (chip label, FunctionRef id) per mini-DSL operator.
+  static const _operators = <(String, String)>[
+    ('vars:', 'vars'),
+    ('allDifferent', 'all_different'),
+    ('noOverlap', 'no_overlap'),
+    ('cumulative', 'cumulative'),
+    ('minimize', 'minimize'),
+    ('maximize', 'maximize'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppState(),
+      builder: (context, _) {
+        if (!AppState().helpMode) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final (label, refId) in _operators)
+                HelpTarget(
+                  onHelpTap: () => showFunctionRefHelpPopover(context, refId),
+                  child: ActionChip(
+                    label: Text(
+                      label,
+                      style: const TextStyle(
+                          fontFamily: 'monospace', fontSize: 12),
+                    ),
+                    onPressed: () => showFunctionRefHelpPopover(context, refId),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
