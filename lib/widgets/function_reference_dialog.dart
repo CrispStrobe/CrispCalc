@@ -81,9 +81,15 @@ class _FunctionReferenceDialogState extends State<FunctionReferenceDialog> {
     final filtered = FunctionReferences.all.where((e) {
       if (_category != null && e.category != _category) return false;
       if (query.isEmpty) return true;
+      // Round 100: search the localized description too, so a German
+      // query matches German text; the English catalog string stays
+      // searchable as the fallback.
+      final localizedDesc = t.functionRefDescription(e.id);
       return e.id.toLowerCase().contains(query) ||
           e.signature.toLowerCase().contains(query) ||
-          e.shortDescription.toLowerCase().contains(query);
+          e.shortDescription.toLowerCase().contains(query) ||
+          (localizedDesc != null &&
+              localizedDesc.toLowerCase().contains(query));
     }).toList();
 
     return AlertDialog(
@@ -176,13 +182,17 @@ class _FunctionRefRow extends StatelessWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
-          entry.shortDescription,
+          // Round 100: prefer the localized description; fall back to
+          // the English catalog string when this locale hasn't
+          // translated the entry yet.
+          t.functionRefDescription(entry.id) ?? entry.shortDescription,
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       children: [
-        for (final ex in entry.examples) _ExampleBlock(example: ex),
+        for (final (i, ex) in entry.examples.indexed)
+          _ExampleBlock(entryId: entry.id, index: i, example: ex),
         if (entry.seeAlso.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -281,8 +291,14 @@ class _FunctionRefRow extends StatelessWidget {
 }
 
 class _ExampleBlock extends StatelessWidget {
+  final String entryId;
+  final int index;
   final FunctionRefExample example;
-  const _ExampleBlock({required this.example});
+  const _ExampleBlock({
+    required this.entryId,
+    required this.index,
+    required this.example,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -323,10 +339,10 @@ class _ExampleBlock extends StatelessWidget {
               color: cs.onSurface.withValues(alpha: 0.8),
             ),
           ),
-          if (example.hint.isNotEmpty) ...[
+          if (_hint(t).isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
-              example.hint,
+              _hint(t),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontStyle: FontStyle.italic,
                   ),
@@ -336,6 +352,11 @@ class _ExampleBlock extends StatelessWidget {
       ),
     );
   }
+
+  // Round 100: prefer the localized hint for this (entry, example),
+  // falling back to the English catalog hint.
+  String _hint(AppLocalizations t) =>
+      t.functionRefExampleHint(entryId, index) ?? example.hint;
 
   Future<void> _copy(BuildContext context, String text) async {
     await Clipboard.setData(ClipboardData(text: text));

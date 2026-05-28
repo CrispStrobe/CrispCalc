@@ -593,6 +593,20 @@ abstract class AppLocalizations {
   String get functionRefSeeAlso;
   String get functionRefTryInCalculator;
   String get functionRefSeeWorkedExample;
+
+  /// Round 100: localized override for a [FunctionRef]'s
+  /// `shortDescription`, keyed by the entry `id`. Returns null when
+  /// this locale has no translation for the entry yet; the dialog
+  /// then falls back to the English string baked into the catalog.
+  /// EN always returns null (the catalog is the English source of
+  /// truth). Signatures and example input/expected stay untranslated
+  /// (they're code), so only the prose flows through here.
+  String? functionRefDescription(String id);
+
+  /// Round 100: localized override for the `hint` on the example at
+  /// [index] of the [FunctionRef] with the given `id`. Null → the
+  /// dialog falls back to the catalog hint. EN always returns null.
+  String? functionRefExampleHint(String id, int index);
   String get functionRefCatCas;
   String get functionRefCatNumberTheory;
   String get functionRefCatPrecision;
@@ -1908,6 +1922,12 @@ class EnLocalizations implements AppLocalizations {
 
   @override
   String? workedExampleDescription(String id) => null;
+  // Round 100: EN returns null for both — the catalog holds the
+  // canonical English prose and the dialog falls back to it.
+  @override
+  String? functionRefDescription(String id) => null;
+  @override
+  String? functionRefExampleHint(String id, int index) => null;
   @override
   String get settingsWorkedExamples => 'Worked examples library';
   @override
@@ -3654,6 +3674,191 @@ class DeLocalizations implements AppLocalizations {
         return '100 m / 10 s ergibt eine Geschwindigkeit in m/s — V5-Parser.';
     }
     return null;
+  }
+
+  // Round 100: DE function-reference prose. CAS category translated
+  // as the pilot; other categories return null and fall back to the
+  // English catalog until translated.
+  @override
+  String? functionRefDescription(String id) {
+    switch (id) {
+      case 'solve':
+        return 'Löst eine Gleichung symbolisch nach einer Variablen auf; '
+            'gibt eine Liste von Lösungen zurück.';
+      case 'expand':
+        return 'Multipliziert Produkte und Potenzen zu einer Summe von '
+            'Monomen aus.';
+      case 'simplify':
+        return 'Fasst gleichartige Terme zusammen, kürzt gemeinsame Faktoren '
+            'und wendet algebraische Standardidentitäten an.';
+      case 'factor':
+        return 'Faktorisiert ein Polynom über den rationalen Zahlen in '
+            'irreduzible Faktoren.';
+      case 'diff':
+        return 'Symbolische erste Ableitung nach einer Variablen.';
+      case 'integrate':
+        return 'Unbestimmtes Integral (3 Argumente) oder bestimmtes Integral '
+            '(5 Argumente) mit numerischem Rückfall.';
+      case 'subst':
+        return 'Ersetzt jedes freie Vorkommen von `variable` in `expression` '
+            'durch `value`. Auch als `substitute(...)` verfügbar.';
+      case 'limit':
+        return 'Numerischer Grenzwert, wenn `variable` gegen `point` strebt. '
+            '`point` kann ein endlicher Wert oder `oo` / `-oo` sein.';
+      case 'gcd':
+        return 'Größter gemeinsamer Teiler zweier ganzer Zahlen oder Polynome.';
+      case 'lcm':
+        return 'Kleinstes gemeinsames Vielfaches zweier ganzer Zahlen oder '
+            'Polynome.';
+      case 'factorial':
+        return 'Exakte ganzzahlige Fakultät. Kleine `n` nutzen Darts '
+            '`BigInt`; große `n` werden an SymEngine übergeben.';
+      case 'fibonacci':
+        return 'n-te Fibonacci-Zahl. `fib(n)` ist der Kurzname.';
+      default:
+        return null;
+    }
+  }
+
+  @override
+  String? functionRefExampleHint(String id, int index) {
+    const hints = <String, List<String>>{
+      'solve': [
+        'In CrispCalc liefert `solve(x^2 - 1, x)` eine Liste der Nullstellen '
+            'im Python-Stil zurück. Der zugrunde liegende Aufruf ist '
+            'SymEngines `solve()` (der Zweig für rationale Nullstellen bei '
+            'Polynomen), von der Bridge umschlossen und zurück in eine '
+            'Dart-Zeichenkette serialisiert.',
+        '`=` in der Eingabe wird als Gleichungssyntax akzeptiert — der '
+            'Präprozessor normalisiert `lhs = rhs` vor dem Bridge-Aufruf zu '
+            '`lhs - rhs`.',
+        'Komplexe Nullstellen kommen als SymEngines Literal `I` zurück. '
+            'Verwendet man sie in weiteren Aufrufen (z. B. `expand((-I)*(I))`), '
+            'hält die Bridge sie symbolisch.',
+      ],
+      'expand': [
+        'In CrispCalc liefert `expand((x + 1)^2)` die binomische Entwicklung. '
+            'Der zugrunde liegende Aufruf ist SymEngines `expand()`, das '
+            '`Pow`- und `Mul`-Knoten auflöst und gleichartige Terme '
+            'zusammenfasst.',
+        'Die Koeffizienten entsprechen Zeile 5 des Pascalschen Dreiecks: '
+            '1, 5, 10, 10, 5, 1, jeweils multipliziert mit der passenden '
+            'Potenz von 2.',
+        'Die dritte binomische Formel (Differenz von Quadraten) — nützlich im '
+            'Wechselspiel mit `factor`, um zwischen den Formen zu wechseln.',
+      ],
+      'simplify': [
+        'In CrispCalc kürzt `simplify` den gemeinsamen Faktor `(x - 2)`. Der '
+            'zugrunde liegende Aufruf ist SymEngines `simplify()`, das '
+            '`rational_simplify` sowie eine kleine Sammlung von '
+            'Umformungsregeln versucht.',
+        'Zusammenfassen gleichartiger Terme bei polynomieller Eingabe — '
+            'intern ist das einfach `expand`, gefolgt vom Zusammenführen der '
+            'Koeffizienten.',
+        'Pythagoreische Identität; SymEngine wendet die trigonometrische '
+            'Umformungsregel an, bevor das Literal `1` zurückgegeben wird.',
+      ],
+      'factor': [
+        'In CrispCalc liefert `factor(x^2 - 1)` die Faktorisierung als '
+            'Differenz von Quadraten. Der zugrunde liegende Aufruf ist '
+            'SymEngines `factor()`, das für univariate Polynome über Q '
+            'Berlekamp / Cantor–Zassenhaus verwendet.',
+        'Identität für Summe/Differenz von Kuben: ein Linearfaktor mal ein '
+            'über Q irreduzibles quadratisches Polynom.',
+        'Die Faktorisierung endet bei der Irreduzibilität über Q — `x^2 + 1` '
+            'zerfällt nicht weiter, ohne komplexe Nullstellen zuzulassen.',
+      ],
+      'diff': [
+        'In CrispCalc wendet `diff(...)` die Potenz- und Konstantenregel '
+            'termweise an. Der zugrunde liegende Aufruf ist SymEngines '
+            '`diff()`, das den Ausdrucksbaum durchläuft und einen neuen '
+            'symbolischen `Add`-Knoten erzeugt.',
+        'Kettenregel: SymEngine wendet `diff(sin(u))/du * du/dx` für das '
+            'innere `u = x^2` an.',
+        'Produktregel — beachte, dass SymEngine das Ergebnis unfaktorisiert '
+            'lässt. Durch `factor` geleitet, wird `exp(x)` ausgeklammert.',
+      ],
+      'integrate': [
+        'In CrispCalc delegiert das unbestimmte `integrate(...)` an '
+            'SymEngines `integrate()`. Partielle Integration wird automatisch '
+            'angewandt, wenn ein Faktor zu einem Polynom differenziert.',
+        'Bestimmte Form: Hat SymEngine eine geschlossene Stammfunktion, wendet '
+            'es den Hauptsatz der Differential- und Integralrechnung an. '
+            'Schlägt das symbolisch fehl, fällt CrispCalc auf die Simpson-Regel '
+            '(200 Streifen) zurück.',
+        'Partialbruchzerlegung: 1/(x²-1) = 1/(2(x-1)) - 1/(2(x+1)). SymEngine '
+            'erledigt das Abdeckverfahren automatisch.',
+      ],
+      'subst': [
+        'In CrispCalc schreibt `subst` den Ausdrucksbaum um und versucht '
+            'anschließend einen Vereinfachungsdurchlauf. Der zugrunde liegende '
+            'Aufruf ist SymEngines `xreplace()` (reine Variablenersetzung, '
+            'kein Mustervergleich).',
+        'Numerische Konstanten `pi`, `e` und die imaginäre Einheit `I` werden '
+            'von SymEngine erkannt und über die trigonometrische Identität '
+            'gefaltet.',
+        'Die Ersetzung ist symbolisch — unbeteiligte freie Variablen `a` und '
+            '`b` bleiben unverändert erhalten.',
+      ],
+      'limit': [
+        'In CrispCalc ist `limit(...)` ein numerisches Verfahren: Die Bridge '
+            'wertet den Ausdruck an einer Folge von Punkten aus, die gegen '
+            '`point` konvergieren, und meldet den Grenzwert, sobald '
+            'aufeinanderfolgende Stichproben bis zur Arbeitsgenauigkeit '
+            'übereinstimmen. Keine symbolische Reihenentwicklung.',
+        'Das Literal `oo` ist SymEngines Unendlichkeits-Sentinel — der '
+            'Präprozessor erkennt es vor dem Dispatch. Verwende `-oo` für '
+            'negative Unendlichkeit.',
+        'Strebt gegen die eulersche Zahl. Da der Weg numerisch ist, ist das '
+            'Ergebnis eine Gleitkommazahl — verwende `e(N)` für die '
+            'hochpräzise Konstante.',
+      ],
+      'gcd': [
+        'In CrispCalc nutzt der ganzzahlige `gcd(...)` die euklidische '
+            'Rekursion gcd(a, b) = gcd(b, a mod b). Der zugrunde liegende '
+            'Aufruf ist SymEngines `gcd()`, das im ganzzahligen Fall an GMPs '
+            '`mpz_gcd` weiterreicht.',
+        'Polynom-GGT über den Subresultanten-PRS-Algorithmus. Nützlich als '
+            'Vorstufe zu `simplify` für Kürzungen.',
+        'Konvention: `gcd(0, n) = |n|`. Entspricht der mathematischen '
+            'Definition, die 0 als Vielfaches jeder ganzen Zahl behandelt.',
+      ],
+      'lcm': [
+        'In CrispCalc wird das ganzzahlige `lcm(...)` über die Identität '
+            '`lcm(a, b) = |a*b| / gcd(a, b)` berechnet. Der zugrunde liegende '
+            'Aufruf ist SymEngines `lcm()`, das an GMPs `mpz_lcm` delegiert.',
+        '36 = 2²·3², die Vereinigung der Primpotenzfaktoren aus 12 = 2²·3 und '
+            '18 = 2·3².',
+        'Das Polynom-kgV wählt das Vielfache höheren Grades — `x^2 - 1` '
+            'enthält `x + 1` bereits als Faktor.',
+      ],
+      'factorial': [
+        'In CrispCalc sind das Postfix `n!` und `factorial(n)` gleichwertig — '
+            'der Präprozessor schreibt das Postfix in den Aufruf um. Für '
+            '`n ≤ 1000` rechnen wir in Dart mit `BigInt`-Multiplikation; '
+            'darüber hinaus ist der zugrunde liegende Aufruf SymEngines '
+            '`factorial()`.',
+        '158 Stellen, dank des BigInt-Wegs exakt erhalten — ein Wechsel zu '
+            'IEEE-754 würde hier auf 1,0 × 10^157 runden.',
+        'Konvention des leeren Produkts: 0! = 1. Notwendig, damit die '
+            'Rekursion n! = n · (n-1)! bei 1 endet.',
+      ],
+      'fibonacci': [
+        'In CrispCalc sind `fib(n)` und `fibonacci(n)` derselbe Aufruf. Für '
+            '`n ≤ 90` nutzen wir eine vorberechnete Tabelle; für größere `n` '
+            'ist der zugrunde liegende Aufruf SymEngines `fibonacci()`, das '
+            'Fast-Doubling verwendet (O(log n) Multiplikationen über GMP).',
+        'Die 50. Fibonacci-Zahl — weit jenseits der Tabellengrenze für kleine '
+            'Terme, passt aber noch in eine vorzeichenbehaftete '
+            '64-Bit-Ganzzahl.',
+        'Wechselt in den GMP-gestützten Weg. Fast-Doubling vermeidet die '
+            'lineare Rekurrenz mit O(n), sodass selbst fib(10000) unter einer '
+            'Sekunde bleibt.',
+      ],
+    };
+    final list = hints[id];
+    if (list == null || index < 0 || index >= list.length) return null;
+    return list[index];
   }
 
   @override
@@ -5425,6 +5630,12 @@ class FrLocalizations implements AppLocalizations {
     return null;
   }
 
+  // Round 100: FR function-reference prose not translated yet — null
+  // falls back to the English catalog (mechanism is in place).
+  @override
+  String? functionRefDescription(String id) => null;
+  @override
+  String? functionRefExampleHint(String id, int index) => null;
   @override
   String get settingsWorkedExamples => 'Bibliothèque d\'exemples résolus';
   @override
@@ -7191,6 +7402,12 @@ class EsLocalizations implements AppLocalizations {
     return null;
   }
 
+  // Round 100: ES function-reference prose not translated yet — null
+  // falls back to the English catalog (mechanism is in place).
+  @override
+  String? functionRefDescription(String id) => null;
+  @override
+  String? functionRefExampleHint(String id, int index) => null;
   @override
   String get settingsWorkedExamples => 'Biblioteca de ejemplos resueltos';
   @override
