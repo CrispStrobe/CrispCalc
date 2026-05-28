@@ -26,7 +26,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "931adcf"   # v1.1.1 — consumer-integration fixes + force_link.c link-guard
+      ref: "0907768"   # v1.2.0 — Linux x86_64 SymEngine (P11 R130)
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine
