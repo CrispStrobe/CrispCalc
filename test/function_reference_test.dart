@@ -15,10 +15,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('FunctionReferences catalogue invariants', () {
     test('round 96: seed list is non-empty and stays under cap', () {
-      // Cap matches the dialog's flat ListView assumption — past
-      // ~60 entries the dialog should grow grouping by category.
+      // Advisory cap on the dialog's flat ListView. Bumped to 70 once
+      // the precision arc's Group B (continued fractions, polynomial
+      // arithmetic, special functions) grew the catalogue past 60; the
+      // dialog already scrolls + searches + filters by category chip,
+      // so this is a soft guard, not a hard UX limit.
       expect(FunctionReferences.all.length, greaterThan(0));
-      expect(FunctionReferences.all.length, lessThanOrEqualTo(60));
+      expect(FunctionReferences.all.length, lessThanOrEqualTo(70));
     });
 
     test('ids are non-empty, unique, and snake_case-shaped', () {

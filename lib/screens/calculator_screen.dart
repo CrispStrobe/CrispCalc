@@ -760,6 +760,23 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('polyfactor(, mod=)', cursorOffsetFromEnd: -6);
         break;
 
+      // Special functions (SymEngine + MPFR via basic_evalf).
+      case 'zeta':
+        _latexController.insert('zeta()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'erf':
+        _latexController.insert('erf()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'lambertw':
+        _latexController.insert('lambertw()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'beta':
+        _latexController.insert('beta()', cursorOffsetFromEnd: -1);
+        break;
+
       case 'mod':
         _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;

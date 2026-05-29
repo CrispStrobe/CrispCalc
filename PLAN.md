@@ -1335,12 +1335,19 @@ Group B (V2 — more specialized, ship after Group A lands):
   `convergent(pi, 3)` → `355/113`. Full UI surfacing (keypad +
   FunctionReference + DE/FR/ES i18n + worked-example).
 
-- [ ] **Bessel / zeta / theta special functions** (MPFR). Plottable
-  on the graphing screen: `BesselJ(n, x)`, `BesselY(n, x)`,
-  `BesselI(n, x)`, `BesselK(n, x)`, `zeta(s)`, `theta(s, q)`, plus
-  the existing `gamma` / `digamma`. MPFR has correctly-rounded
-  implementations for all of these. Mostly an evaluator+grapher
-  wiring round; the math is in the linked binary already.
+- [~] **Special functions** (SymEngine + MPFR). **Partially SHIPPED
+  2026-05-29** — the discoverability round. SymEngine's parser already
+  recognises `zeta`, `erf`, `erfc`, `gamma`, `loggamma`, `lambertw`,
+  `dirichlet_eta`, `beta`, `lowergamma`, `uppergamma`, `polygamma`, and
+  the wrapper's `flutter_symengine_evaluate` already forces `basic_evalf`
+  — so they **already evaluate numerically in the calculator AND plot in
+  the grapher** (no whitelist blocks them, no new wrapper). The gap was
+  purely surfacing: notepad recognition, FunctionReference entries
+  (`gamma`/`zeta`/`erf`/`lambertw`/`beta`, full DE/FR/ES), keypad
+  buttons, worked examples (`zetaBasel`, `gammaHalf`) — all done.
+  **Remaining:** `Bessel{J,Y,I,K}` and `theta` are **not** in SymEngine's
+  parser, so those genuinely need new C++ wrapper functions in
+  math-stack (a 3-repo arc) + the same surfacing.
 
 - [ ] **Arbitrary-precision complex** (MPC). When the user opts into
   "high-precision mode," complex arithmetic stops collapsing to

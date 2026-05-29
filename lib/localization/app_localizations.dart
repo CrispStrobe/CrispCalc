@@ -3570,6 +3570,10 @@ class DeLocalizations implements AppLocalizations {
         return 'Modulare Exponentiation';
       case 'contFracPi':
         return 'Kettenbruch von π';
+      case 'zetaBasel':
+        return 'Riemannsche Zeta — das Basler Problem';
+      case 'gammaHalf':
+        return 'Gamma an einer halbzahligen Stelle';
       case 'booleanIsprimeAnd':
         return 'Primzahl und beschränkt';
       case 'booleanEqualityFold':
@@ -3678,6 +3682,10 @@ class DeLocalizations implements AppLocalizations {
       case 'contFracPi':
         return 'cfrac(pi, 10) — die Entwicklung [3; 7, 15, 1, 292, …] '
             'hinter 355/113.';
+      case 'zetaBasel':
+        return 'zeta(2) — Eulers ζ(2) = π²/6 ≈ 1,6449.';
+      case 'gammaHalf':
+        return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) und 17 < 20 — beide Teile wahr, also ist die '
             'Konjunktion wahr.';
@@ -3755,6 +3763,20 @@ class DeLocalizations implements AppLocalizations {
         return 'Faktorisiert ein univariates Polynom über dem endlichen '
             'Körper 𝔽ₖ (k prim) in normierte irreduzible Faktoren. Für die '
             'Faktorisierung über ℚ dient `factor`.';
+      case 'gamma':
+        return 'Die Gammafunktion Γ(x) — die stetige Fortsetzung von '
+            '(x − 1)! auf die reellen und komplexen Zahlen.';
+      case 'zeta':
+        return 'Die Riemannsche Zetafunktion ζ(s) = Σ 1/nˢ und ihre '
+            'analytische Fortsetzung.';
+      case 'erf':
+        return 'Die Fehlerfunktion erf(x) = (2/√π) ∫₀ˣ e^(−t²) dt — zentral '
+            'für die Normalverteilung.';
+      case 'lambertw':
+        return 'Die Lambertsche W-Funktion — die Umkehrfunktion von x·eˣ, '
+            'sodass W(x)·e^(W(x)) = x.';
+      case 'beta':
+        return 'Die Betafunktion B(a, b) = Γ(a)·Γ(b) / Γ(a + b).';
       case 'factorial':
         return 'Exakte ganzzahlige Fakultät. Kleine `n` nutzen Darts '
             '`BigInt`; große `n` werden an SymEngine übergeben.';
@@ -4046,6 +4068,35 @@ class DeLocalizations implements AppLocalizations {
             'zurück.',
         'Über 𝔽₂ irreduzibel — ein primitives Polynom zur Konstruktion von '
             'GF(8). Ein einzelner Faktor wird unverändert zurückgegeben.',
+      ],
+      'gamma': [
+        'Für eine positive ganze Zahl n gilt Γ(n) = (n − 1)!, also '
+            'Γ(5) = 4! = 24. Numerisch über SymEngines `basic_evalf` (MPFR) '
+            'ausgewertet.',
+        'Γ(½) = √π — die Konstante hinter dem Gauß-Integral. Grafikfähig: '
+            'zeichne `gamma(x)`, um die Pole bei den nichtpositiven ganzen '
+            'Zahlen zu sehen.',
+      ],
+      'zeta': [
+        'Das Basler Problem: ζ(2) = π²/6 ≈ 1,6449. Numerisch über MPFR '
+            'ausgewertet.',
+        'ζ(4) = π⁴/90. Die Werte an geraden ganzen Zahlen sind alle '
+            'rationale Vielfache von Potenzen von π.',
+      ],
+      'erf': [
+        'erf ist ungerade, mit erf(0) = 0 und erf(x) → 1 für x → ∞. '
+            'Grafikfähig: zeichne `erf(x)` für die klassische S-Kurve.',
+        'Die komplementäre Fehlerfunktion erfc(x) = 1 − erf(x).',
+      ],
+      'lambertw': [
+        'Die Omega-Konstante Ω, die Lösung von Ω·e^Ω = 1. Löst Gleichungen '
+            'der Form x·eˣ = c.',
+        'W(0) = 0, denn 0·e⁰ = 0.',
+      ],
+      'beta': [
+        'B(2, 3) = 1!·2!/4! = 2/24 = 1/12. Grundlage der Beta-Verteilung in '
+            'der Statistik.',
+        'B(1, 1) = Γ(1)²/Γ(2) = 1 — eine gleichverteilte Beta-Verteilung.',
       ],
       'factorial': [
         'In CrispCalc sind das Postfix `n!` und `factorial(n)` gleichwertig — '
@@ -6117,6 +6168,10 @@ class FrLocalizations implements AppLocalizations {
         return 'Exponentiation modulaire';
       case 'contFracPi':
         return 'Fraction continue de π';
+      case 'zetaBasel':
+        return 'Zêta de Riemann — le problème de Bâle';
+      case 'gammaHalf':
+        return 'Gamma en un demi-entier';
       case 'booleanIsprimeAnd':
         return 'Premier et borné';
       case 'booleanEqualityFold':
@@ -6225,6 +6280,10 @@ class FrLocalizations implements AppLocalizations {
       case 'contFracPi':
         return 'cfrac(pi, 10) — le développement [3; 7, 15, 1, 292, …] '
             'derrière 355/113.';
+      case 'zetaBasel':
+        return 'zeta(2) — le ζ(2) = π²/6 ≈ 1,6449 d\'Euler.';
+      case 'gammaHalf':
+        return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) et 17 < 20 — les deux clauses sont vraies, '
             'donc la conjonction est vraie.';
@@ -6305,6 +6364,20 @@ class FrLocalizations implements AppLocalizations {
         return "Factorise un polynôme à une variable sur le corps fini 𝔽ₖ "
             "(k premier) en facteurs irréductibles unitaires. Pour la "
             "factorisation sur ℚ, utilisez `factor`.";
+      case 'gamma':
+        return "La fonction Gamma Γ(x) — le prolongement continu de "
+            "(x − 1)! aux réels et au plan complexe.";
+      case 'zeta':
+        return "La fonction zêta de Riemann ζ(s) = Σ 1/nˢ et son "
+            "prolongement analytique.";
+      case 'erf':
+        return "La fonction d'erreur erf(x) = (2/√π) ∫₀ˣ e^(−t²) dt — "
+            "centrale pour la loi normale.";
+      case 'lambertw':
+        return "La fonction W de Lambert — la réciproque de x·eˣ, telle que "
+            "W(x)·e^(W(x)) = x.";
+      case 'beta':
+        return "La fonction Bêta B(a, b) = Γ(a)·Γ(b) / Γ(a + b).";
       case 'factorial':
         return "Factorielle entière exacte. Les petits `n` utilisent le "
             "`BigInt` de Dart ; les grands `n` sont confiés à SymEngine.";
@@ -6597,6 +6670,34 @@ class FrLocalizations implements AppLocalizations {
           "modulo 2 — la factorisation sans carré récupère la multiplicité.",
       "Irréductible sur 𝔽₂ — un polynôme primitif servant à construire "
           "GF(8). Un facteur unique est renvoyé tel quel.",
+    ],
+    'gamma': [
+      "Pour un entier positif n, Γ(n) = (n − 1)!, donc Γ(5) = 4! = 24. "
+          "Évalué numériquement via `basic_evalf` de SymEngine (MPFR).",
+      "Γ(½) = √π — la constante derrière l'intégrale de Gauss. Traçable : "
+          "tracez `gamma(x)` pour voir les pôles aux entiers négatifs ou "
+          "nuls.",
+    ],
+    'zeta': [
+      "Le problème de Bâle : ζ(2) = π²/6 ≈ 1,6449. Évalué numériquement via "
+          "MPFR.",
+      "ζ(4) = π⁴/90. Les valeurs aux entiers pairs sont toutes des multiples "
+          "rationnels de puissances de π.",
+    ],
+    'erf': [
+      "erf est impaire, avec erf(0) = 0 et erf(x) → 1 quand x → ∞. "
+          "Traçable : tracez `erf(x)` pour la sigmoïde classique.",
+      "La fonction d'erreur complémentaire erfc(x) = 1 − erf(x).",
+    ],
+    'lambertw': [
+      "La constante oméga Ω, solution de Ω·e^Ω = 1. Résout les équations de "
+          "la forme x·eˣ = c.",
+      "W(0) = 0, car 0·e⁰ = 0.",
+    ],
+    'beta': [
+      "B(2, 3) = 1!·2!/4! = 2/24 = 1/12. Sous-tend la loi Bêta en "
+          "statistique.",
+      "B(1, 1) = Γ(1)²/Γ(2) = 1 — une loi Bêta uniforme.",
     ],
     'factorial': [
       "Dans CrispCalc, le suffixe `n!` et `factorial(n)` sont équivalents — "
@@ -8647,6 +8748,10 @@ class EsLocalizations implements AppLocalizations {
         return 'Exponenciación modular';
       case 'contFracPi':
         return 'Fracción continua de π';
+      case 'zetaBasel':
+        return 'Zeta de Riemann — el problema de Basilea';
+      case 'gammaHalf':
+        return 'Gamma en un semientero';
       case 'booleanIsprimeAnd':
         return 'Primo y acotado';
       case 'booleanEqualityFold':
@@ -8756,6 +8861,10 @@ class EsLocalizations implements AppLocalizations {
       case 'contFracPi':
         return 'cfrac(pi, 10) — el desarrollo [3; 7, 15, 1, 292, …] '
             'detrás de 355/113.';
+      case 'zetaBasel':
+        return 'zeta(2) — el ζ(2) = π²/6 ≈ 1,6449 de Euler.';
+      case 'gammaHalf':
+        return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) y 17 < 20 — ambas cláusulas son verdaderas, '
             'así que la conjunción es verdadera.';
@@ -8831,6 +8940,20 @@ class EsLocalizations implements AppLocalizations {
         return "Factoriza un polinomio de una variable sobre el cuerpo finito "
             "𝔽ₖ (k primo) en factores irreducibles mónicos. Para factorizar "
             "sobre ℚ usa `factor`.";
+      case 'gamma':
+        return "La función Gamma Γ(x) — la extensión continua de (x − 1)! a "
+            "los reales y al plano complejo.";
+      case 'zeta':
+        return "La función zeta de Riemann ζ(s) = Σ 1/nˢ y su prolongación "
+            "analítica.";
+      case 'erf':
+        return "La función error erf(x) = (2/√π) ∫₀ˣ e^(−t²) dt — central "
+            "para la distribución normal.";
+      case 'lambertw':
+        return "La función W de Lambert — la inversa de x·eˣ, tal que "
+            "W(x)·e^(W(x)) = x.";
+      case 'beta':
+        return "La función Beta B(a, b) = Γ(a)·Γ(b) / Γ(a + b).";
       case 'factorial':
         return "Factorial entero exacto. Los `n` pequeños usan el `BigInt` "
             "de Dart; los `n` grandes se delegan en SymEngine.";
@@ -9119,6 +9242,33 @@ class EsLocalizations implements AppLocalizations {
           "multiplicidad.",
       "Irreducible sobre 𝔽₂ — un polinomio primitivo para construir GF(8). "
           "Un único factor se devuelve sin cambios.",
+    ],
+    'gamma': [
+      "Para un entero positivo n, Γ(n) = (n − 1)!, así que Γ(5) = 4! = 24. "
+          "Evaluada numéricamente mediante `basic_evalf` de SymEngine (MPFR).",
+      "Γ(½) = √π — la constante tras la integral de Gauss. Graficable: "
+          "dibuja `gamma(x)` para ver los polos en los enteros no positivos.",
+    ],
+    'zeta': [
+      "El problema de Basilea: ζ(2) = π²/6 ≈ 1,6449. Evaluada numéricamente "
+          "mediante MPFR.",
+      "ζ(4) = π⁴/90. Los valores en enteros pares son todos múltiplos "
+          "racionales de potencias de π.",
+    ],
+    'erf': [
+      "erf es impar, con erf(0) = 0 y erf(x) → 1 cuando x → ∞. Graficable: "
+          "dibuja `erf(x)` para la sigmoide clásica.",
+      "La función error complementaria erfc(x) = 1 − erf(x).",
+    ],
+    'lambertw': [
+      "La constante omega Ω, solución de Ω·e^Ω = 1. Resuelve ecuaciones de "
+          "la forma x·eˣ = c.",
+      "W(0) = 0, pues 0·e⁰ = 0.",
+    ],
+    'beta': [
+      "B(2, 3) = 1!·2!/4! = 2/24 = 1/12. Sustenta la distribución Beta en "
+          "estadística.",
+      "B(1, 1) = Γ(1)²/Γ(2) = 1 — una distribución Beta uniforme.",
     ],
     'factorial': [
       "En CrispCalc, el sufijo `n!` y `factorial(n)` son equivalentes: el "

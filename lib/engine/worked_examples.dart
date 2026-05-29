@@ -258,6 +258,21 @@ class WorkedExamples {
           'behind 355/113.',
       expression: 'cfrac(pi, 10)',
     ),
+    // Special functions (SymEngine + MPFR via basic_evalf).
+    WorkedExample(
+      id: 'zetaBasel',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Riemann zeta — the Basel problem',
+      description: 'zeta(2) — Euler\'s ζ(2) = π²/6 ≈ 1.6449.',
+      expression: 'zeta(2)',
+    ),
+    WorkedExample(
+      id: 'gammaHalf',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Gamma at a half-integer',
+      description: 'gamma(0.5) — Γ(½) = √π ≈ 1.7725.',
+      expression: 'gamma(0.5)',
+    ),
 
     // === P7 Booleans (Round 112) ============================================
     // Surfaces the relational + logical operator rewrite shipped in

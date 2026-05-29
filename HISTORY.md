@@ -2,6 +2,41 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Precision arc Group B: special functions surfaced (zeta / erf / gamma / lambertw / beta)
+
+A **discoverability** round — no new code path. Investigation showed
+SymEngine's parser already recognises `zeta`, `erf`, `erfc`, `gamma`,
+`loggamma`, `lambertw`, `dirichlet_eta`, `beta`, `lowergamma`,
+`uppergamma`, `polygamma`, and the bridge's `flutter_symengine_evaluate`
+already forces `basic_evalf` — so these **already evaluate numerically in
+the calculator and plot in the grapher** (the graph input gate only
+checks paren balance, no function whitelist). The PLAN's own note held:
+"the math is in the linked binary already." So this round only surfaced
+them:
+
+- **notepad recognition** — added the special-function names (and the
+  previously-missed Group B names `cfrac`/`convergent`/`poly*`) to
+  `kReservedNotepadNames`.
+- **FunctionReference** — `gamma` / `zeta` / `erf` / `lambertw` / `beta`
+  entries (cas category) with full DE/FR/ES i18n.
+- **keypad** — buttons for zeta/erf/lambertw/beta (gamma already had
+  one); `gamma` also gained its help-popover mapping.
+- **worked examples** — `zetaBasel` (ζ(2) = π²/6) and `gammaHalf`
+  (Γ(½) = √π), DE/FR/ES.
+
+`Bessel{J,Y,I,K}` / `theta` are NOT in SymEngine's parser → deferred to a
+genuine 3-repo wrapper arc.
+
+**Also fixed a latent regression**: `precision_call_pass_test` had been
+red on `main` since the round-4 merge — its Round-91 assertion that
+`tryEvaluatePrecisionCall('totient(12)')` returns null became stale when
+round 4 added `totient` to the ntheory dispatch. Updated the assertion
+(totient is correctly intercepted; verified in `precision_test.dart`).
+Raised the advisory FunctionReference catalogue cap 60 → 70 (Group B
+growth; the dialog scrolls/searches/filters, so it's a soft guard). Full
+suite **2532 pass / 1 skip, 0 failures** — green for the first time since
+round 4.
+
 ## 2026-05-29 — Precision arc Group B: polynomial factorisation over 𝔽ₚ
 
 `polyfactor(p, mod=k)` — factor a univariate polynomial over the finite

@@ -535,6 +535,117 @@ class FunctionReferences {
       ],
       seeAlso: ['factor', 'polygcd', 'isprime'],
     ),
+    // === Special functions (SymEngine + MPFR) ================================
+    FunctionRef(
+      id: 'gamma',
+      category: FunctionRefCategory.cas,
+      signature: 'gamma(x)',
+      shortDescription: 'The Gamma function Γ(x) — the continuous extension of '
+          '(x − 1)! to the reals and complex plane.',
+      examples: [
+        FunctionRefExample(
+          input: 'gamma(5)',
+          expected: '24',
+          hint: 'For a positive integer n, Γ(n) = (n − 1)!, so Γ(5) = 4! = '
+              '24. Evaluated numerically through SymEngine\'s `basic_evalf` '
+              '(MPFR).',
+        ),
+        FunctionRefExample(
+          input: 'gamma(0.5)',
+          expected: '1.7724538509…',
+          hint: 'Γ(½) = √π — the constant behind the Gaussian integral. '
+              'Plottable: graph `gamma(x)` to see the poles at the '
+              'non-positive integers.',
+        ),
+      ],
+      seeAlso: ['beta', 'factorial', 'zeta'],
+    ),
+    FunctionRef(
+      id: 'zeta',
+      category: FunctionRefCategory.cas,
+      signature: 'zeta(s)',
+      shortDescription:
+          'The Riemann zeta function ζ(s) = Σ 1/nˢ and its analytic '
+          'continuation.',
+      examples: [
+        FunctionRefExample(
+          input: 'zeta(2)',
+          expected: '1.6449340668…',
+          hint: 'The Basel problem: ζ(2) = π²/6 ≈ 1.6449. Evaluated '
+              'numerically via MPFR.',
+        ),
+        FunctionRefExample(
+          input: 'zeta(4)',
+          expected: '1.0823232337…',
+          hint: 'ζ(4) = π⁴/90. The even-integer values are all rational '
+              'multiples of powers of π.',
+        ),
+      ],
+      seeAlso: ['gamma', 'erf'],
+    ),
+    FunctionRef(
+      id: 'erf',
+      category: FunctionRefCategory.cas,
+      signature: 'erf(x)',
+      shortDescription:
+          'The error function erf(x) = (2/√π) ∫₀ˣ e^(−t²) dt — central to '
+          'the normal distribution.',
+      examples: [
+        FunctionRefExample(
+          input: 'erf(1)',
+          expected: '0.8427007929…',
+          hint: 'erf is odd, with erf(0) = 0 and erf(x) → 1 as x → ∞. '
+              'Plottable: graph `erf(x)` for the classic sigmoid.',
+        ),
+        FunctionRefExample(
+          input: 'erfc(1)',
+          expected: '0.1572992070…',
+          hint: 'The complementary error function erfc(x) = 1 − erf(x).',
+        ),
+      ],
+      seeAlso: ['gamma', 'zeta'],
+    ),
+    FunctionRef(
+      id: 'lambertw',
+      category: FunctionRefCategory.cas,
+      signature: 'lambertw(x)',
+      shortDescription: 'The Lambert W function — the inverse of x·eˣ, so '
+          'W(x)·e^(W(x)) = x.',
+      examples: [
+        FunctionRefExample(
+          input: 'lambertw(1)',
+          expected: '0.5671432904…',
+          hint: 'The omega constant Ω, the solution of Ω·e^Ω = 1. Solves '
+              'equations of the form x·eˣ = c.',
+        ),
+        FunctionRefExample(
+          input: 'lambertw(0)',
+          expected: '0',
+          hint: 'W(0) = 0, since 0·e⁰ = 0.',
+        ),
+      ],
+      seeAlso: ['zeta', 'gamma'],
+    ),
+    FunctionRef(
+      id: 'beta',
+      category: FunctionRefCategory.cas,
+      signature: 'beta(a, b)',
+      shortDescription: 'The Beta function B(a, b) = Γ(a)·Γ(b) / Γ(a + b).',
+      examples: [
+        FunctionRefExample(
+          input: 'beta(2, 3)',
+          expected: '0.0833333333…',
+          hint: 'B(2, 3) = 1!·2!/4! = 2/24 = 1/12. Underlies the Beta '
+              'distribution in statistics.',
+        ),
+        FunctionRefExample(
+          input: 'beta(1, 1)',
+          expected: '1',
+          hint: 'B(1, 1) = Γ(1)²/Γ(2) = 1 — a uniform Beta distribution.',
+        ),
+      ],
+      seeAlso: ['gamma', 'factorial'],
+    ),
     FunctionRef(
       id: 'factorial',
       category: FunctionRefCategory.cas,

@@ -109,7 +109,12 @@ void main() {
     test('non-precision-arc function calls return null', () {
       expect(engine.tryEvaluatePrecisionCall('sin(1)'), isNull);
       expect(engine.tryEvaluatePrecisionCall('integrate(x^2, x)'), isNull);
-      expect(engine.tryEvaluatePrecisionCall('totient(12)'), isNull);
+      // Special functions (gamma/zeta/erf/…) evaluate through the normal
+      // SymEngine path, not the precision pre-pass, so they fall through.
+      expect(engine.tryEvaluatePrecisionCall('gamma(5)'), isNull);
+      expect(engine.tryEvaluatePrecisionCall('cos(1)'), isNull);
+      // NB: `totient(12)` IS intercepted (round 4 ntheory dispatch) — it
+      // is exercised in precision_test.dart, not here.
     });
   });
 

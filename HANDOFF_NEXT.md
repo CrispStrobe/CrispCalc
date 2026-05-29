@@ -15,16 +15,27 @@ single repo, all on `main`, headless-testable):
 3. `polyfactor(p, mod=k)` over 𝔽ₖ — new
    `lib/engine/polynomial_mod.dart` (square-free factorisation +
    Berlekamp). Completes polynomial arithmetic over Z, Q, F_p.
+4. **Special functions surfaced** — `zeta`/`erf`/`erfc`/`gamma`/
+   `loggamma`/`lambertw`/`dirichlet_eta`/`beta`/`lowergamma`/
+   `uppergamma`/`polygamma` already evaluate (SymEngine parser +
+   `basic_evalf`) and plot; this round added notepad recognition,
+   FunctionReference (gamma/zeta/erf/lambertw/beta, DE/FR/ES), keypad
+   buttons, and worked examples. **No native work needed.**
 
-All cross-checked against SymPy and fully surfaced (keypad +
-FunctionReference DE/FR/ES + worked examples). **2484 tests.** Group B
-remaining: **Bessel/zeta/theta** (MPFR — a genuine 3-repo wrapper arc:
-cwrapper already exposes `basic_zeta`/`basic_erf`/`basic_gamma`/
-`basic_lambertw`/`basic_beta`/`basic_polygamma`, but Bessel needs new
-C++ wrapper functions + graphing wiring) and **arbitrary-precision
-complex** (MPC). The pattern to note: **three Group B items landed with
-zero native work** by reaching for pure-Dart before a FLINT/MPFR
-wrapper — only the special-functions arc genuinely needs the bridge.
+All fully surfaced. **2532 tests, 0 failures** (green for the first time
+since round 4 — see below). Group B remaining: **Bessel{J,Y,I,K} /
+theta** (NOT in SymEngine's parser → a genuine 3-repo C++ wrapper arc +
+graphing) and **arbitrary-precision complex** (MPC). Pattern: **four
+Group B items landed with zero native work** — only Bessel/theta and MPC
+genuinely need the bridge.
+
+⚠ **Fixed a latent regression this session:** `precision_call_pass_test`
+had been red on `main` since the round-4 merge (a stale Round-91
+assertion that `totient(12)` is not intercepted, invalidated when round 4
+added `totient` to the dispatch). The flaky `notepad_screen_test`
+full-suite failure masked it in per-round greps. Now fixed; full suite is
+0-failure. **Lesson: when confirming a "known flake", grep the failing
+test names explicitly rather than trusting the summary counter.**
 
 ---
 
@@ -71,7 +82,7 @@ merged to `master`/`main`. Round-5 (UI-only, CrispCalc) went on `main`.
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **main HEAD** | Precision Group A (Round 4 + 5) + Group B continued fractions, on top of R130 + R100 + R105b; **v0.4.1 released** |
-| **Tests** | **2484 pass** (2317 → 2334 R4 → 2387 R5 → 2418 cfrac → 2465 poly → 2484 polyfactor); 1 pre-existing notepad full-suite flake |
+| **Tests** | **2532 pass, 0 failures** (… → 2484 polyfactor → 2532 special-fns); fixed a round-4 latent test regression; `notepad_screen_test` still a flaky full-suite-only failure |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
 | **bridge pin** | **`ce8af30`** (bridge main, post round-4 merge — modpow/modinv/totient/jacobi) — was `535ce5d` pre-session |
 | **bridge main HEAD** | `ce8af30` (round-4 `precision-round4-modular` merged) |

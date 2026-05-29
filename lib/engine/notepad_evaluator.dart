@@ -115,6 +115,12 @@ const Set<String> kReservedNotepadNames = {
   'gcd', 'lcm', 'factorial', 'fibonacci', 'isprime', 'nextprime',
   'prevprime', 'factorint', 'divisors', 'totient', 'modinv', 'modpow',
   'jacobi', 'factor', 'prime',
+  // Precision arc Group B — continued fractions + polynomial arithmetic
+  'cfrac', 'convergent', 'polygcd', 'polyresultant', 'polydiscriminant',
+  'polyfactor',
+  // Special functions (SymEngine + MPFR, via basic_evalf)
+  'zeta', 'erf', 'erfc', 'loggamma', 'lambertw', 'dirichlet_eta',
+  'beta', 'lowergamma', 'uppergamma', 'polygamma',
   // Calculus / CAS ops
   'integrate', 'diff', 'limit', 'solve', 'expand', 'simplify', 'subst',
   // Matrix / linear algebra
