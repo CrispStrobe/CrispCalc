@@ -1774,6 +1774,35 @@ class FunctionReferences {
       seeAlso: ['erf', 'mean'],
       openTarget: 'open:statistics?preset=statsNormalDist',
     ),
+    FunctionRef(
+      id: 'binomial_dist',
+      category: FunctionRefCategory.statistics,
+      signature: 'Distributions → Binomial',
+      shortDescription:
+          'Binomial distribution B(n, p) over n independent trials with '
+          'success probability p: mean n·p, variance n·p·(1−p), the point '
+          'mass P(X = k) and the cumulative P(X ≤ k).',
+      runnable: false,
+      examples: [
+        FunctionRefExample(
+          input: 'n = 20, p = 0.1, k = 2',
+          expected: 'mean = 2, P(X = 2) ≈ 0.285',
+          hint: 'In CrispCalc, the Distributions tab evaluates the binomial '
+              'PMF C(n, k)·pᵏ·(1−p)^(n−k) (`Binomial.pmf` in '
+              '`lib/engine/statistics.dart`); with a 10 % defect rate over 20 '
+              'items the most likely defect count is the mean, 2.',
+        ),
+        FunctionRefExample(
+          input: 'n = 20, p = 0.1, k = 2',
+          expected: 'P(X ≤ 2) ≈ 0.677',
+          hint: 'The CDF sums the PMF from 0 to k. Here ≈ 68 % of batches show '
+              'at most two defects. Variance is n·p·(1−p) = 1.8, so the '
+              'stddev ≈ 1.34.',
+        ),
+      ],
+      seeAlso: ['normal_dist', 'mean'],
+      openTarget: 'open:statistics?preset=statsBinomialDist',
+    ),
     // === Constraints DSL =====================================================
     // All constraints entries are module-surface (runnable: false).
     // The DSL parser is `lib/engine/csp_solver.dart` (class

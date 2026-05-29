@@ -175,5 +175,16 @@ class StatisticsPresets {
         'normP': '0.95',
       },
     ),
+    // Binomial distribution — a quality-control flavour: n = 20 trials
+    // with a 10 % defect rate, asking about k = 2 defects (the mean).
+    // Lands on the Distributions tab (binomial section).
+    'statsBinomialDist': StatisticsPreset(
+      tab: 'distributions',
+      fields: {
+        'binN': '20',
+        'binP': '0.1',
+        'binK': '2',
+      },
+    ),
   };
 }

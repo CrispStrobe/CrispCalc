@@ -3939,6 +3939,11 @@ class DeLocalizations implements AppLocalizations {
         return 'Normalverteilung (Gauß-Verteilung) N(μ, σ): kumulierte '
             'Wahrscheinlichkeit P(X ≤ x) und das Quantil (Umkehrfunktion der '
             'Verteilungsfunktion) zu einer Wahrscheinlichkeit p.';
+      case 'binomial_dist':
+        return 'Binomialverteilung B(n, p) über n unabhängige Versuche mit '
+            'Erfolgswahrscheinlichkeit p: Erwartungswert n·p, Varianz '
+            'n·p·(1−p), die Punktwahrscheinlichkeit P(X = k) und die '
+            'kumulierte P(X ≤ k).';
       // --- Constraints-DSL ---
       case 'vars':
         return 'Deklariert ganzzahlige Entscheidungsvariablen und ihren '
@@ -4520,6 +4525,16 @@ class DeLocalizations implements AppLocalizations {
         'Das 0,95-Quantil ist die Umkehrfunktion der Verteilungsfunktion — der '
             'Wert, unter dem 95 % der Masse liegen (≈ μ + 1,645σ). Passt zu '
             '`erf`, das der Verteilungsfunktion zugrunde liegt.',
+      ],
+      'binomial_dist': [
+        'In CrispCalc wertet der Reiter „Verteilungen" die binomiale '
+            'Wahrscheinlichkeitsfunktion C(n, k)·pᵏ·(1−p)^(n−k) aus '
+            '(`Binomial.pmf` in `lib/engine/statistics.dart`); bei einer '
+            'Ausschussrate von 10 % unter 20 Stücken ist die wahrscheinlichste '
+            'Fehlerzahl der Erwartungswert 2.',
+        'Die Verteilungsfunktion summiert die Wahrscheinlichkeitsfunktion von '
+            '0 bis k. Hier zeigen ≈ 68 % der Lose höchstens zwei Fehler. Die '
+            'Varianz ist n·p·(1−p) = 1,8, also die Standardabweichung ≈ 1,34.',
       ],
       // --- Constraints-DSL ---
       'vars': [
@@ -6649,6 +6664,10 @@ class FrLocalizations implements AppLocalizations {
         return "Loi normale (gaussienne) N(μ, σ) : probabilité cumulée "
             "P(X ≤ x) et le quantile (fonction de répartition inverse) pour "
             "une probabilité p donnée.";
+      case 'binomial_dist':
+        return "Loi binomiale B(n, p) sur n épreuves indépendantes de "
+            "probabilité de succès p : moyenne n·p, variance n·p·(1−p), la "
+            "masse ponctuelle P(X = k) et la probabilité cumulée P(X ≤ k).";
       case 'vars':
         return "Déclare les variables de décision entières et leur domaine. "
             "Toujours la première ligne d'un programme DSL de CrispCalc.";
@@ -7222,6 +7241,16 @@ class FrLocalizations implements AppLocalizations {
       "Le quantile 0,95 est la fonction de répartition inverse — la valeur "
           "en dessous de laquelle se trouve 95 % de la masse (≈ μ + 1,645σ). "
           "Va de pair avec `erf`, qui sous-tend la fonction de répartition.",
+    ],
+    'binomial_dist': [
+      "Dans CrispCalc, l'onglet « Distributions » évalue la fonction de masse "
+          "binomiale C(n, k)·pᵏ·(1−p)^(n−k) (`Binomial.pmf` dans "
+          "`lib/engine/statistics.dart`) ; avec un taux de défaut de 10 % sur "
+          "20 articles, le nombre de défauts le plus probable est la moyenne, "
+          "2.",
+      "La fonction de répartition somme la fonction de masse de 0 à k. Ici "
+          "≈ 68 % des lots présentent au plus deux défauts. La variance vaut "
+          "n·p·(1−p) = 1,8, donc l'écart-type ≈ 1,34.",
     ],
     'vars': [
       "Dans CrispCalc, la ligne `vars:` est analysée par `DslToFlatZinc` "
@@ -9334,6 +9363,10 @@ class EsLocalizations implements AppLocalizations {
         return "Distribución normal (gaussiana) N(μ, σ): probabilidad "
             "acumulada P(X ≤ x) y el cuantil (función de distribución inversa) "
             "para una probabilidad p dada.";
+      case 'binomial_dist':
+        return "Distribución binomial B(n, p) sobre n ensayos independientes "
+            "con probabilidad de éxito p: media n·p, varianza n·p·(1−p), la "
+            "masa puntual P(X = k) y la acumulada P(X ≤ k).";
       case 'vars':
         return "Declara las variables de decisión enteras y su dominio. "
             "Siempre la primera línea de un programa DSL de CrispCalc.";
@@ -9897,6 +9930,16 @@ class EsLocalizations implements AppLocalizations {
       "El cuantil 0,95 es la función de distribución inversa: el valor por "
           "debajo del cual queda el 95 % de la masa (≈ μ + 1,645σ). Va de la "
           "mano de `erf`, que sustenta la función de distribución.",
+    ],
+    'binomial_dist': [
+      "En CrispCalc, la pestaña «Distribuciones» evalúa la función de masa "
+          "binomial C(n, k)·pᵏ·(1−p)^(n−k) (`Binomial.pmf` en "
+          "`lib/engine/statistics.dart`); con una tasa de defectos del 10 % "
+          "sobre 20 artículos, el número de defectos más probable es la media, "
+          "2.",
+      "La función de distribución suma la función de masa de 0 a k. Aquí "
+          "≈ 68 % de los lotes presentan a lo sumo dos defectos. La varianza "
+          "es n·p·(1−p) = 1,8, así que la desviación típica ≈ 1,34.",
     ],
     'vars': [
       "En CrispCalc, la línea `vars:` la analiza `DslToFlatZinc` (véase "

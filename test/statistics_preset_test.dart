@@ -100,6 +100,20 @@ void main() {
       expect(find.text('1.96'), findsNothing); // default normX is gone
     });
 
+    testWidgets('binomial preset lands on Distributions tab and pre-fills',
+        (tester) async {
+      AppState().requestLoadStatisticsPreset('statsBinomialDist');
+      await _pump(tester, const StatisticsScreen());
+
+      expect(AppState().pendingStatisticsPresetId, isNull);
+      final preset = StatisticsPresets.all['statsBinomialDist']!;
+      // n = 20 trials replaced the default n = 10...
+      expect(find.text(preset.fields['binN']!), findsOneWidget);
+      // ...while the untouched normal default confirms we're on the
+      // Distributions tab (the binomial preset doesn't fill normX).
+      expect(find.text('1.96'), findsOneWidget);
+    });
+
     testWidgets('unknown preset id degrades to the default Descriptive tab',
         (tester) async {
       AppState().requestLoadStatisticsPreset('no-such-preset');

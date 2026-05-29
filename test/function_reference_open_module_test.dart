@@ -50,8 +50,8 @@ void main() {
         expect(StatisticsPresets.all.containsKey(id), isTrue,
             reason: '${e.id} targets unknown preset "$id"');
       }
-      expect(seen, 12,
-          reason: 'all twelve stats entries carry preset openTargets');
+      expect(seen, 13,
+          reason: 'all thirteen stats entries carry preset openTargets');
     });
 
     test('the stats entries carry the expected openTargets', () {
@@ -72,6 +72,8 @@ void main() {
           'open:statistics?preset=statsLinearRegression');
       expect(byId['normal_dist']?.openTarget,
           'open:statistics?preset=statsNormalDist');
+      expect(byId['binomial_dist']?.openTarget,
+          'open:statistics?preset=statsBinomialDist');
       expect(
           byId['paired_t']?.openTarget, 'open:statistics?preset=statsPairedT');
       expect(byId['chi2_independence']?.openTarget,
