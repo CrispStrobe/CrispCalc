@@ -26,7 +26,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "513d903"   # precision-bessel — besselj/bessely (MPFR)
+      ref: "4da2379"   # bridge main post bessel merge — besselj/bessely (MPFR)
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine
