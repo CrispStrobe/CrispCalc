@@ -1,6 +1,19 @@
 # CrispCalc — handover for the next session
 
-## Latest: 2026-05-29 (cont.) — Precision arc Group A complete (Round 4 + 5)
+## Latest: 2026-05-29 (cont.) — Group B started: continued fractions
+
+`cfrac(x, n)` / `convergent(x, k)` shipped — the first **Group B** item,
+**pure-Dart** (exact BigInt over the existing MPFR precision strings, no
+new wrapper, single repo, all on `main`). `cfrac(pi, 10)` →
+`[3; 7, 15, 1, 292, 1, 1, 1, 2, 1]`; `convergent(pi, 3)` → `355/113`.
+Full UI surfacing (keypad + FunctionReference DE/FR/ES + worked
+example). **2418 tests.** Group B remaining: polynomial arithmetic,
+Bessel/zeta/theta, arbitrary-precision complex (each a 3-repo wrapper
+arc except where pure-Dart suffices).
+
+---
+
+## Precision arc Group A complete (Round 4 + 5)
 
 Closed out the precision/number-theory arc's **Group A**. Round 4 added
 the last four native functions — `modpow` / `modinv` / `totient` /
@@ -42,8 +55,8 @@ merged to `master`/`main`. Round-5 (UI-only, CrispCalc) went on `main`.
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | Precision arc Group A complete (Round 4 + 5 ntheory) on top of R130 + R100 + R105b; **v0.4.1 released** (all 5 artifacts) |
-| **Tests** | **2387 pass** (2317 → 2334 R4 → 2387 R5 i18n); 1 pre-existing notepad full-suite flake |
+| **main HEAD** | Precision Group A (Round 4 + 5) + Group B continued fractions, on top of R130 + R100 + R105b; **v0.4.1 released** |
+| **Tests** | **2418 pass** (2317 → 2334 R4 → 2387 R5 → 2418 cfrac); 1 pre-existing notepad full-suite flake |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
 | **bridge pin** | **`ce8af30`** (bridge main, post round-4 merge — modpow/modinv/totient/jacobi) — was `535ce5d` pre-session |
 | **bridge main HEAD** | `ce8af30` (round-4 `precision-round4-modular` merged) |

@@ -734,6 +734,15 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('jacobi()', cursorOffsetFromEnd: -1);
         break;
 
+      // Group B (precision arc): continued fractions.
+      case 'cfrac':
+        _latexController.insert('cfrac()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'convergent':
+        _latexController.insert('convergent()', cursorOffsetFromEnd: -1);
+        break;
+
       case 'mod':
         _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;

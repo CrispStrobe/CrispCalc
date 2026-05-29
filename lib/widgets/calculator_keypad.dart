@@ -53,6 +53,8 @@ const Map<String, String> _kAdvKeyHelpRefId = {
   'modpow': 'modpow',
   'modinv': 'modinv',
   'jacobi': 'jacobi',
+  'cfrac': 'cfrac',
+  'convergent': 'convergent',
 };
 
 /// Round 102b (P6): per-glyph → FunctionRef.id mapping for the CAS
@@ -233,6 +235,9 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'modpow',
     'modinv',
     'jacobi',
+    // Group B (precision arc): continued fractions.
+    'cfrac',
+    'convergent',
     // Round 112 (P7): relational + logical operators. Inserts the
     // ASCII form with surrounding spaces so the round-110 / 111
     // preprocessor can lower them into SymEngine's Eq/Lt/.../

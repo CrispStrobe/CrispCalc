@@ -341,6 +341,165 @@ class CalculatorEngine {
     return divs;
   }
 
+  // ===== Continued fractions (precision arc, Group B) =====================
+  //
+  // Pure-Dart, exact BigInt arithmetic. Irrational constants reuse the
+  // round-85/86 MPFR precision strings; everything else is an exact
+  // rational, so the whole feature runs headlessly (no FFI-runtime
+  // dependency beyond the constant getters, which already fall back to
+  // double precision when the bridge is absent).
+
+  /// Continued-fraction expansion of [arg]: the first [terms] partial
+  /// quotients rendered as `[a₀; a₁, a₂, …]`. [arg] is one of the named
+  /// irrational constants (`pi`, `e`, `EulerGamma`, `sqrt(2)`), an
+  /// integer, a rational `p/q`, or a decimal literal. For an irrational
+  /// constant the expansion comes from a high-precision approximation
+  /// (≈ 4·terms + 40 guard digits) so the requested terms are reliable;
+  /// an exact rational yields its finite expansion, which may be shorter
+  /// than [terms]. Returns an `Error: …` string for an unsupported
+  /// argument or an out-of-range count.
+  String cfrac(String arg, int terms) {
+    if (terms < 1 || terms > 100) {
+      return 'Error: cfrac term count must be in 1..100';
+    }
+    final r = _resolveToRational(arg.trim(), terms * 4 + 40);
+    if (r == null) {
+      return 'Error: cfrac argument must be pi, e, EulerGamma, sqrt(2), '
+          'an integer, a rational p/q, or a decimal';
+    }
+    return _formatContinuedFraction(
+        continuedFractionOfRational(r.numerator, r.denominator, terms));
+  }
+
+  /// The k-th convergent (a rational `p/q`) of [arg]'s continued
+  /// fraction. `convergent(x, 0)` is `⌊x⌋ / 1`. Argument forms are the
+  /// same as [cfrac].
+  String convergent(String arg, int k) {
+    if (k < 0 || k > 100) {
+      return 'Error: convergent index must be in 0..100';
+    }
+    final r = _resolveToRational(arg.trim(), (k + 1) * 4 + 40);
+    if (r == null) {
+      return 'Error: convergent argument must be pi, e, EulerGamma, '
+          'sqrt(2), an integer, a rational p/q, or a decimal';
+    }
+    final c = convergentFromTerms(
+        continuedFractionOfRational(r.numerator, r.denominator, k + 1));
+    return c.denominator == BigInt.one
+        ? '${c.numerator}'
+        : '${c.numerator}/${c.denominator}';
+  }
+
+  /// Resolve a cfrac/convergent argument to an exact rational. For the
+  /// irrational constants [guardDigits] sets the MPFR precision of the
+  /// decimal approximation that is then read back as a rational. Returns
+  /// null for an unrecognised form.
+  ({BigInt numerator, BigInt denominator})? _resolveToRational(
+      String arg, int guardDigits) {
+    if (RegExp(r'^-?\d+$').hasMatch(arg)) {
+      return (numerator: BigInt.parse(arg), denominator: BigInt.one);
+    }
+    final frac = RegExp(r'^(-?\d+)\s*/\s*(-?\d+)$').firstMatch(arg);
+    if (frac != null) {
+      final q = BigInt.parse(frac.group(2)!);
+      if (q == BigInt.zero) return null;
+      return (numerator: BigInt.parse(frac.group(1)!), denominator: q);
+    }
+    if (RegExp(r'^-?\d+\.\d+$').hasMatch(arg)) {
+      return _decimalStringToRational(arg);
+    }
+    String? dec;
+    if (arg == 'pi') {
+      dec = getPiWithPrecision(guardDigits);
+    } else if (arg == 'e') {
+      dec = getEWithPrecision(guardDigits);
+    } else if (arg == 'EulerGamma') {
+      dec = getEulerGammaWithPrecision(guardDigits);
+    } else if (RegExp(r'^sqrt\(\s*2\s*\)$').hasMatch(arg)) {
+      dec = getSqrt2WithPrecision(guardDigits);
+    }
+    if (dec == null) return null;
+    return _decimalStringToRational(dec);
+  }
+
+  static ({BigInt numerator, BigInt denominator})? _decimalStringToRational(
+      String s) {
+    final neg = s.startsWith('-');
+    final body = neg ? s.substring(1) : s;
+    final dot = body.indexOf('.');
+    if (dot < 0) {
+      final v = BigInt.tryParse(body);
+      return v == null
+          ? null
+          : (numerator: neg ? -v : v, denominator: BigInt.one);
+    }
+    final digits = BigInt.tryParse(body.replaceFirst('.', ''));
+    if (digits == null) return null;
+    final den = BigInt.from(10).pow(body.length - dot - 1);
+    return (numerator: neg ? -digits : digits, denominator: den);
+  }
+
+  /// Pure-Dart continued-fraction expansion of `num / den` (den ≠ 0).
+  /// Returns up to [maxTerms] partial quotients `[a₀, a₁, …]`; a
+  /// terminating rational yields its exact (possibly shorter)
+  /// expansion. Uses floor division so every quotient after `a₀` is
+  /// positive. Split out for headless unit testing.
+  static List<BigInt> continuedFractionOfRational(
+      BigInt numerator, BigInt denominator, int maxTerms) {
+    if (denominator == BigInt.zero) {
+      throw ArgumentError('continued fraction needs a non-zero denominator');
+    }
+    var a = numerator;
+    var b = denominator;
+    if (b < BigInt.zero) {
+      a = -a;
+      b = -b;
+    }
+    final out = <BigInt>[];
+    for (var i = 0; i < maxTerms && b != BigInt.zero; i++) {
+      var q = a ~/ b;
+      var r = a - q * b;
+      if (r < BigInt.zero) {
+        q -= BigInt.one;
+        r += b;
+      }
+      out.add(q);
+      a = b;
+      b = r;
+    }
+    return out;
+  }
+
+  /// Fold continued-fraction partial quotients into their final
+  /// convergent `p/q` (already in lowest terms by construction). Empty
+  /// input is treated as `0/1`. The denominator is normalised positive.
+  static ({BigInt numerator, BigInt denominator}) convergentFromTerms(
+      List<BigInt> terms) {
+    if (terms.isEmpty) {
+      return (numerator: BigInt.zero, denominator: BigInt.one);
+    }
+    var hPrev = BigInt.one, hPrev2 = BigInt.zero; // numerators p
+    var kPrev = BigInt.zero, kPrev2 = BigInt.one; // denominators q
+    for (final t in terms) {
+      final h = t * hPrev + hPrev2;
+      final k = t * kPrev + kPrev2;
+      hPrev2 = hPrev;
+      hPrev = h;
+      kPrev2 = kPrev;
+      kPrev = k;
+    }
+    if (kPrev < BigInt.zero) {
+      return (numerator: -hPrev, denominator: -kPrev);
+    }
+    return (numerator: hPrev, denominator: kPrev);
+  }
+
+  static String _formatContinuedFraction(List<BigInt> cf) {
+    if (cf.isEmpty) return '[]';
+    if (cf.length == 1) return '[${cf.first}]';
+    return '[${cf.first}; ${cf.skip(1).join(', ')}]';
+  }
+
   /// Round 91 (P6): top-level pre-pass that intercepts precision-arc
   /// calls before SymEngine sees them. Returns the result string when
   /// [input] is a recognized standalone precision-arc call, or null
@@ -363,6 +522,10 @@ class CalculatorEngine {
   ///   divisors(n)                  → comma-separated divisor list
   ///                                   (round 4, pure-Dart from
   ///                                   factorint).
+  ///   cfrac(x, n)                  → continued fraction `[a₀; a₁, …]`
+  ///                                   (Group B, pure-Dart).
+  ///   convergent(x, k)             → k-th rational convergent p/q
+  ///                                   (Group B, pure-Dart).
   ///
   /// Only matches when the call is the **entire** input (after
   /// trimming whitespace). In-expression calls like `pi(50) + 1` are
@@ -473,6 +636,25 @@ class CalculatorEngine {
       } catch (e) {
         return 'Error: divisors failed: $e';
       }
+    }
+
+    // Group B: cfrac(x, n) — continued-fraction expansion. The first
+    // argument is captured loosely (constant name / rational / decimal)
+    // and validated inside [cfrac].
+    m = RegExp(r'^cfrac\s*\(\s*(.+?)\s*,\s*(\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      final n = int.tryParse(m.group(2)!);
+      if (n == null) return 'Error: cfrac term count must be in 1..100';
+      return cfrac(m.group(1)!, n);
+    }
+
+    // Group B: convergent(x, k) — the k-th rational convergent.
+    m = RegExp(r'^convergent\s*\(\s*(.+?)\s*,\s*(\d+)\s*\)$')
+        .firstMatch(trimmed);
+    if (m != null) {
+      final k = int.tryParse(m.group(2)!);
+      if (k == null) return 'Error: convergent index must be in 0..100';
+      return convergent(m.group(1)!, k);
     }
 
     return null;

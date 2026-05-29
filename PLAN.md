@@ -1320,12 +1320,15 @@ Group B (V2 — more specialized, ship after Group A lands):
   represent polynomial-with-modulus and the bindings. Audience:
   abstract algebra students, undergrad cryptography homework.
 
-- [ ] **Continued fractions** (GMP + MPFR). `cfrac(x, n)` returns
-  the first n terms of the continued-fraction expansion as a list;
-  `convergent(x, k)` returns the k-th rational convergent
-  `Fraction(p, q)`. Tiny — n iterations of `floor` + `frac` against
-  an MPFR mantissa. `cfrac(pi, 10)` → `[3; 7, 15, 1, 292, 1, 1, 1,
-  2, 1]` is the kind of thing that should "just work" in a CAS.
+- [x] ~~**Continued fractions** (GMP + MPFR).~~ **SHIPPED 2026-05-29**
+  (first Group B item). `cfrac(x, n)` → `[a₀; a₁, …]`;
+  `convergent(x, k)` → the k-th rational `p/q`. `x` may be
+  `pi`/`e`/`EulerGamma`/`sqrt(2)`, a rational `p/q`, or a decimal.
+  Implemented **pure-Dart** with exact BigInt arithmetic over the
+  round-85/86 MPFR precision strings (no new wrapper), so it runs
+  headlessly. `cfrac(pi, 10)` → `[3; 7, 15, 1, 292, 1, 1, 1, 2, 1]`;
+  `convergent(pi, 3)` → `355/113`. Full UI surfacing (keypad +
+  FunctionReference + DE/FR/ES i18n + worked-example).
 
 - [ ] **Bessel / zeta / theta special functions** (MPFR). Plottable
   on the graphing screen: `BesselJ(n, x)`, `BesselY(n, x)`,

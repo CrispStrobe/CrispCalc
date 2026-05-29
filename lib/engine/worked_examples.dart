@@ -227,6 +227,14 @@ class WorkedExamples {
           'Diffie–Hellman.',
       expression: 'modpow(2, 100, 1000000007)',
     ),
+    WorkedExample(
+      id: 'contFracPi',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Continued fraction of π',
+      description: 'cfrac(pi, 10) — the [3; 7, 15, 1, 292, …] expansion '
+          'behind 355/113.',
+      expression: 'cfrac(pi, 10)',
+    ),
 
     // === P7 Booleans (Round 112) ============================================
     // Surfaces the relational + logical operator rewrite shipped in

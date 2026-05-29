@@ -2,6 +2,35 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Precision arc Group B begins: continued fractions
+
+`cfrac(x, n)` and `convergent(x, k)` — the first **Group B** item.
+`cfrac(x, n)` returns the continued-fraction expansion `[a₀; a₁, …]` to
+`n` terms; `convergent(x, k)` returns the k-th rational convergent
+`p/q`. `x` accepts the named irrationals (`pi` / `e` / `EulerGamma` /
+`sqrt(2)`), a rational `p/q`, or a decimal literal.
+
+**Implemented pure-Dart** with exact `BigInt` arithmetic — no new native
+wrapper. For irrational constants the expansion runs over the existing
+round-85/86 MPFR precision strings (≈ 4·n + 40 guard digits, so the
+requested terms are reliable); for an exact rational it is the Euclidean
+algorithm recording its quotients, terminating naturally. Because it
+needs no FFI beyond the (already-fallback-safe) constant getters, the
+whole feature is headless-testable — no skip gates on the core math.
+
+`lib/engine/calculator_engine.dart` gains `cfrac` / `convergent` plus
+the testable static helpers `continuedFractionOfRational` (floor
+division, non-negative remainders) and `convergentFromTerms` (the
+h/k recurrence). `tryEvaluatePrecisionCall` dispatches both.
+`cfrac(pi, 10)` → `[3; 7, 15, 1, 292, 1, 1, 1, 2, 1]`;
+`convergent(pi, 3)` → `355/113` (Milü). Full UI surfacing: Adv-keypad
+buttons, FunctionReference entries with DE/FR/ES i18n, and the
+`contFracPi` worked example. Full suite **2418 pass** / 1 skip (the
+pre-existing notepad full-suite flake).
+
+Group B remaining: polynomial arithmetic, Bessel/zeta/theta,
+arbitrary-precision complex.
+
 ## 2026-05-29 — Precision arc Round 4: modular arithmetic + totient + jacobi + divisors
 
 Closed out the precision/number-theory arc's Group A (see

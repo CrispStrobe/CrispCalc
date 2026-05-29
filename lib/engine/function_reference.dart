@@ -735,6 +735,57 @@ class FunctionReferences {
       ],
       seeAlso: ['isprime', 'modpow', 'gcd'],
     ),
+    FunctionRef(
+      id: 'cfrac',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'cfrac(x, n)',
+      shortDescription:
+          'Continued-fraction expansion `[a₀; a₁, …]` of `x` to `n` terms. '
+          '`x` may be `pi` / `e` / `EulerGamma` / `sqrt(2)`, a rational '
+          '`p/q`, or a decimal.',
+      examples: [
+        FunctionRefExample(
+          input: 'cfrac(pi, 10)',
+          expected: '[3; 7, 15, 1, 292, 1, 1, 1, 2, 1]',
+          hint: 'In CrispCalc, `cfrac` runs an exact BigInt expansion over a '
+              'high-precision MPFR approximation of the constant. The large '
+              'term 292 is precisely why the convergent 355/113 is such a '
+              'remarkable approximation of π.',
+        ),
+        FunctionRefExample(
+          input: 'cfrac(415/93, 4)',
+          expected: '[4; 2, 6, 7]',
+          hint: 'For an exact rational the expansion is finite — this is just '
+              "Euclid's algorithm recording its quotients.",
+        ),
+      ],
+      seeAlso: ['convergent', 'pi_precision', 'gcd'],
+      workedExampleId: 'contFracPi',
+    ),
+    FunctionRef(
+      id: 'convergent',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'convergent(x, k)',
+      shortDescription:
+          'The k-th convergent `p/q` of `x`’s continued fraction — a '
+          'best rational approximation for its denominator size.',
+      examples: [
+        FunctionRefExample(
+          input: 'convergent(pi, 3)',
+          expected: '355/113',
+          hint: 'Milü — Zu Chongzhi’s 5th-century approximation of π, correct '
+              'to six decimal places. CrispCalc folds the first k+1 partial '
+              'quotients of `cfrac` into the rational.',
+        ),
+        FunctionRefExample(
+          input: 'convergent(pi, 1)',
+          expected: '22/7',
+          hint: 'The schoolbook approximation of π; `convergent(x, 0)` is the '
+              'integer part ⌊x⌋.',
+        ),
+      ],
+      seeAlso: ['cfrac', 'pi_precision'],
+    ),
     // === Precision arc =======================================================
     FunctionRef(
       id: 'pi_precision',

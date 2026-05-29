@@ -3562,6 +3562,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Eulersche φ-Funktion';
       case 'modpowCrypto':
         return 'Modulare Exponentiation';
+      case 'contFracPi':
+        return 'Kettenbruch von π';
       case 'booleanIsprimeAnd':
         return 'Primzahl und beschränkt';
       case 'booleanEqualityFold':
@@ -3659,6 +3661,9 @@ class DeLocalizations implements AppLocalizations {
         return 'totient(36) — Anzahl der zu 36 teilerfremden Reste.';
       case 'modpowCrypto':
         return 'modpow(2, 100, 1000000007) — Kern von RSA / Diffie-Hellman.';
+      case 'contFracPi':
+        return 'cfrac(pi, 10) — die Entwicklung [3; 7, 15, 1, 292, …] '
+            'hinter 355/113.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) und 17 < 20 — beide Teile wahr, also ist die '
             'Konjunktion wahr.';
@@ -3754,6 +3759,13 @@ class DeLocalizations implements AppLocalizations {
       case 'jacobi':
         return 'Jacobi-Symbol (a/n) ∈ {−1, 0, 1} für ungerades positives `n`; '
             'verallgemeinert das Legendre-Symbol.';
+      case 'cfrac':
+        return 'Kettenbruchentwicklung `[a₀; a₁, …]` von `x` mit `n` Gliedern. '
+            '`x` kann `pi` / `e` / `EulerGamma` / `sqrt(2)`, eine rationale '
+            'Zahl `p/q` oder eine Dezimalzahl sein.';
+      case 'convergent':
+        return 'Der k-te Näherungsbruch `p/q` des Kettenbruchs von `x` — eine '
+            'beste rationale Näherung für seine Nennergröße.';
       // --- Hochpräzision ---
       case 'pi_precision':
         return 'π auf N Dezimalstellen über MPFR; gibt die reine Ziffernfolge '
@@ -4075,6 +4087,22 @@ class DeLocalizations implements AppLocalizations {
             'modulo 7 (denn 3² ≡ 2). Über GMPs `mpz_jacobi`.',
         'Das Symbol ist genau dann 0, wenn ggT(a, n) ≠ 1; hier ist '
             'ggT(6, 9) = 3.',
+      ],
+      'cfrac': [
+        'In CrispCalc führt `cfrac` eine exakte BigInt-Entwicklung über eine '
+            'hochpräzise MPFR-Näherung der Konstante aus. Das große Glied 292 '
+            'ist genau der Grund, warum der Näherungsbruch 355/113 π so '
+            'bemerkenswert gut annähert.',
+        'Für eine exakte rationale Zahl ist die Entwicklung endlich — das ist '
+            'nichts anderes als der euklidische Algorithmus, der seine '
+            'Quotienten protokolliert.',
+      ],
+      'convergent': [
+        'Milü — die Näherung von π durch Zu Chongzhi (5. Jahrhundert), auf '
+            'sechs Dezimalstellen genau. CrispCalc faltet die ersten k+1 '
+            'Teilquotienten von `cfrac` zum Bruch zusammen.',
+        'Die Schulbuch-Näherung von π; `convergent(x, 0)` ist der ganzzahlige '
+            'Anteil ⌊x⌋.',
       ],
       // --- Hochpräzision ---
       'pi_precision': [
@@ -6025,6 +6053,8 @@ class FrLocalizations implements AppLocalizations {
         return "Indicatrice d'Euler";
       case 'modpowCrypto':
         return 'Exponentiation modulaire';
+      case 'contFracPi':
+        return 'Fraction continue de π';
       case 'booleanIsprimeAnd':
         return 'Premier et borné';
       case 'booleanEqualityFold':
@@ -6123,6 +6153,9 @@ class FrLocalizations implements AppLocalizations {
       case 'modpowCrypto':
         return 'modpow(2, 100, 1000000007) — le cœur de RSA / '
             'Diffie-Hellman.';
+      case 'contFracPi':
+        return 'cfrac(pi, 10) — le développement [3; 7, 15, 1, 292, …] '
+            'derrière 355/113.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) et 17 < 20 — les deux clauses sont vraies, '
             'donc la conjonction est vraie.';
@@ -6221,6 +6254,14 @@ class FrLocalizations implements AppLocalizations {
       case 'jacobi':
         return "Symbole de Jacobi (a/n) ∈ {−1, 0, 1} pour `n` impair positif ; "
             "généralise le symbole de Legendre.";
+      case 'cfrac':
+        return "Développement en fraction continue `[a₀; a₁, …]` de `x` sur "
+            "`n` termes. `x` peut être `pi` / `e` / `EulerGamma` / "
+            "`sqrt(2)`, un rationnel `p/q` ou un décimal.";
+      case 'convergent':
+        return "La k-ième réduite `p/q` de la fraction continue de `x` — une "
+            "meilleure approximation rationnelle pour la taille de son "
+            "dénominateur.";
       case 'pi_precision':
         return "π avec N décimales via MPFR ; renvoie la chaîne de chiffres "
             "brute.";
@@ -6541,6 +6582,21 @@ class FrLocalizations implements AppLocalizations {
           "(car 3² ≡ 2). Via `mpz_jacobi` de GMP.",
       "Le symbole vaut 0 exactement lorsque pgcd(a, n) ≠ 1 ; ici "
           "pgcd(6, 9) = 3.",
+    ],
+    'cfrac': [
+      "Dans CrispCalc, `cfrac` effectue un développement exact en BigInt sur "
+          "une approximation MPFR haute précision de la constante. Le grand "
+          "terme 292 est précisément pourquoi la réduite 355/113 approche π "
+          "de façon si remarquable.",
+      "Pour un rationnel exact, le développement est fini — ce n'est que "
+          "l'algorithme d'Euclide consignant ses quotients.",
+    ],
+    'convergent': [
+      "Milü — l'approximation de π par Zu Chongzhi (Ve siècle), exacte à six "
+          "décimales. CrispCalc replie les k+1 premiers quotients partiels de "
+          "`cfrac` en une fraction.",
+      "L'approximation scolaire de π ; `convergent(x, 0)` est la partie "
+          "entière ⌊x⌋.",
     ],
     'pi_precision': [
       "Dans CrispCalc, `pi(N)` est un appel traité à part, dirigé vers le "
@@ -8474,6 +8530,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Función φ de Euler';
       case 'modpowCrypto':
         return 'Exponenciación modular';
+      case 'contFracPi':
+        return 'Fracción continua de π';
       case 'booleanIsprimeAnd':
         return 'Primo y acotado';
       case 'booleanEqualityFold':
@@ -8572,6 +8630,9 @@ class EsLocalizations implements AppLocalizations {
       case 'modpowCrypto':
         return 'modpow(2, 100, 1000000007) — el núcleo de RSA / '
             'Diffie-Hellman.';
+      case 'contFracPi':
+        return 'cfrac(pi, 10) — el desarrollo [3; 7, 15, 1, 292, …] '
+            'detrás de 355/113.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) y 17 < 20 — ambas cláusulas son verdaderas, '
             'así que la conjunción es verdadera.';
@@ -8664,6 +8725,14 @@ class EsLocalizations implements AppLocalizations {
       case 'jacobi':
         return "Símbolo de Jacobi (a/n) ∈ {−1, 0, 1} para `n` impar positivo; "
             "generaliza el símbolo de Legendre.";
+      case 'cfrac':
+        return "Desarrollo en fracción continua `[a₀; a₁, …]` de `x` con `n` "
+            "términos. `x` puede ser `pi` / `e` / `EulerGamma` / `sqrt(2)`, "
+            "un racional `p/q` o un decimal.";
+      case 'convergent':
+        return "El k-ésimo convergente `p/q` de la fracción continua de `x` — "
+            "una mejor aproximación racional para el tamaño de su "
+            "denominador.";
       case 'pi_precision':
         return "π con N cifras decimales mediante MPFR; devuelve la cadena "
             "de dígitos en bruto.";
@@ -8980,6 +9049,21 @@ class EsLocalizations implements AppLocalizations {
           "Legendre — aquí 2 es un residuo cuadrático módulo 7 (pues 3² ≡ 2). "
           "Mediante `mpz_jacobi` de GMP.",
       "El símbolo es 0 exactamente cuando mcd(a, n) ≠ 1; aquí mcd(6, 9) = 3.",
+    ],
+    'cfrac': [
+      "En CrispCalc, `cfrac` realiza un desarrollo exacto en BigInt sobre una "
+          "aproximación MPFR de alta precisión de la constante. El término "
+          "grande 292 es justamente por qué el convergente 355/113 aproxima "
+          "π de forma tan notable.",
+      "Para un racional exacto el desarrollo es finito — no es más que el "
+          "algoritmo de Euclides registrando sus cocientes.",
+    ],
+    'convergent': [
+      "Milü — la aproximación de π de Zu Chongzhi (siglo V), exacta hasta "
+          "seis decimales. CrispCalc pliega los primeros k+1 cocientes "
+          "parciales de `cfrac` en la fracción.",
+      "La aproximación escolar de π; `convergent(x, 0)` es la parte entera "
+          "⌊x⌋.",
     ],
     'pi_precision': [
       "En CrispCalc, `pi(N)` es una llamada con tratamiento especial, "

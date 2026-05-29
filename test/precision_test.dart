@@ -346,11 +346,93 @@ void main() {
     });
   });
 
+  // Group B (precision arc): continued fractions. The pure-Dart core
+  // (BigInt expansion + convergent folding) runs headlessly; the
+  // constant-backed dispatch tests gate on the bridge for full
+  // precision but the fallback double still yields the leading terms.
+  group('CalculatorEngine continued fractions (Group B, pure-Dart)', () {
+    BigInt b(int v) => BigInt.from(v);
+
+    test('rational 415/93 → [4, 2, 6, 7]', () {
+      expect(CalculatorEngine.continuedFractionOfRational(b(415), b(93), 10),
+          equals([b(4), b(2), b(6), b(7)]));
+    });
+
+    test('rational 43/19 → [2, 3, 1, 4]', () {
+      expect(CalculatorEngine.continuedFractionOfRational(b(43), b(19), 10),
+          equals([b(2), b(3), b(1), b(4)]));
+    });
+
+    test('terminating rational stops early (maxTerms not reached)', () {
+      // 415/93 has exactly 4 partial quotients.
+      expect(CalculatorEngine.continuedFractionOfRational(b(415), b(93), 50),
+          hasLength(4));
+    });
+
+    test('integer → single term', () {
+      expect(CalculatorEngine.continuedFractionOfRational(b(7), b(1), 5),
+          equals([b(7)]));
+    });
+
+    test('negative value floors a₀ and keeps later terms positive', () {
+      // -415/93 = [-5; 1, 1, 6, 7]  (a₀ = floor(-4.46…) = -5).
+      final cf =
+          CalculatorEngine.continuedFractionOfRational(b(-415), b(93), 10);
+      expect(cf.first, b(-5));
+      expect(cf.skip(1).every((t) => t > BigInt.zero), isTrue);
+    });
+
+    test('convergentFromTerms folds [4,2,6,7] → 415/93', () {
+      final c = CalculatorEngine.convergentFromTerms([b(4), b(2), b(6), b(7)]);
+      expect(c.numerator, b(415));
+      expect(c.denominator, b(93));
+    });
+
+    test('convergentFromTerms of pi terms gives 22/7 then 355/113', () {
+      final c1 = CalculatorEngine.convergentFromTerms([b(3), b(7)]);
+      expect((c1.numerator, c1.denominator), (b(22), b(7)));
+      final c2 =
+          CalculatorEngine.convergentFromTerms([b(3), b(7), b(15), b(1)]);
+      expect((c2.numerator, c2.denominator), (b(355), b(113)));
+    });
+
+    test('cfrac/convergent dispatch on an exact rational (no bridge)', () {
+      expect(engine.cfrac('415/93', 10), '[4; 2, 6, 7]');
+      expect(engine.convergent('415/93', 2), '58/13');
+      expect(engine.convergent('415/93', 3), '415/93');
+      expect(engine.cfrac('43/19', 4), '[2; 3, 1, 4]');
+    });
+
+    test('cfrac on a decimal literal', () {
+      // 3.245 = 649/200 = [3; 4, 12, 4].
+      expect(engine.cfrac('3.245', 6), '[3; 4, 12, 4]');
+    });
+
+    test('bad argument / range → Error string', () {
+      expect(engine.cfrac('1/0', 5), startsWith('Error'));
+      expect(engine.cfrac('hello', 5), startsWith('Error'));
+      expect(engine.cfrac('5', 0), startsWith('Error'));
+      expect(engine.convergent('5', -1), startsWith('Error'));
+    });
+
+    test('constants via the native bridge', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.cfrac('pi', 5), '[3; 7, 15, 1, 292]');
+      expect(engine.convergent('pi', 1), '22/7');
+      expect(engine.convergent('pi', 3), '355/113');
+      expect(engine.cfrac('sqrt(2)', 5), '[1; 2, 2, 2, 2]');
+    });
+  });
+
   // Round 4: dispatch through the top-level precision pre-pass.
   group('CalculatorEngine.tryEvaluatePrecisionCall (round 4 shapes)', () {
     test('non-bridge shapes resolve regardless of native availability', () {
       // divisors(1) needs no bridge.
       expect(engine.tryEvaluatePrecisionCall('divisors(1)'), '1');
+      // cfrac / convergent on an exact rational need no bridge.
+      expect(
+          engine.tryEvaluatePrecisionCall('cfrac(415/93, 10)'), '[4; 2, 6, 7]');
+      expect(engine.tryEvaluatePrecisionCall('convergent(415/93, 1)'), '9/2');
       // unrecognized input falls through to null.
       expect(engine.tryEvaluatePrecisionCall('2 + 2'), isNull);
     });
