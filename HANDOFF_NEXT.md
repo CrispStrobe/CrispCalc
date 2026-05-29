@@ -21,7 +21,7 @@ arc rule (see `memory/feedback_multi_repo_arc_worktree.md`).
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | R130 + R100 + R105b landed; CI green; no new GH Release cut yet — see open item |
+| **main HEAD** | R130 + R100 + R105b + Windows-loader-fix landed; **v0.4.1 released** (all 5 artifacts, 2026-05-29) |
 | **Tests** | **2137 pass** (1992 → 2129 via R100 DE-completeness; → 2137 via R105b popover tests) |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
 | **bridge pin** | **`535ce5d`** (bridge 1.2.1 — Linux `.so` + Windows loader fix) — was `931adcf` pre-session |
@@ -132,10 +132,12 @@ workflow comment. Each ABI is its own ~15-min build slot.
 - CSP Round E.5 — `dart_csp_fzn` CLI (blocked on P4).
 - P9 follow-ups (A5d / A7 / A8) — 3D Scene polish.
 
-### 5. **Consider cutting v0.4.1**
+### 5. **v0.4.1 — RELEASED (2026-05-29)**
 
-main carries the Linux binary + R100-DE but no GH Release has been
-cut. `release.yml` builds the per-platform artifacts; tag when ready.
+Tagged `v0.4.1`, all 5 artifacts published. Linux tarball grew
+13.2 → 19.9 MB (the bundled `.so`), confirming the R130 binary
+shipped. Next release picks up FR/ES i18n + any hardware-smoke-test
+fixes.
 
 ## Hygiene reminders
 
