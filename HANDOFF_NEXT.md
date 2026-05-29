@@ -8,17 +8,23 @@ single repo, all on `main`, headless-testable):
 1. `cfrac(x, n)` / `convergent(x, k)` — exact BigInt over the existing
    MPFR precision strings. `cfrac(pi, 10)` → `[3; 7, 15, 1, 292, …]`;
    `convergent(pi, 3)` → `355/113`.
-2. `polygcd` / `polyresultant` / `polydiscriminant` — new
+2. `polygcd` / `polyresultant` / `polydiscriminant` over ℚ — new
    `lib/engine/polynomial.dart` (exact `Rational`/BigInt, univariate
    parser, Euclidean GCD, Sylvester-determinant resultant,
-   discriminant). Cross-checked against SymPy.
+   discriminant).
+3. `polyfactor(p, mod=k)` over 𝔽ₖ — new
+   `lib/engine/polynomial_mod.dart` (square-free factorisation +
+   Berlekamp). Completes polynomial arithmetic over Z, Q, F_p.
 
-Both fully surfaced (keypad + FunctionReference DE/FR/ES + worked
-examples). **2465 tests.** Group B remaining: `polyfactor` over F_p
-(Berlekamp), Bessel/zeta/theta (MPFR, 3-repo wrapper arc),
-arbitrary-precision complex (MPC). The pattern to note: **reach for
-pure-Dart-over-existing-precision-strings before a FLINT wrapper** —
-two Group B items landed with zero native work.
+All cross-checked against SymPy and fully surfaced (keypad +
+FunctionReference DE/FR/ES + worked examples). **2484 tests.** Group B
+remaining: **Bessel/zeta/theta** (MPFR — a genuine 3-repo wrapper arc:
+cwrapper already exposes `basic_zeta`/`basic_erf`/`basic_gamma`/
+`basic_lambertw`/`basic_beta`/`basic_polygamma`, but Bessel needs new
+C++ wrapper functions + graphing wiring) and **arbitrary-precision
+complex** (MPC). The pattern to note: **three Group B items landed with
+zero native work** by reaching for pure-Dart before a FLINT/MPFR
+wrapper — only the special-functions arc genuinely needs the bridge.
 
 ---
 
@@ -65,7 +71,7 @@ merged to `master`/`main`. Round-5 (UI-only, CrispCalc) went on `main`.
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **main HEAD** | Precision Group A (Round 4 + 5) + Group B continued fractions, on top of R130 + R100 + R105b; **v0.4.1 released** |
-| **Tests** | **2465 pass** (2317 → 2334 R4 → 2387 R5 → 2418 cfrac → 2465 poly); 1 pre-existing notepad full-suite flake |
+| **Tests** | **2484 pass** (2317 → 2334 R4 → 2387 R5 → 2418 cfrac → 2465 poly → 2484 polyfactor); 1 pre-existing notepad full-suite flake |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
 | **bridge pin** | **`ce8af30`** (bridge main, post round-4 merge — modpow/modinv/totient/jacobi) — was `535ce5d` pre-session |
 | **bridge main HEAD** | `ce8af30` (round-4 `precision-round4-modular` merged) |

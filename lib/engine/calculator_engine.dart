@@ -11,6 +11,7 @@ import 'package:symbolic_math_bridge/symbolic_math_bridge.dart';
 import 'matrix_evaluator.dart';
 import 'numerical.dart';
 import 'polynomial.dart';
+import 'polynomial_mod.dart';
 import 'unit_expression.dart';
 
 class CalculatorEngine {
@@ -548,6 +549,35 @@ class CalculatorEngine {
     return Polynomial.discriminant(a).toString();
   }
 
+  /// Group B: factor a univariate polynomial over F_[prime] (prime
+  /// modulus) into monic irreducibles. Pure-Dart (square-free
+  /// factorisation + Berlekamp). Factorisation over Q is the existing
+  /// [factor]; this is the modular case.
+  String polyfactor(String poly, int prime) {
+    final f = Polynomial.tryParse(poly);
+    if (f == null) {
+      return 'Error: polyfactor needs a univariate polynomial';
+    }
+    if (!_isProbablePrimeSmall(prime)) {
+      return 'Error: polyfactor modulus must be a prime';
+    }
+    final z = factorModP(f, prime);
+    if (z == null) {
+      return 'Error: polyfactor could not reduce the polynomial mod $prime '
+          '(a coefficient denominator is divisible by $prime)';
+    }
+    return formatModFactorization(z);
+  }
+
+  static bool _isProbablePrimeSmall(int n) {
+    if (n < 2) return false;
+    if (n % 2 == 0) return n == 2;
+    for (var i = 3; i * i <= n; i += 2) {
+      if (n % i == 0) return false;
+    }
+    return true;
+  }
+
   /// Round 91 (P6): top-level pre-pass that intercepts precision-arc
   /// calls before SymEngine sees them. Returns the result string when
   /// [input] is a recognized standalone precision-arc call, or null
@@ -578,6 +608,8 @@ class CalculatorEngine {
   ///                                   (Group B, pure-Dart).
   ///   polyresultant(p, q)          → resultant Res(p, q) (Group B).
   ///   polydiscriminant(p)          → discriminant of p (Group B).
+  ///   polyfactor(p, mod=k)         → factor p over F_k (Group B,
+  ///                                   pure-Dart Berlekamp).
   ///
   /// Only matches when the call is the **entire** input (after
   /// trimming whitespace). In-expression calls like `pi(50) + 1` are
@@ -722,6 +754,15 @@ class CalculatorEngine {
     m = RegExp(r'^polydiscriminant\s*\(\s*(.+?)\s*\)$').firstMatch(trimmed);
     if (m != null) {
       return polydiscriminant(m.group(1)!);
+    }
+
+    // Group B: polyfactor(p, mod=k) / polyfactor(p, k) — factor over F_k.
+    m = RegExp(r'^polyfactor\s*\(\s*(.+?)\s*,\s*(?:mod\s*=\s*)?(\d+)\s*\)$')
+        .firstMatch(trimmed);
+    if (m != null) {
+      final prime = int.tryParse(m.group(2)!);
+      if (prime == null) return 'Error: polyfactor modulus must be an integer';
+      return polyfactor(m.group(1)!, prime);
     }
 
     return null;

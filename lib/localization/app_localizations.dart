@@ -3536,6 +3536,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Polynom-ggT';
       case 'polyDiscriminantCubic':
         return 'Polynom-Diskriminante';
+      case 'polyFactorMod':
+        return 'Faktorisierung modulo p';
       case 'matrixDet':
         return 'Determinante einer Matrix';
       case 'matrixInverse':
@@ -3638,6 +3640,9 @@ class DeLocalizations implements AppLocalizations {
       case 'polyDiscriminantCubic':
         return 'polydiscriminant(x³ − 2) — ungleich null ⇒ verschiedene '
             'Nullstellen.';
+      case 'polyFactorMod':
+        return 'polyfactor(x⁴ + 1, mod=2) — über ℚ irreduzibel, '
+            '(x + 1)⁴ über 𝔽₂.';
       case 'matrixDet':
         return 'det einer 3×3 — Laplace-Entwicklung oder Zeilen­reduktion.';
       case 'matrixInverse':
@@ -3746,6 +3751,10 @@ class DeLocalizations implements AppLocalizations {
       case 'polydiscriminant':
         return 'Diskriminante eines univariaten Polynoms (Grad ≥ 1) — genau '
             'dann null, wenn `p` eine mehrfache Nullstelle besitzt.';
+      case 'polyfactor':
+        return 'Faktorisiert ein univariates Polynom über dem endlichen '
+            'Körper 𝔽ₖ (k prim) in normierte irreduzible Faktoren. Für die '
+            'Faktorisierung über ℚ dient `factor`.';
       case 'factorial':
         return 'Exakte ganzzahlige Fakultät. Kleine `n` nutzen Darts '
             '`BigInt`; große `n` werden an SymEngine übergeben.';
@@ -4026,6 +4035,17 @@ class DeLocalizations implements AppLocalizations {
             '1. CrispCalc verwendet `(−1)^(n(n−1)/2)·Res(p, p′)/aₙ`.',
         '`(x − 2)²` hat eine doppelte Nullstelle, daher ist die Diskriminante '
             '0.',
+      ],
+      'polyfactor': [
+        'In CrispCalc reduziert `polyfactor` das Polynom modulo k, führt eine '
+            'quadratfreie Zerlegung und anschließend Berlekamps Algorithmus '
+            'aus (reines Dart). Koeffizienten erscheinen als Reste in [0, k), '
+            'daher steht `x − 1` modulo 5 als `x + 4`.',
+        '`x⁴ + 1` ist über ℚ irreduzibel, modulo 2 jedoch eine reine '
+            '4. Potenz — die quadratfreie Zerlegung gewinnt die Vielfachheit '
+            'zurück.',
+        'Über 𝔽₂ irreduzibel — ein primitives Polynom zur Konstruktion von '
+            'GF(8). Ein einzelner Faktor wird unverändert zurückgegeben.',
       ],
       'factorial': [
         'In CrispCalc sind das Postfix `n!` und `factorial(n)` gleichwertig — '
@@ -6063,6 +6083,8 @@ class FrLocalizations implements AppLocalizations {
         return 'PGCD de polynômes';
       case 'polyDiscriminantCubic':
         return 'Discriminant d\'un polynôme';
+      case 'polyFactorMod':
+        return 'Factorisation modulo p';
       case 'matrixDet':
         return 'Déterminant d\'une matrice';
       case 'matrixInverse':
@@ -6164,6 +6186,9 @@ class FrLocalizations implements AppLocalizations {
         return 'polygcd(x² − 1, x² − 2x + 1) — le facteur commun x − 1.';
       case 'polyDiscriminantCubic':
         return 'polydiscriminant(x³ − 2) — non nul ⇒ racines distinctes.';
+      case 'polyFactorMod':
+        return 'polyfactor(x⁴ + 1, mod=2) — irréductible sur ℚ, '
+            '(x + 1)⁴ sur 𝔽₂.';
       case 'matrixDet':
         return 'det d\'une 3×3 — développement de Laplace ou réduction.';
       case 'matrixInverse':
@@ -6276,6 +6301,10 @@ class FrLocalizations implements AppLocalizations {
       case 'polydiscriminant':
         return "Discriminant d'un polynôme à une variable (degré ≥ 1) — nul "
             "exactement lorsque `p` a une racine multiple.";
+      case 'polyfactor':
+        return "Factorise un polynôme à une variable sur le corps fini 𝔽ₖ "
+            "(k premier) en facteurs irréductibles unitaires. Pour la "
+            "factorisation sur ℚ, utilisez `factor`.";
       case 'factorial':
         return "Factorielle entière exacte. Les petits `n` utilisent le "
             "`BigInt` de Dart ; les grands `n` sont confiés à SymEngine.";
@@ -6558,6 +6587,16 @@ class FrLocalizations implements AppLocalizations {
       "Pour `x² + bx + c`, le discriminant est `b² − 4c` — ici 25 − 24 = 1. "
           "CrispCalc utilise `(−1)^(n(n−1)/2)·Res(p, p′)/aₙ`.",
       "`(x − 2)²` a une racine double, donc le discriminant est 0.",
+    ],
+    'polyfactor': [
+      "Dans CrispCalc, `polyfactor` réduit le polynôme modulo k, effectue une "
+          "factorisation sans carré puis l'algorithme de Berlekamp (Dart "
+          "pur). Les coefficients s'affichent comme des restes dans [0, k), "
+          "donc `x − 1` apparaît comme `x + 4` modulo 5.",
+      "`x⁴ + 1` est irréductible sur ℚ mais devient une puissance 4ᵉ parfaite "
+          "modulo 2 — la factorisation sans carré récupère la multiplicité.",
+      "Irréductible sur 𝔽₂ — un polynôme primitif servant à construire "
+          "GF(8). Un facteur unique est renvoyé tel quel.",
     ],
     'factorial': [
       "Dans CrispCalc, le suffixe `n!` et `factorial(n)` sont équivalents — "
@@ -8574,6 +8613,8 @@ class EsLocalizations implements AppLocalizations {
         return 'MCD de polinomios';
       case 'polyDiscriminantCubic':
         return 'Discriminante de un polinomio';
+      case 'polyFactorMod':
+        return 'Factorización módulo p';
       case 'matrixDet':
         return 'Determinante de una matriz';
       case 'matrixInverse':
@@ -8676,6 +8717,9 @@ class EsLocalizations implements AppLocalizations {
       case 'polyDiscriminantCubic':
         return 'polydiscriminant(x³ − 2) — distinto de cero ⇒ raíces '
             'distintas.';
+      case 'polyFactorMod':
+        return 'polyfactor(x⁴ + 1, mod=2) — irreducible sobre ℚ, '
+            '(x + 1)⁴ sobre 𝔽₂.';
       case 'matrixDet':
         return 'det de una 3×3 — desarrollo de Laplace o reducción.';
       case 'matrixInverse':
@@ -8783,6 +8827,10 @@ class EsLocalizations implements AppLocalizations {
       case 'polydiscriminant':
         return "Discriminante de un polinomio de una variable (grado ≥ 1) — "
             "cero exactamente cuando `p` tiene una raíz múltiple.";
+      case 'polyfactor':
+        return "Factoriza un polinomio de una variable sobre el cuerpo finito "
+            "𝔽ₖ (k primo) en factores irreducibles mónicos. Para factorizar "
+            "sobre ℚ usa `factor`.";
       case 'factorial':
         return "Factorial entero exacto. Los `n` pequeños usan el `BigInt` "
             "de Dart; los `n` grandes se delegan en SymEngine.";
@@ -9060,6 +9108,17 @@ class EsLocalizations implements AppLocalizations {
       "Para `x² + bx + c` el discriminante es `b² − 4c`: aquí 25 − 24 = 1. "
           "CrispCalc usa `(−1)^(n(n−1)/2)·Res(p, p′)/aₙ`.",
       "`(x − 2)²` tiene una raíz doble, así que el discriminante es 0.",
+    ],
+    'polyfactor': [
+      "En CrispCalc, `polyfactor` reduce el polinomio módulo k, realiza una "
+          "factorización libre de cuadrados y luego el algoritmo de "
+          "Berlekamp (Dart puro). Los coeficientes se muestran como restos "
+          "en [0, k), así que `x − 1` aparece como `x + 4` módulo 5.",
+      "`x⁴ + 1` es irreducible sobre ℚ pero es una cuarta potencia perfecta "
+          "módulo 2 — la factorización libre de cuadrados recupera la "
+          "multiplicidad.",
+      "Irreducible sobre 𝔽₂ — un polinomio primitivo para construir GF(8). "
+          "Un único factor se devuelve sin cambios.",
     ],
     'factorial': [
       "En CrispCalc, el sufijo `n!` y `factorial(n)` son equivalentes: el "

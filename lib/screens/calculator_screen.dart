@@ -756,6 +756,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('polydiscriminant()', cursorOffsetFromEnd: -1);
         break;
 
+      case 'polyfactor':
+        _latexController.insert('polyfactor(, mod=)', cursorOffsetFromEnd: -6);
+        break;
+
       case 'mod':
         _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;

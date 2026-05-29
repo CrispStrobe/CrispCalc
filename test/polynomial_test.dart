@@ -101,6 +101,48 @@ void main() {
     });
   });
 
+  group('polyfactor over F_p (SFF + Berlekamp)', () {
+    final engine = CalculatorEngine();
+    String pf(String poly, int p) => engine.polyfactor(poly, p);
+
+    test('distinct linear factors', () {
+      // x^2 - 1 = (x-1)(x+1); mod 5 the −1 shows as +4.
+      expect(pf('x^2-1', 5), '(x + 1) · (x + 4)');
+      // x^3 - x = x(x-1)(x+1); mod 7 → x(x+1)(x+6).
+      expect(pf('x^3-x', 7), '(x) · (x + 1) · (x + 6)');
+    });
+
+    test('repeated factors (square-free factorisation kicks in)', () {
+      expect(pf('x^2+1', 2), '(x + 1)^2');
+      expect(pf('x^4+1', 2), '(x + 1)^4');
+      // x^6+x^5+x+1 = (x+1)^2 (x^4+x^3+x^2+x+1) mod 2.
+      expect(pf('x^6+x^5+x+1', 2), '(x + 1)^2 · (x^4 + x^3 + x^2 + x + 1)');
+    });
+
+    test('irreducible polynomials are returned whole', () {
+      expect(pf('x^3+x+1', 2), '(x^3 + x + 1)');
+      expect(pf('x^2+x+1', 2), '(x^2 + x + 1)');
+    });
+
+    test('non-monic input keeps the leading coefficient out front', () {
+      // 2x^2+2 = 2(x^2+1) = 2(x-2)(x-3) mod 5 → 2·(x+2)(x+3).
+      expect(pf('2x^2+2', 5), '2 · (x + 2) · (x + 3)');
+    });
+
+    test('factors differently over different primes', () {
+      // x^4+1 is irreducible over Q but splits mod every prime.
+      expect(pf('x^4+1', 5), '(x^2 + 2) · (x^2 + 3)');
+    });
+
+    test('dispatch accepts mod= syntax and validates the modulus', () {
+      expect(engine.tryEvaluatePrecisionCall('polyfactor(x^2-1, mod=5)'),
+          '(x + 1) · (x + 4)');
+      expect(engine.tryEvaluatePrecisionCall('polyfactor(x^2-1, 5)'),
+          '(x + 1) · (x + 4)');
+      expect(engine.polyfactor('x^2-1', 4), startsWith('Error')); // 4 not prime
+    });
+  });
+
   group('CalculatorEngine polynomial dispatch (headless)', () {
     final engine = CalculatorEngine();
 

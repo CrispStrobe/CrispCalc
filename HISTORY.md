@@ -2,6 +2,36 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Precision arc Group B: polynomial factorisation over 𝔽ₚ
+
+`polyfactor(p, mod=k)` — factor a univariate polynomial over the finite
+field 𝔽ₖ (k prime) into monic irreducibles. Completes "polynomial
+arithmetic over Z, Q, F_p"; like the rest of Group B, **pure-Dart and
+deterministic** (no native bridge).
+
+`lib/engine/polynomial_mod.dart`: reduces the parsed polynomial mod k,
+then **square-free factorisation (Musser)** — including the `f′ = 0`
+perfect-pᵗʰ-power case via Frobenius pᵗʰ-root — followed by
+**Berlekamp's algorithm** (build the Petr matrix x^(p·i) mod f, take the
+null space of Bᵀ − I over 𝔽ₚ for the factor count, split via
+gcd(u, h − c)). Coefficients display as canonical residues in [0, k).
+Modular polynomial arithmetic (`_Fp`: add/sub/mul/divmod/gcd/powmod,
+extended-Euclid inverse, RREF null space) lives in the same file.
+
+`calculator_engine.polyfactor(poly, prime)` (prime-checked) +
+`tryEvaluatePrecisionCall` dispatch accepting `polyfactor(p, mod=k)` and
+`polyfactor(p, k)`. Cross-checked against SymPy `factor_list(...,
+modulus=k)`: `x⁴+1 mod 2 = (x+1)⁴`; `x²−1 mod 5 = (x+1)(x+4)`;
+`x³+x+1 mod 2` irreducible; `2x²+2 mod 5 = 2·(x+2)(x+3)`. Full UI
+surfacing (keypad + FunctionReference cas entry DE/FR/ES + `polyFactorMod`
+worked example).
+
+Full suite **2484 pass** / 1 skip (pre-existing notepad full-suite
+flake). Group B remaining: Bessel/zeta/theta (MPFR — a 3-repo wrapper
+arc; cwrapper already exposes `basic_zeta`/`basic_erf`/`basic_gamma`/
+`basic_lambertw`/`basic_beta`, but **not** Bessel), arbitrary-precision
+complex (MPC).
+
 ## 2026-05-29 — Precision arc Group B: polynomial arithmetic over ℚ
 
 `polygcd(p, q)`, `polyresultant(p, q)`, `polydiscriminant(p)` — the

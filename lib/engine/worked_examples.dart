@@ -125,6 +125,14 @@ class WorkedExamples {
       description: 'polydiscriminant(x³ − 2) — non-zero ⇒ distinct roots.',
       expression: 'polydiscriminant(x^3 - 2)',
     ),
+    WorkedExample(
+      id: 'polyFactorMod',
+      category: WorkedExampleCategory.algebra,
+      title: 'Factor mod p',
+      description: 'polyfactor(x⁴ + 1, mod=2) — irreducible over ℚ, '
+          '(x + 1)⁴ over 𝔽₂.',
+      expression: 'polyfactor(x^4 + 1, mod=2)',
+    ),
 
     // === Linear algebra ======================================================
     WorkedExample(

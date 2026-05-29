@@ -1313,16 +1313,17 @@ Group A (recommended first — ship together as one round):
 
 Group B (V2 — more specialized, ship after Group A lands):
 
-- [x] ~~**Polynomial arithmetic over Q**~~ — `polygcd(p, q)`,
-  `polyresultant(p, q)`, `polydiscriminant(p)` **SHIPPED 2026-05-29**.
-  Implemented **pure-Dart** (`lib/engine/polynomial.dart`: exact
-  `Rational`/BigInt coefficients, univariate parser, Euclidean GCD,
-  Sylvester-determinant resultant, discriminant) — no FLINT wrapper
-  needed, headless-testable, cross-checked against SymPy. Full UI
-  surfacing (keypad + FunctionReference DE/FR/ES + worked examples).
-  **Remaining for a later round:** `polyfactor(p, mod=p)` over F_p
-  (Berlekamp / Cantor–Zassenhaus) — factorisation over Q is already
-  the existing `factor`. Could go pure-Dart or via FLINT `nmod_poly`.
+- [x] ~~**Polynomial arithmetic over Z, Q, F_p**~~ **SHIPPED
+  2026-05-29**, all **pure-Dart** — no FLINT wrapper, headless-testable,
+  cross-checked against SymPy:
+  - `polygcd` / `polyresultant` / `polydiscriminant` over ℚ
+    (`lib/engine/polynomial.dart`: exact `Rational`/BigInt, univariate
+    parser, Euclidean GCD, Sylvester-determinant resultant).
+  - `polyfactor(p, mod=k)` over 𝔽ₖ (`lib/engine/polynomial_mod.dart`:
+    square-free factorisation + Berlekamp). Factorisation over ℚ
+    remains the existing `factor`.
+  Full UI surfacing (keypad + FunctionReference DE/FR/ES + worked
+  examples) for all four.
 
 - [x] ~~**Continued fractions** (GMP + MPFR).~~ **SHIPPED 2026-05-29**
   (first Group B item). `cfrac(x, n)` → `[a₀; a₁, …]`;

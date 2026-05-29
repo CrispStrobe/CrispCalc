@@ -58,6 +58,7 @@ const Map<String, String> _kAdvKeyHelpRefId = {
   'polygcd': 'polygcd',
   'polyresultant': 'polyresultant',
   'polydiscriminant': 'polydiscriminant',
+  'polyfactor': 'polyfactor',
 };
 
 /// Round 102b (P6): per-glyph → FunctionRef.id mapping for the CAS
@@ -245,6 +246,7 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'polygcd',
     'polyresultant',
     'polydiscriminant',
+    'polyfactor',
     // Round 112 (P7): relational + logical operators. Inserts the
     // ASCII form with surrounding spaces so the round-110 / 111
     // preprocessor can lower them into SymEngine's Eq/Lt/.../

@@ -504,6 +504,38 @@ class FunctionReferences {
       seeAlso: ['polyresultant', 'polygcd', 'solve'],
     ),
     FunctionRef(
+      id: 'polyfactor',
+      category: FunctionRefCategory.cas,
+      signature: 'polyfactor(p, mod=k)',
+      shortDescription:
+          'Factor a univariate polynomial over the finite field 𝔽ₖ '
+          '(k prime) into monic irreducibles. For factorisation over ℚ '
+          'use `factor`.',
+      examples: [
+        FunctionRefExample(
+          input: 'polyfactor(x^2-1, mod=5)',
+          expected: '(x + 1) · (x + 4)',
+          hint: 'In CrispCalc, `polyfactor` reduces the polynomial mod k, '
+              'runs square-free factorisation, then Berlekamp\'s algorithm '
+              '(pure Dart). Coefficients display as residues in [0, k), so '
+              '`x − 1` appears as `x + 4` mod 5.',
+        ),
+        FunctionRefExample(
+          input: 'polyfactor(x^4+1, mod=2)',
+          expected: '(x + 1)^4',
+          hint: '`x⁴ + 1` is irreducible over ℚ but is a perfect 4th power '
+              'mod 2 — square-free factorisation recovers the multiplicity.',
+        ),
+        FunctionRefExample(
+          input: 'polyfactor(x^3+x+1, mod=2)',
+          expected: '(x^3 + x + 1)',
+          hint: 'Irreducible over 𝔽₂ — a primitive polynomial used to build '
+              'GF(8). A single factor is returned unchanged.',
+        ),
+      ],
+      seeAlso: ['factor', 'polygcd', 'isprime'],
+    ),
+    FunctionRef(
       id: 'factorial',
       category: FunctionRefCategory.cas,
       signature: 'factorial(n)   or   n!',
