@@ -24,8 +24,8 @@ arc rule (see `memory/feedback_multi_repo_arc_worktree.md`).
 | **main HEAD** | R130 + R100 + R105b landed; CI green; no new GH Release cut yet — see open item |
 | **Tests** | **2137 pass** (1992 → 2129 via R100 DE-completeness; → 2137 via R105b popover tests) |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
-| **bridge pin** | **`0907768`** (bridge 1.2.0 — adds Linux x86_64 `.so`) — was `931adcf` pre-session |
-| **bridge main HEAD** | `0907768` (v1.2.0; `r130-linux` merged) |
+| **bridge pin** | **`535ce5d`** (bridge 1.2.1 — Linux `.so` + Windows loader fix) — was `931adcf` pre-session |
+| **bridge main HEAD** | `535ce5d` (v1.2.1; `r130-linux` + `r131b-windows-loader` merged) |
 | **platforms** | iOS · macOS · Android arm64-v8a · Windows x86_64 · **Linux x86_64** — all full-CAS. Web still the only CAS-less target. |
 
 ## This session — major arcs landed (2026-05-29)
@@ -98,11 +98,13 @@ Flutter bundled.
   `libsymbolic_math_bridge.so` (bundled from `linux/Libraries/` via
   consumer-prebuilt mode). GLIBC baseline is 2.35 — older distros may
   refuse to load.
-- **Android / Windows / iOS**: as before. Note the Windows Dart
-  loader opens `symbolic_math_bridge_plugin.dll` (loader line 325)
-  but consumer mode bundles `libsymbolic_math_bridge.dll` — **verify
-  this on real Windows hardware**; if it fails, that's the bridge
-  1.2.1 fix.
+- **Windows**: the loader DLL-name mismatch flagged last revision is
+  **fixed in bridge 1.2.1** (`535ce5d`, now pinned) —
+  `_openNativeLibrary` tries `libsymbolic_math_bridge.dll` (the
+  consumer-bundled wrapper) first, falling back to
+  `symbolic_math_bridge_plugin.dll`. Reasoned-correct + non-regressive
+  but **still wants a real Windows runtime check** to confirm.
+- **Android / iOS**: as before.
 
 If a runtime fail surfaces, iterate the bridge — add diagnostic
 logging to `_openNativeLibrary()`, narrow it, push, re-pin, release.
