@@ -3,9 +3,10 @@
 Pickup note from the **2026-05-29 session** (P11 R130 + R100 + R105b).
 Three arcs landed: **Linux x86_64 SymEngine** (bridge v1.2.0 — the
 last tier-1 platform; every native target now ships full SymEngine),
-the **German Function Reference i18n** (R100 — complete DE coverage
-of the ~45-entry catalog), and **R105b** per-element help popovers on
-the Statistics / Sudoku / Constraints DSL screens. Prior session
+the **Function Reference i18n** (R100 — full DE/FR/ES coverage of the
+~45-entry catalog), and **R105b** per-element help popovers on the
+Statistics / Sudoku / Constraints DSL screens; plus the bridge v1.2.1
+Windows-loader fix and the **v0.4.1 release**. Prior session
 (2026-05-27) cut v0.4.0 with Android + Windows.
 
 ## ⚠ Working-mode change (unchanged)
@@ -22,7 +23,7 @@ arc rule (see `memory/feedback_multi_repo_arc_worktree.md`).
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **main HEAD** | R130 + R100 + R105b + Windows-loader-fix landed; **v0.4.1 released** (all 5 artifacts, 2026-05-29) |
-| **Tests** | **2137 pass** (1992 → 2129 via R100 DE-completeness; → 2137 via R105b popover tests) |
+| **Tests** | **2317 pass** (1992 → 2129 R100-DE → 2137 R105b → 2317 R100 FR+ES) |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
 | **bridge pin** | **`535ce5d`** (bridge 1.2.1 — Linux `.so` + Windows loader fix) — was `931adcf` pre-session |
 | **bridge main HEAD** | `535ce5d` (v1.2.1; `r130-linux` + `r131b-windows-loader` merged) |
@@ -109,30 +110,19 @@ Flutter bundled.
 If a runtime fail surfaces, iterate the bridge — add diagnostic
 logging to `_openNativeLibrary()`, narrow it, push, re-pin, release.
 
-### 2. **Finish R100 — French + Spanish Function Reference**
-
-German is complete; the mechanism + completeness test are in place.
-FR/ES currently return null (English fallback). To finish: implement
-`functionRefDescription` / `functionRefExampleHint` in
-`FrLocalizations` + `EsLocalizations` (same id-keyed switch/map as
-`DeLocalizations`), then add `'fr'` / `'es'` to the `complete` map in
-`test/function_reference_localization_test.dart` so they're held to
-full coverage. Source terminology from fr/es Wikipedia + curricula.
-~155 strings per locale — get native review before/after.
-
-### 3. **Android x86_64 (emulator) and armeabi-v7a (32-bit)**
+### 2. **Android x86_64 (emulator) and armeabi-v7a (32-bit)**
 
 Extend the `build-android.yml` matrix. Deferred-until-demand per the
 workflow comment. Each ABI is its own ~15-min build slot.
 
-### 4. **Carry-overs from prior sessions**
+### 3. **Carry-overs from prior sessions**
 
 - Round 95 follow-up — Statistics input pre-fill.
 - `open:` / `dsl:` dispatch in Try-in-Calculator (R99 followup).
 - CSP Round E.5 — `dart_csp_fzn` CLI (blocked on P4).
 - P9 follow-ups (A5d / A7 / A8) — 3D Scene polish.
 
-### 5. **v0.4.1 — RELEASED (2026-05-29)**
+### 4. **v0.4.1 — RELEASED (2026-05-29)**
 
 Tagged `v0.4.1`, all 5 artifacts published. Linux tarball grew
 13.2 → 19.9 MB (the bundled `.so`), confirming the R130 binary

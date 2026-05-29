@@ -54,9 +54,11 @@ help surface. Fixed by mirroring the worked-examples precedent:
   every category (CAS, number theory, precision, matrix, statistics,
   constraints DSL, Sudoku) — descriptions + every example hint.
   Terminology per German math didactics (Bildungspläne / de.wikipedia).
-- Localization test enforces **full DE completeness** — adding a
-  catalog entry without its German translation fails CI. FR/ES remain
-  on the English fallback (hook ready). Suite: 1992 → **2129 pass**.
+- Localization test enforces **full completeness** — adding a catalog
+  entry without its translation fails CI. **German shipped first
+  (2129 tests); French + Spanish followed same session, completing all
+  four declared locales** (EN is the source-of-truth fallback). Suite:
+  1992 → 2129 (DE) → **2317 pass** (FR + ES).
 
 ### Arc C: R105b — per-element help popovers on the module screens
 
