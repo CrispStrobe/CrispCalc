@@ -101,6 +101,16 @@ class FunctionRef {
   /// `open:<module>?...` sentinels) is the proper landing for these.
   final bool runnable;
 
+  /// Optional navigation sentinel (`open:<module>?...` or `dsl:<id>`)
+  /// that takes the user straight to the relevant module — pre-filled
+  /// where a preset exists. Round 99 follow-up: module-surface entries
+  /// (`runnable: false`) previously only offered a two-hop "See worked
+  /// example" cross-link; an `openTarget` lets the dialog show a direct
+  /// "Open module" button that routes through the shared
+  /// `module_navigation` dispatcher. Null leaves the entry with only
+  /// its existing buttons.
+  final String? openTarget;
+
   const FunctionRef({
     required this.id,
     required this.category,
@@ -110,6 +120,7 @@ class FunctionRef {
     this.seeAlso = const [],
     this.workedExampleId,
     this.runnable = true,
+    this.openTarget,
   });
 }
 
@@ -1459,6 +1470,9 @@ class FunctionReferences {
       ],
       seeAlso: ['paired_t', 'wilcoxon', 'anova_1'],
       workedExampleId: 'statsHypothesisTests',
+      // Round 99 follow-up: one-tap landing on the Tests tab pre-filled
+      // with two unequal-variance groups (StatisticsPresets).
+      openTarget: 'open:statistics?preset=statsWelchTwoSample',
     ),
     FunctionRef(
       id: 'paired_t',
@@ -1515,6 +1529,9 @@ class FunctionReferences {
       ],
       seeAlso: ['welch_t', 'chi2_independence', 'wilcoxon'],
       workedExampleId: 'statsHypothesisTests',
+      // Round 99 follow-up: one-tap landing on the Tests tab pre-filled
+      // with three separated groups (StatisticsPresets).
+      openTarget: 'open:statistics?preset=statsAnovaThreeGroups',
     ),
     FunctionRef(
       id: 'chi2_goodness',
@@ -1543,6 +1560,9 @@ class FunctionReferences {
       ],
       seeAlso: ['chi2_independence', 'fisher_exact', 'sign_test'],
       workedExampleId: 'statsHypothesisTests',
+      // Round 99 follow-up: one-tap landing on the Tests tab pre-filled
+      // with observed counts vs a uniform expectation (StatisticsPresets).
+      openTarget: 'open:statistics?preset=statsChiSquareGof',
     ),
     FunctionRef(
       id: 'chi2_independence',

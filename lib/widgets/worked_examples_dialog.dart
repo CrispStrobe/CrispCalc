@@ -11,9 +11,7 @@ import 'package:flutter/services.dart';
 import '../engine/app_state.dart';
 import '../engine/worked_examples.dart';
 import '../localization/app_localizations.dart';
-import '../screens/constraints_screen.dart';
-import '../screens/statistics_screen.dart';
-import '../screens/sudoku_screen.dart';
+import 'module_navigation.dart';
 
 /// Round 94 (P6): which surface opened the dialog. Drives category
 /// filtering. Calculator surface shows everything (the default that
@@ -283,66 +281,13 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
   /// without the pre-load — so a typo in a catalog entry degrades
   /// gracefully rather than crashing the dialog.
   void _insert(BuildContext context, String expression) {
-    if (expression.startsWith('open:')) {
-      final spec = expression.substring('open:'.length);
-      final qIdx = spec.indexOf('?');
-      final module = qIdx < 0 ? spec : spec.substring(0, qIdx);
-      final argString = qIdx < 0 ? null : spec.substring(qIdx + 1);
-      final args = <String, String>{};
-      if (argString != null) {
-        for (final pair in argString.split('&')) {
-          final eq = pair.indexOf('=');
-          if (eq > 0) {
-            args[pair.substring(0, eq)] = pair.substring(eq + 1);
-          }
-        }
-      }
+    // Round 95+: `open:<module>?...` / `dsl:<id>` navigation sentinels
+    // route through the shared `module_navigation` dispatcher (the same
+    // routing the Function Reference dialog reuses). Pop our dialog
+    // first, then dispatch — mirrors the prior inline behaviour.
+    if (isModuleSentinel(expression)) {
       Navigator.of(context).pop();
-      switch (module) {
-        case 'sudoku':
-          final preset = args['preset'];
-          if (preset != null) {
-            AppState().requestLoadSudokuPreset(preset);
-          }
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const SudokuScreen(),
-          ));
-          break;
-        case 'constraints':
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const ConstraintsScreen(),
-          ));
-          break;
-        case 'statistics':
-          // Round 95 follow-up: `preset=<id>` resolves against
-          // StatisticsPresets and both picks the tab and pre-fills the
-          // inputs; the older `tab=<id>` just picks the tab.
-          final preset = args['preset'];
-          final tab = args['tab'];
-          if (preset != null) {
-            AppState().requestLoadStatisticsPreset(preset);
-          }
-          if (tab != null) {
-            AppState().requestLoadStatisticsTab(tab);
-          }
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const StatisticsScreen(),
-          ));
-          break;
-      }
-      return;
-    }
-    // Round 73: `dsl:<id>` opens the Constraints module AND
-    // pre-loads the program with that gallery id. The id → text
-    // mapping lives in _DslTabState; we just stash the id on
-    // AppState and let the tab drain it on init.
-    if (expression.startsWith('dsl:')) {
-      final id = expression.substring('dsl:'.length);
-      AppState().requestLoadDslProgram(id);
-      Navigator.of(context).pop();
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => const ConstraintsScreen(),
-      ));
+      dispatchModuleSentinel(context, expression);
       return;
     }
     AppState().requestInsertExpression(expression);

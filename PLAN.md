@@ -1574,6 +1574,13 @@ The deferred carve-out from earlier in the day shipped after
   fill its fields in `initState`. Three populated entries — Welch
   two-sample t, one-way ANOVA, χ² goodness-of-fit (DE/FR/ES). New
   `test/statistics_preset_test.dart`. See HISTORY top entry.
+  **R99 follow-up SHIPPED 2026-05-29**: the `open:`/`dsl:` sentinel
+  parser was extracted from `worked_examples_dialog` into a shared
+  `lib/widgets/module_navigation.dart` (`isModuleSentinel` /
+  `dispatchModuleSentinel`), and the Function Reference dialog gained an
+  "Open module" button (`FunctionRef.openTarget`) so the three
+  preset-backed stats entries land on the pre-filled Tests tab in one
+  tap. New `test/function_reference_open_module_test.dart`.
 
 Catalog changes:
 

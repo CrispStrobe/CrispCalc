@@ -592,6 +592,7 @@ abstract class AppLocalizations {
   String get functionRefEmpty;
   String get functionRefSeeAlso;
   String get functionRefTryInCalculator;
+  String get functionRefOpenModule;
   String get functionRefSeeWorkedExample;
 
   /// Round 100: localized override for a [FunctionRef]'s
@@ -1944,6 +1945,8 @@ class EnLocalizations implements AppLocalizations {
   String get functionRefSeeAlso => 'See also:';
   @override
   String get functionRefTryInCalculator => 'Try in Calculator';
+  @override
+  String get functionRefOpenModule => 'Open module';
   @override
   String get functionRefSeeWorkedExample => 'See worked example';
   @override
@@ -4591,6 +4594,8 @@ class DeLocalizations implements AppLocalizations {
   String get functionRefSeeAlso => 'Siehe auch:';
   @override
   String get functionRefTryInCalculator => 'Im Rechner ausprobieren';
+  @override
+  String get functionRefOpenModule => 'Modul öffnen';
   @override
   String get functionRefSeeWorkedExample => 'Beispielaufgabe ansehen';
   @override
@@ -7246,6 +7251,8 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get functionRefTryInCalculator => 'Essayer dans la Calculatrice';
   @override
+  String get functionRefOpenModule => 'Ouvrir le module';
+  @override
   String get functionRefSeeWorkedExample => 'Voir l\'exemple résolu';
   @override
   String get functionRefCatCas => 'CAS';
@@ -9877,6 +9884,8 @@ class EsLocalizations implements AppLocalizations {
   String get functionRefSeeAlso => 'Véase también:';
   @override
   String get functionRefTryInCalculator => 'Probar en la Calculadora';
+  @override
+  String get functionRefOpenModule => 'Abrir el módulo';
   @override
   String get functionRefSeeWorkedExample => 'Ver ejemplo resuelto';
   @override

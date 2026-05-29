@@ -1,6 +1,29 @@
 # CrispCalc — handover for the next session
 
-## Latest: 2026-05-29 (cont.) — Round 95 follow-up: Statistics input pre-fill
+## Latest: 2026-05-29 (cont.) — Round 99 follow-up: Function Reference "Open module" button
+
+Closed the `open:`/`dsl:` Try-in-Calculator carry-over. Module-surface
+Function Reference entries (`runnable: false`) now offer a direct "Open
+module" button — the three stats entries with a `StatisticsPresets`
+recipe land on the pre-filled Tests tab in one tap (previously only the
+two-hop "See worked example" path existed).
+
+- The `open:`/`dsl:` sentinel parser was **extracted** from
+  `worked_examples_dialog._insert` into a shared
+  `lib/widgets/module_navigation.dart` (`isModuleSentinel` /
+  `dispatchModuleSentinel`) — both dialogs import it; the parser lives
+  in exactly one place now. Reuse it for any future `open:`/`dsl:`
+  surface, don't re-implement.
+- `FunctionRef` gained an optional `openTarget` sentinel; the dialog
+  shows an "Open module" `ElevatedButton` when it's set. New
+  `functionRefOpenModule` string (EN/DE/FR/ES).
+- New `test/function_reference_open_module_test.dart`. Full suite
+  **2615 pass / 1 skip, 0 failures**. Pure-Dart, single repo, `main`,
+  not yet pushed (sits on the Statistics-preset commit `e43a3c0`).
+
+---
+
+## 2026-05-29 (cont.) — Round 95 follow-up: Statistics input pre-fill
 
 Closed the deferred Round-95 carry-over. The `open:statistics?tab=<id>`
 worked-example sentinel only picked a tab; the new
@@ -225,7 +248,10 @@ workflow comment. Each ABI is its own ~15-min build slot.
   2026-05-29** — `open:statistics?preset=<id>` (new `StatisticsPresets`
   + `pendingStatisticsPresetId`); Tests tab pre-selects a test + fills
   inputs. See HISTORY top entry.
-- `open:` / `dsl:` dispatch in Try-in-Calculator (R99 followup).
+- ~~`open:` / `dsl:` dispatch in Try-in-Calculator (R99 followup).~~
+  **SHIPPED 2026-05-29** — Function Reference "Open module" button +
+  shared `lib/widgets/module_navigation.dart` dispatcher (the `open:`/
+  `dsl:` parser now lives in one place). See HISTORY top entry.
 - CSP Round E.5 — `dart_csp_fzn` CLI (blocked on P4).
 - P9 follow-ups (A5d / A7 / A8) — 3D Scene polish.
 

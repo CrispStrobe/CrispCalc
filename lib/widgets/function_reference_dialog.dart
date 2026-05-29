@@ -18,6 +18,7 @@ import '../engine/app_state.dart';
 import '../engine/function_reference.dart';
 import '../engine/worked_examples.dart';
 import '../localization/app_localizations.dart';
+import 'module_navigation.dart';
 import 'worked_examples_dialog.dart';
 
 class FunctionReferenceDialog extends StatefulWidget {
@@ -255,6 +256,17 @@ class _FunctionRefRow extends StatelessWidget {
                   onPressed: () =>
                       _tryInCalculator(context, entry.examples.first.input),
                 ),
+              // Round 99 follow-up: module-surface entries with an
+              // `openTarget` get a direct "Open module" button that
+              // routes through the shared module_navigation dispatcher,
+              // landing on the module (pre-filled where a preset exists)
+              // in one tap instead of the two-hop worked-example path.
+              if (entry.openTarget != null)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: Text(t.functionRefOpenModule),
+                  onPressed: () => _openModule(context, entry.openTarget!),
+                ),
             ],
           ),
         ),
@@ -272,6 +284,17 @@ class _FunctionRefRow extends StatelessWidget {
   void _tryInCalculator(BuildContext context, String expression) {
     AppState().requestInsertExpression(expression);
     Navigator.of(context).pop();
+  }
+
+  /// Round 99 follow-up: pop the Function Reference dialog and dispatch
+  /// an `open:<module>?...` / `dsl:<id>` navigation sentinel via the
+  /// shared `module_navigation` helper (the same routing the
+  /// worked-examples dialog uses). Pops first, then routes.
+  void _openModule(BuildContext context, String target) {
+    final navigator = Navigator.of(context);
+    final rootCtx = navigator.context;
+    navigator.pop();
+    dispatchModuleSentinel(rootCtx, target);
   }
 
   /// Round 96 cross-link, tightened in the Round 96 follow-up: pop

@@ -2,6 +2,42 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Round 99 follow-up: Function Reference "Open module" button
+
+Closes the deferred R99 carry-over (`open:`/`dsl:` dispatch reachable
+from the Function Reference, not just the worked-examples dialog).
+Module-surface entries (`runnable: false`) previously offered only a
+two-hop "See worked example" cross-link; the three stats entries that
+now have a `StatisticsPresets` recipe get a direct **"Open module"**
+button that lands on the pre-filled Tests tab in one tap.
+
+- New **`lib/widgets/module_navigation.dart`** — `isModuleSentinel()` +
+  `dispatchModuleSentinel()`, extracted from
+  `worked_examples_dialog._insert` so both dialogs share one parser/
+  router (handles `open:sudoku?preset`, `open:statistics?preset|tab`,
+  `open:constraints`, `dsl:<id>`). The dispatcher does **not** pop —
+  the caller pops first.
+- **`worked_examples_dialog.dart`** — `_insert` now delegates to the
+  shared helper (the inline `open:`/`dsl:` parsing and its three screen
+  imports are gone). Behaviour unchanged.
+- **`function_reference.dart`** — `FunctionRef` gains an optional
+  `openTarget` sentinel; set on `welch_t` → `statsWelchTwoSample`,
+  `anova_1` → `statsAnovaThreeGroups`, `chi2_goodness` →
+  `statsChiSquareGof`.
+- **`function_reference_dialog.dart`** — an "Open module"
+  `ElevatedButton` (icon `open_in_new`) appears when `openTarget != null`
+  and routes through the shared dispatcher. New `functionRefOpenModule`
+  string in EN/DE/FR/ES.
+- **Tests** — new `test/function_reference_open_module_test.dart`:
+  every `openTarget` is a valid sentinel, the three resolve to real
+  `StatisticsPresets` keys, and a widget test taps the button and
+  asserts the pre-filled Tests tab.
+
+Pure-Dart, single repo, on `main`. Full suite **2615 pass / 1 skip,
+0 failures**. Refactor note: the `open:`/`dsl:` sentinel parser now
+lives in exactly one place — future surfaces import `module_navigation`
+rather than re-implementing it.
+
 ## 2026-05-29 — Round 95 follow-up: Statistics input pre-fill via `open:statistics?preset=<id>`
 
 Closes the deferred Round-95 item (HANDOFF_NEXT "carry-overs"): the
