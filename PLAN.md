@@ -2471,11 +2471,32 @@ number-theory features would silently degrade.
 Three realistic paths to a real web build, in increasing order of
 work and decreasing order of degradation:
 
-### Path A — Reduced-capability web (low risk, ~1 round)
+### Path A — Reduced-capability web — ✅ SHIPPED 2026-05-29
 
-Just ship `flutter build web` as-is. The bridge falls back; the
-dispatcher already returns "Error: requires native library" for
-every CAS call. What breaks (no FR fallback today):
+**Live at https://crisp-calc.vercel.app** (Vercel, prebuilt static
+deploy of `flutter build web`, project `crisp-calc`). Turned out to be
+a **three-repo arc**, not the "~1 round" first estimated — the bridge
+*and* `dart_csp` had to be made web-compilable first:
+
+- `symbolic_math_bridge` (→ `6f28db4`): the package imported `dart:ffi`
+  + `dart:io` unconditionally, so any web build failed to compile. Split
+  into a conditional-import facade + pure-Dart web stub (constructor
+  throws → consumers' existing "native unavailable" fallback).
+- `dart_csp` (→ `6f33cd3`): 64-bit popcount literals (`0x5555…`) that
+  dart2js rejects, and a `Uint64List` bitset rep that throws on dart2js.
+  Fixed with a runtime-built mask + a dart2js-only bitset guard
+  (`identical(1, 1.0)`); dart2wasm/native keep the fast path.
+- CrispCalc: `main.dart` `dart:io` diagnostic behind a conditional
+  import; `web/` scaffolded; **Path A degradation UX** done (shell-level
+  `WebUnsupportedBanner`, `errorNativeRequiredWeb`, "Get the app" CTA,
+  EN/DE/FR/ES).
+
+Confirmed serving: `/`, `main.dart.js` (5.1 MB), SPA fallback all 200.
+The checklist below is the original plan, now satisfied.
+
+Original plan — just ship `flutter build web` as-is. The bridge falls
+back; the dispatcher already returns "Error: requires native library"
+for every CAS call. What breaks (no FR fallback today):
 
 - **CAS**: `solve`, `factor`, `expand`, `simplify`, `diff`,
   `integrate`, `limit`, `gcd`, `lcm` (SymEngine)

@@ -1,6 +1,50 @@
 # CrispCalc — handover for the next session
 
-## Latest: 2026-05-29 (cont.) — StatisticsPresets reach all four tabs
+## Latest: 2026-05-29 (cont.) — Web build live on Vercel (P10 Path A)
+
+**https://crisp-calc.vercel.app** — the browser target now ships
+(reduced-capability per Path A). A **three-repo arc** (the "~1 round"
+estimate was wrong: the bridge *and* dart_csp blocked web compilation):
+
+- **symbolic_math_bridge** `main` → **`6f28db4`**: was importing
+  `dart:ffi` + `dart:io` unconditionally → no web build compiled. Now a
+  conditional-import facade (`lib/symbolic_math_bridge.dart`) over
+  `src/…_io.dart` (native, moved verbatim) + `src/…_web.dart` (pure-Dart
+  stub, constructor throws → consumers' existing "native unavailable"
+  fallback) + shared `src/…_exceptions.dart`. Native plugin registration
+  untouched; **five native platforms unaffected**.
+- **dart_csp** → **`6f33cd3`** (branch `web-compat`, *not* merged to main
+  — its main had diverged with unrelated commits, so CrispCalc pins the
+  tested branch commit): dart2js rejected the 64-bit popcount literals
+  and `Uint64List` throws on dart2js. Runtime-built masks + a
+  dart2js-only bitset guard (`identical(1, 1.0)`); dart2wasm/native keep
+  the fast bitset path.
+- **CrispCalc** `main` → **`f2f8ccc`**: `main.dart` `dart:io` diagnostic
+  behind a conditional import (`diagnostics_runner_io/_stub.dart`);
+  `web/` scaffolded; **Path A UX** — shell-level `WebUnsupportedBanner`
+  (kIsWeb), `errorNativeRequiredWeb`, "Get the app" CTA, all EN/DE/FR/ES.
+
+Deploy: Vercel CLI prebuilt static (`vercel deploy --prod` of
+`build/web`, project `crisp-calc`, account `crispstrobe`). `vercel.json`
+does SPA rewrites. **Redeploy after a code change:** `flutter build web
+--release`, re-add `build/web/vercel.json`, `cd build/web && vercel link
+--yes --project crisp-calc && vercel deploy --prod --yes`. A
+`build-web.yml` CI workflow + auto-deploy is the natural follow-up (not
+done — deploys are manual today).
+
+Works on web (pure Dart): calculator, **statistics** (incl. the new
+presets), matrices, Sudoku/CSP, units, constants. Degrades (native app
+only): SymEngine CAS, MPFR precision, FLINT number theory. Full suite
+**2648 pass / 1 skip / 0 failures** against the git pins.
+
+⚠ **dart2js vs dart2wasm:** the default `flutter build web` (deployed) is
+dart2js — correct everywhere, CSP uses the slower list/interval rep. A
+`--wasm` build would use the fast bitset rep on WasmGC browsers but also
+emits a dart2js fallback (so dart_csp still had to be dart2js-safe).
+
+---
+
+## 2026-05-29 (cont.) — StatisticsPresets reach all four tabs
 
 Extended the preset pre-fill mechanism beyond the Tests tab. The
 **Descriptive / Regression / Distributions** tabs now each read

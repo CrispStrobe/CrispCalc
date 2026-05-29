@@ -118,7 +118,7 @@ build.
 | **Windows x86_64** | ✓ full | `symbolic_math_bridge_plugin.dll`, MSYS2/MinGW64 build (PLAN P11 R131) |
 | **Linux x86_64** | ✓ full | `libsymbolic_math_bridge.so`, vcpkg `x64-linux` static build on ubuntu-22.04 / GLIBC 2.35 (PLAN P11 R130) |
 | Android x86_64 / armeabi-v7a | ✗ not built | extend the bridge's build matrix when needed |
-| Web (Vercel / HF / etc.) | ✗ not built | `dart:ffi` doesn't reach WASM directly; PLAN P10 has three paths |
+| **Web** (Vercel) | ◐ pure-Dart only | **Live: https://crisp-calc.vercel.app** (PLAN P10 Path A). Calculator, statistics, matrices, Sudoku/CSP, units work; symbolic CAS / MPFR precision / FLINT number-theory need the desktop or mobile app (no `dart:ffi` in the browser). |
 
 Releases ship platform binaries via GitHub Actions; see GH Releases
 for `crisp_calc-vX.Y.Z-{macos.zip,ios-unsigned.zip,linux-x64.tar.gz,
