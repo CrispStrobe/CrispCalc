@@ -1,6 +1,35 @@
 # CrispCalc — handover for the next session
 
-## Latest: 2026-05-29 (cont.) — Full StatisticsPresets coverage (9/9 stats entries)
+## Latest: 2026-05-29 (cont.) — StatisticsPresets reach all four tabs
+
+Extended the preset pre-fill mechanism beyond the Tests tab. The
+**Descriptive / Regression / Distributions** tabs now each read
+`StatisticsPreset.fields` in `initState` (mirroring `_TestsTab`), and
+the screen routes the resolved preset only to the tab it targets (so a
+Tests preset can't leak into the Descriptive controllers).
+
+- 3 new presets: `statsDescriptive`, `statsLinearRegression`,
+  `statsNormalDist`.
+- Function Reference: `mean` re-pointed to the **Descriptive** tab (it
+  was mis-landing on the Tests tab via `statsOneSampleT`); new
+  `one_sample_t` entry now owns `statsOneSampleT`; new `linreg`
+  (Regression) + `normal_dist` (Distributions). All three new entries
+  fully localized **DE/FR/ES** (description + both hints).
+- Per-tab pre-fill widget tests; open-module consistency count 9 → 12.
+  Full suite **2640 pass / 1 skip / 0 failures**. Pure-Dart, on `main`.
+- Also committed a stray `linux/flutter/generated_plugins.cmake` (the
+  R130 Linux FFI plugin registration that had never been committed).
+
+Every stats Function Reference entry now opens a pre-filled module in
+one tap — the preset surface is effectively complete across all four
+tabs. **Note:** FR/ES Function-Reference prose is now *complete* (the
+older "FR/ES still return null" note below is stale — they were
+finished after R100 and are held to completeness by
+`function_reference_localization_test.dart`).
+
+---
+
+## 2026-05-29 (cont.) — Full StatisticsPresets coverage (9/9 stats entries)
 
 `StatisticsPresets` grew 3 → 9 (added one-sample t, paired t, χ²
 independence, Fisher's exact, paired sign, Wilcoxon) and the remaining
