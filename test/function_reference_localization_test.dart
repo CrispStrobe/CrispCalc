@@ -24,6 +24,8 @@ void main() {
   // therefore held to completeness.
   final complete = <String, AppLocalizations>{
     'de': const DeLocalizations(),
+    'fr': const FrLocalizations(),
+    'es': const EsLocalizations(),
   };
 
   group('EN returns null (catalog is the English source of truth)', () {

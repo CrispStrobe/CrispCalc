@@ -6075,12 +6075,625 @@ class FrLocalizations implements AppLocalizations {
     return null;
   }
 
-  // Round 100: FR function-reference prose not translated yet — null
-  // falls back to the English catalog (mechanism is in place).
+  // Round 100: FR function-reference prose. Double-quoted strings
+  // throughout because French is full of apostrophes (prefer_single_quotes
+  // is not enforced in analysis_options).
   @override
-  String? functionRefDescription(String id) => null;
+  String? functionRefDescription(String id) {
+    switch (id) {
+      case 'solve':
+        return "Résout symboliquement une équation pour une variable ; "
+            "renvoie une liste de solutions.";
+      case 'expand':
+        return "Développe les produits et les puissances en une somme de "
+            "monômes.";
+      case 'simplify':
+        return "Regroupe les termes semblables, simplifie les facteurs "
+            "communs et applique les identités algébriques usuelles.";
+      case 'factor':
+        return "Factorise un polynôme sur les rationnels en facteurs "
+            "irréductibles.";
+      case 'diff':
+        return "Dérivée première symbolique par rapport à une variable.";
+      case 'integrate':
+        return "Intégrale indéfinie (3 arguments) ou intégrale définie "
+            "(5 arguments) avec repli numérique.";
+      case 'subst':
+        return "Remplace chaque occurrence libre de `variable` dans "
+            "`expression` par `value`. Également disponible sous le nom "
+            "`substitute(...)`.";
+      case 'limit':
+        return "Limite numérique lorsque `variable` tend vers `point`. "
+            "`point` peut être une valeur finie ou `oo` / `-oo`.";
+      case 'gcd':
+        return "Plus grand commun diviseur (PGCD) de deux entiers ou "
+            "polynômes.";
+      case 'lcm':
+        return "Plus petit commun multiple (PPCM) de deux entiers ou "
+            "polynômes.";
+      case 'factorial':
+        return "Factorielle entière exacte. Les petits `n` utilisent le "
+            "`BigInt` de Dart ; les grands `n` sont confiés à SymEngine.";
+      case 'fibonacci':
+        return "n-ième nombre de Fibonacci. `fib(n)` est le nom abrégé.";
+      case 'isprime':
+        return "Test de primalité probabiliste sur les entiers.";
+      case 'nextprime':
+        return "Plus petit nombre premier strictement supérieur à `n`.";
+      case 'prevprime':
+        return "Plus grand nombre premier strictement inférieur à `n`. "
+            "Erreur si aucun nombre premier de ce type n'existe "
+            "(par ex. `prevprime(2)`).";
+      case 'factorint':
+        return "Décomposition en facteurs premiers sous la forme "
+            "`p₁^e₁ · p₂^e₂ · …` avec des exposants Unicode en exposant.";
+      case 'pi_precision':
+        return "π avec N décimales via MPFR ; renvoie la chaîne de chiffres "
+            "brute.";
+      case 'e_precision':
+        return "Nombre d'Euler e avec N décimales via MPFR.";
+      case 'sqrt_precision':
+        return "Racine carrée de l'entier `k` avec N décimales via MPFR. La "
+            "forme à deux arguments choisit le chemin haute précision.";
+      case 'eulergamma_precision':
+        return "Constante d'Euler-Mascheroni γ ≈ 0,5772… avec N décimales "
+            "via MPFR.";
+      case 'matrix_literal':
+        return "Littéral matriciel : une liste de lignes, chaque ligne étant "
+            "une liste d'expressions de cellule. Les cellules peuvent être "
+            "des nombres, des fractions ou symboliques.";
+      case 'det':
+        return "Déterminant d'une matrice carrée. Renvoie un scalaire "
+            "symbolique.";
+      case 'inv':
+        return "Inverse d'une matrice carrée non singulière. Erreur lorsque "
+            "`det = 0`.";
+      case 'transpose':
+        return "Transposée : échange des lignes et des colonnes. Fonctionne "
+            "sur les matrices rectangulaires.";
+      case 'rref':
+        return "Forme échelonnée réduite par lignes via l'élimination de "
+            "Gauss-Jordan. Fonctionne sur des entrées symboliques/"
+            "rationnelles.";
+      case 'matrix_arithmetic':
+        return "Addition/soustraction terme à terme et multiplication "
+            "matricielle sur des littéraux `Matrix(...)`.";
+      case 'mean':
+        return "Moyenne arithmétique d'un échantillon sous forme de liste de "
+            "nombres. Proposée dans l'onglet « Statistiques descriptives » du "
+            "module Statistiques, avec les indicateurs usuels.";
+      case 'welch_t':
+        return "Test t à deux échantillons à variances inégales "
+            "(Welch-Satterthwaite). Choix par défaut robuste lorsque les deux "
+            "groupes peuvent avoir des dispersions différentes.";
+      case 'paired_t':
+        return "Test t apparié sur les différences intra-sujet contre "
+            "μ₀ = 0. À utiliser lorsque les mêmes unités sont mesurées deux "
+            "fois (avant/après).";
+      case 'anova_1':
+        return "Analyse de variance (ANOVA) à un facteur sur K groupes "
+            "indépendants. Teste si les moyennes des groupes diffèrent ; "
+            "fournit une statistique F et une valeur p.";
+      case 'chi2_goodness':
+        return "Test d'adéquation du khi-deux : les effectifs observés "
+            "correspondent-ils à une distribution supposée ?";
+      case 'chi2_independence':
+        return "Test d'indépendance du khi-deux sur une table de "
+            "contingence — deux variables catégorielles sont-elles "
+            "indépendantes ?";
+      case 'fisher_exact':
+        return "Test exact de Fisher sur une table de contingence 2×2. "
+            "Valeur p hypergéométrique exacte — sans approximation pour "
+            "grands échantillons.";
+      case 'wilcoxon':
+        return "Test de la somme des rangs de Wilcoxon / U de "
+            "Mann-Whitney — test non paramétrique à deux échantillons sur "
+            "les rangs. Robuste aux données non normales.";
+      case 'sign_test':
+        return "Test des signes apparié — test non paramétrique fondé sur la "
+            "médiane des différences appariées. Compte combien de fois "
+            "`après > avant`.";
+      case 'vars':
+        return "Déclare les variables de décision entières et leur domaine. "
+            "Toujours la première ligne d'un programme DSL de CrispCalc.";
+      case 'all_different':
+        return "Contrainte globale « toutes les valeurs deux à deux "
+            "distinctes ». La contrainte PPC phare — propagation bien plus "
+            "forte que n·(n-1)/2 clauses `!=` deux à deux.";
+      case 'no_overlap':
+        return "Ordonnancement disjonctif : des tâches ayant des variables "
+            "de début données et des durées fixes ne peuvent pas se "
+            "chevaucher dans le temps sur une même machine.";
+      case 'cumulative':
+        return "Ordonnancement cumulatif sur une ressource renouvelable de "
+            "capacité fixe. Chaque tâche a une durée et une demande de "
+            "ressource propre.";
+      case 'minimize':
+        return "Objectif : minimiser une expression linéaire sur les "
+            "variables de décision. À combiner avec des contraintes pour "
+            "résoudre des PSC d'optimisation.";
+      case 'maximize':
+        return "Objectif : maximiser une expression linéaire. Image miroir "
+            "de `minimize` — même séparation-évaluation, dans le sens "
+            "opposé.";
+      case 'sudoku_regular':
+        return "Règles classiques du Sudoku : chaque ligne, colonne et bloc "
+            "contient chaque chiffre exactement une fois. Des modèles "
+            "existent pour 4×4, 6×6, 8×8, 9×9, 10×10, 12×12, 15×15 et 16×16.";
+      case 'sudoku_x':
+        return "Sudoku-X : règles classiques du Sudoku, plus les deux "
+            "diagonales principales sont également « toutes différentes ». "
+            "Fourni comme modèle 8×8.";
+      case 'sudoku_disjoint':
+        return "Groupes disjoints : règles classiques, plus une contrainte "
+            "« toutes différentes » supplémentaire sur les cellules occupant "
+            "la même position dans le bloc, à travers tous les blocs.";
+      case 'sudoku_killer':
+        return "Sudoku killer : aucun indice donné ; à la place, la grille "
+            "est partitionnée en « cages », chaque cage étant « toutes "
+            "différentes » et de somme égale à une cible donnée.";
+      default:
+        return null;
+    }
+  }
+
   @override
-  String? functionRefExampleHint(String id, int index) => null;
+  String? functionRefExampleHint(String id, int index) {
+    final list = _frHints[id];
+    if (list == null || index < 0 || index >= list.length) return null;
+    return list[index];
+  }
+
+  static const _frHints = <String, List<String>>{
+    'solve': [
+      "Dans CrispCalc, `solve(x^2 - 1, x)` renvoie une liste de racines à la "
+          "manière de Python. L'appel sous-jacent est le `solve()` de "
+          "SymEngine (branche des racines rationnelles pour les polynômes), "
+          "encapsulé par le pont et sérialisé en chaîne Dart.",
+      "`=` dans l'entrée est accepté comme syntaxe d'équation — le "
+          "préprocesseur normalise `lhs = rhs` en `lhs - rhs` avant l'appel "
+          "au pont.",
+      "Les racines complexes reviennent sous le littéral `I` de SymEngine. "
+          "Réutilisées dans d'autres appels (par ex. `expand((-I)*(I))`), le "
+          "pont les conserve sous forme symbolique.",
+    ],
+    'expand': [
+      "Dans CrispCalc, `expand((x + 1)^2)` renvoie le développement du "
+          "binôme. L'appel sous-jacent est le `expand()` de SymEngine, qui "
+          "décompose les nœuds `Pow` et `Mul` et regroupe les termes "
+          "semblables.",
+      "Les coefficients correspondent à la 5ᵉ ligne du triangle de Pascal : "
+          "1, 5, 10, 10, 5, 1, chacun multiplié par la puissance de 2 "
+          "appropriée.",
+      "L'identité de la différence de deux carrés — utile en alternance avec "
+          "`factor` pour passer d'une forme à l'autre.",
+    ],
+    'simplify': [
+      "Dans CrispCalc, `simplify` simplifie le facteur commun `(x - 2)`. "
+          "L'appel sous-jacent est le `simplify()` de SymEngine, qui essaie "
+          "`rational_simplify` ainsi qu'un petit ensemble de règles de "
+          "réécriture.",
+      "Regroupement des termes semblables sur une entrée polynomiale — en "
+          "interne, c'est simplement `expand` suivi de la fusion des "
+          "coefficients.",
+      "Identité de Pythagore ; SymEngine applique la règle de réécriture "
+          "trigonométrique avant de renvoyer le littéral `1`.",
+    ],
+    'factor': [
+      "Dans CrispCalc, `factor(x^2 - 1)` renvoie la factorisation en "
+          "différence de deux carrés. L'appel sous-jacent est le `factor()` "
+          "de SymEngine, qui utilise Berlekamp / Cantor–Zassenhaus pour les "
+          "polynômes à une variable sur Q.",
+      "Identité de la somme/différence de cubes : un facteur linéaire "
+          "multiplié par un trinôme du second degré irréductible sur Q.",
+      "La factorisation s'arrête à l'irréductibilité sur Q — `x^2 + 1` ne se "
+          "décompose pas davantage sans admettre de racines complexes.",
+    ],
+    'diff': [
+      "Dans CrispCalc, `diff(...)` applique terme à terme les règles de "
+          "dérivation des puissances et des constantes. L'appel sous-jacent "
+          "est le `diff()` de SymEngine, qui parcourt l'arbre d'expression et "
+          "produit un nouveau nœud `Add` symbolique.",
+      "Règle de dérivation en chaîne : SymEngine applique "
+          "`diff(sin(u))/du * du/dx` pour l'intérieur `u = x^2`.",
+      "Règle du produit — notez que SymEngine laisse le résultat non "
+          "factorisé. Passé dans `factor`, `exp(x)` est mis en facteur.",
+    ],
+    'integrate': [
+      "Dans CrispCalc, l'intégrale indéfinie `integrate(...)` est déléguée "
+          "au `integrate()` de SymEngine. L'intégration par parties est "
+          "appliquée automatiquement lorsqu'un facteur se dérive en un "
+          "polynôme.",
+      "Forme définie : lorsque SymEngine dispose d'une primitive sous forme "
+          "close, il applique le théorème fondamental de l'analyse. En cas "
+          "d'échec symbolique, CrispCalc se rabat sur la méthode de Simpson "
+          "(200 sous-intervalles).",
+      "Décomposition en éléments simples : 1/(x²-1) = 1/(2(x-1)) - "
+          "1/(2(x+1)). SymEngine effectue le calcul automatiquement.",
+    ],
+    'subst': [
+      "Dans CrispCalc, `subst` réécrit l'arbre d'expression puis tente une "
+          "passe de simplification. L'appel sous-jacent est le `xreplace()` "
+          "de SymEngine (remplacement de variables uniquement, sans filtrage "
+          "de motif).",
+      "Les constantes numériques `pi`, `e` et l'unité imaginaire `I` sont "
+          "reconnues par SymEngine et propagées à travers l'identité "
+          "trigonométrique.",
+      "La substitution est symbolique — les variables libres sans rapport "
+          "`a` et `b` restent intactes.",
+    ],
+    'limit': [
+      "Dans CrispCalc, `limit(...)` est une approche numérique : le pont "
+          "évalue l'expression en une suite de points convergeant vers "
+          "`point` et renvoie la limite dès que des échantillons consécutifs "
+          "concordent à la précision de travail. Pas de développement en "
+          "série symbolique.",
+      "Le littéral `oo` est la sentinelle d'infini de SymEngine — le "
+          "préprocesseur la reconnaît avant l'envoi. Utilisez `-oo` pour "
+          "l'infini négatif.",
+      "Tend vers le nombre d'Euler. Comme le chemin est numérique, le "
+          "résultat est un nombre à virgule flottante — utilisez `e(N)` pour "
+          "la constante en haute précision.",
+    ],
+    'gcd': [
+      "Dans CrispCalc, le `gcd(...)` entier utilise la récurrence "
+          "d'Euclide gcd(a, b) = gcd(b, a mod b). L'appel sous-jacent est le "
+          "`gcd()` de SymEngine, qui s'appuie sur `mpz_gcd` de GMP dans le "
+          "cas entier.",
+      "PGCD polynomial via l'algorithme des sous-résultants (PRS). Utile en "
+          "préalable à `simplify` pour les simplifications.",
+      "Convention : `gcd(0, n) = |n|`. Conforme à la définition "
+          "mathématique qui traite 0 comme un multiple de tout entier.",
+    ],
+    'lcm': [
+      "Dans CrispCalc, le `lcm(...)` entier est calculé via l'identité "
+          "`lcm(a, b) = |a*b| / gcd(a, b)`. L'appel sous-jacent est le "
+          "`lcm()` de SymEngine, qui délègue à `mpz_lcm` de GMP.",
+      "36 = 2²·3², l'union des facteurs en puissances de nombres premiers de "
+          "12 = 2²·3 et 18 = 2·3².",
+      "Le PPCM polynomial choisit le multiple de plus haut degré — `x^2 - 1` "
+          "contient déjà `x + 1` comme facteur.",
+    ],
+    'factorial': [
+      "Dans CrispCalc, le suffixe `n!` et `factorial(n)` sont équivalents — "
+          "le préprocesseur réécrit le suffixe en appel. Pour `n ≤ 1000`, "
+          "nous calculons en Dart avec la multiplication `BigInt` ; au-delà, "
+          "l'appel sous-jacent est le `factorial()` de SymEngine.",
+      "158 chiffres, conservés exactement grâce au chemin BigInt — passer en "
+          "IEEE-754 arrondirait ici à 1,0 × 10^157.",
+      "Convention du produit vide : 0! = 1. Nécessaire pour que la récurrence "
+          "n! = n · (n-1)! se termine à 1.",
+    ],
+    'fibonacci': [
+      "Dans CrispCalc, `fib(n)` et `fibonacci(n)` sont le même appel. Pour "
+          "`n ≤ 90`, nous utilisons une table précalculée ; pour les `n` plus "
+          "grands, l'appel sous-jacent est le `fibonacci()` de SymEngine, qui "
+          "utilise le doublement rapide (O(log n) multiplications via GMP).",
+      "Le 50ᵉ nombre de Fibonacci — bien au-delà de la limite de la table "
+          "pour les petits termes, mais tient encore dans un entier signé de "
+          "64 bits.",
+      "Bascule sur le chemin appuyé par GMP. Le doublement rapide évite la "
+          "récurrence linéaire en O(n), si bien que même fib(10000) reste "
+          "sous la seconde.",
+    ],
+    'isprime': [
+      "Dans CrispCalc, `isprime(n)` renvoie une puce booléenne. L'appel "
+          "sous-jacent est `mpz_probab_prime_p` de GMP (25 tours de "
+          "Miller-Rabin, borne d'erreur 4^-25 ≈ 9×10^-16) via le module "
+          "`ntheory` de SymEngine. 2027 est le 308ᵉ nombre premier.",
+      "2024 = 2³·11·23.",
+      "Le neuvième nombre premier de Mersenne, M61. Miller-Rabin se résout "
+          "encore en microsecondes à cette taille — le coût réside dans les "
+          "exponentiations modulaires, pas dans la longueur en bits.",
+    ],
+    'nextprime': [
+      "Dans CrispCalc, `nextprime(n)` itère à partir de `n+1` et teste "
+          "chaque candidat. L'appel sous-jacent est le "
+          "`ntheory::nextprime()` de SymEngine, qui utilise le crible de "
+          "FLINT sur de courtes fenêtres lorsque l'écart est grand.",
+      "Strictement supérieur — `nextprime(p)` n'est jamais `p` lui-même, "
+          "même lorsque `p` est premier.",
+    ],
+    'prevprime': [
+      "Dans CrispCalc, `prevprime(n)` descend à partir de `n-1`. L'appel "
+          "sous-jacent est le `ntheory::prevprime()` de SymEngine.",
+      "Il n'existe aucun nombre premier en dessous de 2 ; le pont lève une "
+          "erreur plutôt que de renvoyer une valeur sentinelle. CrispCalc "
+          "affiche la puce d'erreur.",
+    ],
+    'factorint': [
+      "Dans CrispCalc, `factorint(n)` renvoie une décomposition en facteurs "
+          "premiers mise en forme. L'appel sous-jacent est `fmpz_factor` de "
+          "FLINT, en façade via l'enveloppe ntheory de SymEngine ; CrispCalc "
+          "convertit la liste de (nombre premier, exposant) en l'affichage à "
+          "chiffres Unicode en exposant.",
+      "Le 8ᵉ nombre premier de Mersenne, M31. Un facteur unique (lui-même) — "
+          "`factorint` court-circuite lorsque l'entrée est première.",
+      "Cas limite : par convention, 1 a la factorisation vide ; CrispCalc "
+          "l'affiche comme le littéral `1` plutôt qu'une chaîne vide.",
+    ],
+    'pi_precision': [
+      "Dans CrispCalc, `pi(N)` est un appel traité à part, dirigé vers le "
+          "chemin haute précision avant que SymEngine ne le voie. L'appel "
+          "sous-jacent est `mpfr_const_pi` de MPFR à la précision "
+          "⌈N·log2(10)⌉ + 16 bits de garde, suivi de la conversion en base "
+          "10.",
+      "À N = 100, la précision de travail est d'environ 348 bits. Les bits "
+          "de garde empêchent la conversion de base d'afficher des chiffres "
+          "de fin arrondis.",
+    ],
+    'e_precision': [
+      "Dans CrispCalc, `e(N)` reflète le pipeline de `pi(N)` : `mpfr_const_e` "
+          "de MPFR (qui utilise la série de Taylor Σ 1/k!) à la précision "
+          "⌈N·log2(10)⌉ + 16 bits de garde, puis le rendu en base 10.",
+      "Assez court pour être mémorisé — utile comme vérification rapide de "
+          "précision face à `limit((1 + 1/n)^n, n, oo)`.",
+    ],
+    'sqrt_precision': [
+      "Dans CrispCalc, le `sqrt(k, N)` à deux arguments est la voie haute "
+          "précision. L'appel sous-jacent est `mpfr_sqrt_ui` de MPFR à la "
+          "précision ⌈N·log2(10)⌉ + 16 bits de garde. Le `sqrt(2)` à un "
+          "argument renvoie plutôt le `sqrt(2)` symbolique via SymEngine.",
+      "Utile pour la vérification — `sqrt(3, N)` devrait concorder avec des "
+          "chiffres de référence dérivés indépendamment.",
+    ],
+    'eulergamma_precision': [
+      "Dans CrispCalc, `EulerGamma(N)` utilise `mpfr_const_euler` de MPFR, "
+          "qui évalue γ via la formule de Brent–McMillan (fonctions de "
+          "Bessel modifiées). La précision est ⌈N·log2(10)⌉ + 16 bits de "
+          "garde, comme le pipeline de `pi(N)` et `e(N)`.",
+      "γ n'a aucune forme close connue. La routine MPFR est l'implémentation "
+          "de référence standard ; CrispCalc se contente d'afficher la chaîne "
+          "de chiffres.",
+    ],
+    'matrix_literal': [
+      "Dans CrispCalc, le littéral `Matrix(...)` est reconnu par "
+          "l'évaluateur de matrices avant que le moteur ne voie l'expression. "
+          "L'appel sous-jacent est le constructeur `DenseMatrix` de "
+          "SymEngine — la disposition lignes/colonnes est fixée à la "
+          "construction.",
+      "Les cellules restent symboliques — les rationnels ne sont pas réduits "
+          "en nombres à virgule flottante. Idem pour les symboles libres : "
+          "`Matrix([[a, b], [c, d]])` est accepté et propagé via `det` / "
+          "`inv` / `rref`.",
+      "Les matrices non carrées conviennent à `transpose` et `rref` mais "
+          "échouent pour `det` / `inv`, qui exigent une entrée carrée.",
+    ],
+    'det': [
+      "Dans CrispCalc, `det(M)` est évalué comme un scalaire unique. L'appel "
+          "sous-jacent est le `DenseMatrix::det()` de SymEngine, qui utilise "
+          "l'algorithme sans fraction de Bareiss — exact pour des entrées "
+          "symboliques/rationnelles, sans explosion en virgule flottante.",
+      "Exemple scolaire classique 3×3 — le développement de Laplace par "
+          "cofacteurs donne le même résultat en 6 termes.",
+      "Les entrées symboliques passent inchangées. Bareiss conserve le "
+          "résultat sous forme d'`Add` SymEngine plutôt qu'un nombre à "
+          "virgule flottante.",
+    ],
+    'inv': [
+      "Dans CrispCalc, `inv(M)` renvoie `adj(M)/det(M)`. L'appel sous-jacent "
+          "est le `DenseMatrix::inv()` de SymEngine, qui utilise "
+          "l'élimination de Gauss-Jordan sur les rationnels — les entrées "
+          "reviennent en fractions exactes, pas en nombres à virgule "
+          "flottante.",
+      "La matrice identité est sa propre inverse — un test rapide de bon "
+          "fonctionnement confirmant que le pont fait l'aller-retour "
+          "correctement.",
+      "Une entrée singulière (det = 0) provoque une erreur propre plutôt que "
+          "de renvoyer de grands nombres absurdes. La puce d'erreur apparaît "
+          "dans l'historique de la calculatrice.",
+    ],
+    'transpose': [
+      "Dans CrispCalc, `transpose(M)` est implémenté côté Dart car le pont "
+          "n'expose pas de point d'entrée de transposition. Nous allouons une "
+          "nouvelle `SymEngineMatrix` aux dimensions échangées et copions les "
+          "cellules une à une.",
+      "Entrée rectangulaire : une 2×3 devient une 3×2 — utile pour les "
+          "dispositions de données appariées.",
+      "Idempotente après deux applications. Vérifie que l'échange des "
+          "cellules laisse le contenu symbolique intact.",
+    ],
+    'rref': [
+      "Dans CrispCalc, `rref` exécute Gauss-Jordan en Dart et appelle le "
+          "`simplify()` de SymEngine à chaque mise à jour de cellule. Le pont "
+          "n'expose pas `rref` directement, donc l'algorithme parcourt les "
+          "colonnes de gauche à droite, met à l'échelle la ligne de pivot, "
+          "puis élimine la colonne au-dessus et en dessous.",
+      "Entrée de rang déficient : la seconde ligne se réduit à des zéros. "
+          "Utile pour repérer visuellement une dépendance linéaire.",
+      "La mise à l'échelle du pivot normalise les entrées de tête à 1. La "
+          "détection symbolique des valeurs non nulles est le point "
+          "sensible — voir la note d'algorithme dans `matrix_evaluator.dart`.",
+    ],
+    'matrix_arithmetic': [
+      "Dans CrispCalc, les opérations binaires sur matrices sont prises en "
+          "charge par l'évaluateur de matrices lorsque les deux opérandes se "
+          "lisent comme des littéraux `Matrix(...)`. L'appel sous-jacent est "
+          "`add_dense_dense` de SymEngine ; la soustraction passe par "
+          "`add_dense_dense` avec une négation terme à terme du membre de "
+          "droite.",
+      "La multiplication est le produit scalaire ligne par colonne habituel "
+          "via `mul_dense_dense` de SymEngine. La multiplication à droite par "
+          "l'identité est un test de bon fonctionnement.",
+      "La soustraction est terme à terme ; une discordance de dimensions "
+          "échoue proprement avec `Error: matrix - failed: …`.",
+    ],
+    'mean': [
+      "Dans CrispCalc, `mean` est calculée par `DescriptiveStats.mean` (voir "
+          "`lib/engine/statistics.dart`) — une somme en une passe / n. Pour "
+          "des données appariées ou groupées, le module Statistiques expose "
+          "aussi l'écart-type, la médiane, les quartiles et l'écart "
+          "interquartile.",
+      "Entrée à virgule flottante — l'implémentation accumule en `double`, "
+          "si bien que des listes très grandes ou d'ordres de grandeur mêlés "
+          "peuvent nécessiter un algorithme de sommation stable si vous "
+          "voulez plus de 15 chiffres.",
+    ],
+    'welch_t': [
+      "Dans CrispCalc, `welchT` se trouve dans "
+          "`lib/engine/hypothesis_tests.dart`. L'appel sous-jacent calcule la "
+          "statistique de test t = (x̄_A − x̄_B) / √(s_A²/n_A + s_B²/n_B), "
+          "approche ensuite les degrés de liberté via Welch-Satterthwaite, et "
+          "lit la valeur p sur `TDistribution.cdf`.",
+      "Cas à très petit échantillon — le ddl de Welch ≈ 4 bien que "
+          "n_A + n_B = 6, car la loi t à deux échantillons tient compte de "
+          "l'incertitude de l'estimation de la variance.",
+    ],
+    'paired_t': [
+      "Dans CrispCalc, `pairedT` se ramène à un test t à un échantillon sur "
+          "le vecteur des différences d = après − avant. L'appel sous-jacent "
+          "est la même voie `TDistribution.cdf` que `welchT`, mais avec "
+          "ddl = n - 1 (pas de correction de Welch car il n'y a qu'une seule "
+          "estimation de variance à faire).",
+      "Cas limite : des décalages identiques produisent une variance nulle "
+          "des différences, que l'implémentation présente comme la valeur "
+          "limite p = 0 plutôt qu'un NaN.",
+    ],
+    'anova_1': [
+      "Dans CrispCalc, `anovaOneWay` partitionne la somme des carrés totale "
+          "en somme des carrés inter-groupes et intra-groupes. L'appel "
+          "sous-jacent est F = MS_inter / MS_intra avec ddl1 = K - 1 et "
+          "ddl2 = N - K, puis `FDistribution.sf` pour la valeur p de la queue "
+          "supérieure.",
+      "Des dispersions égales et des moyennes bien séparées produisent un F "
+          "élevé. On rejette H₀ (toutes les moyennes égales) au seuil "
+          "α = 0,05.",
+    ],
+    'chi2_goodness': [
+      "Dans CrispCalc, `chiSquareGof` évalue Σ (O - E)² / E et lit la valeur "
+          "p de la queue supérieure sur `ChiSquaredDistribution.sf` avec "
+          "ddl = k - 1, où k est le nombre de catégories. On suppose les "
+          "effectifs des cellules ≥ 5 — l'implémentation n'applique pas de "
+          "correction de Yates automatique.",
+      "Concordance parfaite → χ² = 0 → on ne rejette H₀ à aucun seuil α.",
+    ],
+    'chi2_independence': [
+      "Dans CrispCalc, `chiSquareIndependence` calcule les effectifs "
+          "attendus à partir des marges ligne × colonne (E_ij = ligne_i · "
+          "colonne_j / total), puis Σ (O - E)² / E avec "
+          "ddl = (lignes - 1) · (colonnes - 1). La valeur p sous-jacente "
+          "provient de `ChiSquaredDistribution.sf`.",
+      "Forte concentration hors diagonale → faible valeur p. Pour les tables "
+          "2×2 creuses, préférez `fisher_exact`, qui ne repose pas sur "
+          "l'approximation du khi-deux pour grands échantillons.",
+    ],
+    'fisher_exact': [
+      "Dans CrispCalc, `fisherExact` énumère toutes les tables 2×2 ayant les "
+          "mêmes marges et somme les probabilités hypergéométriques des "
+          "tables au moins aussi extrêmes que l'observée. L'appel sous-jacent "
+          "calcule des termes log-binomiaux pour éviter le dépassement sur de "
+          "grands totaux, puis exponentie ; la valeur p bilatérale suit la "
+          "convention de R (somme des probabilités de queue ≤ celle "
+          "observée).",
+      "Table symétrique → aucun indice d'association.",
+    ],
+    'wilcoxon': [
+      "Dans CrispCalc, `wilcoxonRankSum` réunit les deux échantillons, "
+          "attribue des rangs corrigés par les rangs moyens, somme les rangs "
+          "du groupe A et fournit le z de l'approximation normale. L'appel "
+          "sous-jacent applique une correction de liaisons à la variance et "
+          "lit la valeur p bilatérale sur la fonction de répartition normale.",
+      "Cas à très petit échantillon — l'approximation normale est limite à "
+          "n_A + n_B = 6. Pour de très petits échantillons, on préférera la "
+          "loi de permutation exacte (pas encore livrée).",
+    ],
+    'sign_test': [
+      "Dans CrispCalc, `pairedSign` écarte les paires de différence nulle, "
+          "compte les positives parmi les n restantes et teste contre une "
+          "loi Binomiale(n, 0,5). La valeur p sous-jacente utilise la queue "
+          "binomiale exacte — pas d'approximation normale, c'est donc le bon "
+          "choix pour de très petits échantillons appariés.",
+      "Une paire liée (4 → 4) est écartée, laissant n = 3 positives sur 3 "
+          "paires informatives. La valeur p exacte bilatérale est "
+          "2 · min(Binom(3, 0,5).cdf(3), …).",
+    ],
+    'vars': [
+      "Dans CrispCalc, la ligne `vars:` est analysée par `DslToFlatZinc` "
+          "(voir `lib/engine/csp_solver.dart`) et émet une déclaration "
+          "FlatZinc `var int: x :: …` par nom. Les bornes du domaine sont des "
+          "entiers concrets ; les domaines symboliques ne sont pas pris en "
+          "charge.",
+      "Un domaine `0..1` modélise une variable booléenne. FlatZinc a un type "
+          "`var bool` distinct — l'analyseur ne le détecte pas, mais le "
+          "solveur traite l'entier 0/1 tout aussi efficacement.",
+    ],
+    'all_different': [
+      "Dans CrispCalc, `allDifferent` se traduit en "
+          "`all_different_int([a, b, c])` de FlatZinc. Le solveur sous-jacent "
+          "(dart_csp) implémente la propagation par cohérence de bornes via "
+          "l'algorithme de couplage de Régin — bien plus rapide que le mode "
+          "deux à deux sur de grandes listes d'arguments.",
+      "Les modèles de Sudoku du module Sudoku reposent sur des piles de "
+          "contraintes `allDifferent` — une par ligne, colonne, bloc et "
+          "éventuelles zones de variante.",
+    ],
+    'no_overlap': [
+      "Dans CrispCalc, `noOverlap` se traduit en "
+          "`disjunctive([s1, s2, s3], [4, 3, 2])` de FlatZinc. Le solveur "
+          "sous-jacent utilise l'edge-finding plus le propagateur θ-tree de "
+          "Vilím — le même algorithme que celui intégré à MiniZinc.",
+      "Problème classique de séquencement sur une machine. Combinez avec "
+          "`minimize` sur l'expression du makespan pour obtenir "
+          "l'ordonnancement optimal. Voir l'exemple résolu pour le programme "
+          "DSL complet.",
+    ],
+    'cumulative': [
+      "Dans CrispCalc, `cumulative` se traduit en "
+          "`cumulative([starts], [durations], [resources], capacity)` de "
+          "FlatZinc. Le solveur sous-jacent utilise la propagation par "
+          "emploi du temps plus le raisonnement énergétique — des variantes "
+          "tenant compte de la capacité des propagateurs de `noOverlap`.",
+      "Le problème d'ordonnancement de projet à contraintes de ressources "
+          "(RCPSP) empile plusieurs contraintes `cumulative`, une par type de "
+          "ressource. Voir l'exemple résolu `dslRcpsp` pour un projet à deux "
+          "ressources.",
+    ],
+    'minimize': [
+      "Dans CrispCalc, `minimize` émet `solve minimize __obj__;` de FlatZinc "
+          "après avoir construit la variable objectif via l'analyse de "
+          "l'expression linéaire. Le solveur sous-jacent utilise la "
+          "séparation-évaluation — test de faisabilité, puis resserrement de "
+          "la borne supérieure à chaque solution améliorante.",
+      "Voir l'exemple résolu `dslCoinChange` — minimisez sur une somme de "
+          "variables indicatrices pour trouver le plus petit ensemble de "
+          "pièces totalisant la cible.",
+    ],
+    'maximize': [
+      "Dans CrispCalc, `maximize` émet `solve maximize __obj__;` de FlatZinc. "
+          "Le solveur sous-jacent fait de la séparation-évaluation tout comme "
+          "`minimize`, mais avec le resserrement de la borne inférieure "
+          "inversé.",
+      "Problème du sac à dos 0/1 classique. Le DSL le gère naturellement "
+          "comme une déclaration `vars: x_1, ... in 0..1` plus une contrainte "
+          "de capacité linéaire et un objectif linéaire.",
+    ],
+    'sudoku_regular': [
+      "Dans CrispCalc, la variante classique se trouve dans "
+          "`lib/engine/sudoku.dart` sous `SudokuVariant.regular`. Le solveur "
+          "sous-jacent instancie une contrainte `allDifferent` par ligne, "
+          "colonne et bloc (27 au total pour le 9×9) et les confie à "
+          "`dart_csp`.",
+    ],
+    'sudoku_x': [
+      "Dans CrispCalc, le Sudoku-X est `SudokuVariant.x` "
+          "(`lib/engine/sudoku.dart`). Le solveur sous-jacent ajoute deux "
+          "contraintes `allDifferent` supplémentaires au trio classique "
+          "ligne/colonne/bloc — une par diagonale.",
+    ],
+    'sudoku_disjoint': [
+      "Dans CrispCalc, c'est `SudokuVariant.disjoint`. Pour une grille N×N "
+          "avec des blocs √N × √N, la contrainte ajoute N recouvrements "
+          "`allDifferent` de plus — un par position dans le bloc. Le 8×8 est "
+          "livré comme un modèle unique.",
+    ],
+    'sudoku_killer': [
+      "Dans CrispCalc, c'est `SudokuVariant.killer`. Le solveur sous-jacent "
+          "superpose au trio classique ligne/colonne/bloc une contrainte "
+          "`allDifferent` par cage et une contrainte `somme = cible` par "
+          "cage. Les modèles killer 4×4 et 9×9 sont tous deux livrés.",
+    ],
+  };
+
   @override
   String get settingsWorkedExamples => 'Bibliothèque d\'exemples résolus';
   @override
@@ -7847,12 +8460,607 @@ class EsLocalizations implements AppLocalizations {
     return null;
   }
 
-  // Round 100: ES function-reference prose not translated yet — null
-  // falls back to the English catalog (mechanism is in place).
+  // Round 100: ES function-reference prose.
   @override
-  String? functionRefDescription(String id) => null;
+  String? functionRefDescription(String id) {
+    switch (id) {
+      case 'solve':
+        return "Resuelve simbólicamente una ecuación para una variable; "
+            "devuelve una lista de soluciones.";
+      case 'expand':
+        return "Desarrolla productos y potencias en una suma de monomios.";
+      case 'simplify':
+        return "Agrupa términos semejantes, cancela factores comunes y "
+            "aplica las identidades algebraicas habituales.";
+      case 'factor':
+        return "Factoriza un polinomio sobre los racionales en factores "
+            "irreducibles.";
+      case 'diff':
+        return "Derivada primera simbólica respecto a una variable.";
+      case 'integrate':
+        return "Integral indefinida (3 argumentos) o integral definida "
+            "(5 argumentos) con respaldo numérico.";
+      case 'subst':
+        return "Sustituye cada aparición libre de `variable` en `expression` "
+            "por `value`. También disponible como `substitute(...)`.";
+      case 'limit':
+        return "Límite numérico cuando `variable` tiende a `point`. `point` "
+            "puede ser un valor finito o `oo` / `-oo`.";
+      case 'gcd':
+        return "Máximo común divisor (MCD) de dos enteros o polinomios.";
+      case 'lcm':
+        return "Mínimo común múltiplo (mcm) de dos enteros o polinomios.";
+      case 'factorial':
+        return "Factorial entero exacto. Los `n` pequeños usan el `BigInt` "
+            "de Dart; los `n` grandes se delegan en SymEngine.";
+      case 'fibonacci':
+        return "n-ésimo número de Fibonacci. `fib(n)` es el alias corto.";
+      case 'isprime':
+        return "Test de primalidad probabilístico sobre enteros.";
+      case 'nextprime':
+        return "El menor número primo estrictamente mayor que `n`.";
+      case 'prevprime':
+        return "El mayor número primo estrictamente menor que `n`. Error si "
+            "no existe tal primo (p. ej. `prevprime(2)`).";
+      case 'factorint':
+        return "Factorización en primos con la forma `p₁^e₁ · p₂^e₂ · …` con "
+            "exponentes en superíndice Unicode.";
+      case 'pi_precision':
+        return "π con N cifras decimales mediante MPFR; devuelve la cadena "
+            "de dígitos en bruto.";
+      case 'e_precision':
+        return "Número de Euler e con N cifras decimales mediante MPFR.";
+      case 'sqrt_precision':
+        return "Raíz cuadrada del entero `k` con N cifras decimales mediante "
+            "MPFR. La forma de dos argumentos elige la vía de alta "
+            "precisión.";
+      case 'eulergamma_precision':
+        return "Constante de Euler-Mascheroni γ ≈ 0,5772… con N cifras "
+            "decimales mediante MPFR.";
+      case 'matrix_literal':
+        return "Literal de matriz: una lista de filas, cada fila una lista "
+            "de expresiones de celda. Las celdas pueden ser números, "
+            "fracciones o simbólicas.";
+      case 'det':
+        return "Determinante de una matriz cuadrada. Devuelve un escalar "
+            "simbólico.";
+      case 'inv':
+        return "Inversa de una matriz cuadrada no singular. Error cuando "
+            "`det = 0`.";
+      case 'transpose':
+        return "Transpuesta: intercambia filas y columnas. Funciona con "
+            "matrices rectangulares.";
+      case 'rref':
+        return "Forma escalonada reducida por filas mediante eliminación de "
+            "Gauss-Jordan. Funciona sobre entradas simbólicas/racionales.";
+      case 'matrix_arithmetic':
+        return "Suma/resta elemento a elemento y multiplicación de matrices "
+            "sobre literales `Matrix(...)`.";
+      case 'mean':
+        return "Media aritmética de una muestra como lista de números. "
+            "Disponible en la pestaña «Estadística descriptiva» del módulo de "
+            "Estadística, junto a los estadísticos habituales.";
+      case 'welch_t':
+        return "Prueba t de dos muestras con varianzas desiguales "
+            "(Welch-Satterthwaite). Opción robusta por defecto cuando los dos "
+            "grupos pueden tener dispersiones distintas.";
+      case 'paired_t':
+        return "Prueba t para muestras pareadas sobre las diferencias "
+            "intrasujeto frente a μ₀ = 0. Se usa cuando las mismas unidades "
+            "se miden dos veces (antes/después).";
+      case 'anova_1':
+        return "Análisis de varianza (ANOVA) de un factor sobre K grupos "
+            "independientes. Contrasta si difieren las medias de los grupos; "
+            "da un estadístico F y un valor p.";
+      case 'chi2_goodness':
+        return "Prueba de bondad de ajuste chi-cuadrado: ¿los recuentos "
+            "observados coinciden con una distribución supuesta?";
+      case 'chi2_independence':
+        return "Prueba de independencia chi-cuadrado sobre una tabla de "
+            "contingencia: ¿son independientes dos variables categóricas?";
+      case 'fisher_exact':
+        return "Prueba exacta de Fisher sobre una tabla de contingencia 2×2. "
+            "Valor p hipergeométrico exacto, sin aproximación para muestras "
+            "grandes.";
+      case 'wilcoxon':
+        return "Prueba de suma de rangos de Wilcoxon / U de "
+            "Mann-Whitney: prueba no paramétrica de dos muestras sobre "
+            "rangos. Robusta ante datos no normales.";
+      case 'sign_test':
+        return "Prueba de los signos para muestras pareadas: prueba no "
+            "paramétrica basada en la mediana de las diferencias pareadas. "
+            "Cuenta cuántas veces `después > antes`.";
+      case 'vars':
+        return "Declara las variables de decisión enteras y su dominio. "
+            "Siempre la primera línea de un programa DSL de CrispCalc.";
+      case 'all_different':
+        return "Restricción global «todos los valores distintos dos a dos». "
+            "La restricción estrella de PPC: propagación mucho más fuerte que "
+            "n·(n-1)/2 cláusulas `!=` dos a dos.";
+      case 'no_overlap':
+        return "Planificación disyuntiva: tareas con variables de inicio "
+            "dadas y duraciones fijas no pueden solaparse en el tiempo en una "
+            "misma máquina.";
+      case 'cumulative':
+        return "Planificación acumulativa sobre un recurso renovable de "
+            "capacidad fija. Cada tarea tiene una duración y una demanda de "
+            "recurso propia.";
+      case 'minimize':
+        return "Objetivo: minimizar una expresión lineal sobre las variables "
+            "de decisión. Combínalo con restricciones para resolver PSR de "
+            "optimización.";
+      case 'maximize':
+        return "Objetivo: maximizar una expresión lineal. Imagen especular "
+            "de `minimize`: la misma ramificación y acotación, en sentido "
+            "opuesto.";
+      case 'sudoku_regular':
+        return "Reglas clásicas del Sudoku: cada fila, columna y caja "
+            "contiene cada dígito exactamente una vez. Hay plantillas para "
+            "4×4, 6×6, 8×8, 9×9, 10×10, 12×12, 15×15 y 16×16.";
+      case 'sudoku_x':
+        return "Sudoku-X: reglas clásicas del Sudoku más las dos diagonales "
+            "principales, que también son «todas distintas». Se ofrece como "
+            "plantilla 8×8.";
+      case 'sudoku_disjoint':
+        return "Grupos disjuntos: reglas clásicas más una restricción «todas "
+            "distintas» adicional sobre las celdas que ocupan la misma "
+            "posición dentro de la caja, en todas las cajas.";
+      case 'sudoku_killer':
+        return "Sudoku killer: sin pistas dadas; en su lugar, la cuadrícula "
+            "se divide en «jaulas», cada una «todas distintas» y con suma "
+            "igual a un objetivo dado.";
+      default:
+        return null;
+    }
+  }
+
   @override
-  String? functionRefExampleHint(String id, int index) => null;
+  String? functionRefExampleHint(String id, int index) {
+    final list = _esHints[id];
+    if (list == null || index < 0 || index >= list.length) return null;
+    return list[index];
+  }
+
+  static const _esHints = <String, List<String>>{
+    'solve': [
+      "En CrispCalc, `solve(x^2 - 1, x)` devuelve una lista de raíces al "
+          "estilo de Python. La llamada subyacente es el `solve()` de "
+          "SymEngine (la rama de raíces racionales para polinomios), envuelta "
+          "por el puente y serializada de nuevo a una cadena de Dart.",
+      "`=` en la entrada se acepta como sintaxis de ecuación: el "
+          "preprocesador normaliza `lhs = rhs` a `lhs - rhs` antes de la "
+          "llamada al puente.",
+      "Las raíces complejas vuelven como el literal `I` de SymEngine. Si las "
+          "reutilizas en otras llamadas (p. ej. `expand((-I)*(I))`), el "
+          "puente las mantiene simbólicas.",
+    ],
+    'expand': [
+      "En CrispCalc, `expand((x + 1)^2)` devuelve el desarrollo del binomio. "
+          "La llamada subyacente es el `expand()` de SymEngine, que descompone "
+          "los nodos `Pow` y `Mul` y agrupa los términos semejantes.",
+      "Los coeficientes coinciden con la fila 5 del triángulo de Pascal: "
+          "1, 5, 10, 10, 5, 1, cada uno multiplicado por la potencia de 2 "
+          "correspondiente.",
+      "La identidad de la diferencia de cuadrados, útil en combinación con "
+          "`factor` para alternar entre las formas.",
+    ],
+    'simplify': [
+      "En CrispCalc, `simplify` cancela el factor común `(x - 2)`. La "
+          "llamada subyacente es el `simplify()` de SymEngine, que prueba "
+          "`rational_simplify` más un pequeño conjunto de reglas de "
+          "reescritura.",
+      "Agrupación de términos semejantes en una entrada polinómica: "
+          "internamente es simplemente `expand` seguido de la fusión de "
+          "coeficientes.",
+      "Identidad pitagórica; SymEngine aplica la regla de reescritura "
+          "trigonométrica antes de devolver el literal `1`.",
+    ],
+    'factor': [
+      "En CrispCalc, `factor(x^2 - 1)` devuelve la factorización como "
+          "diferencia de cuadrados. La llamada subyacente es el `factor()` de "
+          "SymEngine, que usa Berlekamp / Cantor–Zassenhaus para polinomios "
+          "de una variable sobre Q.",
+      "Identidad de la suma/diferencia de cubos: un factor lineal por un "
+          "trinomio de segundo grado irreducible sobre Q.",
+      "La factorización se detiene en la irreducibilidad sobre Q: `x^2 + 1` "
+          "no se descompone más sin admitir raíces complejas.",
+    ],
+    'diff': [
+      "En CrispCalc, `diff(...)` aplica término a término las reglas de la "
+          "potencia y de la constante. La llamada subyacente es el `diff()` "
+          "de SymEngine, que recorre el árbol de la expresión y emite un "
+          "nuevo nodo `Add` simbólico.",
+      "Regla de la cadena: SymEngine aplica `diff(sin(u))/du * du/dx` para el "
+          "interior `u = x^2`.",
+      "Regla del producto: observa que SymEngine deja el resultado sin "
+          "factorizar. Pasado por `factor`, se saca `exp(x)` como factor "
+          "común.",
+    ],
+    'integrate': [
+      "En CrispCalc, la integral indefinida `integrate(...)` se delega en el "
+          "`integrate()` de SymEngine. La integración por partes se aplica "
+          "automáticamente cuando un factor se deriva a un polinomio.",
+      "Forma definida: cuando SymEngine dispone de una primitiva en forma "
+          "cerrada, aplica el teorema fundamental del cálculo. Si falla "
+          "simbólicamente, CrispCalc recurre a la regla de Simpson "
+          "(200 subintervalos).",
+      "Fracciones parciales: 1/(x²-1) = 1/(2(x-1)) - 1/(2(x+1)). SymEngine "
+          "realiza el cálculo automáticamente.",
+    ],
+    'subst': [
+      "En CrispCalc, `subst` reescribe el árbol de la expresión y luego "
+          "intenta una pasada de simplificación. La llamada subyacente es el "
+          "`xreplace()` de SymEngine (sustitución solo de variables, sin "
+          "coincidencia de patrones).",
+      "Las constantes numéricas `pi`, `e` y la unidad imaginaria `I` las "
+          "reconoce SymEngine y se propagan a través de la identidad "
+          "trigonométrica.",
+      "La sustitución es simbólica: las variables libres no relacionadas `a` "
+          "y `b` permanecen intactas.",
+    ],
+    'limit': [
+      "En CrispCalc, `limit(...)` es un método numérico: el puente evalúa la "
+          "expresión en una sucesión de puntos que convergen a `point` y "
+          "comunica el límite cuando muestras consecutivas concuerdan a la "
+          "precisión de trabajo. Sin desarrollo en serie simbólico.",
+      "El literal `oo` es el centinela de infinito de SymEngine: el "
+          "preprocesador lo reconoce antes del envío. Usa `-oo` para el "
+          "infinito negativo.",
+      "Tiende al número de Euler. Como la vía es numérica, el resultado es "
+          "un número en coma flotante; usa `e(N)` para la constante en alta "
+          "precisión.",
+    ],
+    'gcd': [
+      "En CrispCalc, el `gcd(...)` entero usa la recurrencia de Euclides "
+          "gcd(a, b) = gcd(b, a mod b). La llamada subyacente es el `gcd()` "
+          "de SymEngine, que en el caso entero recurre a `mpz_gcd` de GMP.",
+      "MCD de polinomios mediante el algoritmo de subresultantes (PRS). Útil "
+          "como paso previo a `simplify` para las cancelaciones.",
+      "Convención: `gcd(0, n) = |n|`. Coincide con la definición matemática "
+          "que trata el 0 como múltiplo de todo entero.",
+    ],
+    'lcm': [
+      "En CrispCalc, el `lcm(...)` entero se calcula mediante la identidad "
+          "`lcm(a, b) = |a*b| / gcd(a, b)`. La llamada subyacente es el "
+          "`lcm()` de SymEngine, que delega en `mpz_lcm` de GMP.",
+      "36 = 2²·3², la unión de los factores en potencias de primos de "
+          "12 = 2²·3 y 18 = 2·3².",
+      "El mcm de polinomios elige el múltiplo de mayor grado: `x^2 - 1` ya "
+          "contiene `x + 1` como factor.",
+    ],
+    'factorial': [
+      "En CrispCalc, el sufijo `n!` y `factorial(n)` son equivalentes: el "
+          "preprocesador reescribe el sufijo como llamada. Para `n ≤ 1000` "
+          "calculamos en Dart con multiplicación `BigInt`; más allá, la "
+          "llamada subyacente es el `factorial()` de SymEngine.",
+      "158 dígitos, conservados exactamente gracias a la vía BigInt: pasar a "
+          "IEEE-754 redondearía aquí a 1,0 × 10^157.",
+      "Convención del producto vacío: 0! = 1. Necesaria para que la "
+          "recurrencia n! = n · (n-1)! termine en 1.",
+    ],
+    'fibonacci': [
+      "En CrispCalc, `fib(n)` y `fibonacci(n)` son la misma llamada. Para "
+          "`n ≤ 90` usamos una tabla precalculada; para `n` mayores, la "
+          "llamada subyacente es el `fibonacci()` de SymEngine, que usa "
+          "duplicación rápida (O(log n) multiplicaciones mediante GMP).",
+      "El 50.º número de Fibonacci: muy por encima del límite de la tabla "
+          "para términos pequeños, pero aún cabe en un entero con signo de "
+          "64 bits.",
+      "Pasa a la vía respaldada por GMP. La duplicación rápida evita la "
+          "recurrencia lineal O(n), de modo que incluso fib(10000) queda por "
+          "debajo de un segundo.",
+    ],
+    'isprime': [
+      "En CrispCalc, `isprime(n)` devuelve una etiqueta booleana. La llamada "
+          "subyacente es `mpz_probab_prime_p` de GMP (25 rondas de "
+          "Miller-Rabin, cota de error 4^-25 ≈ 9×10^-16) mediante el módulo "
+          "`ntheory` de SymEngine. 2027 es el 308.º número primo.",
+      "2024 = 2³·11·23.",
+      "El noveno número primo de Mersenne, M61. Miller-Rabin se resuelve aún "
+          "en microsegundos a este tamaño: el coste está en las "
+          "exponenciaciones modulares, no en la longitud en bits.",
+    ],
+    'nextprime': [
+      "En CrispCalc, `nextprime(n)` itera desde `n+1` y prueba cada "
+          "candidato. La llamada subyacente es el `ntheory::nextprime()` de "
+          "SymEngine, que usa la criba de FLINT sobre ventanas cortas cuando "
+          "el hueco es grande.",
+      "Estrictamente mayor: `nextprime(p)` nunca es `p` mismo, aunque `p` sea "
+          "primo.",
+    ],
+    'prevprime': [
+      "En CrispCalc, `prevprime(n)` desciende desde `n-1`. La llamada "
+          "subyacente es el `ntheory::prevprime()` de SymEngine.",
+      "Por debajo de 2 no existen primos; el puente lanza un error en lugar "
+          "de devolver un valor centinela. CrispCalc muestra la etiqueta de "
+          "error.",
+    ],
+    'factorint': [
+      "En CrispCalc, `factorint(n)` devuelve una descomposición en primos "
+          "ya formateada. La llamada subyacente es `fmpz_factor` de FLINT, "
+          "con la envoltura ntheory de SymEngine por delante; CrispCalc "
+          "convierte la lista de (primo, exponente) en la representación con "
+          "dígitos Unicode en superíndice.",
+      "El 8.º número primo de Mersenne, M31. Un único factor (él mismo): "
+          "`factorint` se cortocircuita cuando la entrada es prima.",
+      "Caso límite: por convención, 1 tiene la factorización vacía; "
+          "CrispCalc lo muestra como el literal `1` en vez de una cadena "
+          "vacía.",
+    ],
+    'pi_precision': [
+      "En CrispCalc, `pi(N)` es una llamada con tratamiento especial, "
+          "dirigida a la vía de alta precisión antes de que SymEngine la vea. "
+          "La llamada subyacente es `mpfr_const_pi` de MPFR con precisión "
+          "⌈N·log2(10)⌉ + 16 bits de guarda, seguida de la conversión a "
+          "base 10.",
+      "Con N = 100 la precisión de trabajo es de unos 348 bits. Los bits de "
+          "guarda impiden que la conversión de base muestre dígitos finales "
+          "redondeados.",
+    ],
+    'e_precision': [
+      "En CrispCalc, `e(N)` refleja la canalización de `pi(N)`: "
+          "`mpfr_const_e` de MPFR (que usa la serie de Taylor Σ 1/k!) con "
+          "precisión ⌈N·log2(10)⌉ + 16 bits de guarda, y luego la "
+          "representación en base 10.",
+      "Lo bastante corto para memorizarlo: útil como comprobación rápida de "
+          "precisión frente a `limit((1 + 1/n)^n, n, oo)`.",
+    ],
+    'sqrt_precision': [
+      "En CrispCalc, el `sqrt(k, N)` de dos argumentos es la vía de alta "
+          "precisión. La llamada subyacente es `mpfr_sqrt_ui` de MPFR con "
+          "precisión ⌈N·log2(10)⌉ + 16 bits de guarda. El `sqrt(2)` de un "
+          "argumento devuelve en cambio el `sqrt(2)` simbólico mediante "
+          "SymEngine.",
+      "Útil para verificar: `sqrt(3, N)` debería concordar con dígitos de "
+          "referencia obtenidos de forma independiente.",
+    ],
+    'eulergamma_precision': [
+      "En CrispCalc, `EulerGamma(N)` usa `mpfr_const_euler` de MPFR, que "
+          "evalúa γ mediante la fórmula de Brent–McMillan (funciones de "
+          "Bessel modificadas). La precisión es ⌈N·log2(10)⌉ + 16 bits de "
+          "guarda, igual que la canalización de `pi(N)` y `e(N)`.",
+      "γ no tiene forma cerrada conocida. La rutina de MPFR es la "
+          "implementación de referencia estándar; CrispCalc se limita a "
+          "mostrar la cadena de dígitos.",
+    ],
+    'matrix_literal': [
+      "En CrispCalc, el literal `Matrix(...)` lo reconoce el evaluador de "
+          "matrices antes de que el motor vea la expresión. La llamada "
+          "subyacente es el constructor `DenseMatrix` de SymEngine: la "
+          "disposición de filas/columnas se fija en la construcción.",
+      "Las celdas siguen siendo simbólicas: los racionales no se reducen a "
+          "coma flotante. Lo mismo ocurre con los símbolos libres: "
+          "`Matrix([[a, b], [c, d]])` se acepta y se propaga por `det` / "
+          "`inv` / `rref`.",
+      "Las matrices no cuadradas valen para `transpose` y `rref` pero fallan "
+          "en `det` / `inv`, que exigen una entrada cuadrada.",
+    ],
+    'det': [
+      "En CrispCalc, `det(M)` se evalúa como un único escalar. La llamada "
+          "subyacente es el `DenseMatrix::det()` de SymEngine, que usa el "
+          "algoritmo sin fracciones de Bareiss: exacto para entradas "
+          "simbólicas/racionales, sin desbordamiento en coma flotante.",
+      "Ejemplo clásico de libro de texto 3×3: el desarrollo por cofactores "
+          "de Laplace da el mismo resultado en 6 términos.",
+      "Las entradas simbólicas pasan sin cambios. Bareiss mantiene el "
+          "resultado como un `Add` de SymEngine en lugar de un número en coma "
+          "flotante.",
+    ],
+    'inv': [
+      "En CrispCalc, `inv(M)` devuelve `adj(M)/det(M)`. La llamada subyacente "
+          "es el `DenseMatrix::inv()` de SymEngine, que usa la eliminación de "
+          "Gauss-Jordan sobre los racionales: las entradas vuelven como "
+          "fracciones exactas, no como coma flotante.",
+      "La matriz identidad es su propia inversa: una comprobación rápida de "
+          "que el puente hace el viaje de ida y vuelta correctamente.",
+      "Una entrada singular (det = 0) da un error limpio en lugar de "
+          "devolver números enormes sin sentido. La etiqueta de error aparece "
+          "en el historial de la calculadora.",
+    ],
+    'transpose': [
+      "En CrispCalc, `transpose(M)` está implementado del lado de Dart "
+          "porque el puente no expone un punto de entrada de transposición. "
+          "Reservamos una nueva `SymEngineMatrix` con dimensiones "
+          "intercambiadas y copiamos las celdas una a una.",
+      "Entrada rectangular: una 2×3 pasa a ser una 3×2, útil para "
+          "disposiciones de datos pareados.",
+      "Idempotente tras dos aplicaciones. Verifica que el intercambio de "
+          "celdas deja intacto el contenido simbólico.",
+    ],
+    'rref': [
+      "En CrispCalc, `rref` ejecuta Gauss-Jordan en Dart y llama al "
+          "`simplify()` de SymEngine en cada actualización de celda. El "
+          "puente no expone `rref` directamente, así que el algoritmo recorre "
+          "las columnas de izquierda a derecha, escala la fila pivote y luego "
+          "elimina la columna por encima y por debajo.",
+      "Entrada de rango deficiente: la segunda fila se reduce a todo ceros. "
+          "Útil para detectar visualmente la dependencia lineal.",
+      "El escalado del pivote normaliza a 1 las entradas principales. La "
+          "detección simbólica de valores no nulos es el punto débil: véase "
+          "la nota del algoritmo en `matrix_evaluator.dart`.",
+    ],
+    'matrix_arithmetic': [
+      "En CrispCalc, las operaciones binarias con matrices las gestiona el "
+          "evaluador de matrices cuando ambos operandos se analizan como "
+          "literales `Matrix(...)`. La llamada subyacente es `add_dense_dense` "
+          "de SymEngine; la resta pasa por `add_dense_dense` con una negación "
+          "elemento a elemento del lado derecho.",
+      "La multiplicación es el producto escalar fila por columna habitual "
+          "mediante `mul_dense_dense` de SymEngine. La multiplicación por la "
+          "derecha por la identidad es una comprobación de funcionamiento.",
+      "La resta es elemento a elemento; una discrepancia de dimensiones falla "
+          "limpiamente con `Error: matrix - failed: …`.",
+    ],
+    'mean': [
+      "En CrispCalc, `mean` la calcula `DescriptiveStats.mean` (véase "
+          "`lib/engine/statistics.dart`): una suma en una pasada / n. Para "
+          "datos pareados o agrupados, el módulo de Estadística también ofrece "
+          "desviación típica, mediana, cuartiles y el rango intercuartílico.",
+      "Entrada en coma flotante: la implementación acumula en `double`, así "
+          "que listas muy grandes o de magnitudes mezcladas pueden requerir "
+          "un algoritmo de suma estable si necesitas más de 15 dígitos.",
+    ],
+    'welch_t': [
+      "En CrispCalc, `welchT` está en "
+          "`lib/engine/hypothesis_tests.dart`. La llamada subyacente calcula "
+          "el estadístico t = (x̄_A − x̄_B) / √(s_A²/n_A + s_B²/n_B), luego "
+          "aproxima los grados de libertad mediante Welch-Satterthwaite y lee "
+          "el valor p en `TDistribution.cdf`.",
+      "Caso de muestra diminuta: los gl de Welch ≈ 4 aunque n_A + n_B = 6, "
+          "porque la distribución t de dos muestras ajusta la incertidumbre "
+          "de la estimación de la varianza.",
+    ],
+    'paired_t': [
+      "En CrispCalc, `pairedT` se reduce a una prueba t de una muestra sobre "
+          "el vector de diferencias d = después − antes. La llamada subyacente "
+          "es la misma vía `TDistribution.cdf` que usa `welchT`, pero con "
+          "gl = n - 1 (sin ajuste de Welch, ya que solo hay una estimación de "
+          "la varianza que hacer).",
+      "Caso límite: desplazamientos idénticos producen varianza nula en las "
+          "diferencias, que la implementación presenta como el valor límite "
+          "p = 0 en lugar de un NaN.",
+    ],
+    'anova_1': [
+      "En CrispCalc, `anovaOneWay` descompone la suma de cuadrados total en "
+          "la suma de cuadrados entre grupos y dentro de los grupos. La "
+          "llamada subyacente es F = MC_entre / MC_dentro con gl1 = K - 1 y "
+          "gl2 = N - K, y luego `FDistribution.sf` para el valor p de la cola "
+          "superior.",
+      "Dispersiones iguales y medias bien separadas producen una F alta. Se "
+          "rechaza H₀ (todas las medias iguales) al nivel α = 0,05.",
+    ],
+    'chi2_goodness': [
+      "En CrispCalc, `chiSquareGof` evalúa Σ (O - E)² / E y lee el valor p "
+          "de la cola superior en `ChiSquaredDistribution.sf` con gl = k - 1, "
+          "donde k es el número de categorías. Se supone que los recuentos de "
+          "celda son ≥ 5: la implementación no aplica la corrección de Yates "
+          "automáticamente.",
+      "Coincidencia perfecta → χ² = 0 → no se rechaza H₀ a ningún nivel α.",
+    ],
+    'chi2_independence': [
+      "En CrispCalc, `chiSquareIndependence` calcula los recuentos esperados "
+          "a partir de los marginales de fila × columna (E_ij = fila_i · "
+          "columna_j / total), luego Σ (O - E)² / E con "
+          "gl = (filas - 1) · (columnas - 1). El valor p subyacente proviene "
+          "de `ChiSquaredDistribution.sf`.",
+      "Fuerte concentración fuera de la diagonal → valor p bajo. Para tablas "
+          "2×2 dispersas, prefiere `fisher_exact`, que no depende de la "
+          "aproximación chi-cuadrado para muestras grandes.",
+    ],
+    'fisher_exact': [
+      "En CrispCalc, `fisherExact` enumera todas las tablas 2×2 con los "
+          "mismos marginales y suma las probabilidades hipergeométricas de "
+          "las tablas al menos tan extremas como la observada. La llamada "
+          "subyacente calcula términos log-binomiales para evitar el "
+          "desbordamiento con totales grandes, y luego exponencia; el valor p "
+          "bilateral sigue la convención de R (suma de probabilidades de cola "
+          "≤ la observada).",
+      "Tabla simétrica → ninguna evidencia de asociación.",
+    ],
+    'wilcoxon': [
+      "En CrispCalc, `wilcoxonRankSum` une ambas muestras, asigna rangos "
+          "corregidos por rangos medios, suma los rangos del grupo A e "
+          "informa del z de la aproximación normal. La llamada subyacente "
+          "aplica una corrección por empates a la varianza y lee el valor p "
+          "bilateral en la función de distribución normal.",
+      "Caso de muestra diminuta: la aproximación normal está en el límite con "
+          "n_A + n_B = 6. Para muestras muy pequeñas conviene la distribución "
+          "de permutación exacta (aún no incluida).",
+    ],
+    'sign_test': [
+      "En CrispCalc, `pairedSign` descarta los pares con diferencia nula, "
+          "cuenta los positivos entre los n restantes y contrasta frente a "
+          "una Binomial(n, 0,5). El valor p subyacente usa la cola binomial "
+          "exacta: sin aproximación normal, por lo que es la opción adecuada "
+          "para muestras pareadas muy pequeñas.",
+      "Un par empatado (4 → 4) se descarta, dejando n = 3 positivos de 3 "
+          "pares informativos. El valor p exacto bilateral es "
+          "2 · min(Binom(3, 0,5).cdf(3), …).",
+    ],
+    'vars': [
+      "En CrispCalc, la línea `vars:` la analiza `DslToFlatZinc` (véase "
+          "`lib/engine/csp_solver.dart`) y emite una declaración FlatZinc "
+          "`var int: x :: …` por nombre. Las cotas del dominio son enteros "
+          "concretos; los dominios simbólicos no se admiten.",
+      "Un dominio `0..1` modela una variable booleana. FlatZinc tiene un tipo "
+          "`var bool` aparte: el analizador no lo detecta, pero el solucionador "
+          "trata el entero 0/1 con la misma eficiencia.",
+    ],
+    'all_different': [
+      "En CrispCalc, `allDifferent` se traduce a "
+          "`all_different_int([a, b, c])` de FlatZinc. El solucionador "
+          "subyacente (dart_csp) implementa la propagación por consistencia de "
+          "cotas mediante el algoritmo de emparejamiento de Régin: mucho más "
+          "rápido que el modo dos a dos en listas de argumentos grandes.",
+      "Las plantillas de Sudoku del módulo Sudoku se construyen sobre pilas "
+          "de restricciones `allDifferent`: una por fila, columna, caja y las "
+          "zonas de variante que haya.",
+    ],
+    'no_overlap': [
+      "En CrispCalc, `noOverlap` se traduce a "
+          "`disjunctive([s1, s2, s3], [4, 3, 2])` de FlatZinc. El "
+          "solucionador subyacente usa edge-finding más el propagador θ-tree "
+          "de Vilím: el mismo algoritmo que el integrado en MiniZinc.",
+      "Problema clásico de secuenciación en una máquina. Combínalo con "
+          "`minimize` sobre la expresión del makespan para obtener la "
+          "planificación óptima. Véase el ejemplo resuelto para el programa "
+          "DSL completo.",
+    ],
+    'cumulative': [
+      "En CrispCalc, `cumulative` se traduce a "
+          "`cumulative([starts], [durations], [resources], capacity)` de "
+          "FlatZinc. El solucionador subyacente usa propagación por "
+          "calendario más razonamiento energético: variantes conscientes de "
+          "la capacidad de los propagadores de `noOverlap`.",
+      "El problema de planificación de proyectos con recursos limitados "
+          "(RCPSP) apila varias restricciones `cumulative`, una por tipo de "
+          "recurso. Véase el ejemplo resuelto `dslRcpsp` para un proyecto con "
+          "dos recursos.",
+    ],
+    'minimize': [
+      "En CrispCalc, `minimize` emite `solve minimize __obj__;` de FlatZinc "
+          "tras construir la variable objetivo mediante el análisis de la "
+          "expresión lineal. El solucionador subyacente usa ramificación y "
+          "acotación: comprobación de factibilidad y luego ajuste de la cota "
+          "superior en cada solución que mejora.",
+      "Véase el ejemplo resuelto `dslCoinChange`: minimiza sobre una suma de "
+          "variables indicadoras para hallar el menor conjunto de monedas que "
+          "suma el objetivo.",
+    ],
+    'maximize': [
+      "En CrispCalc, `maximize` emite `solve maximize __obj__;` de FlatZinc. "
+          "El solucionador subyacente hace ramificación y acotación igual que "
+          "`minimize`, pero con el ajuste de la cota inferior invertido.",
+      "Problema clásico de la mochila 0/1. El DSL lo gestiona de forma "
+          "natural como una declaración `vars: x_1, ... in 0..1` más una "
+          "restricción de capacidad lineal y un objetivo lineal.",
+    ],
+    'sudoku_regular': [
+      "En CrispCalc, la variante clásica está en `lib/engine/sudoku.dart` "
+          "como `SudokuVariant.regular`. El solucionador subyacente instancia "
+          "una restricción `allDifferent` por fila, columna y caja (27 en "
+          "total para el 9×9) y se las pasa a `dart_csp`.",
+    ],
+    'sudoku_x': [
+      "En CrispCalc, el Sudoku-X es `SudokuVariant.x` "
+          "(`lib/engine/sudoku.dart`). El solucionador subyacente añade dos "
+          "restricciones `allDifferent` adicionales al trío clásico "
+          "fila/columna/caja: una por diagonal.",
+    ],
+    'sudoku_disjoint': [
+      "En CrispCalc, es `SudokuVariant.disjoint`. Para una cuadrícula N×N "
+          "con cajas √N × √N, la restricción añade N superposiciones "
+          "`allDifferent` más: una por posición dentro de la caja. El 8×8 se "
+          "ofrece como una sola plantilla.",
+    ],
+    'sudoku_killer': [
+      "En CrispCalc, es `SudokuVariant.killer`. El solucionador subyacente "
+          "superpone al trío clásico fila/columna/caja una restricción "
+          "`allDifferent` por jaula y una restricción `suma = objetivo` por "
+          "jaula. Se ofrecen las plantillas killer de 4×4 y 9×9.",
+    ],
+  };
+
   @override
   String get settingsWorkedExamples => 'Biblioteca de ejemplos resueltos';
   @override
