@@ -3596,6 +3596,12 @@ class DeLocalizations implements AppLocalizations {
         return 'Z-Wert nachschlagen';
       case 'statsHypothesisTests':
         return 'Hypothesentests-Bereich';
+      case 'statsWelchTwoSample':
+        return 'Welch-Zweistichproben-t (vorbefüllt)';
+      case 'statsAnovaThreeGroups':
+        return 'Einfaktorielle ANOVA (vorbefüllt)';
+      case 'statsChiSquareGof':
+        return 'Chi-Quadrat-Anpassungstest (vorbefüllt)';
       case 'unitConversion':
         return 'Einheitenumrechnung inline';
       case 'compositeDim':
@@ -3721,6 +3727,16 @@ class DeLocalizations implements AppLocalizations {
         return 'Öffnet das Statistik-Modul direkt auf dem Tests-Reiter — '
             'Einstichproben-t, Zweistichproben-t (Welch), gepaart, ANOVA, '
             'Chi-Quadrat und Wilcoxon — mit vorbefüllten Beispieldaten.';
+      case 'statsWelchTwoSample':
+        return 'Öffnet den Tests-Reiter beim Welch-Zweistichproben-t mit '
+            'zwei bereits eingetragenen Gruppen ungleicher Varianz.';
+      case 'statsAnovaThreeGroups':
+        return 'Öffnet den Tests-Reiter bei der einfaktoriellen ANOVA mit '
+            'drei bereits eingetragenen, getrennten Gruppen.';
+      case 'statsChiSquareGof':
+        return 'Öffnet den Tests-Reiter beim Chi-Quadrat-Anpassungstest mit '
+            'bereits eingetragenen beobachteten Häufigkeiten gegen eine '
+            'Gleichverteilung.';
       case 'unitConversion':
         return '100 km/h in mph umgerechnet — V2 inline-Parser.';
       case 'compositeDim':
@@ -6247,6 +6263,12 @@ class FrLocalizations implements AppLocalizations {
         return 'Lecture d\'un score Z';
       case 'statsHypothesisTests':
         return 'Espace tests d\'hypothèse';
+      case 'statsWelchTwoSample':
+        return 't à deux échantillons de Welch (prérempli)';
+      case 'statsAnovaThreeGroups':
+        return 'ANOVA à un facteur (préremplie)';
+      case 'statsChiSquareGof':
+        return 'Khi-deux d\'ajustement (prérempli)';
       case 'unitConversion':
         return 'Conversion d\'unités en ligne';
       case 'compositeDim':
@@ -6373,6 +6395,15 @@ class FrLocalizations implements AppLocalizations {
             'Tests — t à un échantillon, t à deux échantillons (Welch), '
             'apparié, ANOVA, khi-deux et Wilcoxon — avec des données '
             'd\'exemple préchargées.';
+      case 'statsWelchTwoSample':
+        return 'Ouvre l\'onglet Tests sur le t à deux échantillons de Welch '
+            'avec deux groupes de variances inégales déjà saisis.';
+      case 'statsAnovaThreeGroups':
+        return 'Ouvre l\'onglet Tests sur l\'ANOVA à un facteur avec trois '
+            'groupes distincts déjà saisis.';
+      case 'statsChiSquareGof':
+        return 'Ouvre l\'onglet Tests sur le khi-deux d\'ajustement avec des '
+            'effectifs observés déjà saisis face à une distribution uniforme.';
       case 'unitConversion':
         return '100 km/h converti en mph — analyseur inline V2.';
       case 'compositeDim':
@@ -8881,6 +8912,12 @@ class EsLocalizations implements AppLocalizations {
         return 'Consulta de puntuación Z';
       case 'statsHypothesisTests':
         return 'Espacio de pruebas de hipótesis';
+      case 'statsWelchTwoSample':
+        return 't de dos muestras de Welch (rellenado)';
+      case 'statsAnovaThreeGroups':
+        return 'ANOVA de un factor (rellenada)';
+      case 'statsChiSquareGof':
+        return 'Chi-cuadrado de bondad de ajuste (rellenado)';
       case 'unitConversion':
         return 'Conversión de unidades en línea';
       case 'compositeDim':
@@ -9009,6 +9046,16 @@ class EsLocalizations implements AppLocalizations {
             'Pruebas — t de una muestra, t de dos muestras (Welch), '
             'pareada, ANOVA, chi-cuadrado y Wilcoxon — con datos de '
             'ejemplo precargados.';
+      case 'statsWelchTwoSample':
+        return 'Abre la pestaña Pruebas en la t de dos muestras de Welch con '
+            'dos grupos de varianzas desiguales ya introducidos.';
+      case 'statsAnovaThreeGroups':
+        return 'Abre la pestaña Pruebas en la ANOVA de un factor con tres '
+            'grupos separados ya introducidos.';
+      case 'statsChiSquareGof':
+        return 'Abre la pestaña Pruebas en el chi-cuadrado de bondad de '
+            'ajuste con frecuencias observadas ya introducidas frente a una '
+            'distribución uniforme.';
       case 'unitConversion':
         return '100 km/h convertido a mph — analizador inline V2.';
       case 'compositeDim':

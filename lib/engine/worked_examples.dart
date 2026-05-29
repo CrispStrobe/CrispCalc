@@ -374,6 +374,34 @@ class WorkedExamples {
           'Wilcoxon — with default sample data pre-filled.',
       expression: 'open:statistics?tab=tests',
     ),
+    // Round 95 follow-up: `open:statistics?preset=<id>` lands on the
+    // Tests tab AND pre-selects a test + fills curated sample data, so
+    // the user sees a complete worked result immediately instead of an
+    // empty form. Data lives in StatisticsPresets.
+    WorkedExample(
+      id: 'statsWelchTwoSample',
+      category: WorkedExampleCategory.statistics,
+      title: 'Welch two-sample t (pre-filled)',
+      description: 'Opens the Tests tab on Welch\'s two-sample t with two '
+          'unequal-variance groups already entered.',
+      expression: 'open:statistics?preset=statsWelchTwoSample',
+    ),
+    WorkedExample(
+      id: 'statsAnovaThreeGroups',
+      category: WorkedExampleCategory.statistics,
+      title: 'One-way ANOVA (pre-filled)',
+      description: 'Opens the Tests tab on one-way ANOVA with three '
+          'separated groups already entered.',
+      expression: 'open:statistics?preset=statsAnovaThreeGroups',
+    ),
+    WorkedExample(
+      id: 'statsChiSquareGof',
+      category: WorkedExampleCategory.statistics,
+      title: 'χ² goodness-of-fit (pre-filled)',
+      description: 'Opens the Tests tab on χ² goodness-of-fit with observed '
+          'counts against a uniform expectation already entered.',
+      expression: 'open:statistics?preset=statsChiSquareGof',
+    ),
 
     // === Units / conversions =================================================
     WorkedExample(

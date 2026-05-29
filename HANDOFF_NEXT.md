@@ -1,6 +1,32 @@
 # CrispCalc — handover for the next session
 
-## Latest: 2026-05-29 (cont.) — Group B: continued fractions + polynomial arithmetic
+## Latest: 2026-05-29 (cont.) — Round 95 follow-up: Statistics input pre-fill
+
+Closed the deferred Round-95 carry-over. The `open:statistics?tab=<id>`
+worked-example sentinel only picked a tab; the new
+`open:statistics?preset=<id>` sentinel **also pre-selects a hypothesis
+test and fills its input fields** so a tapped example shows a complete
+worked result immediately. Pure-Dart, single repo, on `main`,
+headless-testable.
+
+- New `lib/engine/statistics_presets.dart` — `StatisticsPreset` (tab +
+  `_TestKind` name + controller-name→text field map) and a 3-entry
+  `StatisticsPresets.all`: Welch two-sample t, one-way ANOVA, χ²
+  goodness-of-fit. Data lives in Dart, not the sentinel string.
+- New one-shot `AppState.pendingStatisticsPresetId` slot (sibling to
+  `pendingStatisticsTab`, so that path is unchanged). `_TestsTab` takes
+  an optional `preset:` and applies it in `initState`.
+- Dialog `_insert` handles `preset=` alongside `tab=`; 3 new statistics
+  worked examples (DE/FR/ES). New `test/statistics_preset_test.dart`.
+- **Suite 2587 → 2611 pass / 1 skip, 0 failures** (commit `e4b3937`,
+  not yet pushed). Pattern to reuse: a named-preset catalog + a
+  one-shot AppState slot drained in `initState` is the clean way to
+  pre-load *any* module from a worked example (mirrors the sudoku
+  `preset=` path).
+
+---
+
+## 2026-05-29 — Group B: continued fractions + polynomial arithmetic
 
 Two **Group B** items shipped, both **pure-Dart** (no native wrapper,
 single repo, all on `main`, headless-testable):
@@ -195,7 +221,10 @@ workflow comment. Each ABI is its own ~15-min build slot.
 
 ### 3. **Carry-overs from prior sessions**
 
-- Round 95 follow-up — Statistics input pre-fill.
+- ~~Round 95 follow-up — Statistics input pre-fill.~~ **SHIPPED
+  2026-05-29** — `open:statistics?preset=<id>` (new `StatisticsPresets`
+  + `pendingStatisticsPresetId`); Tests tab pre-selects a test + fills
+  inputs. See HISTORY top entry.
 - `open:` / `dsl:` dispatch in Try-in-Calculator (R99 followup).
 - CSP Round E.5 — `dart_csp_fzn` CLI (blocked on P4).
 - P9 follow-ups (A5d / A7 / A8) — 3D Scene polish.

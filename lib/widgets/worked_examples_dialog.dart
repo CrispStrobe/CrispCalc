@@ -276,6 +276,8 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
   ///   - `open:sudoku?preset=<id>`     → SudokuPresets.all[id]
   ///   - `open:statistics?tab=<id>`    → 'descriptive' / 'regression'
   ///                                     / 'distributions' / 'tests'
+  ///   - `open:statistics?preset=<id>` → StatisticsPresets.all[id]
+  ///                                     (picks the tab + fills inputs)
   ///
   /// Unknown keys are silently ignored — the module still opens, just
   /// without the pre-load — so a typo in a catalog entry degrades
@@ -312,7 +314,14 @@ class _WorkedExamplesDialogState extends State<WorkedExamplesDialog> {
           ));
           break;
         case 'statistics':
+          // Round 95 follow-up: `preset=<id>` resolves against
+          // StatisticsPresets and both picks the tab and pre-fills the
+          // inputs; the older `tab=<id>` just picks the tab.
+          final preset = args['preset'];
           final tab = args['tab'];
+          if (preset != null) {
+            AppState().requestLoadStatisticsPreset(preset);
+          }
           if (tab != null) {
             AppState().requestLoadStatisticsTab(tab);
           }

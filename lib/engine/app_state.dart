@@ -723,6 +723,30 @@ class AppState extends ChangeNotifier {
     return value;
   }
 
+  /// Round 95 follow-up (P6): pending "open the Statistics module with
+  /// a named pre-fill preset" signal. Set by the worked-examples
+  /// dialog when an `open:statistics?preset=<id>` sentinel is tapped;
+  /// drained by `_StatisticsScreenState.initState`. The id resolves
+  /// against `StatisticsPresets.all`, which carries the tab, the
+  /// Tests-tab test kind, and the field-value overrides. Mirrors
+  /// [_pendingStatisticsTab]; the two are independent slots so the
+  /// existing `tab=<id>` entry keeps working unchanged.
+  String? _pendingStatisticsPresetId;
+  String? get pendingStatisticsPresetId => _pendingStatisticsPresetId;
+
+  void requestLoadStatisticsPreset(String id) {
+    _pendingStatisticsPresetId = id;
+    notifyListeners();
+  }
+
+  String? consumePendingStatisticsPresetId() {
+    final value = _pendingStatisticsPresetId;
+    if (value != null) {
+      _pendingStatisticsPresetId = null;
+    }
+    return value;
+  }
+
   /// Parameter values per graph slot. Keyed by slot index, then by
   /// parameter name. Used by the graphing screen's slider panel: any
   /// identifier in a function string that isn't `x` (or a reserved

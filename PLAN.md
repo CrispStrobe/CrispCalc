@@ -1564,6 +1564,16 @@ The deferred carve-out from earlier in the day shipped after
   `descriptive`/`regression`/`distributions`/`tests`. V1 stops
   at tab-pick — pre-filling the input fields is a future
   extension once a real demand for it shows up.
+  **Follow-up SHIPPED 2026-05-29**: `open:statistics?preset=<id>`
+  resolves against a new `StatisticsPresets` catalog
+  (`lib/engine/statistics_presets.dart`) carrying the tab, the
+  Tests-tab `_TestKind`, and per-controller field overrides; a new
+  one-shot `pendingStatisticsPresetId` slot (sibling to
+  `pendingStatisticsTab`) is drained by `_StatisticsScreenState`,
+  which hands the preset to `_TestsTab` to pre-select the test and
+  fill its fields in `initState`. Three populated entries — Welch
+  two-sample t, one-way ANOVA, χ² goodness-of-fit (DE/FR/ES). New
+  `test/statistics_preset_test.dart`. See HISTORY top entry.
 
 Catalog changes:
 

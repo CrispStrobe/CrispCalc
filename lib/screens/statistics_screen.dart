@@ -14,6 +14,7 @@ import '../engine/app_state.dart';
 import '../engine/distributions.dart';
 import '../engine/hypothesis_tests.dart';
 import '../engine/statistics.dart';
+import '../engine/statistics_presets.dart';
 import '../localization/app_localizations.dart';
 import '../widgets/function_ref_help_popover.dart';
 import '../widgets/help_target.dart';
@@ -30,6 +31,27 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
+  /// Round 95 follow-up (P6): a resolved pre-fill preset stashed by an
+  /// `open:statistics?preset=<id>` sentinel, handed to the Tests tab so
+  /// it can pre-select a test kind and fill its input fields. Null when
+  /// the screen was opened without (or with an unknown) preset.
+  StatisticsPreset? _preset;
+
+  static int _tabIndexFor(String? id) {
+    switch (id) {
+      case 'descriptive':
+        return 0;
+      case 'regression':
+        return 1;
+      case 'distributions':
+        return 2;
+      case 'tests':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -38,19 +60,20 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     // worked-example `open:statistics?tab=<id>` sentinel. Unknown
     // ids fall through to the default (Descriptive) tab.
     final pendingTab = AppState().consumePendingStatisticsTab();
-    switch (pendingTab) {
-      case 'descriptive':
-        _tabs.index = 0;
-        break;
-      case 'regression':
-        _tabs.index = 1;
-        break;
-      case 'distributions':
-        _tabs.index = 2;
-        break;
-      case 'tests':
-        _tabs.index = 3;
-        break;
+    if (pendingTab != null) {
+      _tabs.index = _tabIndexFor(pendingTab);
+    }
+    // Round 95 follow-up (P6): drain a pending pre-fill preset id. The
+    // preset both picks the tab (overriding any `tab=` above) and — on
+    // the Tests tab — pre-selects a test and fills its fields. An
+    // unknown id is consumed but otherwise ignored (graceful degrade).
+    final pendingPreset = AppState().consumePendingStatisticsPresetId();
+    if (pendingPreset != null) {
+      final preset = StatisticsPresets.all[pendingPreset];
+      if (preset != null) {
+        _preset = preset;
+        _tabs.index = _tabIndexFor(preset.tab);
+      }
     }
   }
 
@@ -80,11 +103,11 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
       body: TabBarView(
         controller: _tabs,
-        children: const [
-          _DescriptiveTab(),
-          _RegressionTab(),
-          _DistributionsTab(),
-          _TestsTab(),
+        children: [
+          const _DescriptiveTab(),
+          const _RegressionTab(),
+          const _DistributionsTab(),
+          _TestsTab(preset: _preset),
         ],
       ),
     );
@@ -585,13 +608,62 @@ enum _TestKind {
 }
 
 class _TestsTab extends StatefulWidget {
-  const _TestsTab();
+  /// Round 95 follow-up (P6): optional pre-fill recipe — selects a test
+  /// kind and fills the relevant controllers when the tab mounts.
+  final StatisticsPreset? preset;
+  const _TestsTab({this.preset});
   @override
   State<_TestsTab> createState() => _TestsTabState();
 }
 
 class _TestsTabState extends State<_TestsTab> {
   _TestKind _kind = _TestKind.oneSampleT;
+
+  /// Round 95 follow-up: maps a `_TestKind` enum name (as carried in a
+  /// [StatisticsPreset.testId]) back to the enum value.
+  static const Map<String, _TestKind> _testIdToKind = {
+    'oneSampleT': _TestKind.oneSampleT,
+    'twoSampleT': _TestKind.twoSampleT,
+    'pairedT': _TestKind.pairedT,
+    'anovaOneWay': _TestKind.anovaOneWay,
+    'chiSquareGof': _TestKind.chiSquareGof,
+    'chiSquareIndep': _TestKind.chiSquareIndep,
+    'fisherExact': _TestKind.fisherExact,
+    'pairedSign': _TestKind.pairedSign,
+    'wilcoxonRankSum': _TestKind.wilcoxonRankSum,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final preset = widget.preset;
+    if (preset == null) return;
+    final kind = _testIdToKind[preset.testId];
+    if (kind != null) _kind = kind;
+    // Field overrides. Keys match the controller names below; unknown
+    // keys are silently ignored so a typo degrades gracefully.
+    final byKey = <String, TextEditingController>{
+      'oneSampleData': _oneSampleData,
+      'oneSampleMu': _oneSampleMu,
+      'twoSampleA': _twoSampleA,
+      'twoSampleB': _twoSampleB,
+      'anovaGroups': _anovaGroups,
+      'pairedBefore': _pairedBefore,
+      'pairedAfter': _pairedAfter,
+      'gofObserved': _gofObserved,
+      'gofExpected': _gofExpected,
+      'indepTable': _indepTable,
+      'fisherTable': _fisherTable,
+      'signBefore': _signBefore,
+      'signAfter': _signAfter,
+      'wilcoxonA': _wilcoxonA,
+      'wilcoxonB': _wilcoxonB,
+      'alpha': _alpha,
+    };
+    preset.fields.forEach((key, value) {
+      byKey[key]?.text = value;
+    });
+  }
 
   // Round 105b (P6): a test-picker chip. When [refId] is non-null and
   // help mode is on, tapping the chip opens the Function Reference

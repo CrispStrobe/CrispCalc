@@ -2,6 +2,40 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Round 95 follow-up: Statistics input pre-fill via `open:statistics?preset=<id>`
+
+Closes the deferred Round-95 item (HANDOFF_NEXT "carry-overs"): the
+`open:statistics?tab=<id>` sentinel only picked a tab and left the user
+on an empty form. The new `open:statistics?preset=<id>` sentinel both
+selects the tab **and** — on the Tests tab — pre-selects a test kind and
+fills its input fields with a curated dataset, so a tapped worked example
+shows a complete worked result immediately.
+
+- New **`lib/engine/statistics_presets.dart`** — `StatisticsPreset`
+  (tab + optional `_TestKind` name + controller-name→text field map) and
+  a `StatisticsPresets.all` catalog with three entries: Welch two-sample
+  t (unequal-variance groups), one-way ANOVA (three separated groups),
+  χ² goodness-of-fit (observed vs uniform). Data lives in Dart, not the
+  sentinel string — keeps catalog expressions short and avoids escaping
+  commas/newlines.
+- **AppState**: new one-shot `_pendingStatisticsPresetId` slot
+  (`requestLoadStatisticsPreset` / `consumePendingStatisticsPresetId`),
+  independent of the existing `tab=` slot so that path is unchanged.
+- **`statistics_screen.dart`**: `_StatisticsScreenState` drains the
+  preset slot (preset tab wins over `tab=`), passes the resolved preset
+  to `_TestsTab`, which in `initState` maps `testId`→`_TestKind` and
+  applies field overrides via a controller-name lookup. Unknown ids /
+  keys are consumed but ignored (graceful degrade).
+- **Dialog + catalog**: `_insert` handles `preset=` alongside `tab=`;
+  three new `statistics`-category worked examples; DE/FR/ES titles +
+  descriptions (per German math-didactics terminology).
+- **Tests**: new `test/statistics_preset_test.dart` (slot round-trip,
+  screen drain + pre-fill side effect, unknown-id degrade,
+  catalog↔preset cross-consistency). Pure-Dart, single repo, on `main`.
+
+Full suite **2611 pass / 1 skip, 0 failures** (was 2587: +6 preset
+tests, +18 auto-generated locale-coverage tests for the three entries).
+
 ## 2026-05-29 — Precision arc Group B complete: arbitrary-precision complex (cevalf, MPC)
 
 `cevalf(expr, N)` — the complex counterpart of `evalf`: evaluate any
