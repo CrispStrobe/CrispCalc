@@ -65,6 +65,41 @@ void main() {
       expect(find.text(preset.fields['anovaGroups']!), findsOneWidget);
     });
 
+    testWidgets('descriptive preset lands on Descriptive tab and pre-fills',
+        (tester) async {
+      AppState().requestLoadStatisticsPreset('statsDescriptive');
+      await _pump(tester, const StatisticsScreen());
+
+      expect(AppState().pendingStatisticsPresetId, isNull);
+      final preset = StatisticsPresets.all['statsDescriptive']!;
+      // The preset sample replaced the tab's default sample.
+      expect(find.text(preset.fields['descriptiveData']!), findsOneWidget);
+      expect(find.text('2, 4, 4, 4, 5, 5, 7, 9'), findsNothing);
+    });
+
+    testWidgets('regression preset lands on Regression tab and pre-fills',
+        (tester) async {
+      AppState().requestLoadStatisticsPreset('statsLinearRegression');
+      await _pump(tester, const StatisticsScreen());
+
+      expect(AppState().pendingStatisticsPresetId, isNull);
+      final preset = StatisticsPresets.all['statsLinearRegression']!;
+      expect(find.text(preset.fields['regressionX']!), findsOneWidget);
+      expect(find.text(preset.fields['regressionY']!), findsOneWidget);
+    });
+
+    testWidgets('distributions preset lands on Distributions tab and pre-fills',
+        (tester) async {
+      AppState().requestLoadStatisticsPreset('statsNormalDist');
+      await _pump(tester, const StatisticsScreen());
+
+      expect(AppState().pendingStatisticsPresetId, isNull);
+      final preset = StatisticsPresets.all['statsNormalDist']!;
+      // The distinctive CDF point distinguishes the preset from defaults.
+      expect(find.text(preset.fields['normX']!), findsOneWidget);
+      expect(find.text('1.96'), findsNothing); // default normX is gone
+    });
+
     testWidgets('unknown preset id degrades to the default Descriptive tab',
         (tester) async {
       AppState().requestLoadStatisticsPreset('no-such-preset');

@@ -1437,7 +1437,38 @@ class FunctionReferences {
               'a stable summation algorithm if you need >15 digits.',
         ),
       ],
-      seeAlso: ['welch_t', 'paired_t', 'anova_1'],
+      seeAlso: ['one_sample_t', 'welch_t', 'linreg'],
+      workedExampleId: 'statsHypothesisTests',
+      // Statistics-preset follow-up: land on the Descriptive Stats tab
+      // pre-filled with a spread-out sample (not the Tests tab).
+      openTarget: 'open:statistics?preset=statsDescriptive',
+    ),
+    FunctionRef(
+      id: 'one_sample_t',
+      category: FunctionRefCategory.statistics,
+      signature: 'Tests → One-sample t',
+      shortDescription:
+          'One-sample t-test: does a sample mean differ from a hypothesised '
+          'population mean μ₀? Reports t, df = n−1, and a two-sided p-value.',
+      runnable: false,
+      examples: [
+        FunctionRefExample(
+          input: 'data = [...], μ₀ = 70',
+          expected: 't, df = n-1, p',
+          hint: 'In CrispCalc, `oneSampleT` lives in '
+              '`lib/engine/hypothesis_tests.dart`. The underlying call computes '
+              't = (x̄ − μ₀) / (s / √n), then reads the two-sided p-value off '
+              '`TDistribution.cdf` with df = n − 1.',
+        ),
+        FunctionRefExample(
+          input: 'data = [74, 78, 81, 69, 76, 80, 77], μ₀ = 70',
+          expected: 't ≈ 4.0, df = 6, p ≈ 0.007',
+          hint: 'The sample sits clearly above μ₀ = 70, so the test rejects '
+              'H₀ (mean = 70) at α = 0.05. Compare with `paired_t`, which is a '
+              'one-sample t on the difference vector.',
+        ),
+      ],
+      seeAlso: ['mean', 'paired_t', 'welch_t'],
       workedExampleId: 'statsHypothesisTests',
       openTarget: 'open:statistics?preset=statsOneSampleT',
     ),
@@ -1686,6 +1717,62 @@ class FunctionReferences {
       seeAlso: ['paired_t', 'wilcoxon', 'fisher_exact'],
       workedExampleId: 'statsHypothesisTests',
       openTarget: 'open:statistics?preset=statsSignTest',
+    ),
+    FunctionRef(
+      id: 'linreg',
+      category: FunctionRefCategory.statistics,
+      signature: 'Regression → Linear fit',
+      shortDescription:
+          'Ordinary least-squares linear regression y = a·x + b on paired '
+          '(x, y) data. Reports the slope, intercept and coefficient of '
+          'determination R².',
+      runnable: false,
+      examples: [
+        FunctionRefExample(
+          input: 'x = [...], y = [...]',
+          expected: 'y = a·x + b, R²',
+          hint: 'In CrispCalc, the Regression tab fits via the closed-form '
+              'least-squares estimators a = Sxy / Sxx and b = ȳ − a·x̄ (see '
+              '`lib/engine/statistics.dart`). The same tab also offers '
+              'polynomial and exponential models.',
+        ),
+        FunctionRefExample(
+          input: 'x = [1, 2, 3, 4, 5, 6], y = [2.1, 3.9, 6.2, 7.8, 10.1, 11.9]',
+          expected: 'y ≈ 1.99·x + 0.05, R² ≈ 1.00',
+          hint: 'Points lying close to y = 2x give a slope ≈ 2 and an R² near '
+              '1 — an almost perfect linear fit.',
+        ),
+      ],
+      seeAlso: ['mean', 'one_sample_t'],
+      openTarget: 'open:statistics?preset=statsLinearRegression',
+    ),
+    FunctionRef(
+      id: 'normal_dist',
+      category: FunctionRefCategory.statistics,
+      signature: 'Distributions → Normal',
+      shortDescription:
+          'Normal (Gaussian) distribution N(μ, σ): cumulative probability '
+          'P(X ≤ x) and the inverse-CDF quantile for a given probability p.',
+      runnable: false,
+      examples: [
+        FunctionRefExample(
+          input: 'μ = 100, σ = 15, x = 130',
+          expected: 'P(X ≤ 130) ≈ 0.977',
+          hint: 'In CrispCalc, the Distributions tab evaluates the normal CDF '
+              'via the error function (`Normal.cdf` in '
+              '`lib/engine/statistics.dart`); x = μ + 2σ sits at the ≈ 97.7th '
+              'percentile.',
+        ),
+        FunctionRefExample(
+          input: 'μ = 100, σ = 15, p = 0.95',
+          expected: 'quantile ≈ 124.7',
+          hint: 'The 0.95 quantile is the inverse CDF — the value below which '
+              '95 % of the mass lies (≈ μ + 1.645σ). Pairs with `erf`, which '
+              'underlies the CDF.',
+        ),
+      ],
+      seeAlso: ['erf', 'mean'],
+      openTarget: 'open:statistics?preset=statsNormalDist',
     ),
     // === Constraints DSL =====================================================
     // All constraints entries are module-surface (runnable: false).

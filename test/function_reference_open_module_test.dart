@@ -50,8 +50,8 @@ void main() {
         expect(StatisticsPresets.all.containsKey(id), isTrue,
             reason: '${e.id} targets unknown preset "$id"');
       }
-      expect(seen, 9,
-          reason: 'all nine stats entries carry preset openTargets');
+      expect(seen, 12,
+          reason: 'all twelve stats entries carry preset openTargets');
     });
 
     test('the stats entries carry the expected openTargets', () {
@@ -62,8 +62,16 @@ void main() {
           'open:statistics?preset=statsAnovaThreeGroups');
       expect(byId['chi2_goodness']?.openTarget,
           'open:statistics?preset=statsChiSquareGof');
+      // `mean` lands on the Descriptive tab; the dedicated one-sample-t
+      // entry owns the statsOneSampleT (Tests-tab) preset.
       expect(
-          byId['mean']?.openTarget, 'open:statistics?preset=statsOneSampleT');
+          byId['mean']?.openTarget, 'open:statistics?preset=statsDescriptive');
+      expect(byId['one_sample_t']?.openTarget,
+          'open:statistics?preset=statsOneSampleT');
+      expect(byId['linreg']?.openTarget,
+          'open:statistics?preset=statsLinearRegression');
+      expect(byId['normal_dist']?.openTarget,
+          'open:statistics?preset=statsNormalDist');
       expect(
           byId['paired_t']?.openTarget, 'open:statistics?preset=statsPairedT');
       expect(byId['chi2_independence']?.openTarget,

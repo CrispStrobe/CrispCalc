@@ -3897,6 +3897,10 @@ class DeLocalizations implements AppLocalizations {
         return 'Arithmetisches Mittel einer Stichprobe als Zahlenliste. Im '
             'Reiter „Deskriptive Statistik" des Statistik-Moduls zusammen mit '
             'den üblichen Kennzahlen verfügbar.';
+      case 'one_sample_t':
+        return 'Einstichproben-t-Test: Weicht das Stichprobenmittel von einem '
+            'angenommenen Populationsmittel μ₀ ab? Gibt t, df = n−1 und einen '
+            'zweiseitigen p-Wert aus.';
       case 'welch_t':
         return 'Zweistichproben-t-Test bei ungleichen Varianzen '
             '(Welch-Satterthwaite). Robuste Standardwahl, wenn die beiden '
@@ -3927,6 +3931,14 @@ class DeLocalizations implements AppLocalizations {
         return 'Gepaarter Vorzeichentest — nichtparametrischer, medianbasierter '
             'Test auf gepaarten Differenzen. Zählt, wie oft `nachher > vorher` '
             'gilt.';
+      case 'linreg':
+        return 'Lineare Regression nach der Methode der kleinsten Quadrate '
+            'y = a·x + b für gepaarte (x, y)-Daten. Gibt Steigung, '
+            'Achsenabschnitt und Bestimmtheitsmaß R² aus.';
+      case 'normal_dist':
+        return 'Normalverteilung (Gauß-Verteilung) N(μ, σ): kumulierte '
+            'Wahrscheinlichkeit P(X ≤ x) und das Quantil (Umkehrfunktion der '
+            'Verteilungsfunktion) zu einer Wahrscheinlichkeit p.';
       // --- Constraints-DSL ---
       case 'vars':
         return 'Deklariert ganzzahlige Entscheidungsvariablen und ihren '
@@ -4403,6 +4415,15 @@ class DeLocalizations implements AppLocalizations {
             'können sehr große oder größenmäßig gemischte Listen einen stabilen '
             'Summationsalgorithmus erfordern, wenn du >15 Stellen brauchst.',
       ],
+      'one_sample_t': [
+        'In CrispCalc liegt `oneSampleT` in `lib/engine/hypothesis_tests.dart`. '
+            'Der zugrunde liegende Aufruf berechnet t = (x̄ − μ₀) / (s / √n) und '
+            'liest den zweiseitigen p-Wert aus `TDistribution.cdf` mit '
+            'df = n − 1 ab.',
+        'Die Stichprobe liegt deutlich über μ₀ = 70, daher verwirft der Test '
+            'H₀ (Mittelwert = 70) bei α = 0,05. Vergleiche mit `paired_t`, einem '
+            'Einstichproben-t-Test des Differenzvektors.',
+      ],
       'welch_t': [
         'In CrispCalc liegt `welchT` in `lib/engine/hypothesis_tests.dart`. '
             'Der zugrunde liegende Aufruf berechnet die Teststatistik '
@@ -4482,6 +4503,23 @@ class DeLocalizations implements AppLocalizations {
         'Ein gebundenes Paar (4 → 4) wird verworfen, sodass n = 3 positive von '
             '3 informativen Paaren übrig bleiben. Der zweiseitige exakte '
             'p-Wert ist 2 · min(Binom(3, 0,5).cdf(3), …).',
+      ],
+      'linreg': [
+        'In CrispCalc passt der Reiter „Regression" die Daten über die '
+            'geschlossenen Kleinste-Quadrate-Schätzer a = Sxy / Sxx und '
+            'b = ȳ − a·x̄ an (siehe `lib/engine/statistics.dart`). Derselbe '
+            'Reiter bietet auch polynomielle und exponentielle Modelle.',
+        'Punkte, die nahe an y = 2x liegen, ergeben eine Steigung ≈ 2 und ein '
+            'R² nahe 1 — eine nahezu perfekte lineare Anpassung.',
+      ],
+      'normal_dist': [
+        'In CrispCalc wertet der Reiter „Verteilungen" die '
+            'Verteilungsfunktion der Normalverteilung über die Fehlerfunktion '
+            'aus (`Normal.cdf` in `lib/engine/statistics.dart`); x = μ + 2σ '
+            'liegt etwa beim 97,7. Perzentil.',
+        'Das 0,95-Quantil ist die Umkehrfunktion der Verteilungsfunktion — der '
+            'Wert, unter dem 95 % der Masse liegen (≈ μ + 1,645σ). Passt zu '
+            '`erf`, das der Verteilungsfunktion zugrunde liegt.',
       ],
       // --- Constraints-DSL ---
       'vars': [
@@ -6568,6 +6606,10 @@ class FrLocalizations implements AppLocalizations {
         return "Moyenne arithmétique d'un échantillon sous forme de liste de "
             "nombres. Proposée dans l'onglet « Statistiques descriptives » du "
             "module Statistiques, avec les indicateurs usuels.";
+      case 'one_sample_t':
+        return "Test t à un échantillon : la moyenne de l'échantillon "
+            "diffère-t-elle d'une moyenne de population supposée μ₀ ? Fournit "
+            "t, df = n−1 et une valeur p bilatérale.";
       case 'welch_t':
         return "Test t à deux échantillons à variances inégales "
             "(Welch-Satterthwaite). Choix par défaut robuste lorsque les deux "
@@ -6599,6 +6641,14 @@ class FrLocalizations implements AppLocalizations {
         return "Test des signes apparié — test non paramétrique fondé sur la "
             "médiane des différences appariées. Compte combien de fois "
             "`après > avant`.";
+      case 'linreg':
+        return "Régression linéaire par les moindres carrés y = a·x + b sur "
+            "des données appariées (x, y). Fournit la pente, l'ordonnée à "
+            "l'origine et le coefficient de détermination R².";
+      case 'normal_dist':
+        return "Loi normale (gaussienne) N(μ, σ) : probabilité cumulée "
+            "P(X ≤ x) et le quantile (fonction de répartition inverse) pour "
+            "une probabilité p donnée.";
       case 'vars':
         return "Déclare les variables de décision entières et leur domaine. "
             "Toujours la première ligne d'un programme DSL de CrispCalc.";
@@ -7068,6 +7118,16 @@ class FrLocalizations implements AppLocalizations {
           "peuvent nécessiter un algorithme de sommation stable si vous "
           "voulez plus de 15 chiffres.",
     ],
+    'one_sample_t': [
+      "Dans CrispCalc, `oneSampleT` se trouve dans "
+          "`lib/engine/hypothesis_tests.dart`. L'appel sous-jacent calcule "
+          "t = (x̄ − μ₀) / (s / √n), puis lit la valeur p bilatérale dans "
+          "`TDistribution.cdf` avec df = n − 1.",
+      "L'échantillon se situe nettement au-dessus de μ₀ = 70 ; le test rejette "
+          "donc H₀ (moyenne = 70) au seuil α = 0,05. À comparer avec "
+          "`paired_t`, un test t à un échantillon sur le vecteur des "
+          "différences.",
+    ],
     'welch_t': [
       "Dans CrispCalc, `welchT` se trouve dans "
           "`lib/engine/hypothesis_tests.dart`. L'appel sous-jacent calcule la "
@@ -7145,6 +7205,23 @@ class FrLocalizations implements AppLocalizations {
       "Une paire liée (4 → 4) est écartée, laissant n = 3 positives sur 3 "
           "paires informatives. La valeur p exacte bilatérale est "
           "2 · min(Binom(3, 0,5).cdf(3), …).",
+    ],
+    'linreg': [
+      "Dans CrispCalc, l'onglet « Régression » ajuste les données via les "
+          "estimateurs des moindres carrés en forme close a = Sxy / Sxx et "
+          "b = ȳ − a·x̄ (voir `lib/engine/statistics.dart`). Le même onglet "
+          "propose aussi des modèles polynomial et exponentiel.",
+      "Des points proches de y = 2x donnent une pente ≈ 2 et un R² proche de "
+          "1 — un ajustement linéaire presque parfait.",
+    ],
+    'normal_dist': [
+      "Dans CrispCalc, l'onglet « Distributions » évalue la fonction de "
+          "répartition de la loi normale via la fonction d'erreur "
+          "(`Normal.cdf` dans `lib/engine/statistics.dart`) ; x = μ + 2σ se "
+          "situe au ≈ 97,7ᵉ centile.",
+      "Le quantile 0,95 est la fonction de répartition inverse — la valeur "
+          "en dessous de laquelle se trouve 95 % de la masse (≈ μ + 1,645σ). "
+          "Va de pair avec `erf`, qui sous-tend la fonction de répartition.",
     ],
     'vars': [
       "Dans CrispCalc, la ligne `vars:` est analysée par `DslToFlatZinc` "
@@ -9215,6 +9292,10 @@ class EsLocalizations implements AppLocalizations {
         return "Media aritmética de una muestra como lista de números. "
             "Disponible en la pestaña «Estadística descriptiva» del módulo de "
             "Estadística, junto a los estadísticos habituales.";
+      case 'one_sample_t':
+        return "Prueba t para una muestra: ¿difiere la media muestral de una "
+            "media poblacional supuesta μ₀? Da t, df = n−1 y un valor p "
+            "bilateral.";
       case 'welch_t':
         return "Prueba t de dos muestras con varianzas desiguales "
             "(Welch-Satterthwaite). Opción robusta por defecto cuando los dos "
@@ -9245,6 +9326,14 @@ class EsLocalizations implements AppLocalizations {
         return "Prueba de los signos para muestras pareadas: prueba no "
             "paramétrica basada en la mediana de las diferencias pareadas. "
             "Cuenta cuántas veces `después > antes`.";
+      case 'linreg':
+        return "Regresión lineal por mínimos cuadrados y = a·x + b sobre datos "
+            "pareados (x, y). Da la pendiente, la ordenada en el origen y el "
+            "coeficiente de determinación R².";
+      case 'normal_dist':
+        return "Distribución normal (gaussiana) N(μ, σ): probabilidad "
+            "acumulada P(X ≤ x) y el cuantil (función de distribución inversa) "
+            "para una probabilidad p dada.";
       case 'vars':
         return "Declara las variables de decisión enteras y su dominio. "
             "Siempre la primera línea de un programa DSL de CrispCalc.";
@@ -9706,6 +9795,15 @@ class EsLocalizations implements AppLocalizations {
           "que listas muy grandes o de magnitudes mezcladas pueden requerir "
           "un algoritmo de suma estable si necesitas más de 15 dígitos.",
     ],
+    'one_sample_t': [
+      "En CrispCalc, `oneSampleT` está en "
+          "`lib/engine/hypothesis_tests.dart`. La llamada subyacente calcula "
+          "t = (x̄ − μ₀) / (s / √n) y lee el valor p bilateral de "
+          "`TDistribution.cdf` con df = n − 1.",
+      "La muestra está claramente por encima de μ₀ = 70, así que la prueba "
+          "rechaza H₀ (media = 70) con α = 0,05. Compárese con `paired_t`, una "
+          "prueba t para una muestra sobre el vector de diferencias.",
+    ],
     'welch_t': [
       "En CrispCalc, `welchT` está en "
           "`lib/engine/hypothesis_tests.dart`. La llamada subyacente calcula "
@@ -9782,6 +9880,23 @@ class EsLocalizations implements AppLocalizations {
       "Un par empatado (4 → 4) se descarta, dejando n = 3 positivos de 3 "
           "pares informativos. El valor p exacto bilateral es "
           "2 · min(Binom(3, 0,5).cdf(3), …).",
+    ],
+    'linreg': [
+      "En CrispCalc, la pestaña «Regresión» ajusta los datos mediante los "
+          "estimadores de mínimos cuadrados en forma cerrada a = Sxy / Sxx y "
+          "b = ȳ − a·x̄ (véase `lib/engine/statistics.dart`). La misma pestaña "
+          "ofrece también modelos polinómico y exponencial.",
+      "Puntos próximos a y = 2x dan una pendiente ≈ 2 y un R² cercano a 1: un "
+          "ajuste lineal casi perfecto.",
+    ],
+    'normal_dist': [
+      "En CrispCalc, la pestaña «Distribuciones» evalúa la función de "
+          "distribución de la normal mediante la función de error "
+          "(`Normal.cdf` en `lib/engine/statistics.dart`); x = μ + 2σ se sitúa "
+          "en torno al percentil 97,7.",
+      "El cuantil 0,95 es la función de distribución inversa: el valor por "
+          "debajo del cual queda el 95 % de la masa (≈ μ + 1,645σ). Va de la "
+          "mano de `erf`, que sustenta la función de distribución.",
     ],
     'vars': [
       "En CrispCalc, la línea `vars:` la analiza `DslToFlatZinc` (véase "

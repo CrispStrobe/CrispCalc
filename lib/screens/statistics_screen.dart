@@ -104,10 +104,15 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       body: TabBarView(
         controller: _tabs,
         children: [
-          const _DescriptiveTab(),
-          const _RegressionTab(),
-          const _DistributionsTab(),
-          _TestsTab(preset: _preset),
+          // Each tab gets the resolved preset only when it is the one the
+          // preset targets, so a Tests preset never leaks into the
+          // Descriptive controllers (and vice-versa).
+          _DescriptiveTab(
+              preset: _preset?.tab == 'descriptive' ? _preset : null),
+          _RegressionTab(preset: _preset?.tab == 'regression' ? _preset : null),
+          _DistributionsTab(
+              preset: _preset?.tab == 'distributions' ? _preset : null),
+          _TestsTab(preset: _preset?.tab == 'tests' ? _preset : null),
         ],
       ),
     );
@@ -117,7 +122,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 // === Descriptive tab =====================================================
 
 class _DescriptiveTab extends StatefulWidget {
-  const _DescriptiveTab();
+  /// Statistics-preset follow-up (P6): optional pre-fill recipe — fills
+  /// the sample field when the tab mounts.
+  final StatisticsPreset? preset;
+  const _DescriptiveTab({this.preset});
 
   @override
   State<_DescriptiveTab> createState() => _DescriptiveTabState();
@@ -125,6 +133,15 @@ class _DescriptiveTab extends StatefulWidget {
 
 class _DescriptiveTabState extends State<_DescriptiveTab> {
   final _input = TextEditingController(text: '2, 4, 4, 4, 5, 5, 7, 9');
+
+  @override
+  void initState() {
+    super.initState();
+    // Field overrides; unknown keys are silently ignored.
+    widget.preset?.fields.forEach((key, value) {
+      if (key == 'descriptiveData') _input.text = value;
+    });
+  }
 
   @override
   void dispose() {
@@ -243,7 +260,10 @@ class _Row {
 // === Regression tab ======================================================
 
 class _RegressionTab extends StatefulWidget {
-  const _RegressionTab();
+  /// Statistics-preset follow-up (P6): optional pre-fill recipe — fills
+  /// the x / y sample fields when the tab mounts (default linear model).
+  final StatisticsPreset? preset;
+  const _RegressionTab({this.preset});
   @override
   State<_RegressionTab> createState() => _RegressionTabState();
 }
@@ -255,6 +275,16 @@ class _RegressionTabState extends State<_RegressionTab> {
   final _ys = TextEditingController(text: '2.1, 3.9, 6.0, 8.1, 10.0');
   _RegressionModel _model = _RegressionModel.linear;
   int _polyDegree = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    // Field overrides; unknown keys are silently ignored.
+    widget.preset?.fields.forEach((key, value) {
+      if (key == 'regressionX') _xs.text = value;
+      if (key == 'regressionY') _ys.text = value;
+    });
+  }
 
   @override
   void dispose() {
@@ -437,7 +467,10 @@ class _RegressionTabState extends State<_RegressionTab> {
 // === Distributions tab ===================================================
 
 class _DistributionsTab extends StatefulWidget {
-  const _DistributionsTab();
+  /// Statistics-preset follow-up (P6): optional pre-fill recipe — fills
+  /// the normal / binomial parameter fields when the tab mounts.
+  final StatisticsPreset? preset;
+  const _DistributionsTab({this.preset});
   @override
   State<_DistributionsTab> createState() => _DistributionsTabState();
 }
@@ -453,6 +486,24 @@ class _DistributionsTabState extends State<_DistributionsTab> {
   final _binN = TextEditingController(text: '10');
   final _binP = TextEditingController(text: '0.5');
   final _binK = TextEditingController(text: '5');
+
+  @override
+  void initState() {
+    super.initState();
+    // Field overrides; unknown keys are silently ignored.
+    final byKey = <String, TextEditingController>{
+      'normMean': _normMean,
+      'normSd': _normSd,
+      'normX': _normX,
+      'normP': _normP,
+      'binN': _binN,
+      'binP': _binP,
+      'binK': _binK,
+    };
+    widget.preset?.fields.forEach((key, value) {
+      byKey[key]?.text = value;
+    });
+  }
 
   @override
   void dispose() {

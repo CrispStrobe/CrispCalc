@@ -21,13 +21,18 @@ class StatisticsPreset {
 
   /// For the Tests tab only: which test chip to pre-select. The value
   /// is a `_TestKind` enum name (e.g. `twoSampleT`, `anovaOneWay`,
-  /// `chiSquareGof`). Null leaves the tab's default selection.
+  /// `chiSquareGof`). Null leaves the tab's default selection. The
+  /// Descriptive / Regression / Distributions tabs have no sub-selection
+  /// chip, so their presets leave this null and rely on [fields] alone.
   final String? testId;
 
   /// Controller-name → text overrides applied on the receiving tab.
-  /// Keys match the Tests-tab controller names
-  /// (`twoSampleA`, `anovaGroups`, `gofObserved`, …). Unknown keys are
-  /// ignored, so a typo degrades gracefully rather than crashing.
+  /// Keys match the receiving tab's controller names — Tests
+  /// (`twoSampleA`, `anovaGroups`, `gofObserved`, …), Descriptive
+  /// (`descriptiveData`), Regression (`regressionX` / `regressionY`),
+  /// Distributions (`normMean` / `normSd` / `normX` / `normP` / `binN`
+  /// / `binP` / `binK`). Unknown keys are ignored, so a typo degrades
+  /// gracefully rather than crashing.
   final Map<String, String> fields;
 
   const StatisticsPreset({
@@ -137,6 +142,37 @@ class StatisticsPresets {
         'wilcoxonA': '12, 14, 11, 13, 15',
         'wilcoxonB': '20, 22, 19, 21, 23',
         'alpha': '0.05',
+      },
+    ),
+    // Descriptive statistics — a single numeric sample with enough
+    // spread that mean, median, SD, quartiles and IQR all differ
+    // visibly. Lands on the Descriptive Stats tab.
+    'statsDescriptive': StatisticsPreset(
+      tab: 'descriptive',
+      fields: {
+        'descriptiveData': '12, 15, 14, 10, 18, 13, 16, 11, 17, 14',
+      },
+    ),
+    // Linear regression — six (x, y) points lying close to y = 2x, so
+    // the least-squares fit has a slope ≈ 2 and a high R². Lands on the
+    // Regression tab with its default linear model.
+    'statsLinearRegression': StatisticsPreset(
+      tab: 'regression',
+      fields: {
+        'regressionX': '1, 2, 3, 4, 5, 6',
+        'regressionY': '2.1, 3.9, 6.2, 7.8, 10.1, 11.9',
+      },
+    ),
+    // Normal distribution — an IQ-style N(100, 15); the CDF point and
+    // the 0.95 quantile illustrate the tail/inverse-CDF readouts. Lands
+    // on the Distributions tab.
+    'statsNormalDist': StatisticsPreset(
+      tab: 'distributions',
+      fields: {
+        'normMean': '100',
+        'normSd': '15',
+        'normX': '130',
+        'normP': '0.95',
       },
     ),
   };
