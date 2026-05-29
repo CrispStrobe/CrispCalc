@@ -26,7 +26,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "afadd2e"   # bridge main post cevalf merge — Group B complete
+      ref: "6f28db4"   # bridge main: conditional-import facade + web stub (web support)
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine
@@ -36,7 +36,7 @@ dependencies:
   dart_csp:
     git:
       url: https://github.com/CrispStrobe/dart_csp.git
-      ref: "69a9cfb"
+      ref: "6f33cd3"   # web-compat: dart2js-compatible solver (Flutter web)
 
   # Math rendering
   flutter_math_fork: ^0.7.2

@@ -61,8 +61,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "69a9cfb"
-      resolved-ref: "69a9cfb304cd2692563e78d2f12d3e4433e3cbf5"
+      ref: "6f33cd3"
+      resolved-ref: "6f33cd3d7f0e72b4b73ae11ab16f478886dfceae"
       url: "https://github.com/CrispStrobe/dart_csp.git"
     source: git
     version: "2.1.0"
@@ -438,8 +438,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: afadd2e
-      resolved-ref: afadd2e0027d84f2f70e57b10de85fbb2af9fc0b
+      ref: "6f28db4"
+      resolved-ref: "6f28db4c9a2b9bc39b7d4ae2a27d0235d0c52c67"
       url: "https://github.com/CrispStrobe/symbolic_math_bridge.git"
     source: git
     version: "1.2.1"

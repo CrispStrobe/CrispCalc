@@ -12,6 +12,8 @@
 // to emit raw strings unchanged, so tests and the diagnostic
 // batteries keep their original assertions.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../localization/app_localizations.dart';
 
 class EngineErrorFormatter {
@@ -25,7 +27,9 @@ class EngineErrorFormatter {
     // Native library not loaded — affects most symbolic ops on
     // platforms without the bridge (Linux / Windows / Android in CI).
     if (lower.contains('requires native library')) {
-      return t.errorNativeRequired;
+      // On web the native bridge can never load — point at the app
+      // instead of implying a transient platform gap.
+      return kIsWeb ? t.errorNativeRequiredWeb : t.errorNativeRequired;
     }
 
     // Bridge integrate() is a stub in the current SymEngine build.
