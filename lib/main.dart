@@ -8,16 +8,17 @@
 //   < 720 px  : bottom navigation bar
 //   >= 720 px : NavigationRail (extended above 1100 px)
 
-import 'dart:io' show Platform, exit, stdout;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+// Headless diagnostic self-test. Native (dart:io) impl on desktop/mobile;
+// no-op stub on web (no dart:io). Keeps main.dart web-compilable.
+import 'diagnostics_runner_stub.dart'
+    if (dart.library.io) 'diagnostics_runner_io.dart';
 import 'engine/app_state.dart';
 import 'engine/calculator_engine.dart';
 import 'engine/matrix_diagnostics.dart';
-import 'engine/step_diagnostics.dart';
 import 'localization/app_localizations.dart';
 import 'screens/about_screen.dart';
 import 'screens/analysis_hub_screen.dart';
@@ -33,6 +34,7 @@ import 'widgets/onboarding_tour.dart';
 import 'widgets/user_functions_dialog.dart';
 import 'widgets/function_reference_dialog.dart';
 import 'widgets/worked_examples_dialog.dart';
+import 'widgets/web_unsupported_banner.dart';
 
 /// Round 71: a single app-wide [RouteObserver] so screens / dialogs
 /// pushed onto the root navigator can subscribe via [RouteAware] and
@@ -73,54 +75,14 @@ void main() async {
   await registerNativeLicenses();
 
   // Headless self-test for CI / manual verification. Invoke with the
-  // `CRISPCALC_DIAGNOSTIC=matrix` environment variable set (desktop only —
-  // `Platform.executableArguments` is Dart-VM args, not user argv, so an
-  // env var is the cleanest hook from a launched binary). Runs the matrix
-  // battery against the native bridge, prints PASS/FAIL lines to stdout,
-  // exits non-zero on any failure.
-  final diag = Platform.environment['CRISPCALC_DIAGNOSTIC'];
-  if (!kIsWebShim &&
-      (Platform.isMacOS || Platform.isLinux || Platform.isWindows) &&
-      diag != null) {
-    if (diag == 'matrix') {
-      final results = MatrixDiagnostics.run(CalculatorEngine());
-      var anyFailed = false;
-      for (final r in results) {
-        stdout.writeln('${r.passed ? "PASS" : "FAIL"}  ${r.name}');
-        stdout.writeln('  expr:     ${r.expression}');
-        stdout.writeln('  expected: ${r.expected}');
-        stdout.writeln('  actual:   ${r.actual}');
-        if (!r.passed) anyFailed = true;
-      }
-      final passed = results.where((r) => r.passed).length;
-      stdout.writeln('---');
-      stdout.writeln('$passed of ${results.length} checks passed');
-      exit(anyFailed ? 1 : 0);
-    }
-    if (diag == 'steps') {
-      final results = StepDiagnostics.run(CalculatorEngine());
-      var anyFailed = false;
-      for (final r in results) {
-        stdout.writeln(
-            '${r.passed ? "PASS" : "FAIL"}  [${r.operation}]  ${r.name}');
-        stdout.writeln('  expr:     ${r.expression}');
-        stdout.writeln('  expected: ${r.expected}');
-        stdout.writeln('  actual:   ${r.actual}');
-        if (!r.passed) anyFailed = true;
-      }
-      final passed = results.where((r) => r.passed).length;
-      stdout.writeln('---');
-      stdout.writeln('$passed of ${results.length} checks passed');
-      exit(anyFailed ? 1 : 0);
-    }
-  }
+  // `CRISPCALC_DIAGNOSTIC=matrix|steps` environment variable set (desktop
+  // only). Runs the matrix / step battery against the native bridge,
+  // prints PASS/FAIL lines, and exits non-zero on any failure. On web this
+  // is a no-op (the conditional import resolves to the stub).
+  runDiagnosticsIfRequested();
 
   runApp(const CrispCalcApp());
 }
-
-// Tiny shim so the desktop-only platform check above also works at
-// analyze time on web builds (which can't import dart:io).
-const bool kIsWebShim = bool.fromEnvironment('dart.library.html');
 
 class CrispCalcApp extends StatelessWidget {
   const CrispCalcApp({super.key});
@@ -317,10 +279,21 @@ class _MainScreenState extends State<MainScreen> {
     ];
   }
 
+  /// Wraps a shell body with the web-only "CAS unavailable" banner above
+  /// it. Off-web the banner renders nothing, so this is a transparent
+  /// pass-through on native.
+  Widget _withWebBanner(Widget body) => Column(
+        children: [
+          const WebUnsupportedBanner(),
+          Expanded(child: body),
+        ],
+      );
+
   Widget _buildBottomNavLayout(AppLocalizations t) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: _withWebBanner(
+          IndexedStack(index: _selectedIndex, children: _screens)),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: cs.surface,
@@ -341,7 +314,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildRailLayout(AppLocalizations t, {required bool extended}) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Row(
+      body: _withWebBanner(Row(
         children: [
           NavigationRail(
             backgroundColor: cs.surface,
@@ -363,7 +336,7 @@ class _MainScreenState extends State<MainScreen> {
             child: IndexedStack(index: _selectedIndex, children: _screens),
           ),
         ],
-      ),
+      )),
     );
   }
 }

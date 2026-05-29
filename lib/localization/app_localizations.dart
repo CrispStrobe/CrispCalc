@@ -365,6 +365,18 @@ abstract class AppLocalizations {
   // -- Friendly errors (shown in history when an op fails) --
   String get errorParse;
   String get errorNativeRequired;
+
+  /// Web-specific variant of [errorNativeRequired]: the browser build
+  /// has no native CAS, so point the user at the desktop/mobile app.
+  String get errorNativeRequiredWeb;
+
+  /// Banner shown on the Calculator and Notepad in the web build,
+  /// explaining which features need the native app.
+  String get webBannerCasUnavailable;
+
+  /// Short CTA label linking to the downloadable desktop/mobile apps.
+  String get webDownloadApp;
+
   String get errorIntegrateNotImplemented;
   String get errorMatrixLiteral;
   String get errorInternalMatrixDisposed;
@@ -1422,6 +1434,14 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get errorNativeRequired =>
       'This operation needs the native math library, which isn\'t loaded on this platform.';
+  @override
+  String get errorNativeRequiredWeb =>
+      'Symbolic math (solve, factor, integrate, …) needs the desktop or mobile app — it can\'t run in the browser.';
+  @override
+  String get webBannerCasUnavailable =>
+      'Browser build: symbolic CAS, high-precision and number-theory features need the desktop or mobile app. Statistics, matrices, Sudoku/CSP, units and the calculator all work here.';
+  @override
+  String get webDownloadApp => 'Get the app';
   @override
   String get errorIntegrateNotImplemented =>
       'Symbolic integration isn\'t available in this build. Use the ∫ button with bounds for a numerical (definite) result.';
@@ -2995,6 +3015,14 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get errorNativeRequired =>
       'Diese Operation benötigt die native Mathematik-Bibliothek, die auf dieser Plattform nicht geladen ist.';
+  @override
+  String get errorNativeRequiredWeb =>
+      'Symbolische Mathematik (solve, factor, integrate, …) benötigt die Desktop- oder Mobil-App — im Browser nicht verfügbar.';
+  @override
+  String get webBannerCasUnavailable =>
+      'Browser-Version: symbolisches CAS, hochpräzise und zahlentheoretische Funktionen benötigen die Desktop- oder Mobil-App. Statistik, Matrizen, Sudoku/CSP, Einheiten und der Rechner funktionieren hier.';
+  @override
+  String get webDownloadApp => 'App holen';
   @override
   String get errorIntegrateNotImplemented =>
       'Symbolische Integration ist in diesem Build nicht verfügbar. Bitte ∫ mit Integrationsgrenzen verwenden für ein numerisches (bestimmtes) Ergebnis.';
@@ -5712,6 +5740,14 @@ class FrLocalizations implements AppLocalizations {
   String get errorNativeRequired =>
       'Cette opération nécessite la bibliothèque mathématique native, non chargée sur cette plateforme.';
   @override
+  String get errorNativeRequiredWeb =>
+      'Le calcul formel (solve, factor, integrate, …) nécessite l\'application de bureau ou mobile — indisponible dans le navigateur.';
+  @override
+  String get webBannerCasUnavailable =>
+      'Version navigateur : le CAS symbolique, la haute précision et la théorie des nombres nécessitent l\'application de bureau ou mobile. Les statistiques, matrices, Sudoku/CSP, unités et la calculatrice fonctionnent ici.';
+  @override
+  String get webDownloadApp => 'Obtenir l\'app';
+  @override
   String get errorIntegrateNotImplemented =>
       'L\'intégration symbolique n\'est pas disponible dans cette version. Utilisez ∫ avec des bornes pour un résultat numérique (défini).';
   @override
@@ -8417,6 +8453,14 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get errorNativeRequired =>
       'Esta operación necesita la biblioteca matemática nativa, no cargada en esta plataforma.';
+  @override
+  String get errorNativeRequiredWeb =>
+      'El cálculo simbólico (solve, factor, integrate, …) necesita la app de escritorio o móvil — no disponible en el navegador.';
+  @override
+  String get webBannerCasUnavailable =>
+      'Versión navegador: el CAS simbólico, la alta precisión y la teoría de números necesitan la app de escritorio o móvil. La estadística, matrices, Sudoku/CSP, unidades y la calculadora funcionan aquí.';
+  @override
+  String get webDownloadApp => 'Obtener la app';
   @override
   String get errorIntegrateNotImplemented =>
       'La integración simbólica no está disponible en esta versión. Usa ∫ con límites para un resultado numérico (definido).';
