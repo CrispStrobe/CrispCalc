@@ -101,10 +101,10 @@ merged to `master`/`main`. Round-5 (UI-only, CrispCalc) went on `main`.
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
 | **main HEAD** | Precision Group A (Round 4 + 5) + Group B (cfrac, poly over ℚ/𝔽ₚ, special fns, evalf, Bessel), on top of R130 + R100 + R105b; **v0.4.1 released** |
-| **Tests** | **2571 pass, 0 failures** (… → 2548 evalf → 2571 bessel); `notepad_screen_test` still a flaky full-suite-only failure (passes in isolation) |
+| **Tests** | **2587 pass, 0 failures** (… → 2571 bessel → 2587 cevalf); `notepad_screen_test` still a flaky full-suite-only failure (passes in isolation) |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
-| **bridge pin** | **`4da2379`** (bridge main, post Bessel merge) — was `535ce5d` pre-session |
-| **bridge main HEAD** | `4da2379` (round-4 + evalf + bessel merged); math-stack `master` `e194b864` |
+| **bridge pin** | **`afadd2e`** (bridge main, post cevalf merge — Group B complete) — was `535ce5d` pre-session |
+| **bridge main HEAD** | `afadd2e` (round-4 + evalf + bessel + cevalf merged); math-stack `master` `2ec2a62d` |
 | **platforms** | iOS · macOS · Android arm64-v8a · Windows x86_64 · **Linux x86_64** — all full-CAS. Web still the only CAS-less target. |
 
 ## This session — major arcs landed (2026-05-29)
