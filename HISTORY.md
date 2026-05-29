@@ -2,6 +2,55 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Precision arc Round 4: modular arithmetic + totient + jacobi + divisors
+
+Closed out the precision/number-theory arc's Group A (see
+`HANDOFF_PRECISION.md`). Rounds 1–3 (MPFR constants, isprime/nextprime/
+prevprime, factorint) had already shipped; this round adds the last
+four native functions plus the pure-Dart `divisors`. Full three-repo
+chain: wrapper C → bridge bindings + keepalive → CrispCalc engine +
+parser.
+
+**math-stack-ios-builder** (`src/flutter_symengine_wrapper.{c,h}`,
+re-vendored identically into the bridge's `src/` for the
+Android/Windows/Linux source-compile path):
+
+- `flutter_symengine_modpow(a, e, m)` — GMP `mpz_powm`. Negative
+  exponent guarded: GMP raises SIGFPE if the base has no inverse, so
+  we `mpz_invert` first and return a clean error when `gcd(a,m) ≠ 1`.
+- `flutter_symengine_modinv(a, m)` — GMP `mpz_invert`; errors when no
+  inverse exists.
+- `flutter_symengine_totient(n)` — FLINT `fmpz_euler_phi`, same ~90-bit
+  input cap as factorint (φ needs the factorization).
+- `flutter_symengine_jacobi(a, n)` — GMP `mpz_jacobi`; domain-guarded
+  to odd positive `n`. Returns `-1` / `0` / `1`.
+
+SymEngine's `cwrapper.h` exposes `ntheory_mod_inverse` but neither
+`powm` nor a Jacobi symbol, so three of the four go straight to GMP
+(already keepalive'd since round 13); totient uses FLINT.
+
+**symbolic_math_bridge**: Dart bindings `ntheoryModpow` / `ntheoryModinv`
+/ `ntheoryTotient` / `ntheoryJacobi` (binary + ternary string-in/out
+helpers added alongside the existing unary `_callStringInOut`). New
+`+load` keepalive entries in both `ios/` and `macos/`
+`SymEngineBridge.m`: externs + `refs[]` for `flutter_symengine_*` and
+the raw `__gmpz_powm` / `__gmpz_invert` / `__gmpz_jacobi` /
+`fmpz_euler_phi` symbols (release dead-strip is unforgiving — verified
+present via `nm` on the rebuilt xcframework).
+
+**CrispCalc** (`lib/engine/calculator_engine.dart`): `modpow` /
+`modinv` / `totient` / `jacobi` engine methods (native-only, no headless
+fallback) and `divisors(n)` — pure-Dart enumeration over the
+`factorint` result, split into a static `divisorsFromFactors` helper so
+the math is unit-testable without the bridge. `tryEvaluatePrecisionCall`
+gained dispatch for `modpow(a,e,m)`, `modinv(a,m)`, `totient(n)`,
+`jacobi(a,n)`, `divisors(n)`. New tests in `test/precision_test.dart`
+(classroom values + domain-error cases + pure-Dart divisor enumeration).
+
+UI surfacing (Adv-keypad buttons, worked-examples, FunctionReference
+entries + i18n) is the natural Round-5 follow-up — these ship reachable
+by typed input, the same way the round-85/86 MPFR constants first did.
+
 ## 2026-05-29 (P11 R130 + R100) — Linux SymEngine + German Function Reference
 
 Two arcs landed in one session.

@@ -229,4 +229,140 @@ void main() {
               e.toString().toLowerCase().contains('factorint'))));
     });
   });
+
+  // Round 4 (precision arc): modular arithmetic + multiplicative
+  // number theory. The native-backed methods gate on isNativeAvailable
+  // (bigint, no headless fallback); divisor enumeration is pure-Dart
+  // and tested directly.
+  group('CalculatorEngine.modpow (round 4)', () {
+    test('classroom values', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.modpow('2', '10', '1000'), '24'); // 1024 mod 1000
+      expect(engine.modpow('2', '100', '1000000007'), '976371285');
+      expect(engine.modpow('7', '0', '13'), '1'); // a^0 = 1
+      expect(engine.modpow('10', '3', '1'), '0'); // everything mod 1
+    });
+
+    test('negative exponent uses the modular inverse', () {
+      if (!engine.isNativeAvailable) return;
+      // 3^-1 mod 11 = 4, so 3^-1 mod 11 == modinv(3, 11).
+      expect(engine.modpow('3', '-1', '11'), '4');
+    });
+
+    test('negative exponent without an inverse errors', () {
+      if (!engine.isNativeAvailable) return;
+      // gcd(2, 10) = 2 ≠ 1 → no inverse.
+      expect(() => engine.modpow('2', '-1', '10'), throwsA(anything));
+    });
+  });
+
+  group('CalculatorEngine.modinv (round 4)', () {
+    test('classroom values', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.modinv('3', '11'), '4'); // 3·4 = 12 ≡ 1 (mod 11)
+      expect(engine.modinv('7', '26'), '15'); // 7·15 = 105 ≡ 1 (mod 26)
+    });
+
+    test('errors when gcd(a, m) != 1', () {
+      if (!engine.isNativeAvailable) return;
+      expect(() => engine.modinv('2', '4'), throwsA(anything));
+    });
+  });
+
+  group('CalculatorEngine.totient (round 4)', () {
+    test('classroom values', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.totient('1'), '1');
+      expect(engine.totient('12'), '4'); // {1,5,7,11}
+      expect(engine.totient('360'), '96');
+      expect(engine.totient('97'), '96'); // prime p → p-1
+    });
+
+    test('non-positive input errors', () {
+      if (!engine.isNativeAvailable) return;
+      expect(() => engine.totient('0'), throwsA(anything));
+    });
+  });
+
+  group('CalculatorEngine.jacobi (round 4)', () {
+    test('classroom values', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.jacobi('2', '7'), '1'); // 2 is a QR mod 7
+      expect(engine.jacobi('3', '7'), '-1'); // 3 is a non-residue mod 7
+      expect(engine.jacobi('6', '9'), '0'); // gcd(6, 9) ≠ 1
+      expect(engine.jacobi('1', '1'), '1');
+    });
+
+    test('even or non-positive n errors', () {
+      if (!engine.isNativeAvailable) return;
+      expect(() => engine.jacobi('3', '8'), throwsA(anything));
+    });
+  });
+
+  group('CalculatorEngine.divisorsFromFactors (round 4, pure-Dart)', () {
+    test('empty factorization (n = 1) yields [1]', () {
+      expect(CalculatorEngine.divisorsFromFactors(const []), equals([1]));
+    });
+
+    test('single prime power 2^3 = 8 → 1,2,4,8', () {
+      expect(
+          CalculatorEngine.divisorsFromFactors(const [(prime: 2, exponent: 3)]),
+          equals([1, 2, 4, 8]));
+    });
+
+    test('12 = 2^2·3 → 1,2,3,4,6,12 (sorted)', () {
+      expect(
+          CalculatorEngine.divisorsFromFactors(const [
+            (prime: 2, exponent: 2),
+            (prime: 3, exponent: 1),
+          ]),
+          equals([1, 2, 3, 4, 6, 12]));
+    });
+
+    test('36 = 2^2·3^2 → nine divisors', () {
+      expect(
+          CalculatorEngine.divisorsFromFactors(const [
+            (prime: 2, exponent: 2),
+            (prime: 3, exponent: 2),
+          ]),
+          equals([1, 2, 3, 4, 6, 9, 12, 18, 36]));
+    });
+  });
+
+  group('CalculatorEngine.divisors (round 4, end-to-end)', () {
+    test('divisors(1) = [1] without the bridge', () {
+      expect(engine.divisors('1'), equals([1]));
+    });
+
+    test('divisors(0) is undefined', () {
+      expect(() => engine.divisors('0'), throwsStateError);
+    });
+
+    test('classroom values via the native bridge', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.divisors('12'), equals([1, 2, 3, 4, 6, 12]));
+      expect(engine.divisors('28'), equals([1, 2, 4, 7, 14, 28]));
+      expect(engine.divisors('-12'), equals([1, 2, 3, 4, 6, 12]));
+    });
+  });
+
+  // Round 4: dispatch through the top-level precision pre-pass.
+  group('CalculatorEngine.tryEvaluatePrecisionCall (round 4 shapes)', () {
+    test('non-bridge shapes resolve regardless of native availability', () {
+      // divisors(1) needs no bridge.
+      expect(engine.tryEvaluatePrecisionCall('divisors(1)'), '1');
+      // unrecognized input falls through to null.
+      expect(engine.tryEvaluatePrecisionCall('2 + 2'), isNull);
+    });
+
+    test('native-backed shapes round-trip', () {
+      if (!engine.isNativeAvailable) return;
+      expect(engine.tryEvaluatePrecisionCall('modpow(2, 10, 1000)'), '24');
+      expect(engine.tryEvaluatePrecisionCall('modinv(3, 11)'), '4');
+      expect(engine.tryEvaluatePrecisionCall('totient(12)'), '4');
+      expect(engine.tryEvaluatePrecisionCall('jacobi(2, 7)'), '1');
+      expect(
+          engine.tryEvaluatePrecisionCall('divisors(12)'), '1, 2, 3, 4, 6, 12');
+    });
+  });
 }

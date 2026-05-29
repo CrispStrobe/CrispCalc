@@ -1287,28 +1287,29 @@ Group A (recommended first — ship together as one round):
   digits so a single 158-digit `100!` doesn't dominate the screen,
   but the clipboard always sees the full string.
 
-- [ ] **Arbitrary-precision real constants on demand** (MPFR).
+- [x] ~~**Arbitrary-precision real constants on demand** (MPFR).
   Templated calls: `pi(50)`, `e(100)`, `EulerGamma(200)`,
-  `sqrt(2, 50)`, `ln(10, 100)`. The argument sets the decimal
-  precision (1..10000). Backed by MPFR's `mpfr_const_pi`,
-  `mpfr_const_euler`, etc. Pedagogically delightful for "what's π to
-  100 digits?" classroom moments. Tiny: one FFI call per constant +
-  a precision-aware formatter that uses the requested digit count.
+  `sqrt(2, 50)`.~~ **SHIPPED** (precision-arc rounds 85/86). The
+  argument sets the decimal precision (1..10000), backed by MPFR
+  through SymEngine's `basic_evalf`. Dispatched by
+  `tryEvaluatePrecisionCall`. (`ln(10, N)` not yet wired — a clean
+  add when a UI surface needs it.)
 
-- [ ] **Number-theory toy set** (FLINT + GMP). New keypad buttons /
-  CAS shortcuts on the Adv tab:
-  - `isprime(n)` → bool (FLINT BPSW + Miller-Rabin, exact for n &lt; 2^64)
-  - `nextprime(n)` / `prevprime(n)` → next/previous prime
-  - `factorint(n)` → list of `(prime, exponent)` tuples
-  - `divisors(n)` → list of divisors
-  - `totient(n)` → Euler's φ
-  - `modinv(a, m)` → modular inverse via extended GCD
-  - `modpow(a, e, m)` → fast modular exponentiation
-  - `jacobi(a, n)` → Jacobi symbol
-  Sits below `prime` / `factor` on the Adv tab (we already have
-  those as one-shot, but FLINT-backed versions return structured
-  results, not strings). Use case: high-school olympiad problems,
-  introductory crypto.
+- [x] ~~**Number-theory toy set** (FLINT + GMP).~~ **SHIPPED** across
+  precision-arc rounds 89 / 90 / Round 4 (2026-05-29). All eight
+  reachable by typed input via `tryEvaluatePrecisionCall`:
+  - `isprime(n)` → bool (GMP Miller-Rabin, 25 reps) — round 89
+  - `nextprime(n)` / `prevprime(n)` → next/previous prime — round 89
+  - `factorint(n)` → list of `(prime, exponent)` tuples — round 90
+  - `divisors(n)` → list of divisors (pure-Dart from factorint) — R4
+  - `totient(n)` → Euler's φ (FLINT `fmpz_euler_phi`) — R4
+  - `modinv(a, m)` → modular inverse (GMP `mpz_invert`) — R4
+  - `modpow(a, e, m)` → modular exponentiation (GMP `mpz_powm`) — R4
+  - `jacobi(a, n)` → Jacobi symbol (GMP `mpz_jacobi`) — R4
+  **Remaining (Round 5 follow-up):** Adv-tab keypad buttons +
+  worked-examples + FunctionReference entries (+ DE/FR/ES i18n) to
+  surface these beyond typed input. `factorint` / `isprime` already
+  have keypad buttons (round 92); the other six don't yet.
 
 Group B (V2 — more specialized, ship after Group A lands):
 

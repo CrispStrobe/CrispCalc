@@ -277,6 +277,70 @@ class CalculatorEngine {
     return out;
   }
 
+  /// Round 4 (precision arc): a^e mod m via GMP's `mpz_powm`. A
+  /// negative exponent is honoured when `gcd(a, m) = 1` (the wrapper
+  /// inverts the base first). Native-only — bigint modular
+  /// exponentiation has no pure-Dart fallback that wouldn't overflow.
+  String modpow(String a, String e, String m) =>
+      _bridgeCall('modpow', (b) => b.ntheoryModpow(a, e, m));
+
+  /// Round 4: modular inverse `a^-1 mod m` via GMP's `mpz_invert`.
+  /// Surfaces the wrapper's "no inverse" error when `gcd(a, m) != 1`.
+  String modinv(String a, String m) =>
+      _bridgeCall('modinv', (b) => b.ntheoryModinv(a, m));
+
+  /// Round 4: Euler's totient φ(n) via FLINT's `fmpz_euler_phi`.
+  /// Capped at ~90 bits wrapper-side (φ needs n's factorization).
+  String totient(String n) =>
+      _bridgeCall('totient', (b) => b.ntheoryTotient(n));
+
+  /// Round 4: the Jacobi symbol (a/n) as the string `-1` / `0` / `1`.
+  /// `n` must be odd and positive (the wrapper errors otherwise).
+  String jacobi(String a, String n) =>
+      _bridgeCall('jacobi', (b) => b.ntheoryJacobi(a, n));
+
+  /// Round 4: all positive divisors of `n`, sorted ascending. Pure-Dart
+  /// derivation from [factorint] — enumerates every product of
+  /// `prime^k` for `0 ≤ k ≤ exponent`. Requires the native bridge
+  /// (via [factorint]). `divisors(1) = [1]`; negative `n` uses `|n|`;
+  /// `divisors(0)` throws (every integer divides 0).
+  ///
+  /// Bounded by [factorint]'s ~90-bit input cap, but note the
+  /// individual divisors are returned as Dart `int`s — for inputs
+  /// whose factors exceed 2^63 the underlying [factorint] parse throws
+  /// first, so this never silently overflows.
+  List<int> divisors(String n) {
+    final magnitude = n.startsWith('-') ? n.substring(1) : n;
+    if (magnitude == '0') {
+      throw StateError('divisors(0) is undefined (every integer divides 0)');
+    }
+    if (magnitude == '1') return const [1];
+    return divisorsFromFactors(factorint(magnitude));
+  }
+
+  /// Pure-Dart divisor enumeration from a prime factorization. Returns
+  /// the sorted list of every product `∏ pᵢ^kᵢ` with `0 ≤ kᵢ ≤ eᵢ`.
+  /// An empty factorization (n = 1) yields `[1]`. Split out from
+  /// [divisors] so the enumeration is unit-testable without the native
+  /// bridge that [factorint] needs.
+  static List<int> divisorsFromFactors(
+      List<({int prime, int exponent})> factors) {
+    var divs = <int>[1];
+    for (final f in factors) {
+      final extended = <int>[];
+      var power = 1;
+      for (var k = 0; k <= f.exponent; k++) {
+        for (final d in divs) {
+          extended.add(d * power);
+        }
+        power *= f.prime;
+      }
+      divs = extended;
+    }
+    divs.sort();
+    return divs;
+  }
+
   /// Round 91 (P6): top-level pre-pass that intercepts precision-arc
   /// calls before SymEngine sees them. Returns the result string when
   /// [input] is a recognized standalone precision-arc call, or null
@@ -292,6 +356,13 @@ class CalculatorEngine {
   ///   factorint(n)                 → formatted as `p^e · p^e · ...`
   ///                                   with Unicode superscripts
   ///                                   (round 90).
+  ///   modpow(a, e, m)              → a^e mod m (round 4).
+  ///   modinv(a, m)                 → a^-1 mod m (round 4).
+  ///   totient(n)                   → Euler's φ(n) (round 4).
+  ///   jacobi(a, n)                 → Jacobi symbol -1/0/1 (round 4).
+  ///   divisors(n)                  → comma-separated divisor list
+  ///                                   (round 4, pure-Dart from
+  ///                                   factorint).
   ///
   /// Only matches when the call is the **entire** input (after
   /// trimming whitespace). In-expression calls like `pi(50) + 1` are
@@ -356,6 +427,51 @@ class CalculatorEngine {
         return formatFactorint(factors, originalInput: n);
       } catch (e) {
         return 'Error: factorint failed: $e';
+      }
+    }
+
+    // Round 4: modpow(a, e, m) — three integer args.
+    m = RegExp(r'^modpow\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$')
+        .firstMatch(trimmed);
+    if (m != null) {
+      try {
+        return modpow(m.group(1)!, m.group(2)!, m.group(3)!);
+      } catch (e) {
+        return 'Error: modpow failed: $e';
+      }
+    }
+
+    // Round 4: modinv(a, m) / jacobi(a, n) — two integer args.
+    m = RegExp(r'^(modinv|jacobi)\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$')
+        .firstMatch(trimmed);
+    if (m != null) {
+      final name = m.group(1)!;
+      try {
+        return name == 'modinv'
+            ? modinv(m.group(2)!, m.group(3)!)
+            : jacobi(m.group(2)!, m.group(3)!);
+      } catch (e) {
+        return 'Error: $name failed: $e';
+      }
+    }
+
+    // Round 4: totient(n) — single integer arg.
+    m = RegExp(r'^totient\s*\(\s*(-?\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      try {
+        return totient(m.group(1)!);
+      } catch (e) {
+        return 'Error: totient failed: $e';
+      }
+    }
+
+    // Round 4: divisors(n) — single integer arg, comma-separated list.
+    m = RegExp(r'^divisors\s*\(\s*(-?\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      try {
+        return divisors(m.group(1)!).join(', ');
+      } catch (e) {
+        return 'Error: divisors failed: $e';
       }
     }
 
