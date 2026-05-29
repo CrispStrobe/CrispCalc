@@ -1594,6 +1594,7 @@ class FunctionReferences {
       ],
       seeAlso: ['chi2_goodness', 'fisher_exact', 'anova_1'],
       workedExampleId: 'statsHypothesisTests',
+      openTarget: 'open:statistics?preset=statsChiSquareIndep',
     ),
     FunctionRef(
       id: 'fisher_exact',
@@ -1653,6 +1654,7 @@ class FunctionReferences {
       ],
       seeAlso: ['welch_t', 'sign_test', 'anova_1'],
       workedExampleId: 'statsHypothesisTests',
+      openTarget: 'open:statistics?preset=statsWilcoxon',
     ),
     FunctionRef(
       id: 'sign_test',
@@ -1683,6 +1685,7 @@ class FunctionReferences {
       ],
       seeAlso: ['paired_t', 'wilcoxon', 'fisher_exact'],
       workedExampleId: 'statsHypothesisTests',
+      openTarget: 'open:statistics?preset=statsSignTest',
     ),
     // === Constraints DSL =====================================================
     // All constraints entries are module-surface (runnable: false).
