@@ -1306,10 +1306,10 @@ Group A (recommended first — ship together as one round):
   - `modinv(a, m)` → modular inverse (GMP `mpz_invert`) — R4
   - `modpow(a, e, m)` → modular exponentiation (GMP `mpz_powm`) — R4
   - `jacobi(a, n)` → Jacobi symbol (GMP `mpz_jacobi`) — R4
-  **Remaining (Round 5 follow-up):** Adv-tab keypad buttons +
-  worked-examples + FunctionReference entries (+ DE/FR/ES i18n) to
-  surface these beyond typed input. `factorint` / `isprime` already
-  have keypad buttons (round 92); the other six don't yet.
+  **Round 5 (UI surfacing) — SHIPPED 2026-05-29.** All eight now have
+  Adv-tab keypad buttons, FunctionReference entries (full DE/FR/ES
+  i18n), and worked-examples for the headline cases (`divisors`,
+  `totient`, `modpow`). Group A is complete.
 
 Group B (V2 — more specialized, ship after Group A lands):
 

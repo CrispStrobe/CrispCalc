@@ -1,5 +1,23 @@
 # CrispCalc — handover for the next session
 
+## Latest: 2026-05-29 (cont.) — Precision arc Group A complete (Round 4 + 5)
+
+Closed out the precision/number-theory arc's **Group A**. Round 4 added
+the last four native functions — `modpow` / `modinv` / `totient` /
+`jacobi` — plus pure-Dart `divisors`, across the full three-repo chain
+(wrapper C → bridge bindings + `+load` keepalive → CrispCalc engine +
+parser). Round 5 surfaced all of them in the UI (Adv-keypad buttons,
+FunctionReference entries with DE/FR/ES i18n, worked-examples). **All
+three repos merged to their default branches** (math-stack `master`
+`39d2e4d8`, bridge `main` `ce8af30`, CrispCalc `main` repinned to
+`ce8af30`). Release-build `nm` confirmed the new symbols survive
+dead-strip. **2387 tests** (one pre-existing notepad full-suite flake,
+passes in isolation). Group A done; **Group B** (polynomial arithmetic,
+continued fractions, Bessel/zeta/theta, arbitrary-precision complex) is
+the next precision arc. See `HANDOFF_PRECISION.md` + HISTORY top entry.
+
+---
+
 Pickup note from the **2026-05-29 session** (P11 R130 + R100 + R105b).
 Three arcs landed: **Linux x86_64 SymEngine** (bridge v1.2.0 — the
 last tier-1 platform; every native target now ships full SymEngine),
@@ -9,24 +27,26 @@ Statistics / Sudoku / Constraints DSL screens; plus the bridge v1.2.1
 Windows-loader fix and the **v0.4.1 release**. Prior session
 (2026-05-27) cut v0.4.0 with Android + Windows.
 
-## ⚠ Working-mode change (unchanged)
+## ⚠ Working mode
 
-**Parallel-arc work is paused.** All edits go **directly on `main`**
-in `/Volumes/backups/code/CrispCalc`. The bridge plugin work
-happens on its own feature branches in
-`/Volumes/backups/code/symbolic_math_bridge` per the multi-repo
-arc rule (see `memory/feedback_multi_repo_arc_worktree.md`).
+**Single-repo CrispCalc work** goes **directly on `main`**. A
+**multi-repo arc** (CrispCalc + symbolic_math_bridge +
+math-stack-ios-builder) uses a **feature branch per repo**, then
+merges each to its default branch — per the multi-repo rule (see
+`memory/feedback_multi_repo_arc_worktree.md`). The round-4 arc this
+session followed exactly that: `precision-round4-modular` in all three,
+merged to `master`/`main`. Round-5 (UI-only, CrispCalc) went on `main`.
 
 ## State
 
 | | |
 |---|---|
 | **Main worktree** | `/Volumes/backups/code/CrispCalc` (branch `main`) |
-| **main HEAD** | R130 + R100 + R105b + Windows-loader-fix landed; **v0.4.1 released** (all 5 artifacts, 2026-05-29) |
-| **Tests** | **2317 pass** (1992 → 2129 R100-DE → 2137 R105b → 2317 R100 FR+ES) |
+| **main HEAD** | Precision arc Group A complete (Round 4 + 5 ntheory) on top of R130 + R100 + R105b; **v0.4.1 released** (all 5 artifacts) |
+| **Tests** | **2387 pass** (2317 → 2334 R4 → 2387 R5 i18n); 1 pre-existing notepad full-suite flake |
 | **dart_csp pin** | `69a9cfb` (unchanged) |
-| **bridge pin** | **`535ce5d`** (bridge 1.2.1 — Linux `.so` + Windows loader fix) — was `931adcf` pre-session |
-| **bridge main HEAD** | `535ce5d` (v1.2.1; `r130-linux` + `r131b-windows-loader` merged) |
+| **bridge pin** | **`ce8af30`** (bridge main, post round-4 merge — modpow/modinv/totient/jacobi) — was `535ce5d` pre-session |
+| **bridge main HEAD** | `ce8af30` (round-4 `precision-round4-modular` merged) |
 | **platforms** | iOS · macOS · Android arm64-v8a · Windows x86_64 · **Linux x86_64** — all full-CAS. Web still the only CAS-less target. |
 
 ## This session — major arcs landed (2026-05-29)

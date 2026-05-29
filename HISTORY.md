@@ -47,9 +47,27 @@ gained dispatch for `modpow(a,e,m)`, `modinv(a,m)`, `totient(n)`,
 `jacobi(a,n)`, `divisors(n)`. New tests in `test/precision_test.dart`
 (classroom values + domain-error cases + pure-Dart divisor enumeration).
 
-UI surfacing (Adv-keypad buttons, worked-examples, FunctionReference
-entries + i18n) is the natural Round-5 follow-up — these ship reachable
-by typed input, the same way the round-85/86 MPFR constants first did.
+**Round 5 (UI surfacing) — shipped same session.** All three repos
+merged to their default branches (math-stack `master` 39d2e4d8, bridge
+`main` ce8af30, CrispCalc `main` repinned to ce8af30). Then the
+round-4 functions were surfaced beyond typed input:
+
+- **FunctionReference**: catalog entries for `divisors` / `totient` /
+  `modpow` / `modinv` / `jacobi` with worked-example cross-links, plus
+  full DE/FR/ES description + per-example-hint i18n (the
+  locale-coverage test holds all three locales complete). German per
+  German math didactics (Teiler, teilerfremd, Eulersche φ-Funktion,
+  ggT, Jacobi-/Legendre-Symbol, quadratischer Rest).
+- **worked_examples**: `divisors12` / `eulerTotient` / `modpowCrypto`
+  + DE/FR/ES titles + descriptions.
+- **Adv keypad**: buttons for the five new functions with insert
+  handlers + help-popover ref-id mappings.
+
+Full suite 2387 pass / 1 skip; the lone failure is a pre-existing
+notepad force-reload full-suite flake (passes in isolation).
+
+Group B (polynomial arithmetic, continued fractions, Bessel/zeta/theta,
+arbitrary-precision complex) remains for a future arc.
 
 ## 2026-05-29 (P11 R130 + R100) — Linux SymEngine + German Function Reference
 
