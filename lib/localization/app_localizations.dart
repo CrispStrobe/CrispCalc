@@ -3556,6 +3556,12 @@ class DeLocalizations implements AppLocalizations {
         return 'Nächste Primzahl nach 1000';
       case 'mersenneM31':
         return 'Mersenne-Primzahl M31';
+      case 'divisors12':
+        return 'Alle Teiler';
+      case 'eulerTotient':
+        return 'Eulersche φ-Funktion';
+      case 'modpowCrypto':
+        return 'Modulare Exponentiation';
       case 'booleanIsprimeAnd':
         return 'Primzahl und beschränkt';
       case 'booleanEqualityFold':
@@ -3646,6 +3652,13 @@ class DeLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — bestätigt die achte Mersenne-Primzahl '
             'als einzelnen Faktor.';
+      case 'divisors12':
+        return 'divisors(12) → 1, 2, 3, 4, 6, 12 — aus der '
+            'Primfaktorzerlegung abgeleitet.';
+      case 'eulerTotient':
+        return 'totient(36) — Anzahl der zu 36 teilerfremden Reste.';
+      case 'modpowCrypto':
+        return 'modpow(2, 100, 1000000007) — Kern von RSA / Diffie-Hellman.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) und 17 < 20 — beide Teile wahr, also ist die '
             'Konjunktion wahr.';
@@ -3726,6 +3739,21 @@ class DeLocalizations implements AppLocalizations {
       case 'factorint':
         return 'Primfaktorzerlegung als `p₁^e₁ · p₂^e₂ · …` mit hochgestellten '
             'Unicode-Exponenten.';
+      case 'divisors':
+        return 'Alle positiven Teiler von `n`, aufsteigend sortiert und durch '
+            'Komma getrennt.';
+      case 'totient':
+        return 'Eulersche φ-Funktion φ(n): Anzahl der zu `n` teilerfremden '
+            'Zahlen in 1..n.';
+      case 'modpow':
+        return 'Modulare Exponentiation `aᵉ mod m`. Ein negativer Exponent '
+            'nutzt das modulare Inverse von `a` (sofern es existiert).';
+      case 'modinv':
+        return 'Modulares Inverses `a⁻¹ mod m` über den erweiterten '
+            'euklidischen Algorithmus. Fehler, wenn `ggT(a, m) ≠ 1`.';
+      case 'jacobi':
+        return 'Jacobi-Symbol (a/n) ∈ {−1, 0, 1} für ungerades positives `n`; '
+            'verallgemeinert das Legendre-Symbol.';
       // --- Hochpräzision ---
       case 'pi_precision':
         return 'π auf N Dezimalstellen über MPFR; gibt die reine Ziffernfolge '
@@ -4010,6 +4038,43 @@ class DeLocalizations implements AppLocalizations {
             '`factorint` bricht ab, wenn die Eingabe prim ist.',
         'Sonderfall: Per Konvention hat 1 die leere Faktorzerlegung; CrispCalc '
             'stellt dies als das Literal `1` dar statt als leere Zeichenkette.',
+      ],
+      'divisors': [
+        'In CrispCalc wird `divisors(n)` rein in Dart aus `factorint(n)` '
+            'abgeleitet: jedes Produkt von Primzahlpotenzen pᵏ mit '
+            '0 ≤ k ≤ Exponent. Die Anzahl ist ∏(eᵢ + 1) — hier '
+            '(2+1)(1+1) = 6.',
+        '28 ist eine vollkommene Zahl: Die Summe ihrer echten Teiler (alle '
+            'außer 28 selbst) ergibt 28.',
+      ],
+      'totient': [
+        'Die vier zu 12 teilerfremden Reste sind {1, 5, 7, 11}. CrispCalc '
+            'berechnet φ aus der Primfaktorzerlegung über FLINTs '
+            '`fmpz_euler_phi`.',
+        'Für eine Primzahl p gilt φ(p) = p − 1, da jede kleinere positive '
+            'Zahl zu p teilerfremd ist.',
+      ],
+      'modpow': [
+        'Square-and-Multiply über GMPs `mpz_powm` — die Grundoperation '
+            'modularer Arithmetik und (im Schulbuch) von RSA / '
+            'Diffie-Hellman. Die riesige Zahl `2¹⁰⁰` wird nie explizit '
+            'gebildet.',
+        'Ein negativer Exponent invertiert zunächst die Basis, daher ist '
+            '`modpow(a, -1, m)` gleich `modinv(a, m)` — hier 3⁻¹ ≡ 4 '
+            '(mod 11). Fehler, wenn ggT(a, m) ≠ 1.',
+      ],
+      'modinv': [
+        'Das eindeutige x in [0, m) mit a·x ≡ 1 (mod m), über GMPs '
+            '`mpz_invert`. Probe: 3·4 = 12 ≡ 1 (mod 11).',
+        'Nur Einheiten modulo m sind invertierbar. ggT(2, 4) = 2 ≠ 1, also '
+            'existiert kein Inverses.',
+      ],
+      'jacobi': [
+        'Für eine Primzahl n stimmt das Jacobi-Symbol mit dem '
+            'Legendre-Symbol überein — hier ist 2 ein quadratischer Rest '
+            'modulo 7 (denn 3² ≡ 2). Über GMPs `mpz_jacobi`.',
+        'Das Symbol ist genau dann 0, wenn ggT(a, n) ≠ 1; hier ist '
+            'ggT(6, 9) = 3.',
       ],
       // --- Hochpräzision ---
       'pi_precision': [
@@ -5954,6 +6019,12 @@ class FrLocalizations implements AppLocalizations {
         return 'Premier suivant après 1000';
       case 'mersenneM31':
         return 'Premier de Mersenne M31';
+      case 'divisors12':
+        return 'Tous les diviseurs';
+      case 'eulerTotient':
+        return "Indicatrice d'Euler";
+      case 'modpowCrypto':
+        return 'Exponentiation modulaire';
       case 'booleanIsprimeAnd':
         return 'Premier et borné';
       case 'booleanEqualityFold':
@@ -6044,6 +6115,14 @@ class FrLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — confirme le huitième nombre '
             'premier de Mersenne comme facteur unique.';
+      case 'divisors12':
+        return 'divisors(12) → 1, 2, 3, 4, 6, 12 — dérivé de la '
+            'factorisation en facteurs premiers.';
+      case 'eulerTotient':
+        return 'totient(36) — nombre de restes premiers avec 36.';
+      case 'modpowCrypto':
+        return 'modpow(2, 100, 1000000007) — le cœur de RSA / '
+            'Diffie-Hellman.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) et 17 < 20 — les deux clauses sont vraies, '
             'donc la conjonction est vraie.';
@@ -6127,6 +6206,21 @@ class FrLocalizations implements AppLocalizations {
       case 'factorint':
         return "Décomposition en facteurs premiers sous la forme "
             "`p₁^e₁ · p₂^e₂ · …` avec des exposants Unicode en exposant.";
+      case 'divisors':
+        return "Tous les diviseurs positifs de `n`, triés par ordre croissant "
+            "et séparés par des virgules.";
+      case 'totient':
+        return "Indicatrice d'Euler φ(n) : le nombre d'entiers de 1 à n "
+            "premiers avec `n`.";
+      case 'modpow':
+        return "Exponentiation modulaire `aᵉ mod m`. Un exposant négatif "
+            "utilise l'inverse modulaire de `a` (lorsqu'il existe).";
+      case 'modinv':
+        return "Inverse modulaire `a⁻¹ mod m` via l'algorithme d'Euclide "
+            "étendu. Erreur lorsque `pgcd(a, m) ≠ 1`.";
+      case 'jacobi':
+        return "Symbole de Jacobi (a/n) ∈ {−1, 0, 1} pour `n` impair positif ; "
+            "généralise le symbole de Legendre.";
       case 'pi_precision':
         return "π avec N décimales via MPFR ; renvoie la chaîne de chiffres "
             "brute.";
@@ -6411,6 +6505,42 @@ class FrLocalizations implements AppLocalizations {
           "`factorint` court-circuite lorsque l'entrée est première.",
       "Cas limite : par convention, 1 a la factorisation vide ; CrispCalc "
           "l'affiche comme le littéral `1` plutôt qu'une chaîne vide.",
+    ],
+    'divisors': [
+      "Dans CrispCalc, `divisors(n)` est dérivé en Dart pur de `factorint(n)` : "
+          "chaque produit de puissances de nombres premiers pᵏ avec "
+          "0 ≤ k ≤ exposant. Le compte vaut ∏(eᵢ + 1) — ici (2+1)(1+1) = 6.",
+      "28 est un nombre parfait : la somme de ses diviseurs propres (tous "
+          "sauf 28 lui-même) vaut 28.",
+    ],
+    'totient': [
+      "Les quatre restes premiers avec 12 sont {1, 5, 7, 11}. CrispCalc "
+          "calcule φ à partir de la décomposition en facteurs premiers via "
+          "`fmpz_euler_phi` de FLINT.",
+      "Pour un nombre premier p, φ(p) = p − 1, car tout entier positif plus "
+          "petit est premier avec p.",
+    ],
+    'modpow': [
+      "Exponentiation rapide (carré-et-multiplie) via `mpz_powm` de GMP — "
+          "l'opération de base de l'arithmétique modulaire et (en version "
+          "scolaire) de RSA / Diffie-Hellman. Le gigantesque `2¹⁰⁰` n'est "
+          "jamais formé explicitement.",
+      "Un exposant négatif inverse d'abord la base, donc `modpow(a, -1, m)` "
+          "égale `modinv(a, m)` — ici 3⁻¹ ≡ 4 (mod 11). Erreur si "
+          "pgcd(a, m) ≠ 1.",
+    ],
+    'modinv': [
+      "L'unique x dans [0, m) tel que a·x ≡ 1 (mod m), via `mpz_invert` de "
+          "GMP. Vérification : 3·4 = 12 ≡ 1 (mod 11).",
+      "Seules les unités modulo m sont inversibles. pgcd(2, 4) = 2 ≠ 1, donc "
+          "aucun inverse n'existe.",
+    ],
+    'jacobi': [
+      "Pour un nombre premier n, le symbole de Jacobi coïncide avec le "
+          "symbole de Legendre — ici 2 est un résidu quadratique modulo 7 "
+          "(car 3² ≡ 2). Via `mpz_jacobi` de GMP.",
+      "Le symbole vaut 0 exactement lorsque pgcd(a, n) ≠ 1 ; ici "
+          "pgcd(6, 9) = 3.",
     ],
     'pi_precision': [
       "Dans CrispCalc, `pi(N)` est un appel traité à part, dirigé vers le "
@@ -8338,6 +8468,12 @@ class EsLocalizations implements AppLocalizations {
         return 'Primo siguiente después de 1000';
       case 'mersenneM31':
         return 'Primo de Mersenne M31';
+      case 'divisors12':
+        return 'Todos los divisores';
+      case 'eulerTotient':
+        return 'Función φ de Euler';
+      case 'modpowCrypto':
+        return 'Exponenciación modular';
       case 'booleanIsprimeAnd':
         return 'Primo y acotado';
       case 'booleanEqualityFold':
@@ -8428,6 +8564,14 @@ class EsLocalizations implements AppLocalizations {
       case 'mersenneM31':
         return 'factorint(2^31 − 1) — confirma el octavo primo de '
             'Mersenne como factor único.';
+      case 'divisors12':
+        return 'divisors(12) → 1, 2, 3, 4, 6, 12 — derivado de la '
+            'factorización en primos.';
+      case 'eulerTotient':
+        return 'totient(36) — cantidad de restos coprimos con 36.';
+      case 'modpowCrypto':
+        return 'modpow(2, 100, 1000000007) — el núcleo de RSA / '
+            'Diffie-Hellman.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) y 17 < 20 — ambas cláusulas son verdaderas, '
             'así que la conjunción es verdadera.';
@@ -8505,6 +8649,21 @@ class EsLocalizations implements AppLocalizations {
       case 'factorint':
         return "Factorización en primos con la forma `p₁^e₁ · p₂^e₂ · …` con "
             "exponentes en superíndice Unicode.";
+      case 'divisors':
+        return "Todos los divisores positivos de `n`, ordenados de menor a "
+            "mayor y separados por comas.";
+      case 'totient':
+        return "Función φ de Euler φ(n): la cantidad de enteros en 1..n "
+            "coprimos con `n`.";
+      case 'modpow':
+        return "Exponenciación modular `aᵉ mod m`. Un exponente negativo usa "
+            "el inverso modular de `a` (cuando existe).";
+      case 'modinv':
+        return "Inverso modular `a⁻¹ mod m` mediante el algoritmo de Euclides "
+            "extendido. Error cuando `mcd(a, m) ≠ 1`.";
+      case 'jacobi':
+        return "Símbolo de Jacobi (a/n) ∈ {−1, 0, 1} para `n` impar positivo; "
+            "generaliza el símbolo de Legendre.";
       case 'pi_precision':
         return "π con N cifras decimales mediante MPFR; devuelve la cadena "
             "de dígitos en bruto.";
@@ -8786,6 +8945,41 @@ class EsLocalizations implements AppLocalizations {
       "Caso límite: por convención, 1 tiene la factorización vacía; "
           "CrispCalc lo muestra como el literal `1` en vez de una cadena "
           "vacía.",
+    ],
+    'divisors': [
+      "En CrispCalc, `divisors(n)` se deriva en Dart puro a partir de "
+          "`factorint(n)`: cada producto de potencias de primos pᵏ con "
+          "0 ≤ k ≤ exponente. La cantidad es ∏(eᵢ + 1) — aquí (2+1)(1+1) = 6.",
+      "28 es un número perfecto: la suma de sus divisores propios (todos "
+          "salvo el propio 28) es 28.",
+    ],
+    'totient': [
+      "Los cuatro restos coprimos con 12 son {1, 5, 7, 11}. CrispCalc calcula "
+          "φ a partir de la factorización en primos mediante `fmpz_euler_phi` "
+          "de FLINT.",
+      "Para un primo p, φ(p) = p − 1, ya que todo entero positivo menor es "
+          "coprimo con p.",
+    ],
+    'modpow': [
+      "Exponenciación rápida (cuadrar y multiplicar) mediante `mpz_powm` de "
+          "GMP — la operación básica de la aritmética modular y (en su "
+          "versión escolar) de RSA / Diffie-Hellman. El gigantesco `2¹⁰⁰` "
+          "nunca se forma de manera explícita.",
+      "Un exponente negativo invierte primero la base, así que "
+          "`modpow(a, -1, m)` equivale a `modinv(a, m)` — aquí 3⁻¹ ≡ 4 "
+          "(mod 11). Error si mcd(a, m) ≠ 1.",
+    ],
+    'modinv': [
+      "El único x en [0, m) con a·x ≡ 1 (mod m), mediante `mpz_invert` de "
+          "GMP. Comprobación: 3·4 = 12 ≡ 1 (mod 11).",
+      "Solo las unidades módulo m son invertibles. mcd(2, 4) = 2 ≠ 1, así que "
+          "no existe inverso.",
+    ],
+    'jacobi': [
+      "Para un primo n, el símbolo de Jacobi coincide con el símbolo de "
+          "Legendre — aquí 2 es un residuo cuadrático módulo 7 (pues 3² ≡ 2). "
+          "Mediante `mpz_jacobi` de GMP.",
+      "El símbolo es 0 exactamente cuando mcd(a, n) ≠ 1; aquí mcd(6, 9) = 3.",
     ],
     'pi_precision': [
       "En CrispCalc, `pi(N)` es una llamada con tratamiento especial, "

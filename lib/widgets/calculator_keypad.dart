@@ -48,6 +48,11 @@ const Map<String, String> _kAdvKeyHelpRefId = {
   'nextprime': 'nextprime',
   'prevprime': 'prevprime',
   'factorint': 'factorint',
+  'divisors': 'divisors',
+  'totient': 'totient',
+  'modpow': 'modpow',
+  'modinv': 'modinv',
+  'jacobi': 'jacobi',
 };
 
 /// Round 102b (P6): per-glyph → FunctionRef.id mapping for the CAS
@@ -221,6 +226,13 @@ class _CalculatorKeypadState extends State<CalculatorKeypad> {
     'nextprime',
     'prevprime',
     'factorint',
+    // Round 4 (precision arc): modular arithmetic + multiplicative
+    // number theory.
+    'divisors',
+    'totient',
+    'modpow',
+    'modinv',
+    'jacobi',
     // Round 112 (P7): relational + logical operators. Inserts the
     // ASCII form with surrounding spaces so the round-110 / 111
     // preprocessor can lower them into SymEngine's Eq/Lt/.../

@@ -612,6 +612,129 @@ class FunctionReferences {
       seeAlso: ['isprime', 'nextprime', 'gcd'],
       workedExampleId: 'factorint360',
     ),
+    FunctionRef(
+      id: 'divisors',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'divisors(n)',
+      shortDescription: 'All positive divisors of `n`, sorted ascending and '
+          'comma-separated.',
+      examples: [
+        FunctionRefExample(
+          input: 'divisors(12)',
+          expected: '1, 2, 3, 4, 6, 12',
+          hint: 'In CrispCalc, `divisors(n)` is derived in pure Dart from '
+              '`factorint(n)`: every product of prime powers pᵏ with '
+              '0 ≤ k ≤ exponent. The count equals ∏(eᵢ + 1) — here '
+              '(2+1)(1+1) = 6.',
+        ),
+        FunctionRefExample(
+          input: 'divisors(28)',
+          expected: '1, 2, 4, 7, 14, 28',
+          hint: '28 is a perfect number: its proper divisors (all but 28 '
+              'itself) sum to 28.',
+        ),
+      ],
+      seeAlso: ['factorint', 'totient', 'gcd'],
+      workedExampleId: 'divisors12',
+    ),
+    FunctionRef(
+      id: 'totient',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'totient(n)',
+      shortDescription:
+          "Euler's totient φ(n): the count of integers in 1..n that are "
+          'coprime to `n`.',
+      examples: [
+        FunctionRefExample(
+          input: 'totient(12)',
+          expected: '4',
+          hint: 'The four units modulo 12 are {1, 5, 7, 11}. CrispCalc '
+              "computes φ from the prime factorisation via FLINT's "
+              '`fmpz_euler_phi`.',
+        ),
+        FunctionRefExample(
+          input: 'totient(97)',
+          expected: '96',
+          hint: 'For a prime p, φ(p) = p − 1, since every smaller positive '
+              'integer is coprime to p.',
+        ),
+      ],
+      seeAlso: ['factorint', 'modinv', 'divisors'],
+      workedExampleId: 'eulerTotient',
+    ),
+    FunctionRef(
+      id: 'modpow',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'modpow(a, e, m)',
+      shortDescription:
+          'Modular exponentiation `aᵉ mod m`. A negative exponent uses the '
+          'modular inverse of `a` (when it exists).',
+      examples: [
+        FunctionRefExample(
+          input: 'modpow(2, 100, 1000000007)',
+          expected: '976371285',
+          hint: "Square-and-multiply via GMP's `mpz_powm` — the workhorse "
+              'behind modular arithmetic and (textbook) RSA / '
+              'Diffie–Hellman. Never forms the gigantic `2¹⁰⁰` directly.',
+        ),
+        FunctionRefExample(
+          input: 'modpow(3, -1, 11)',
+          expected: '4',
+          hint: 'A negative exponent inverts the base first, so '
+              '`modpow(a, -1, m)` equals `modinv(a, m)` — here 3⁻¹ ≡ 4 '
+              '(mod 11). Errors when gcd(a, m) ≠ 1.',
+        ),
+      ],
+      seeAlso: ['modinv', 'totient', 'gcd'],
+      workedExampleId: 'modpowCrypto',
+    ),
+    FunctionRef(
+      id: 'modinv',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'modinv(a, m)',
+      shortDescription:
+          'Modular inverse `a⁻¹ mod m` via the extended Euclidean '
+          'algorithm. Errors when `gcd(a, m) ≠ 1`.',
+      examples: [
+        FunctionRefExample(
+          input: 'modinv(3, 11)',
+          expected: '4',
+          hint: 'The unique x in [0, m) with a·x ≡ 1 (mod m), via GMP\'s '
+              '`mpz_invert`. Check: 3·4 = 12 ≡ 1 (mod 11).',
+        ),
+        FunctionRefExample(
+          input: 'modinv(2, 4)',
+          expected: 'Error: no inverse: gcd(a, m) != 1',
+          hint: 'Only units modulo m are invertible. gcd(2, 4) = 2 ≠ 1, so '
+              'no inverse exists.',
+        ),
+      ],
+      seeAlso: ['modpow', 'gcd', 'totient'],
+    ),
+    FunctionRef(
+      id: 'jacobi',
+      category: FunctionRefCategory.numberTheory,
+      signature: 'jacobi(a, n)',
+      shortDescription:
+          'Jacobi symbol (a/n) ∈ {−1, 0, 1} for odd positive `n`; '
+          'generalises the Legendre symbol.',
+      examples: [
+        FunctionRefExample(
+          input: 'jacobi(2, 7)',
+          expected: '1',
+          hint: 'For prime n the Jacobi symbol equals the Legendre symbol — '
+              'here 2 is a quadratic residue mod 7 (since 3² ≡ 2). Via '
+              "GMP's `mpz_jacobi`.",
+        ),
+        FunctionRefExample(
+          input: 'jacobi(6, 9)',
+          expected: '0',
+          hint: 'The symbol is 0 exactly when gcd(a, n) ≠ 1; here '
+              'gcd(6, 9) = 3.',
+        ),
+      ],
+      seeAlso: ['isprime', 'modpow', 'gcd'],
+    ),
     // === Precision arc =======================================================
     FunctionRef(
       id: 'pi_precision',

@@ -711,6 +711,29 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('factorint()', cursorOffsetFromEnd: -1);
         break;
 
+      // Round 4 (precision arc): modular arithmetic + multiplicative
+      // number theory. Cursor lands inside the parens; comma-separated
+      // args are typed by the user.
+      case 'divisors':
+        _latexController.insert('divisors()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'totient':
+        _latexController.insert('totient()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'modpow':
+        _latexController.insert('modpow()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'modinv':
+        _latexController.insert('modinv()', cursorOffsetFromEnd: -1);
+        break;
+
+      case 'jacobi':
+        _latexController.insert('jacobi()', cursorOffsetFromEnd: -1);
+        break;
+
       case 'mod':
         _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;

@@ -202,6 +202,31 @@ class WorkedExamples {
           'prime as a single factor.',
       expression: 'factorint(2147483647)',
     ),
+    // Round 4 (precision arc): modular arithmetic + multiplicative
+    // number theory. All route through tryEvaluatePrecisionCall.
+    WorkedExample(
+      id: 'divisors12',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'All divisors',
+      description: 'divisors(12) → 1, 2, 3, 4, 6, 12 — derived from '
+          'factorint.',
+      expression: 'divisors(12)',
+    ),
+    WorkedExample(
+      id: 'eulerTotient',
+      category: WorkedExampleCategory.numberTheory,
+      title: "Euler's totient",
+      description: 'totient(36) — count of residues coprime to 36.',
+      expression: 'totient(36)',
+    ),
+    WorkedExample(
+      id: 'modpowCrypto',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Modular exponentiation',
+      description: 'modpow(2, 100, 1000000007) — the heart of RSA / '
+          'Diffie–Hellman.',
+      expression: 'modpow(2, 100, 1000000007)',
+    ),
 
     // === P7 Booleans (Round 112) ============================================
     // Surfaces the relational + logical operator rewrite shipped in
