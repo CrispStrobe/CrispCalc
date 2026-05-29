@@ -26,7 +26,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "348a5cd"   # precision-round4-modular — modpow/modinv/totient/jacobi
+      ref: "ce8af30"   # bridge main post round-4 merge — modpow/modinv/totient/jacobi
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine
