@@ -48,11 +48,13 @@ void main() {
       // Cap raised to 30 in round 73 to accommodate the constraints
       // category (Killer + DSL sentinels). Raised to 40 in round 92
       // for the precision-arc surfacing. Raised to 50 in round 111b
-      // for the P7 boolean batch (boolean*, if-fold). If we go past 50
-      // the dialog should grow proper category-grouping rather than
-      // the flat ListView it has today.
+      // for the P7 boolean batch (boolean*, if-fold). Raised to 60 for
+      // the precision arc's Group B (continued fractions, polynomial
+      // arithmetic, special functions, evalf). If we go past 60 the
+      // dialog should grow proper category-grouping rather than the
+      // flat ListView it has today.
       expect(WorkedExamples.all.length, greaterThanOrEqualTo(12));
-      expect(WorkedExamples.all.length, lessThanOrEqualTo(50));
+      expect(WorkedExamples.all.length, lessThanOrEqualTo(60));
     });
 
     test('round 69: constraints category surfaces Killer + DSL entries', () {

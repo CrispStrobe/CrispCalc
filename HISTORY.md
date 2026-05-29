@@ -2,6 +2,33 @@
 
 Completed work, newest first.
 
+## 2026-05-29 — Precision arc Group B: generic arbitrary-precision evalf(expr, N)
+
+`evalf(expr, N)` — evaluate **any** parseable real expression to N
+decimal digits via MPFR. The generic counterpart to `pi(N)`/`e(N)`:
+`evalf(ln(10), 100)`, `evalf(zeta(2), 50)`, `evalf(sqrt(2)+sqrt(3), 80)`.
+Subsumes the long-open `ln(k, N)` gap and gives arbitrary precision for
+the special functions surfaced in the previous round. A 3-repo wrapper
+arc (the Round-4 flow):
+
+- **math-stack** `src/flutter_symengine_wrapper.{c,h}`:
+  `flutter_symengine_evalf_with_precision(expr, digits)` — `basic_parse`
+  + `basic_evalf` (real=1) at ⌈digits·log2(10)⌉+8 bits; non-real results
+  rejected. Re-vendored into the bridge; xcframework rebuilt.
+- **bridge**: `mpfrEvalf(expr, digits)` Dart binding (new
+  `_EvalfPrecision` typedef, string+int → string) + `+load` keepalive
+  (ios + macos) — verified present via `nm` and surviving release
+  dead-strip.
+- **CrispCalc**: `evalfPrecision` engine method + `tryEvaluatePrecisionCall`
+  dispatch for `evalf(expr, N)` (the expression may itself contain
+  commas, e.g. `evalf(beta(2,3), 50)` — the trailing `, <digits>)`
+  anchors the precision arg). FunctionReference entry (precision
+  category) with DE/FR/ES, keypad button, `evalfLn10` worked example.
+  Bridge re-pinned.
+
+Raised the advisory worked-examples cap 50 → 60 (Group B growth). Full
+suite **2548 pass / 1 skip, 0 failures**.
+
 ## 2026-05-29 — Precision arc Group B: special functions surfaced (zeta / erf / gamma / lambertw / beta)
 
 A **discoverability** round — no new code path. Investigation showed

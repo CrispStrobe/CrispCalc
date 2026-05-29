@@ -3574,6 +3574,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Riemannsche Zeta — das Basler Problem';
       case 'gammaHalf':
         return 'Gamma an einer halbzahligen Stelle';
+      case 'evalfLn10':
+        return 'Arbiträr-präzises evalf';
       case 'booleanIsprimeAnd':
         return 'Primzahl und beschränkt';
       case 'booleanEqualityFold':
@@ -3686,6 +3688,8 @@ class DeLocalizations implements AppLocalizations {
         return 'zeta(2) — Eulers ζ(2) = π²/6 ≈ 1,6449.';
       case 'gammaHalf':
         return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
+      case 'evalfLn10':
+        return 'evalf(ln(10), 50) — beliebiger Ausdruck auf 50 Stellen.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) und 17 < 20 — beide Teile wahr, also ist die '
             'Konjunktion wahr.';
@@ -3827,6 +3831,9 @@ class DeLocalizations implements AppLocalizations {
       case 'eulergamma_precision':
         return 'Euler-Mascheroni-Konstante γ ≈ 0,5772… auf N Dezimalstellen '
             'über MPFR.';
+      case 'evalf':
+        return 'Wertet einen beliebigen reellen Ausdruck auf N Dezimalstellen '
+            'über MPFR aus — der arbiträr-präzise Zahlenwert von `expr`.';
       // --- Matrizen / Lineare Algebra ---
       case 'matrix_literal':
         return 'Matrix-Literal: eine Liste von Zeilen, jede Zeile eine Liste '
@@ -4247,6 +4254,15 @@ class DeLocalizations implements AppLocalizations {
         'γ hat keine bekannte geschlossene Form. Die MPFR-Routine ist die '
             'Standard-Referenzimplementierung; CrispCalc stellt lediglich die '
             'Ziffernfolge dar.',
+      ],
+      'evalf': [
+        'In CrispCalc parst `evalf` einen beliebigen Ausdruck und leitet ihn '
+            'durch SymEngines `basic_evalf` mit ⌈N·log2(10)⌉ + 8 Bit. Das '
+            'generische Gegenstück zu `pi(N)` / `e(N)` — funktioniert für '
+            'Logarithmen, Wurzeln, Summen und die Spezialfunktionen.',
+        'Mit Spezialfunktionen kombinierbar für hochpräzise Werte: '
+            'ζ(2) = π²/6. Nicht-reelle Ergebnisse werden abgelehnt '
+            '(hochpräzises Komplexes ist ein separater Pfad).',
       ],
       // --- Matrizen / Lineare Algebra ---
       'matrix_literal': [
@@ -6172,6 +6188,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Zêta de Riemann — le problème de Bâle';
       case 'gammaHalf':
         return 'Gamma en un demi-entier';
+      case 'evalfLn10':
+        return 'evalf de précision arbitraire';
       case 'booleanIsprimeAnd':
         return 'Premier et borné';
       case 'booleanEqualityFold':
@@ -6284,6 +6302,8 @@ class FrLocalizations implements AppLocalizations {
         return 'zeta(2) — le ζ(2) = π²/6 ≈ 1,6449 d\'Euler.';
       case 'gammaHalf':
         return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
+      case 'evalfLn10':
+        return 'evalf(ln(10), 50) — toute expression à 50 décimales.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) et 17 < 20 — les deux clauses sont vraies, '
             'donc la conjonction est vraie.';
@@ -6428,6 +6448,10 @@ class FrLocalizations implements AppLocalizations {
       case 'eulergamma_precision':
         return "Constante d'Euler-Mascheroni γ ≈ 0,5772… avec N décimales "
             "via MPFR.";
+      case 'evalf':
+        return "Évalue n'importe quelle expression réelle avec N décimales "
+            "via MPFR — la valeur numérique de précision arbitraire de "
+            "`expr`.";
       case 'matrix_literal':
         return "Littéral matriciel : une liste de lignes, chaque ligne étant "
             "une liste d'expressions de cellule. Les cellules peuvent être "
@@ -6841,6 +6865,15 @@ class FrLocalizations implements AppLocalizations {
       "γ n'a aucune forme close connue. La routine MPFR est l'implémentation "
           "de référence standard ; CrispCalc se contente d'afficher la chaîne "
           "de chiffres.",
+    ],
+    'evalf': [
+      "Dans CrispCalc, `evalf` analyse n'importe quelle expression et la "
+          "dirige vers `basic_evalf` de SymEngine à ⌈N·log2(10)⌉ + 8 bits. "
+          "Le pendant générique de `pi(N)` / `e(N)` — fonctionne pour les "
+          "logarithmes, racines, sommes et les fonctions spéciales.",
+      "À combiner avec les fonctions spéciales pour des valeurs de haute "
+          "précision : ζ(2) = π²/6. Les résultats non réels sont rejetés "
+          "(le complexe haute précision est un chemin distinct).",
     ],
     'matrix_literal': [
       "Dans CrispCalc, le littéral `Matrix(...)` est reconnu par "
@@ -8752,6 +8785,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Zeta de Riemann — el problema de Basilea';
       case 'gammaHalf':
         return 'Gamma en un semientero';
+      case 'evalfLn10':
+        return 'evalf de precisión arbitraria';
       case 'booleanIsprimeAnd':
         return 'Primo y acotado';
       case 'booleanEqualityFold':
@@ -8865,6 +8900,8 @@ class EsLocalizations implements AppLocalizations {
         return 'zeta(2) — el ζ(2) = π²/6 ≈ 1,6449 de Euler.';
       case 'gammaHalf':
         return 'gamma(0.5) — Γ(½) = √π ≈ 1,7725.';
+      case 'evalfLn10':
+        return 'evalf(ln(10), 50) — cualquier expresión con 50 cifras.';
       case 'booleanIsprimeAnd':
         return 'isprime(17) y 17 < 20 — ambas cláusulas son verdaderas, '
             'así que la conjunción es verdadera.';
@@ -9004,6 +9041,10 @@ class EsLocalizations implements AppLocalizations {
       case 'eulergamma_precision':
         return "Constante de Euler-Mascheroni γ ≈ 0,5772… con N cifras "
             "decimales mediante MPFR.";
+      case 'evalf':
+        return "Evalúa cualquier expresión real con N cifras decimales "
+            "mediante MPFR — el valor numérico de precisión arbitraria de "
+            "`expr`.";
       case 'matrix_literal':
         return "Literal de matriz: una lista de filas, cada fila una lista "
             "de expresiones de celda. Las celdas pueden ser números, "
@@ -9414,6 +9455,15 @@ class EsLocalizations implements AppLocalizations {
       "γ no tiene forma cerrada conocida. La rutina de MPFR es la "
           "implementación de referencia estándar; CrispCalc se limita a "
           "mostrar la cadena de dígitos.",
+    ],
+    'evalf': [
+      "En CrispCalc, `evalf` analiza cualquier expresión y la dirige a "
+          "`basic_evalf` de SymEngine con ⌈N·log2(10)⌉ + 8 bits. El "
+          "equivalente genérico de `pi(N)` / `e(N)`: funciona con "
+          "logaritmos, raíces, sumas y las funciones especiales.",
+      "Combínalo con funciones especiales para valores de alta precisión: "
+          "ζ(2) = π²/6. Los resultados no reales se rechazan (el complejo "
+          "de alta precisión es una vía aparte).",
     ],
     'matrix_literal': [
       "En CrispCalc, el literal `Matrix(...)` lo reconoce el evaluador de "

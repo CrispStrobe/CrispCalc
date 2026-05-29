@@ -777,6 +777,10 @@ class CalculatorScreenState extends State<CalculatorScreen>
         _latexController.insert('beta()', cursorOffsetFromEnd: -1);
         break;
 
+      case 'evalf':
+        _latexController.insert('evalf(, )', cursorOffsetFromEnd: -3);
+        break;
+
       case 'mod':
         _latexController.insert(' \\bmod ', cursorOffsetFromEnd: 0);
         break;

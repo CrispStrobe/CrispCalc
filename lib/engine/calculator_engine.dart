@@ -578,6 +578,18 @@ class CalculatorEngine {
     return true;
   }
 
+  /// Group B: arbitrary-precision numeric evaluation of any parseable
+  /// expression to [decimalDigits] digits via MPFR (real-valued).
+  /// `evalf(ln(10), 100)`, `evalf(zeta(2), 50)`, `evalf(sqrt(2)+sqrt(3),
+  /// 80)`. Native-only (the generic high-precision path has no pure-Dart
+  /// fallback); a non-real result surfaces the wrapper's error.
+  String evalfPrecision(String expression, int decimalDigits) {
+    if (decimalDigits < 1 || decimalDigits > 10000) {
+      return 'Error: precision must be in 1..10000';
+    }
+    return _bridgeCall('evalf', (b) => b.mpfrEvalf(expression, decimalDigits));
+  }
+
   /// Round 91 (P6): top-level pre-pass that intercepts precision-arc
   /// calls before SymEngine sees them. Returns the result string when
   /// [input] is a recognized standalone precision-arc call, or null
@@ -610,6 +622,8 @@ class CalculatorEngine {
   ///   polydiscriminant(p)          → discriminant of p (Group B).
   ///   polyfactor(p, mod=k)         → factor p over F_k (Group B,
   ///                                   pure-Dart Berlekamp).
+  ///   evalf(expr, N)               → expr to N digits via MPFR
+  ///                                   (Group B, native).
   ///
   /// Only matches when the call is the **entire** input (after
   /// trimming whitespace). In-expression calls like `pi(50) + 1` are
@@ -754,6 +768,19 @@ class CalculatorEngine {
     m = RegExp(r'^polydiscriminant\s*\(\s*(.+?)\s*\)$').firstMatch(trimmed);
     if (m != null) {
       return polydiscriminant(m.group(1)!);
+    }
+
+    // Group B: evalf(expr, N) — arbitrary-precision numeric evaluation
+    // of any expression. The expression (group 1) may itself contain
+    // commas (e.g. evalf(beta(2,3), 50)); the trailing `, <digits>)`
+    // anchors the precision argument.
+    m = RegExp(r'^evalf\s*\(\s*(.+?)\s*,\s*(\d+)\s*\)$').firstMatch(trimmed);
+    if (m != null) {
+      final n = int.tryParse(m.group(2)!);
+      if (n == null || n < 1 || n > 10000) {
+        return 'Error: precision must be in 1..10000';
+      }
+      return evalfPrecision(m.group(1)!, n);
     }
 
     // Group B: polyfactor(p, mod=k) / polyfactor(p, k) — factor over F_k.

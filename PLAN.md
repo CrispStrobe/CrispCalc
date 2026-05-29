@@ -1292,8 +1292,10 @@ Group A (recommended first — ship together as one round):
   `sqrt(2, 50)`.~~ **SHIPPED** (precision-arc rounds 85/86). The
   argument sets the decimal precision (1..10000), backed by MPFR
   through SymEngine's `basic_evalf`. Dispatched by
-  `tryEvaluatePrecisionCall`. (`ln(10, N)` not yet wired — a clean
-  add when a UI surface needs it.)
+  `tryEvaluatePrecisionCall`. `ln(k, N)` and arbitrary-precision of any
+  expression are now covered by the generic **`evalf(expr, N)`**
+  (SHIPPED 2026-05-29 — `lib/engine/calculator_engine.dart` +
+  `flutter_symengine_evalf_with_precision`).
 
 - [x] ~~**Number-theory toy set** (FLINT + GMP).~~ **SHIPPED** across
   precision-arc rounds 89 / 90 / Round 4 (2026-05-29). All eight

@@ -1102,6 +1102,32 @@ class FunctionReferences {
       ],
       seeAlso: ['pi_precision', 'e_precision', 'sqrt_precision'],
     ),
+    FunctionRef(
+      id: 'evalf',
+      category: FunctionRefCategory.precision,
+      signature: 'evalf(expr, N)',
+      shortDescription:
+          'Evaluate any real expression to N decimal digits via MPFR — '
+          'arbitrary-precision numeric value of `expr`.',
+      examples: [
+        FunctionRefExample(
+          input: 'evalf(ln(10), 50)',
+          expected: '2.3025850929940456840179914546843642076011014886288',
+          hint: 'In CrispCalc, `evalf` parses any expression and routes it '
+              'through SymEngine\'s `basic_evalf` at ⌈N·log2(10)⌉ + 8 bits. '
+              'The generic counterpart to `pi(N)` / `e(N)` — works on '
+              'logs, roots, sums, and the special functions.',
+        ),
+        FunctionRefExample(
+          input: 'evalf(zeta(2), 30)',
+          expected: '1.64493406684822643647241516665',
+          hint: 'Combine with special functions for high-precision values: '
+              'ζ(2) = π²/6. Non-real results are rejected (high-precision '
+              'complex is a separate path).',
+        ),
+      ],
+      seeAlso: ['pi_precision', 'zeta', 'gamma'],
+    ),
     // === Matrix / linear algebra =============================================
     FunctionRef(
       id: 'matrix_literal',

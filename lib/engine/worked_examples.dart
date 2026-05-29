@@ -273,6 +273,13 @@ class WorkedExamples {
       description: 'gamma(0.5) — Γ(½) = √π ≈ 1.7725.',
       expression: 'gamma(0.5)',
     ),
+    WorkedExample(
+      id: 'evalfLn10',
+      category: WorkedExampleCategory.numberTheory,
+      title: 'Arbitrary-precision evalf',
+      description: 'evalf(ln(10), 50) — any expression to 50 digits.',
+      expression: 'evalf(ln(10), 50)',
+    ),
 
     // === P7 Booleans (Round 112) ============================================
     // Surfaces the relational + logical operator rewrite shipped in

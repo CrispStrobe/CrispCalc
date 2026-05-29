@@ -424,6 +424,39 @@ void main() {
     });
   });
 
+  // Group B: generic arbitrary-precision evalf(expr, N).
+  group('CalculatorEngine.evalfPrecision (Group B)', () {
+    test('precision out of range → friendly error (no bridge needed)', () {
+      expect(engine.evalfPrecision('ln(10)', 0), contains('1..10000'));
+      expect(engine.evalfPrecision('ln(10)', 10001), contains('1..10000'));
+    });
+
+    test('dispatch matches evalf(expr, N) and is not null', () {
+      // Matched by the pre-pass; headless it surfaces a native-required
+      // error rather than null (distinguishes "matched" from "fell
+      // through").
+      final r = engine.tryEvaluatePrecisionCall('evalf(ln(10), 50)');
+      expect(r, isNotNull);
+      // Expression may itself contain commas — beta(2, 3).
+      final r2 = engine.tryEvaluatePrecisionCall('evalf(beta(2, 3), 40)');
+      expect(r2, isNotNull);
+      // Out-of-range precision short-circuits to the range error.
+      expect(engine.tryEvaluatePrecisionCall('evalf(pi, 0)'),
+          contains('1..10000'));
+    });
+
+    test('native-backed high-precision values', () {
+      if (!engine.isNativeAvailable) return;
+      // ln(10) to 30 digits — 2.302585092994045684017991454684...
+      expect(engine.evalfPrecision('ln(10)', 30), startsWith('2.30258509299'));
+      // zeta(2) = pi^2/6.
+      expect(engine.evalfPrecision('zeta(2)', 20), startsWith('1.6449340668'));
+      // a sum of surds.
+      expect(engine.evalfPrecision('sqrt(2)+sqrt(3)', 20),
+          startsWith('3.1462643699'));
+    });
+  });
+
   // Round 4: dispatch through the top-level precision pre-pass.
   group('CalculatorEngine.tryEvaluatePrecisionCall (round 4 shapes)', () {
     test('non-bridge shapes resolve regardless of native availability', () {
