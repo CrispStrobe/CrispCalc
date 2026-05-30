@@ -62,6 +62,13 @@ class _ConstraintsScreenState extends State<ConstraintsScreen>
     if (AppState().pendingDslProgramId != null) {
       _tabs.index = 2;
     }
+    // A pending cryptarithm puzzle lands the user on the Cryptarithm
+    // tab (index 1), which drains the slot + fills the field in its
+    // own initState. Peeked (not consumed) here so the tab still sees
+    // it.
+    if (AppState().pendingCryptarithmPuzzle != null) {
+      _tabs.index = 1;
+    }
   }
 
   @override
@@ -795,6 +802,28 @@ class _CryptarithmTabState extends State<_CryptarithmTab> {
   bool _solving = false;
   CspMusResult? _mus;
   bool _explaining = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Drain a pending `open:constraints?cryptarithm=<puzzle>` request
+    // (set by the worked-examples / Function Reference dispatcher). The
+    // sentinel carries the puzzle without spaces; prettify it back to
+    // the tab's `WORD op WORD = WORD` display style.
+    final puzzle = AppState().consumePendingCryptarithmPuzzle();
+    if (puzzle != null && puzzle.trim().isNotEmpty) {
+      _ctl.text = _prettifyCryptarithm(puzzle);
+    }
+  }
+
+  /// Re-inserts spaces around the operators of a compact cryptarithm
+  /// string (`SEND+MORE=MONEY` → `SEND + MORE = MONEY`) so a sentinel-
+  /// supplied puzzle matches the field's hand-typed style. The solver
+  /// strips whitespace anyway, so this is purely cosmetic.
+  static String _prettifyCryptarithm(String raw) => raw
+      .replaceAll(' ', '')
+      .replaceAllMapped(RegExp(r'[+\-=]'), (m) => ' ${m[0]} ')
+      .trim();
 
   @override
   void dispose() {

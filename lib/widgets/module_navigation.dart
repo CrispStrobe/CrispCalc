@@ -14,6 +14,9 @@
 //   - `open:statistics?preset=<id>` → StatisticsPresets.all[id]
 //                                     (picks the tab + fills inputs)
 //   - `open:constraints`            → Constraints module
+//   - `open:constraints?cryptarithm=<puzzle>`
+//                                   → Constraints module + Cryptarithm
+//                                     tab pre-filled with the puzzle
 //   - `dsl:<id>`                    → Constraints module + load the
 //                                     named DSL gallery program
 //
@@ -66,6 +69,14 @@ bool dispatchModuleSentinel(BuildContext context, String sentinel) {
         ));
         return true;
       case 'constraints':
+        // `cryptarithm=<puzzle>` pre-fills the Cryptarithm tab (e.g.
+        // `SEND+MORE=MONEY`). The puzzle is passed verbatim — the `+`
+        // and second `=` survive because the arg parser splits on the
+        // FIRST `=` only.
+        final cryptarithm = args['cryptarithm'];
+        if (cryptarithm != null) {
+          AppState().requestLoadCryptarithm(cryptarithm);
+        }
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => const ConstraintsScreen(),
         ));

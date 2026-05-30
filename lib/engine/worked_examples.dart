@@ -563,5 +563,20 @@ class WorkedExamples {
           'the makespan.',
       expression: 'dsl:rcpsp',
     ),
+    // Surface the Cryptarithm tab in the discovery library: the
+    // canonical SEND + MORE = MONEY puzzle. The solver already exists
+    // (CspSolver.solveCryptarithm) but had no entry pointing users to
+    // it. The `open:constraints?cryptarithm=` sentinel lands on the
+    // Cryptarithm tab with the puzzle pre-filled.
+    WorkedExample(
+      id: 'cryptSendMoreMoney',
+      category: WorkedExampleCategory.constraints,
+      title: 'Cryptarithm — SEND + MORE = MONEY',
+      description:
+          'Opens the Cryptarithm tab with the classic puzzle: each letter '
+          'is a distinct digit 0–9 (no leading zeros). Unique solution '
+          '9567 + 1085 = 10652.',
+      expression: 'open:constraints?cryptarithm=SEND+MORE=MONEY',
+    ),
   ];
 }

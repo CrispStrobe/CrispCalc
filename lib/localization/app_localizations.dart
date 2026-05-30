@@ -3749,6 +3749,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Parallele Ressourcen-Planung — cumulative (DSL)';
       case 'dslRcpsp':
         return 'Projektplanung RCPSP — zwei Ressourcen (DSL)';
+      case 'cryptSendMoreMoney':
+        return 'Kryptarithmus — SEND + MORE = MONEY';
       case 'derivPoly':
         return 'Ableitung eines Polynoms';
       case 'chainRule':
@@ -3876,6 +3878,8 @@ class DeLocalizations implements AppLocalizations {
         return 'Lädt ein DSL-Programm, das drei Aufgaben auf einer Ressource der Kapazität 2 via `cumulative` plant und den Makespan minimiert.';
       case 'dslRcpsp':
         return 'Lädt ein DSL-Programm mit zwei parallelen `cumulative`-Auflagen (Crew + Ausrüstung, je Kapazität 3) über vier Aufgaben; minimiert den Makespan.';
+      case 'cryptSendMoreMoney':
+        return 'Öffnet den Kryptarithmus-Tab mit dem klassischen Rätsel: jeder Buchstabe ist eine andere Ziffer 0–9 (keine führenden Nullen). Eindeutige Lösung 9567 + 1085 = 10652.';
       case 'derivPoly':
         return 'd/dx von x³ − 4x + 7 an beliebigem x.';
       case 'chainRule':
@@ -6583,6 +6587,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Ordonnancement parallèle — cumulative (DSL)';
       case 'dslRcpsp':
         return 'Ordonnancement de projet RCPSP — deux ressources (DSL)';
+      case 'cryptSendMoreMoney':
+        return 'Cryptarithme — SEND + MORE = MONEY';
       case 'derivPoly':
         return 'Dérivée d\'un polynôme';
       case 'chainRule':
@@ -6710,6 +6716,8 @@ class FrLocalizations implements AppLocalizations {
         return 'Charge un programme DSL qui ordonnance trois tâches sur une ressource de capacité 2 via `cumulative` et minimise le makespan.';
       case 'dslRcpsp':
         return 'Charge un programme DSL avec deux contraintes `cumulative` parallèles (équipe + équipement, capacité 3 chacune) sur quatre tâches ; minimise le makespan.';
+      case 'cryptSendMoreMoney':
+        return 'Ouvre l\'onglet Cryptarithme avec le puzzle classique : chaque lettre est un chiffre distinct 0–9 (pas de zéro en tête). Solution unique 9567 + 1085 = 10652.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en tout x.';
       case 'chainRule':
@@ -9398,6 +9406,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Planificación paralela — cumulative (DSL)';
       case 'dslRcpsp':
         return 'Planificación de proyecto RCPSP — dos recursos (DSL)';
+      case 'cryptSendMoreMoney':
+        return 'Criptoaritmo — SEND + MORE = MONEY';
       case 'derivPoly':
         return 'Derivada de un polinomio';
       case 'chainRule':
@@ -9525,6 +9535,8 @@ class EsLocalizations implements AppLocalizations {
         return 'Carga un programa DSL que planifica tres tareas sobre un recurso de capacidad 2 con `cumulative` y minimiza el makespan.';
       case 'dslRcpsp':
         return 'Carga un programa DSL con dos restricciones `cumulative` paralelas (equipo + equipamiento, capacidad 3 cada una) sobre cuatro tareas; minimiza el makespan.';
+      case 'cryptSendMoreMoney':
+        return 'Abre la pestaña Criptoaritmo con el puzle clásico: cada letra es un dígito distinto 0–9 (sin ceros a la izquierda). Solución única 9567 + 1085 = 10652.';
       case 'derivPoly':
         return 'd/dx de x³ − 4x + 7 en cualquier x.';
       case 'chainRule':

@@ -50,11 +50,13 @@ void main() {
       // for the precision-arc surfacing. Raised to 50 in round 111b
       // for the P7 boolean batch (boolean*, if-fold). Raised to 60 for
       // the precision arc's Group B (continued fractions, polynomial
-      // arithmetic, special functions, evalf). If we go past 60 the
-      // dialog should grow proper category-grouping rather than the
-      // flat ListView it has today.
+      // arithmetic, special functions, evalf). Raised to 70 for the
+      // cryptarithm discovery entry (SEND+MORE=MONEY). The earlier
+      // "past 60 → grow category-grouping" note is satisfied: the dialog
+      // already offers per-category filter chips + substring search, so
+      // the flat ListView no longer forces a long manual scroll.
       expect(WorkedExamples.all.length, greaterThanOrEqualTo(12));
-      expect(WorkedExamples.all.length, lessThanOrEqualTo(60));
+      expect(WorkedExamples.all.length, lessThanOrEqualTo(70));
     });
 
     test('round 69: constraints category surfaces Killer + DSL entries', () {

@@ -678,6 +678,30 @@ class AppState extends ChangeNotifier {
     return value;
   }
 
+  /// Pending "open the Constraints screen's Cryptarithm tab and load
+  /// this puzzle" signal. Set by the worked-examples dialog when an
+  /// `open:constraints?cryptarithm=<puzzle>` sentinel is tapped (e.g.
+  /// `SEND+MORE=MONEY`); drained by `_CryptarithmTabState.initState`,
+  /// which fills the puzzle field. The value is the raw puzzle string
+  /// (not a gallery id) — the cryptarithm solver parses it directly,
+  /// so there's no id→puzzle catalog to keep in sync. Mirrors
+  /// [_pendingDslProgramId].
+  String? _pendingCryptarithmPuzzle;
+  String? get pendingCryptarithmPuzzle => _pendingCryptarithmPuzzle;
+
+  void requestLoadCryptarithm(String puzzle) {
+    _pendingCryptarithmPuzzle = puzzle;
+    notifyListeners();
+  }
+
+  String? consumePendingCryptarithmPuzzle() {
+    final value = _pendingCryptarithmPuzzle;
+    if (value != null) {
+      _pendingCryptarithmPuzzle = null;
+    }
+    return value;
+  }
+
   /// Round 95 (P6): pending "open the Sudoku module and load this
   /// preset" signal. Set by the worked-examples dialog when an
   /// `open:sudoku?preset=<id>` sentinel is tapped; drained by
