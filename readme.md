@@ -100,7 +100,7 @@ CrispCalc/
 
 ```bash
 flutter pub get
-flutter test            # 1992 unit tests run without the native bridge
+flutter test            # ~2682 unit tests run without the native bridge
 flutter run             # Runs the app; SymEngine bridge required for math
 ```
 
@@ -108,7 +108,7 @@ The native side lives in the `symbolic_math_bridge` plugin (separate
 repository, git-pinned in `pubspec.yaml`). See its README for the SymEngine
 build.
 
-## Platform support (v0.4.0)
+## Platform support (v0.4.1)
 
 | Platform | SymEngine bridge | Notes |
 |---|---|---|
