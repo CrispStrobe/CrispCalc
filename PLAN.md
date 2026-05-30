@@ -1094,7 +1094,7 @@ extends the Sudoku/CSP engine layer directly.
   no engine changes. Doubles as the visual hook the
   worked-examples catalog can point users at.
 
-- [ ] **Optimization tab — LP / IP via `minimize` / `maximize`**
+- [~] **Optimization tab — LP / IP via `minimize` / `maximize`**
   (big impact / medium effort — *strategically biggest win*).
   Branch-and-bound is genuinely rare in consumer calculator
   apps — Mathematica has it, TI / Casio / Soulver / Numi
@@ -1107,6 +1107,18 @@ extends the Sudoku/CSP engine layer directly.
   resource caps), knapsack (max value under weight cap),
   assignment (min cost matrix), transportation (min cost
   shipping). ~1–2 days.
+  - **OR gallery done 2026-05-30**: the optimization *capability*
+    already lives in the DSL (`minimize`/`maximize`, branch-and-
+    bound). Shipped three canonical OR problems as DSL gallery
+    entries — `knapsack` (0/1, max value ≤ cap → 7),
+    `productionPlanning` (max profit under two resource caps →
+    29), `assignmentMinCost` (3×3 min-cost permutation via 0/1
+    x_ij → 9). Localized titles en/de/fr/es; solver tests lock
+    each proven optimum. **Deferred**: a *dedicated* Optimize tab
+    with a structured form (vars/bounds/constraints/objective in
+    separate fields) — the DSL surface already covers the
+    capability, so the tab is now UX sugar rather than new
+    function; transportation (min-cost flow) gallery entry.
 
 - [~] **Graph / map coloring puzzles** (high pedagogy / small).
   Classic CSP — `allDifferent` between adjacent regions over

@@ -2,6 +2,30 @@
 
 Completed work, newest first.
 
+## 2026-05-30 — CSP optimization gallery: knapsack / production planning / assignment
+
+Follow-on to the pedagogy gallery. The optimization *capability* already
+lives in the DSL (`minimize`/`maximize` over branch-and-bound), so this
+ships three canonical operations-research problems as DSL gallery
+entries — no engine work, same proven pattern.
+
+- **`knapsack`** — 0/1 knapsack, four items, capacity 5; `maximize`
+  value subject to a weight-cap constraint. Optimum value 7 (items 1+2).
+- **`productionPlanning`** — maximize profit (3·A + 5·B) under two shared
+  resource caps (machine hours, labour). Optimum 29 at a=3, b=4.
+- **`assignmentMinCost`** — 3×3 assignment problem: 0/1 x_ij with row and
+  column sums = 1, `minimize` total cost over the matrix
+  [[9,2,7],[6,4,3],[5,8,1]]. Optimum cost 9.
+
+Localized titles en/de/fr/es; three ids added to the `localizations_test`
+CSP coverage list. New `CspSolver.solveDsl — optimization gallery` group
+in `csp_solver_test.dart` (3 tests) locks each proven optimum + validates
+constraint feasibility / permutation structure. PLAN + HISTORY updated.
+
+**Deferred** (noted in PLAN): a dedicated Optimize tab with a structured
+form (the DSL already covers the capability — the tab would be UX sugar);
+a transportation / min-cost-flow gallery entry.
+
 ## 2026-05-30 — CSP pedagogy gallery: map coloring / magic square / set partitioning
 
 Three new DSL gallery entries in `ConstraintsScreen`'s DSL tab, each

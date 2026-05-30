@@ -1708,6 +1708,12 @@ class EnLocalizations implements AppLocalizations {
         return 'Equal-sum split (set partitioning)';
       case 'coinChangeMin':
         return 'Coin change (minimize coins)';
+      case 'knapsack':
+        return '0/1 knapsack (maximize value)';
+      case 'productionPlanning':
+        return 'Production planning (maximize profit)';
+      case 'assignmentMinCost':
+        return 'Assignment problem (minimize cost)';
       case 'schedulingMakespan':
         return 'Scheduling — minimize makespan';
       case 'cumulativeScheduling':
@@ -3298,6 +3304,12 @@ class DeLocalizations implements AppLocalizations {
         return 'Gleichsummenteilung (Mengenpartition)';
       case 'coinChangeMin':
         return 'Münzwechsel (Anzahl minimieren)';
+      case 'knapsack':
+        return '0/1-Rucksackproblem (Wert maximieren)';
+      case 'productionPlanning':
+        return 'Produktionsplanung (Gewinn maximieren)';
+      case 'assignmentMinCost':
+        return 'Zuordnungsproblem (Kosten minimieren)';
       case 'schedulingMakespan':
         return 'Scheduling — Makespan minimieren';
       case 'cumulativeScheduling':
@@ -6030,6 +6042,12 @@ class FrLocalizations implements AppLocalizations {
         return 'Partition en sommes égales';
       case 'coinChangeMin':
         return 'Rendu de monnaie (minimiser les pièces)';
+      case 'knapsack':
+        return 'Sac à dos 0/1 (maximiser la valeur)';
+      case 'productionPlanning':
+        return 'Planification de production (maximiser le profit)';
+      case 'assignmentMinCost':
+        return 'Problème d\'affectation (minimiser le coût)';
       case 'schedulingMakespan':
         return 'Ordonnancement — minimiser le makespan';
       case 'cumulativeScheduling':
@@ -8748,6 +8766,12 @@ class EsLocalizations implements AppLocalizations {
         return 'Partición de suma igual';
       case 'coinChangeMin':
         return 'Cambio de monedas (minimizar piezas)';
+      case 'knapsack':
+        return 'Mochila 0/1 (maximizar el valor)';
+      case 'productionPlanning':
+        return 'Planificación de producción (maximizar el beneficio)';
+      case 'assignmentMinCost':
+        return 'Problema de asignación (minimizar el coste)';
       case 'schedulingMakespan':
         return 'Planificación — minimizar el makespan';
       case 'cumulativeScheduling':

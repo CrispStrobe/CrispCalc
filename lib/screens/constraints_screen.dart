@@ -812,6 +812,47 @@ pennies + 5*nickels + 10*dimes + 25*quarters == 17
 minimize pennies + nickels + dimes + quarters''',
     ),
     (
+      // 0/1 knapsack: four items with weights {2,3,4,5} and values
+      // {3,4,5,6}, knapsack capacity 5. One 0/1 indicator per item;
+      // the linear constraint caps total weight, and `maximize`
+      // (branch-and-bound) returns the optimal-value subset. Optimum:
+      // items 1+2 (weight 5, value 7).
+      id: 'knapsack',
+      program: '''vars: x1, x2, x3, x4 in 0..1
+2*x1 + 3*x2 + 4*x3 + 5*x4 <= 5
+maximize 3*x1 + 4*x2 + 5*x3 + 6*x4''',
+    ),
+    (
+      // Linear production planning: make `a` units of product A and
+      // `b` of product B to maximize profit (3 per A, 5 per B) subject
+      // to two shared resources — machine hours (2·A + B ≤ 10) and
+      // labour (A + 3·B ≤ 15). Integer branch-and-bound. Optimum:
+      // a=3, b=4 → profit 29 (both resources fully consumed).
+      id: 'productionPlanning',
+      program: '''vars: a, b in 0..10
+2*a + b <= 10
+a + 3*b <= 15
+maximize 3*a + 5*b''',
+    ),
+    (
+      // Assignment problem: assign 3 workers to 3 tasks at minimum
+      // total cost. x_ij = 1 iff worker i does task j. Each worker
+      // takes exactly one task (row sums = 1) and each task is taken
+      // by exactly one worker (column sums = 1). The objective sums
+      // the chosen cells of the cost matrix
+      //   [[9,2,7],[6,4,3],[5,8,1]].
+      // Optimum cost 9: w1→t2 (2), w2→t1 (6), w3→t3 (1).
+      id: 'assignmentMinCost',
+      program: '''vars: x11, x12, x13, x21, x22, x23, x31, x32, x33 in 0..1
+x11 + x12 + x13 == 1
+x21 + x22 + x23 == 1
+x31 + x32 + x33 == 1
+x11 + x21 + x31 == 1
+x12 + x22 + x32 == 1
+x13 + x23 + x33 == 1
+minimize 9*x11 + 2*x12 + 7*x13 + 6*x21 + 4*x22 + 3*x23 + 5*x31 + 8*x32 + 1*x33''',
+    ),
+    (
       // Round 77: single-machine scheduling with minimum makespan.
       // Three tasks of durations 4, 3, 2 must run without overlap;
       // the `noOverlap` overlay enforces pairwise disjointness on

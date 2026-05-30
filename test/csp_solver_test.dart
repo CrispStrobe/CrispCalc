@@ -272,6 +272,73 @@ vars: b1, b2, b3, b4, b5, b6 in 0..1
     });
   });
 
+  // Operations-research optimization gallery (PLAN P-CSP "Optimization
+  // tab" item, shipped as DSL gallery entries — minimize/maximize already
+  // exist in the DSL). Locks the proven optima for each program.
+  group('CspSolver.solveDsl — optimization gallery', () {
+    test('0/1 knapsack maximizes value within the weight cap', () async {
+      const dsl = '''
+vars: x1, x2, x3, x4 in 0..1
+2*x1 + 3*x2 + 4*x3 + 5*x4 <= 5
+maximize 3*x1 + 4*x2 + 5*x3 + 6*x4
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 7); // items 1+2: weight 5, value 7
+      final s = r.solutions.first;
+      const weights = [2, 3, 4, 5];
+      var totalWeight = 0;
+      for (var i = 0; i < 4; i++) {
+        totalWeight += weights[i] * s['x${i + 1}']!;
+      }
+      expect(totalWeight, lessThanOrEqualTo(5));
+    });
+
+    test('production planning maximizes profit under both resource caps',
+        () async {
+      const dsl = '''
+vars: a, b in 0..10
+2*a + b <= 10
+a + 3*b <= 15
+maximize 3*a + 5*b
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 29); // a=3, b=4
+      final s = r.solutions.first;
+      expect(2 * s['a']! + s['b']!, lessThanOrEqualTo(10));
+      expect(s['a']! + 3 * s['b']!, lessThanOrEqualTo(15));
+      expect(3 * s['a']! + 5 * s['b']!, 29);
+    });
+
+    test('assignment problem minimizes total cost with a valid permutation',
+        () async {
+      const dsl = '''
+vars: x11, x12, x13, x21, x22, x23, x31, x32, x33 in 0..1
+x11 + x12 + x13 == 1
+x21 + x22 + x23 == 1
+x31 + x32 + x33 == 1
+x11 + x21 + x31 == 1
+x12 + x22 + x32 == 1
+x13 + x23 + x33 == 1
+minimize 9*x11 + 2*x12 + 7*x13 + 6*x21 + 4*x22 + 3*x23 + 5*x31 + 8*x32 + 1*x33
+''';
+      final r = await CspSolver.solveDsl(dsl);
+      expect(r.ok, isTrue, reason: r.error);
+      expect(r.objective, 9); // w1→t2, w2→t1, w3→t3
+      final s = r.solutions.first;
+      // Exactly one assignment per worker and per task.
+      for (var i = 1; i <= 3; i++) {
+        expect(
+            [for (var j = 1; j <= 3; j++) s['x$i$j']!].reduce((a, b) => a + b),
+            1);
+        expect(
+            [for (var w = 1; w <= 3; w++) s['x$w$i']!].reduce((a, b) => a + b),
+            1);
+      }
+    });
+  });
+
   group('CspSolver.solveDsl — Round 74 optimization', () {
     test('minimize returns the proven optimum + its objective value', () async {
       // Pay 17 cents with the fewest coins drawn from {1, 5, 10}.
