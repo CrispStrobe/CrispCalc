@@ -3420,7 +3420,7 @@ class DeLocalizations implements AppLocalizations {
       case 'equalSumSplit':
         return 'Gleichsummenteilung (Mengenpartition)';
       case 'coinChangeMin':
-        return 'Münzwechsel (Anzahl minimieren)';
+        return 'Wechselgeldproblem (Anzahl minimieren)';
       case 'knapsack':
         return '0/1-Rucksackproblem (Wert maximieren)';
       case 'productionPlanning':
@@ -3742,7 +3742,7 @@ class DeLocalizations implements AppLocalizations {
       case 'dslTransportation':
         return 'Transportproblem — kostenminimaler Versand (DSL)';
       case 'dslCoinChange':
-        return 'Münzwechsel — Anzahl minimieren (DSL)';
+        return 'Wechselgeldproblem — Anzahl minimieren (DSL)';
       case 'dslSchedulingMakespan':
         return 'Einzelmaschinen-Scheduling — Makespan minimieren (DSL)';
       case 'dslCumulativeScheduling':
