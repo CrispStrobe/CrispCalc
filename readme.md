@@ -100,7 +100,7 @@ CrispCalc/
 
 ```bash
 flutter pub get
-flutter test            # ~2682 unit tests run without the native bridge
+flutter test            # ~2723 unit tests run without the native bridge
 flutter run             # Runs the app; SymEngine bridge required for math
 ```
 
