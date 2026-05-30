@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Schematic map of the seven Australian states/territories, colored
-/// from a solution to the `mapColoringAustralia` DSL gallery program.
+/// Map of the seven Australian states/territories, colored from a
+/// solution to the `mapColoringAustralia` DSL gallery program.
 ///
-/// This is a *pedagogical* visualization, not a geographically accurate
-/// map: the regions are stylized polygons laid out in roughly their real
-/// relative positions so the four-color-theorem property — no two
-/// bordering regions share a color — is visible at a glance. Tasmania is
+/// The regions are drawn in their true relative positions with a
+/// recognizable Australia silhouette (the broad Western Australia third,
+/// the Cape York peninsula, the south-eastern wedge, Tasmania offshore).
+/// It stays a *teaching* visualization rather than a survey-grade map:
+/// every Russell & Norvig adjacency is rendered as a genuine **shared
+/// border** (the bordering polygons reuse the same boundary vertices —
+/// including the real tri-state corners Poeppel, Cameron and the Murray
+/// junction), so the four-color-theorem property — no two bordering
+/// regions share a color — is exact and visible at a glance. Tasmania is
 /// drawn as a separate island (it has no land border, so it is freely
 /// colorable).
 class AustraliaMapView extends StatelessWidget {
@@ -33,6 +38,15 @@ class AustraliaMapView extends StatelessWidget {
   static bool matches(Map<String, int> solution) =>
       solution.length == regionKeys.length &&
       solution.keys.toSet().containsAll(regionKeys);
+
+  /// Region boundary polygons keyed by variable name, on the same
+  /// 0..100 logical grid the painter uses. Exposed for the topology test
+  /// that verifies every Russell & Norvig adjacency is a real shared edge
+  /// (two regions referencing the same two boundary vertices).
+  @visibleForTesting
+  static Map<String, List<Offset>> get regionPolygons => {
+        for (final r in _regions) r.varName: r.points,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -71,83 +85,120 @@ class _Region {
   const _Region(this.varName, this.label, this.points, this.labelAt);
 }
 
-/// Stylized region polygons on a 100×100 logical grid (x → right,
-/// y → down). Shared edges are approximate — the goal is recognizability
-/// and visually-adjacent borders, not cartographic accuracy.
+// Region polygons on a 100×100 logical grid (x → right, y → down),
+// positioned to read as a real Australia silhouette. Every internal
+// border meets at a named junction vertex that the bordering regions
+// *both* reference, so each Russell & Norvig adjacency is a genuine
+// shared edge (two polygons referencing the same two vertices), not two
+// shapes that merely touch. That keeps the four-color property exact.
+//
+// The internal junctions follow Australia's real surveyed corners:
+const Offset _waNtTop = Offset(40, 20); // WA·NT meridian, north end
+const Offset _ntQTop = Offset(64, 20); // NT·QLD meridian, north end
+const Offset _waNtSa = Offset(40, 52); // WA·NT·SA tri-corner
+const Offset _ntSaQ = Offset(64, 52); // NT·SA·QLD tri-corner (Poeppel)
+const Offset _saQNsw = Offset(74, 60); // SA·QLD·NSW tri-corner (Cameron)
+const Offset _saNswV = Offset(63, 74); // SA·NSW·VIC tri-corner (Murray jct)
+const Offset _waSaCoast = Offset(40, 70); // WA·SA meridian, south (coast) end
+const Offset _saVCoast = Offset(57, 80); // SA·VIC border, south (coast) end
+const Offset _qNswCoast = Offset(92, 52); // QLD·NSW border, east (coast) end
+const Offset _nswVCoast = Offset(70, 72); // NSW·VIC border, east end
+
 const List<_Region> _regions = [
+  // Western Australia — the broad western third. Its whole east side is
+  // the 129°E meridian, split by the WA·NT·SA corner into the WA/NT
+  // border (above) and the WA/SA border (below).
   _Region(
       'wa',
       'WA',
       [
-        Offset(3, 30),
-        Offset(30, 22),
-        Offset(40, 30),
-        Offset(40, 70),
-        Offset(15, 73),
-        Offset(5, 55),
+        Offset(8, 28), // NW coast
+        _waNtTop, // NE: top of the WA/NT meridian
+        _waNtSa, // WA·NT·SA tri-corner
+        _waSaCoast, // SE: bottom of the WA/SA meridian
+        Offset(28, 77), // S coast
+        Offset(10, 68),
+        Offset(3, 45), // W coast
       ],
-      Offset(20, 50)),
+      Offset(21, 48)),
+  // Northern Territory — central-north block. Borders WA (west, meridian),
+  // QLD (east, meridian), SA (south).
   _Region(
       'nt',
       'NT',
       [
-        Offset(40, 18),
-        Offset(58, 16),
-        Offset(58, 46),
-        Offset(40, 46),
+        _waNtTop,
+        _ntQTop,
+        _ntSaQ, // Poeppel
+        _waNtSa,
       ],
-      Offset(49, 33)),
+      Offset(52, 36)),
+  // Queensland — north-east, with the Cape York peninsula reaching up.
+  // Borders NT (west), SA (south-west) and NSW (south).
   _Region(
       'q',
       'QLD',
       [
-        Offset(58, 16),
-        Offset(95, 19),
-        Offset(92, 50),
-        Offset(62, 50),
-        Offset(58, 46),
+        _ntQTop,
+        Offset(78, 12), // Cape York tip
+        Offset(96, 30), // NE coast
+        _qNswCoast, // QLD·NSW border, east end
+        _saQNsw, // Cameron
+        _ntSaQ, // Poeppel
       ],
-      Offset(76, 33)),
+      Offset(79, 33)),
+  // South Australia — central-south. The five-way state: borders WA, NT,
+  // QLD, NSW and VIC.
   _Region(
       'sa',
       'SA',
       [
-        Offset(40, 46),
-        Offset(58, 46),
-        Offset(62, 72),
-        Offset(40, 70),
+        _waNtSa,
+        _ntSaQ, // Poeppel
+        _saQNsw, // Cameron
+        _saNswV, // Murray junction
+        _saVCoast, // S coast (SA/VIC border)
+        Offset(40, 80), // S coast
+        _waSaCoast, // back up the WA/SA meridian
       ],
-      Offset(50, 58)),
+      Offset(50, 63)),
+  // New South Wales — south-east. Borders QLD (north), SA (west) and
+  // VIC (south).
   _Region(
       'nsw',
       'NSW',
       [
-        Offset(62, 50),
-        Offset(92, 50),
-        Offset(88, 64),
-        Offset(63, 64),
+        _saQNsw, // Cameron
+        _qNswCoast, // QLD·NSW border, east end
+        Offset(94, 66), // E coast
+        _nswVCoast, // NSW·VIC border, east end
+        _saNswV, // Murray junction
       ],
-      Offset(76, 57)),
+      Offset(79, 63)),
+  // Victoria — the south-east corner of the mainland. Borders SA (west)
+  // and NSW (north).
   _Region(
       'v',
       'VIC',
       [
-        Offset(63, 64),
-        Offset(88, 64),
-        Offset(84, 74),
-        Offset(66, 74),
+        _saNswV, // Murray junction
+        _nswVCoast, // NSW·VIC border, east end
+        Offset(86, 76), // SE coast
+        Offset(72, 84), // S coast
+        _saVCoast, // SA/VIC border, south end
       ],
-      Offset(75, 69)),
+      Offset(71, 77)),
+  // Tasmania — offshore island, no land border (freely colorable).
   _Region(
       't',
       'TAS',
       [
-        Offset(70, 83),
-        Offset(82, 83),
-        Offset(80, 94),
-        Offset(72, 94),
+        Offset(70, 88),
+        Offset(80, 86),
+        Offset(82, 95),
+        Offset(72, 96),
       ],
-      Offset(76, 88)),
+      Offset(76, 91)),
 ];
 
 /// Color-index → fill color. The DSL program's domain is `1..3`, but the

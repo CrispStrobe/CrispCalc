@@ -2,6 +2,31 @@
 
 Completed work, newest first.
 
+## 2026-05-30 (cont.) — Australia map: geographically-accurate silhouette
+
+Replaced the stylized polygons in `lib/widgets/australia_map_painter.dart`
+with a recognizable Australia outline — the broad Western Australia
+third, the Cape York peninsula, the south-eastern wedge, and Tasmania
+offshore — positioned in true relative geography. The visualization is
+still a teaching aid, not a survey map, but it now reads as Australia at
+a glance.
+
+The pedagogically important property is preserved exactly: every Russell
+& Norvig adjacency is constructed from a **shared named junction vertex**
+that both bordering regions reference, following Australia's real
+surveyed tri-corners (WA·NT·SA, Poeppel, Cameron, the Murray junction).
+So each internal border is a genuine common edge, not two shapes that
+merely touch — which is what makes the four-color property visible and
+correct.
+
+- 10 named junction vertices reused across regions; `_regions` rewritten.
+- New `@visibleForTesting AustraliaMapView.regionPolygons` accessor.
+- `australia_map_painter_test.dart` grows a `region geometry` group (4
+  tests): all points in the 0..100 grid; each of the 9 adjacencies
+  shares ≥2 vertices; non-adjacent pairs share <2; Tasmania shares none.
+- Pure-Dart, single repo, on `main`. Full suite **2673 pass / 1 skip,
+  0 failures**.
+
 ## 2026-05-30 (cont.) — CSP transportation gallery entry (min-cost flow)
 
 Added a `transportation` DSL gallery entry to `ConstraintsScreen`'s

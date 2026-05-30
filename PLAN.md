@@ -1146,9 +1146,18 @@ extends the Sudoku/CSP engine layer directly.
     renders a schematic colored map of the seven states/
     territories from the solution; `_ResultBlock` shows it
     automatically when a solution's variable set is exactly the
-    seven region keys (mirrors the Gantt-overlay trigger). Item
-    complete; a geographically-accurate `Path`-based silhouette
-    would be the only further polish.
+    seven region keys (mirrors the Gantt-overlay trigger).
+  - **Geographic silhouette done 2026-05-30**: replaced the
+    stylized polygons with a recognizable Australia outline
+    positioned in true relative geography (broad WA third, Cape
+    York peninsula, south-eastern wedge, Tasmania offshore). Every
+    R&N adjacency is built from a *shared* named junction vertex
+    (the real surveyed tri-corners — WA·NT·SA, Poeppel, Cameron,
+    the Murray junction), so each border is a genuine common edge
+    rather than two shapes that merely touch — the four-color
+    property stays exact. New topology test asserts all 9
+    adjacencies share ≥2 vertices, non-adjacent pairs share <2,
+    and Tasmania touches nothing. Item complete.
 
 - [~] **Magic squares generator** (curiosity / small). 3×3
   through 6×6 magic squares via `allDifferent` + per-row /
