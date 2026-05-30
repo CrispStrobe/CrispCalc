@@ -36,7 +36,7 @@ dependencies:
   dart_csp:
     git:
       url: https://github.com/CrispStrobe/dart_csp.git
-      ref: "605ba00315a9f916a91b69b368240e66cab4b242"   # main: dart2js-safe + propagation-trace API (2.2.0)
+      ref: "9739dc41e33afd8288d75a73764da4cb0b76fe74"   # main: tagged v2.2.0 (dart2js-safe + propagation-trace API)
 
   # Math rendering
   flutter_math_fork: ^0.7.2
