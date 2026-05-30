@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:symbolic_math_bridge/symbolic_math_bridge.dart';
 
 import 'matrix_evaluator.dart';
+import 'numeric_fallback.dart';
 import 'numerical.dart';
 import 'polynomial.dart';
 import 'polynomial_mod.dart';
@@ -65,6 +66,16 @@ class CalculatorEngine {
     if (_nativeAvailable && expression.contains('Matrix(')) {
       final matrixResult = MatrixEvaluator.tryEvaluate(expression, this);
       if (matrixResult != null) return matrixResult;
+    }
+    // No native bridge (notably the web build): SymEngine is unavailable,
+    // so resolve the *numeric* subset in pure Dart instead of returning
+    // "requires native library" for everything. Symbolic input (free
+    // variables, matrices, unknown functions) yields null here and falls
+    // through to the native-only path below, which surfaces the proper
+    // "needs the native app" message.
+    if (!_nativeAvailable) {
+      final numeric = NumericFallbackEvaluator.tryEvaluate(expression);
+      if (numeric != null) return numeric;
     }
     return _bridgeCall('evaluate', (b) => b.evaluate(expression));
   }
