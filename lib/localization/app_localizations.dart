@@ -513,6 +513,27 @@ abstract class AppLocalizations {
   String get constraintsExplainSatisfiable;
   String constraintsExplainEntryCount(int n);
   String get constraintsExportFlatZinc;
+  // Round F — propagation step-trace visualizer (AC-3 replay).
+  String get constraintsVisualizeButton;
+  String get constraintsTraceHeader;
+  String get constraintsTraceIntro;
+  String constraintsTraceStepCounter(int current, int total);
+  String get constraintsTraceInitial;
+  String constraintsTraceDecision(String variable, int value);
+  String constraintsTracePrune(String values, String variable, String cause);
+  String constraintsTraceWipeout(String variable, String cause);
+  String get constraintsTraceBacktrack;
+  String constraintsTraceBackjump(int from, int to);
+  String get constraintsTraceSolutionStep;
+  String get constraintsTraceSolved;
+  String get constraintsTraceUnsat;
+  String constraintsTraceTruncatedNote(int n);
+  String get constraintsTraceObjectiveNote;
+  String get constraintsTracePlay;
+  String get constraintsTracePause;
+  String get constraintsTraceRestart;
+  String get constraintsTraceStepBack;
+  String get constraintsTraceStepForward;
   String get constraintsExportedHeader;
   String get constraintsDiophantineIntro;
   String get constraintsCryptarithmIntro;
@@ -1791,6 +1812,57 @@ class EnLocalizations implements AppLocalizations {
       n == 1 ? '1 conflicting constraint' : '$n conflicting constraints';
   @override
   String get constraintsExportFlatZinc => 'Export as FlatZinc';
+  @override
+  String get constraintsVisualizeButton => 'Visualize';
+  @override
+  String get constraintsTraceHeader => 'Propagation trace';
+  @override
+  String get constraintsTraceIntro =>
+      'Step through the solver: each decision, each value pruned from a '
+      'domain by a constraint, every dead-end and backtrack.';
+  @override
+  String constraintsTraceStepCounter(int current, int total) =>
+      'Step $current / $total';
+  @override
+  String get constraintsTraceInitial => 'Initial domains — before any search.';
+  @override
+  String constraintsTraceDecision(String variable, int value) =>
+      'Decision: try $variable = $value';
+  @override
+  String constraintsTracePrune(String values, String variable, String cause) =>
+      'Prune $values from $variable — $cause';
+  @override
+  String constraintsTraceWipeout(String variable, String cause) =>
+      'Dead end: $variable’s domain emptied — $cause';
+  @override
+  String get constraintsTraceBacktrack =>
+      'Backtrack — undo the last decision and try another value.';
+  @override
+  String constraintsTraceBackjump(int from, int to) =>
+      'Backjump from depth $from to depth $to.';
+  @override
+  String get constraintsTraceSolutionStep =>
+      'Solution — all variables assigned.';
+  @override
+  String get constraintsTraceSolved => 'Solved';
+  @override
+  String get constraintsTraceUnsat => 'No solution — search space exhausted';
+  @override
+  String constraintsTraceTruncatedNote(int n) =>
+      'Trace capped at $n steps — replay is a partial prefix.';
+  @override
+  String get constraintsTraceObjectiveNote =>
+      'Showing the feasibility search; the objective is ignored.';
+  @override
+  String get constraintsTracePlay => 'Play';
+  @override
+  String get constraintsTracePause => 'Pause';
+  @override
+  String get constraintsTraceRestart => 'Restart';
+  @override
+  String get constraintsTraceStepBack => 'Step back';
+  @override
+  String get constraintsTraceStepForward => 'Step forward';
   @override
   String get constraintsExportedHeader => 'FlatZinc translation';
 
@@ -3410,6 +3482,61 @@ class DeLocalizations implements AppLocalizations {
       : '$n widersprüchliche Bedingungen';
   @override
   String get constraintsExportFlatZinc => 'Als FlatZinc exportieren';
+  @override
+  String get constraintsVisualizeButton => 'Visualisieren';
+  @override
+  String get constraintsTraceHeader => 'Propagierungs-Verlauf';
+  @override
+  String get constraintsTraceIntro =>
+      'Schritt für Schritt durch den Löser: jede Entscheidung, jeder von '
+      'einer Bedingung aus einem Wertebereich gestrichene Wert, jede '
+      'Sackgasse und jedes Backtracking.';
+  @override
+  String constraintsTraceStepCounter(int current, int total) =>
+      'Schritt $current / $total';
+  @override
+  String get constraintsTraceInitial =>
+      'Anfangs-Wertebereiche — vor jeder Suche.';
+  @override
+  String constraintsTraceDecision(String variable, int value) =>
+      'Entscheidung: versuche $variable = $value';
+  @override
+  String constraintsTracePrune(String values, String variable, String cause) =>
+      'Streiche $values aus $variable — $cause';
+  @override
+  String constraintsTraceWipeout(String variable, String cause) =>
+      'Sackgasse: Wertebereich von $variable geleert — $cause';
+  @override
+  String get constraintsTraceBacktrack =>
+      'Backtracking — letzte Entscheidung zurücknehmen und einen anderen '
+      'Wert versuchen.';
+  @override
+  String constraintsTraceBackjump(int from, int to) =>
+      'Backjump von Tiefe $from zu Tiefe $to.';
+  @override
+  String get constraintsTraceSolutionStep => 'Lösung — alle Variablen belegt.';
+  @override
+  String get constraintsTraceSolved => 'Gelöst';
+  @override
+  String get constraintsTraceUnsat => 'Keine Lösung — Suchraum erschöpft';
+  @override
+  String constraintsTraceTruncatedNote(int n) =>
+      'Verlauf bei $n Schritten gekappt — die Wiedergabe ist nur ein '
+      'Anfangsausschnitt.';
+  @override
+  String get constraintsTraceObjectiveNote =>
+      'Es wird die Zulässigkeitssuche gezeigt; die Zielfunktion wird '
+      'ignoriert.';
+  @override
+  String get constraintsTracePlay => 'Abspielen';
+  @override
+  String get constraintsTracePause => 'Pause';
+  @override
+  String get constraintsTraceRestart => 'Neu starten';
+  @override
+  String get constraintsTraceStepBack => 'Schritt zurück';
+  @override
+  String get constraintsTraceStepForward => 'Schritt vor';
   @override
   String get constraintsExportedHeader => 'FlatZinc-Übersetzung';
 
@@ -6185,6 +6312,61 @@ class FrLocalizations implements AppLocalizations {
   @override
   String get constraintsExportFlatZinc => 'Exporter en FlatZinc';
   @override
+  String get constraintsVisualizeButton => 'Visualiser';
+  @override
+  String get constraintsTraceHeader => 'Trace de propagation';
+  @override
+  String get constraintsTraceIntro =>
+      'Parcourez le solveur pas à pas : chaque décision, chaque valeur '
+      'retirée d’un domaine par une contrainte, chaque impasse et chaque '
+      'retour arrière.';
+  @override
+  String constraintsTraceStepCounter(int current, int total) =>
+      'Étape $current / $total';
+  @override
+  String get constraintsTraceInitial =>
+      'Domaines initiaux — avant toute recherche.';
+  @override
+  String constraintsTraceDecision(String variable, int value) =>
+      'Décision : essayer $variable = $value';
+  @override
+  String constraintsTracePrune(String values, String variable, String cause) =>
+      'Retirer $values de $variable — $cause';
+  @override
+  String constraintsTraceWipeout(String variable, String cause) =>
+      'Impasse : domaine de $variable vidé — $cause';
+  @override
+  String get constraintsTraceBacktrack =>
+      'Retour arrière — annuler la dernière décision et essayer une autre '
+      'valeur.';
+  @override
+  String constraintsTraceBackjump(int from, int to) =>
+      'Saut arrière de la profondeur $from à la profondeur $to.';
+  @override
+  String get constraintsTraceSolutionStep =>
+      'Solution — toutes les variables affectées.';
+  @override
+  String get constraintsTraceSolved => 'Résolu';
+  @override
+  String get constraintsTraceUnsat =>
+      'Aucune solution — espace de recherche épuisé';
+  @override
+  String constraintsTraceTruncatedNote(int n) =>
+      'Trace limitée à $n étapes — la relecture n’est qu’un préfixe partiel.';
+  @override
+  String get constraintsTraceObjectiveNote =>
+      'Affichage de la recherche de faisabilité ; l’objectif est ignoré.';
+  @override
+  String get constraintsTracePlay => 'Lire';
+  @override
+  String get constraintsTracePause => 'Pause';
+  @override
+  String get constraintsTraceRestart => 'Redémarrer';
+  @override
+  String get constraintsTraceStepBack => 'Étape précédente';
+  @override
+  String get constraintsTraceStepForward => 'Étape suivante';
+  @override
   String get constraintsExportedHeader => 'Traduction FlatZinc';
 
   @override
@@ -8945,6 +9127,60 @@ class EsLocalizations implements AppLocalizations {
       n == 1 ? '1 restricción en conflicto' : '$n restricciones en conflicto';
   @override
   String get constraintsExportFlatZinc => 'Exportar como FlatZinc';
+  @override
+  String get constraintsVisualizeButton => 'Visualizar';
+  @override
+  String get constraintsTraceHeader => 'Traza de propagación';
+  @override
+  String get constraintsTraceIntro =>
+      'Recorre el solucionador paso a paso: cada decisión, cada valor '
+      'eliminado de un dominio por una restricción, cada callejón sin '
+      'salida y cada retroceso.';
+  @override
+  String constraintsTraceStepCounter(int current, int total) =>
+      'Paso $current / $total';
+  @override
+  String get constraintsTraceInitial =>
+      'Dominios iniciales — antes de toda búsqueda.';
+  @override
+  String constraintsTraceDecision(String variable, int value) =>
+      'Decisión: probar $variable = $value';
+  @override
+  String constraintsTracePrune(String values, String variable, String cause) =>
+      'Eliminar $values de $variable — $cause';
+  @override
+  String constraintsTraceWipeout(String variable, String cause) =>
+      'Callejón sin salida: dominio de $variable vaciado — $cause';
+  @override
+  String get constraintsTraceBacktrack =>
+      'Retroceso — deshacer la última decisión y probar otro valor.';
+  @override
+  String constraintsTraceBackjump(int from, int to) =>
+      'Salto atrás de la profundidad $from a la profundidad $to.';
+  @override
+  String get constraintsTraceSolutionStep =>
+      'Solución — todas las variables asignadas.';
+  @override
+  String get constraintsTraceSolved => 'Resuelto';
+  @override
+  String get constraintsTraceUnsat =>
+      'Sin solución — espacio de búsqueda agotado';
+  @override
+  String constraintsTraceTruncatedNote(int n) =>
+      'Traza limitada a $n pasos — la reproducción es un prefijo parcial.';
+  @override
+  String get constraintsTraceObjectiveNote =>
+      'Se muestra la búsqueda de factibilidad; el objetivo se ignora.';
+  @override
+  String get constraintsTracePlay => 'Reproducir';
+  @override
+  String get constraintsTracePause => 'Pausa';
+  @override
+  String get constraintsTraceRestart => 'Reiniciar';
+  @override
+  String get constraintsTraceStepBack => 'Paso atrás';
+  @override
+  String get constraintsTraceStepForward => 'Paso adelante';
   @override
   String get constraintsExportedHeader => 'Traducción FlatZinc';
 

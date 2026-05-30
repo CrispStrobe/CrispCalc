@@ -1203,13 +1203,38 @@ extends the Sudoku/CSP engine layer directly.
     sketch would require conditional sums — out of scope for
     the current DSL).
 
-- [ ] **Step-trace visualization of AC-3 propagation** (large
+- [x] ~~**Step-trace visualization of AC-3 propagation** (large
   / pedagogy gold). Instrument `dart_csp`'s solver to emit
   propagation steps (variable domain shrinks, constraint
   firings) and render them as a step-by-step replay in the
   DSL tab. Would be a *genuinely unique* feature among
-  calculator apps. Requires an upstream solver patch to
-  expose propagation events. ~3–5 days end-to-end.
+  calculator apps. Requires a dart_csp solver patch to
+  expose propagation events. ~3–5 days end-to-end.~~ **DONE
+  2026-05-30 — Round F.** The dart_csp solver patch landed as
+  2.2.0's `PropagationTrace` API (`solveWithTrace` /
+  `PropagationEvent`/`PropagationObserver`, opt-in, zero
+  overhead when unset, web-safe plain-map events). CrispCalc
+  side: `CspSolver.traceDsl` builds a *labeled* Problem (cause
+  captions read as the DSL source line, mirroring the MUS
+  path), runs the trace, and projects the event stream into
+  per-step **domain snapshots** via a backtracking trail —
+  faithful across decisions/prunes/wipeouts/backtracks.
+  `PropagationVisualizer` widget renders a scrubbable,
+  auto-playable replay on the DSL tab ("Visualize" button):
+  per-variable domain chips (decided value accented,
+  just-pruned values struck-through), an event caption, and a
+  Solved/Unsatisfiable outcome chip. 20 i18n strings ×
+  en/de/fr/es. Tests: `csp_trace_test.dart` (15, incl.
+  snapshot-faithfulness across K4 backtracking) +
+  `propagation_visualizer_test.dart` (2 widget). The
+  propagation-trace feature now lives on our `dart_csp` **`main`**
+  (commit `b36b801`, "port the fine-grained propagation trace to
+  main", on top of main's own web-safety fix + cumulative-ER /
+  FlatZinc-set work), so CrispCalc pins
+  `main` (`605ba00`) directly — no `web-compat` branch needed
+  for this feature. Full suite **2682 pass / 1 skip / 0 fail**;
+  `flutter build web --release` compiles (dart2js web-safety
+  confirmed against the main pin).
 
 - [ ] **CBJ-aware "explain failure" mode** (power-user /
   medium). The newest dart_csp commit (`e3cce21`) added
@@ -2558,6 +2583,15 @@ a **three-repo arc**, not the "~1 round" first estimated — the bridge
   dart2js rejects, and a `Uint64List` bitset rep that throws on dart2js.
   Fixed with a runtime-built mask + a dart2js-only bitset guard
   (`identical(1, 1.0)`); dart2wasm/native keep the fast path.
+  **Update 2026-05-30 (Round F):** the web-safety fix has since landed
+  on `dart_csp` `main` directly (its own `6515552`), and the
+  propagation-trace feature landed on `main` too (`b36b801`)
+  → `main` (`605ba00`) is now web-safe *and* carries the trace API
+  *and* main's cumulative-ER / FlatZinc-set work. **CrispCalc re-pinned
+  from the `web-compat` branch to `main`** — the divergence that forced
+  the branch fork is gone, so the app tracks `main` again. (The now-
+  redundant `web-compat` / `feat/propagation-trace` branches can be
+  retired by the dart_csp maintainer at leisure.)
 - CrispCalc: `main.dart` `dart:io` diagnostic behind a conditional
   import; `web/` scaffolded; **Path A degradation UX** done (shell-level
   `WebUnsupportedBanner`, `errorNativeRequiredWeb`, "Get the app" CTA,

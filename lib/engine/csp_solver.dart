@@ -227,6 +227,202 @@ class CspMusResult {
       );
 }
 
+/// The kind of a single [CspTraceStep] — a UI-facing mirror of
+/// dart_csp's `PropagationEventKind`, decoupled so the screen layer
+/// never imports the solver package directly (Round F).
+enum CspTraceStepKind {
+  /// The search pinned [CspTraceStep.variable] to
+  /// [CspTraceStep.value] at [CspTraceStep.depth].
+  decision,
+
+  /// A constraint removed [CspTraceStep.removedValues] from
+  /// [CspTraceStep.variable]'s domain (which stayed non-empty).
+  prune,
+
+  /// A prune that emptied a domain — the immediate cause of the
+  /// current branch's dead-end.
+  wipeout,
+
+  /// The search abandoned the decision at [CspTraceStep.depth] and
+  /// rolled back one level.
+  backtrack,
+
+  /// Conflict-directed backjump from [CspTraceStep.depth] to
+  /// [CspTraceStep.targetDepth].
+  backjump,
+
+  /// A complete consistent assignment ([CspTraceStep.assignment]).
+  solution,
+}
+
+/// One replayable step of a propagation/search trace. Carries the raw
+/// event fields *and* a full post-step domain snapshot
+/// ([domains]) so the visualizer can render the state after the step
+/// by simple indexing — no replay logic in the widget. Round F
+/// (leverages dart_csp 2.2.0's propagation-trace API).
+class CspTraceStep {
+  final int seq;
+  final CspTraceStepKind kind;
+
+  /// Variable decided ([CspTraceStepKind.decision]) or pruned
+  /// ([CspTraceStepKind.prune] / [CspTraceStepKind.wipeout]).
+  final String? variable;
+
+  /// The pinned value, for a decision.
+  final int? value;
+
+  /// Values removed from [variable], for a prune / wipeout.
+  final List<int> removedValues;
+
+  /// [variable]'s domain just before the prune (ascending).
+  final List<int> domainBefore;
+
+  /// [variable]'s domain just after the prune (empty on a wipeout).
+  final List<int> domainAfter;
+
+  /// Coarse kind of the causing constraint — `'binary'` for an AC-3
+  /// arc, else the n-ary kind (`'allDifferent'`, `'linearLeq'`, …).
+  final String? causeKind;
+
+  /// The causing constraint's user label (the DSL source line, etc.).
+  final String? causeLabel;
+
+  /// Variables the causing constraint scopes.
+  final List<String> causeScope;
+
+  /// Decision depth (0 at the root), for decision / backtrack /
+  /// backjump.
+  final int? depth;
+
+  /// Backjump target depth, for a backjump.
+  final int? targetDepth;
+
+  /// The complete assignment, for a solution step.
+  final Map<String, int>? assignment;
+
+  /// Full domain snapshot of every variable *after* this step is
+  /// applied. The visualizer renders this directly.
+  final Map<String, List<int>> domains;
+
+  const CspTraceStep({
+    required this.seq,
+    required this.kind,
+    required this.domains,
+    this.variable,
+    this.value,
+    this.removedValues = const [],
+    this.domainBefore = const [],
+    this.domainAfter = const [],
+    this.causeKind,
+    this.causeLabel,
+    this.causeScope = const [],
+    this.depth,
+    this.targetDepth,
+    this.assignment,
+  });
+}
+
+/// Result envelope for [CspSolver.traceDsl]. Carries the ordered
+/// [steps], the declared variable order + [initialDomains] (so the
+/// visualizer can show the starting state before step 0), and the
+/// terminal outcome ([solved] / [solution] or unsatisfiable).
+///
+/// Shapes:
+///   * `error != null` — the model failed to build/parse.
+///   * `unsupported == true` — the program is valid but can't be
+///     traced as-is (e.g. it has no finite-domain variables); the
+///     reason is in [error].
+///   * otherwise — a real trace; [solved] tells whether the search
+///     reached a [solution] or proved unsatisfiability.
+class CspTraceResult {
+  final String? error;
+
+  /// True when the program parsed but doesn't fit the trace path.
+  final bool unsupported;
+
+  /// Declared variables, in source order.
+  final List<String> variables;
+
+  /// Each variable's full declared domain, before any propagation.
+  final Map<String, List<int>> initialDomains;
+
+  final List<CspTraceStep> steps;
+
+  /// True when the trace ended on a complete assignment.
+  final bool solved;
+
+  /// The found assignment when [solved]; null on unsatisfiable.
+  final Map<String, int>? solution;
+
+  /// True when the event stream hit the `maxEvents` cap and was cut
+  /// short — the trace is a partial prefix.
+  final bool truncated;
+
+  /// True when the program carried a `minimize` / `maximize` directive
+  /// that the trace path ignores (it visualizes the feasibility
+  /// search over the constraints, not the optimization).
+  final bool objectiveIgnored;
+
+  bool get ok => error == null;
+
+  const CspTraceResult._({
+    required this.error,
+    required this.unsupported,
+    required this.variables,
+    required this.initialDomains,
+    required this.steps,
+    required this.solved,
+    required this.solution,
+    required this.truncated,
+    required this.objectiveIgnored,
+  });
+
+  factory CspTraceResult.failure(String message) => CspTraceResult._(
+        error: message,
+        unsupported: false,
+        variables: const [],
+        initialDomains: const {},
+        steps: const [],
+        solved: false,
+        solution: null,
+        truncated: false,
+        objectiveIgnored: false,
+      );
+
+  factory CspTraceResult.unsupportedProgram(String message) => CspTraceResult._(
+        error: message,
+        unsupported: true,
+        variables: const [],
+        initialDomains: const {},
+        steps: const [],
+        solved: false,
+        solution: null,
+        truncated: false,
+        objectiveIgnored: false,
+      );
+
+  factory CspTraceResult.ok({
+    required List<String> variables,
+    required Map<String, List<int>> initialDomains,
+    required List<CspTraceStep> steps,
+    required bool solved,
+    required Map<String, int>? solution,
+    required bool truncated,
+    required bool objectiveIgnored,
+  }) =>
+      CspTraceResult._(
+        error: null,
+        unsupported: false,
+        variables: variables,
+        initialDomains: initialDomains,
+        steps: steps,
+        solved: solved,
+        solution: solution,
+        truncated: truncated,
+        objectiveIgnored: objectiveIgnored,
+      );
+}
+
 class CspSolver {
   /// Solves a small Diophantine-style problem. [variables] maps each
   /// variable name to its inclusive `[min..max]` integer range.
@@ -1266,6 +1462,240 @@ class CspSolver {
           'Failed to parse FlatZinc: ${_friendlyError(e)}');
     }
     return _runQuickXplain(lowered.problem);
+  }
+
+  /// Round F — propagation step-trace for the DSL tab. Rebuilds the
+  /// program as a *labeled* Problem (identically to [explainDsl], so
+  /// every prune cause reads as the originating DSL line) and runs
+  /// dart_csp 2.2.0's `solveWithTrace`, then projects the raw
+  /// `PropagationEvent` stream into [CspTraceStep]s — each carrying a
+  /// full post-step domain snapshot reconstructed via a backtracking
+  /// trail, so the visualizer renders state by simple indexing.
+  ///
+  /// `minimize` / `maximize` directives are ignored (the same as the
+  /// explain pass): the trace visualizes the feasibility search over
+  /// the constraint set, which is where the AC-3 pedagogy lives.
+  ///
+  /// [maxEvents] bounds the captured trace (and so the underlying
+  /// solve); the default keeps even a pathological program responsive.
+  /// A capped trace sets [CspTraceResult.truncated].
+  static Future<CspTraceResult> traceDsl(String input,
+      {int maxEvents = 20000}) async {
+    final parsed = _parseDslForExplain(input);
+    if (parsed.error != null) {
+      return CspTraceResult.failure(parsed.error!);
+    }
+    if (parsed.variables.isEmpty) {
+      return CspTraceResult.unsupportedProgram('No variables declared.');
+    }
+
+    // Declared-order variable list + full initial domains.
+    final variables = parsed.variables.keys.toList();
+    final initialDomains = <String, List<int>>{
+      for (final e in parsed.variables.entries)
+        e.key: [for (var v = e.value.min; v <= e.value.max; v++) v],
+    };
+
+    final problem = csp.Problem();
+    try {
+      for (final entry in parsed.variables.entries) {
+        problem.addRangeVariable(entry.key, entry.value.min, entry.value.max);
+      }
+      final knownVars = parsed.variables.keys.toSet();
+      for (final c in parsed.constraints) {
+        final label = c.label;
+        final linear = _tryParseLinear(c.text, knownVars);
+        if (linear != null) {
+          final (:vars, :coeffs, :op, :bound) = linear;
+          switch (op) {
+            case '==':
+              problem.addLinearEquals(vars, coeffs, bound, label: label);
+              break;
+            case '<=':
+              problem.addLinearLeq(vars, coeffs, bound, label: label);
+              break;
+            case '>=':
+              problem.addLinearGeq(vars, coeffs, bound, label: label);
+              break;
+            case '<':
+              problem.addLinearLeq(vars, coeffs, bound - 1, label: label);
+              break;
+            case '>':
+              problem.addLinearGeq(vars, coeffs, bound + 1, label: label);
+              break;
+          }
+          continue;
+        }
+        problem.addStringConstraint(c.text, label: label);
+      }
+      for (var k = 0; k < parsed.noOverlap.length; k++) {
+        final g = parsed.noOverlap[k];
+        problem.addNoOverlap(g.starts, g.durations,
+            label: 'noOverlap #${k + 1}');
+      }
+      for (var k = 0; k < parsed.cumulative.length; k++) {
+        final g = parsed.cumulative[k];
+        problem.addCumulative(g.starts, g.durations, g.demands, g.capacity,
+            label: 'cumulative #${k + 1}');
+      }
+    } catch (e) {
+      return CspTraceResult.failure(
+          'Failed to build the constraint model: ${_friendlyError(e)}');
+    }
+
+    csp.PropagationTrace trace;
+    try {
+      trace = await problem.solveWithTrace(maxEvents: maxEvents);
+    } catch (e) {
+      return CspTraceResult.failure('Trace failed: ${_friendlyError(e)}');
+    }
+
+    final steps =
+        _reconstructTraceSteps(trace.events, variables, initialDomains);
+    final solved = trace.result is Map;
+    final solution = solved
+        ? <String, int>{
+            for (final e in (trace.result as Map).entries)
+              e.key as String: (e.value as num).toInt(),
+          }
+        : null;
+
+    return CspTraceResult.ok(
+      variables: variables,
+      initialDomains: initialDomains,
+      steps: steps,
+      solved: solved,
+      solution: solution,
+      truncated: trace.truncated,
+      objectiveIgnored:
+          RegExp(r'(^|\n)\s*(minimize|maximize)\s+').hasMatch(input),
+    );
+  }
+
+  /// Replays the raw `PropagationEvent` stream into [CspTraceStep]s,
+  /// attaching a full domain snapshot after each step. A backtracking
+  /// trail makes the snapshots faithful across dead-ends:
+  ///
+  ///   * `decision`/`prune`/`wipeout` mutate the live domain map; each
+  ///     mutation pushes the prior domain onto the current decision
+  ///     frame so it can be undone.
+  ///   * prunes emitted *before* the first decision are root-level
+  ///     propagation — permanent, recorded on no frame.
+  ///   * `backtrack @dD` pops the top decision frame, restoring every
+  ///     domain it captured (back to the pre-decision-D state). This
+  ///     matches dart_csp's observed semantics (a backtrack at depth D
+  ///     undoes the decision made at depth D and its consequences).
+  ///   * `backjump @dD->tD` pops frames down to level tD.
+  static List<CspTraceStep> _reconstructTraceSteps(
+    List<csp.PropagationEvent> events,
+    List<String> variables,
+    Map<String, List<int>> initialDomains,
+  ) {
+    // Live, mutable domain state (copy of the initial domains).
+    final domains = <String, List<int>>{
+      for (final e in initialDomains.entries) e.key: List<int>.of(e.value),
+    };
+    // One frame per active decision level; each frame is the ordered
+    // list of (variable, priorDomain) undo records to replay on pop.
+    final trail = <List<(String, List<int>)>>[];
+
+    List<int> ints(List<dynamic>? xs) =>
+        [for (final x in (xs ?? const [])) (x as num).toInt()];
+
+    Map<String, List<int>> snapshot() => {
+          for (final e in domains.entries) e.key: List<int>.of(e.value),
+        };
+
+    final steps = <CspTraceStep>[];
+    for (final e in events) {
+      switch (e.kind) {
+        case csp.PropagationEventKind.decision:
+          final v = e.variable!;
+          final val = (e.value as num).toInt();
+          // Open a new decision frame and record the pinned var's
+          // prior domain so a backtrack restores it.
+          trail.add([(v, List<int>.of(domains[v] ?? const []))]);
+          domains[v] = [val];
+          steps.add(CspTraceStep(
+            seq: e.seq,
+            kind: CspTraceStepKind.decision,
+            variable: v,
+            value: val,
+            depth: e.depth,
+            domains: snapshot(),
+          ));
+          break;
+        case csp.PropagationEventKind.prune:
+        case csp.PropagationEventKind.domainWipeout:
+          final v = e.variable!;
+          final after = ints(e.domainAfter);
+          // Record undo on the current frame (root prunes -> none).
+          if (trail.isNotEmpty) {
+            trail.last.add((v, List<int>.of(domains[v] ?? const [])));
+          }
+          domains[v] = after;
+          steps.add(CspTraceStep(
+            seq: e.seq,
+            kind: e.kind == csp.PropagationEventKind.prune
+                ? CspTraceStepKind.prune
+                : CspTraceStepKind.wipeout,
+            variable: v,
+            removedValues: ints(e.removedValues),
+            domainBefore: ints(e.domainBefore),
+            domainAfter: after,
+            causeKind: e.causeKind,
+            causeLabel: e.causeLabel,
+            causeScope: List<String>.of(e.causeScope ?? const []),
+            domains: snapshot(),
+          ));
+          break;
+        case csp.PropagationEventKind.backtrack:
+          if (trail.isNotEmpty) {
+            for (final (v, prior) in trail.removeLast().reversed) {
+              domains[v] = List<int>.of(prior);
+            }
+          }
+          steps.add(CspTraceStep(
+            seq: e.seq,
+            kind: CspTraceStepKind.backtrack,
+            depth: e.depth,
+            domains: snapshot(),
+          ));
+          break;
+        case csp.PropagationEventKind.backjump:
+          final target = e.targetDepth ?? 0;
+          while (trail.length > target) {
+            for (final (v, prior) in trail.removeLast().reversed) {
+              domains[v] = List<int>.of(prior);
+            }
+          }
+          steps.add(CspTraceStep(
+            seq: e.seq,
+            kind: CspTraceStepKind.backjump,
+            depth: e.depth,
+            targetDepth: e.targetDepth,
+            domains: snapshot(),
+          ));
+          break;
+        case csp.PropagationEventKind.solution:
+          final assign = <String, int>{
+            for (final me in (e.assignment ?? const {}).entries)
+              me.key: (me.value as num).toInt(),
+          };
+          // Pin the snapshot to the solution's singletons.
+          for (final me in assign.entries) {
+            domains[me.key] = [me.value];
+          }
+          steps.add(CspTraceStep(
+            seq: e.seq,
+            kind: CspTraceStepKind.solution,
+            assignment: assign,
+            domains: snapshot(),
+          ));
+          break;
+      }
+    }
+    return steps;
   }
 
   /// Shared QuickXplain runner. Catches engine errors, translates

@@ -35,6 +35,7 @@ import '../engine/magic_square.dart';
 import '../localization/app_localizations.dart';
 import '../widgets/australia_map_painter.dart';
 import '../widgets/germany_map_painter.dart';
+import '../widgets/propagation_visualizer.dart';
 import '../widgets/function_ref_help_popover.dart';
 import '../widgets/help_target.dart';
 import '../widgets/module_help_dialog.dart';
@@ -1181,6 +1182,11 @@ minimize makespan''',
   // solve / example load so a stale translation can't linger
   // after the user has edited the program.
   FlatZincExportResult? _export;
+  // Round F: propagation step-trace for the visualizer. Cleared on
+  // every fresh solve / example load / export so a stale replay can't
+  // linger after the program changed.
+  CspTraceResult? _trace;
+  bool _tracing = false;
 
   @override
   void initState() {
@@ -1205,11 +1211,15 @@ minimize makespan''',
       _result = null;
       _mus = null;
       _export = null;
+      _trace = null;
     });
   }
 
   void _doExport() {
-    setState(() => _export = DslToFlatZinc.export(_ctl.text));
+    setState(() {
+      _export = DslToFlatZinc.export(_ctl.text);
+      _trace = null;
+    });
   }
 
   @override
@@ -1223,12 +1233,29 @@ minimize makespan''',
       _solving = true;
       _mus = null;
       _export = null;
+      _trace = null;
     });
     final r = await CspSolver.solveDsl(_ctl.text);
     if (!mounted) return;
     setState(() {
       _solving = false;
       _result = r;
+    });
+  }
+
+  // Round F: build a propagation step-trace and reveal the AC-3
+  // replay visualizer. Independent of the Solve result block — the
+  // user can visualize without first solving.
+  Future<void> _visualize() async {
+    setState(() {
+      _tracing = true;
+      _export = null;
+    });
+    final r = await CspSolver.traceDsl(_ctl.text);
+    if (!mounted) return;
+    setState(() {
+      _tracing = false;
+      _trace = r;
     });
   }
 
@@ -1310,6 +1337,18 @@ minimize makespan''',
                 icon: const Icon(Icons.code, size: 18),
                 label: Text(t.constraintsExportFlatZinc),
               ),
+              // Round F: AC-3 propagation step-trace visualizer.
+              OutlinedButton.icon(
+                onPressed: _tracing ? null : _visualize,
+                icon: _tracing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.slideshow_outlined, size: 18),
+                label: Text(t.constraintsVisualizeButton),
+              ),
             ],
           ),
           // Round 105b (P6): in help mode, reveal a reference row of
@@ -1334,6 +1373,43 @@ minimize makespan''',
             const SizedBox(height: 16),
             _FlatZincExportBlock(result: _export!),
           ],
+          if (_trace != null) ...[
+            const SizedBox(height: 16),
+            if (_trace!.ok)
+              PropagationVisualizer(trace: _trace!)
+            else
+              _TraceErrorBlock(message: _trace!.error!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Round F: friendly error surface when a program can't be traced
+/// (parse error, no variables, etc.). Mirrors the export error block.
+class _TraceErrorBlock extends StatelessWidget {
+  final String message;
+  const _TraceErrorBlock({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child:
+                Text(message, style: TextStyle(color: scheme.onErrorContainer)),
+          ),
         ],
       ),
     );
