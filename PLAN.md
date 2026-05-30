@@ -2523,9 +2523,13 @@ What still works (pure Dart):
 
 Scope checklist when this round ships:
 
-- Add a `flutter build web` target to CI + a web-build workflow
+- [x] ~~Add a `flutter build web` target to CI + a web-build workflow
   (`.github/workflows/build-web.yml` mirroring the other
-  per-platform builds).
+  per-platform builds).~~ **Done 2026-05-30** — `build-web.yml` builds
+  the bundle on every push/PR to `main` (artifact `crisp_calc-web`) and
+  auto-deploys to Vercel prod on push to `main`, gated on the
+  `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` repo secrets
+  (skips cleanly until they're set). `vercel.json` now tracked at root.
 - Detect web at runtime (`kIsWeb`) and surface a banner /
   module-level explainer on Calculator + Notepad: *"Symbolic
   features (solve, integrate, factorint, …) require the desktop
