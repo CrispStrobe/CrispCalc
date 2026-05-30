@@ -1127,13 +1127,19 @@ extends the Sudoku/CSP engine layer directly.
   Midwest, Germany Bundesländer). Bonus: a `CustomPainter`
   region map colored from the solution. ~1 day with the
   visualizer, ~half a day text-only.
-  - **Text-only done 2026-05-30**: new `mapColoringAustralia`
-    DSL gallery entry — the canonical Russell & Norvig 7-region
-    Australia map, 3-colorable (the pre-existing `mapColoring`
-    K4 entry is intentionally *un*-colorable as a contrast).
-    Localized title across en/de/fr/es; solver test asserts
-    adjacency + ≤3 colors. **Deferred**: the `CustomPainter`
-    region map (real geography render) — UI-only follow-up.
+  - **Done 2026-05-30**: new `mapColoringAustralia` DSL gallery
+    entry — the canonical Russell & Norvig 7-region Australia
+    map, 3-colorable (the pre-existing `mapColoring` K4 entry is
+    intentionally *un*-colorable as a contrast). Localized title
+    across en/de/fr/es; solver test asserts adjacency + ≤3
+    colors. **Plus the `CustomPainter` region map** (HISTORY
+    2026-05-30) — `lib/widgets/australia_map_painter.dart`
+    renders a schematic colored map of the seven states/
+    territories from the solution; `_ResultBlock` shows it
+    automatically when a solution's variable set is exactly the
+    seven region keys (mirrors the Gantt-overlay trigger). Item
+    complete; a geographically-accurate `Path`-based silhouette
+    would be the only further polish.
 
 - [~] **Magic squares generator** (curiosity / small). 3×3
   through 6×6 magic squares via `allDifferent` + per-row /

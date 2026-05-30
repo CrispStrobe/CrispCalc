@@ -2,6 +2,28 @@
 
 Completed work, newest first.
 
+## 2026-05-30 — Map-coloring visualizer: schematic Australia map painter
+
+Adds the "bonus" `CustomPainter` region map from the map-coloring PLAN
+item. New `lib/widgets/australia_map_painter.dart` (`AustraliaMapView` +
+`_AustraliaMapPainter`) draws a schematic, stylized map of the seven
+Australian states/territories — seven hand-authored polygons on a 100×100
+logical grid, in roughly their real relative positions — each filled from
+the solved color index (1→red, 2→blue, 3→green, +amber/purple fallbacks)
+with a centered state label. Tasmania is drawn as a separate island.
+
+Integration mirrors the existing Gantt overlay: the shared `_ResultBlock`
+in `constraints_screen.dart` renders the map automatically when a
+solution's variable set is *exactly* the seven region keys
+(`AustraliaMapView.matches`), so solving the `mapColoringAustralia`
+gallery program now shows both the textual assignment and the colored map
+(the "no two neighbours share a color" property at a glance).
+
+Pure-Dart, no new i18n strings. `test/australia_map_painter_test.dart` —
+4 `matches` cases (exact set accepted; subset / superset / same-size
+different-names rejected) + a widget render smoke test. PLAN + HISTORY
+updated.
+
 ## 2026-05-30 — CSP optimization gallery: knapsack / production planning / assignment
 
 Follow-on to the pedagogy gallery. The optimization *capability* already

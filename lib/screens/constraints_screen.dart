@@ -30,6 +30,7 @@ import 'package:flutter/services.dart';
 import '../engine/app_state.dart';
 import '../engine/csp_solver.dart';
 import '../localization/app_localizations.dart';
+import '../widgets/australia_map_painter.dart';
 import '../widgets/function_ref_help_popover.dart';
 import '../widgets/help_target.dart';
 import '../widgets/module_help_dialog.dart';
@@ -367,6 +368,16 @@ class _ResultBlock extends StatelessWidget {
             assignment: result.solutions.first,
             capacity: result.ganttCapacity,
           ),
+        ],
+        // Map-coloring overlay: the `mapColoringAustralia` gallery
+        // program assigns a color to each of the seven Australian
+        // regions. When the first solution is exactly that variable
+        // set, render it as a schematic colored map so the
+        // "no two neighbours share a color" property is visible.
+        if (result.solutions.isNotEmpty &&
+            AustraliaMapView.matches(result.solutions.first)) ...[
+          const SizedBox(height: 12),
+          AustraliaMapView(assignment: result.solutions.first),
         ],
       ],
     );
