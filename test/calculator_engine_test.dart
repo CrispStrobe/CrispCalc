@@ -60,9 +60,16 @@ void main() {
       expect(engine.integrate('x^2', 'x', '0', '1'), '1/3'); // definite
     });
 
-    test('integrate() of a non-polynomial still needs native', () {
+    test('integrate() resolves standard trig via the Dart step walker', () {
+      // SymEngine has no integrator; the StepEngine rule walker is
+      // authoritative and many rules are bridge-free pattern matches.
+      expect(engine.integrate('sin(x)', 'x'), '-cos(x) + C');
+    });
+
+    test('integrate() of a non-elementary integrand still errors cleanly', () {
       if (engine.isNativeAvailable) return;
-      expect(engine.integrate('sin(x)', 'x'), startsWith('Error'));
+      // exp(x^2) has no elementary antiderivative — no rule matches.
+      expect(engine.integrate('exp(x^2)', 'x'), startsWith('Error'));
     });
   });
 

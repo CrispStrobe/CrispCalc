@@ -38,14 +38,14 @@ void main() {
       expect(result, '1/2'); // ∫₀¹ x dx
     });
 
-    test('polynomial indefinite integral resolves without the native bridge',
-        () {
-      // Exact Dart antiderivative; no native lib needed for the polynomial
-      // subset (non-polynomial integrands still require native).
-      final result = engine.integrate('x', 'x');
-      expect(result, '1/2x^2 + C');
+    test('indefinite integral resolves without the native bridge', () {
+      // Exact Dart antiderivative for polynomials, plus the StepEngine rule
+      // walker for standard trig/exp — all bridge-free. Only non-elementary
+      // integrands (no antiderivative rule) still error.
+      expect(engine.integrate('x', 'x'), '1/2x^2 + C');
+      expect(engine.integrate('sin(x)', 'x'), '-cos(x) + C');
       if (!engine.isNativeAvailable) {
-        expect(engine.integrate('sin(x)', 'x'), startsWith('Error'));
+        expect(engine.integrate('exp(x^2)', 'x'), startsWith('Error'));
       }
     });
 

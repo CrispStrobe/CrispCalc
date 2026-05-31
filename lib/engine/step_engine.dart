@@ -352,6 +352,17 @@ class StepEngine {
     return steps;
   }
 
+  /// Authoritative antiderivative: runs the rule walker and returns the
+  /// assembled antiderivative string (WITHOUT "+ C"), or null when no rule
+  /// matched. Unlike [integrate] this discards the step trace — it's the
+  /// answer-only entry point used by [CalculatorEngine.integrate] (SymEngine
+  /// has no integrator, so this Dart walker is the real engine). Recursion-
+  /// safe: the walker never calls `engine.integrate`.
+  static String? antiderivative(
+      String expr, String variable, CalculatorEngine engine) {
+    return _traceIntegrate(expr, variable, engine, <MathStep>[]);
+  }
+
   /// Recursive walker. Returns the assembled antiderivative string
   /// when a rule (possibly with nested rules) handled the input, or
   /// null when the integrator fell through and the final step's
@@ -817,16 +828,16 @@ class StepEngine {
       }
     }
 
-    // Fall through — emit a "Symbolic integration" step that lets the
-    // bridge try. Returns null so the caller knows we couldn't compute
-    // an answer Dart-side.
+    // Fall through — no textbook rule matched. Emit an "unevaluated" step
+    // and return null so the caller knows we couldn't compute an answer.
+    // (We must NOT call engine.integrate here: CalculatorEngine.integrate
+    // now routes back into this walker, so that would recurse infinitely.)
     steps.add(MathStep(
-      rule: 'Symbolic integration',
+      rule: 'Unevaluated',
       formula: '',
       before: '∫ $s d$variable',
-      after: engine.integrate(s, variable),
-      note: 'No standard textbook rule matched this shape — handing off '
-          'to the symbolic integrator.',
+      after: '∫ $s d$variable',
+      note: 'No standard textbook rule matched this shape.',
       noteI18n: const StepNote('integralFallthroughSymbolic'),
     ));
     return null;

@@ -8,6 +8,7 @@
 
 import 'package:crisp_calc/engine/calculator_engine.dart';
 import 'package:crisp_calc/engine/step_engine.dart';
+import 'package:crisp_calc/engine/symbolic_web.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -163,11 +164,13 @@ void main() {
       expect(rules.first, equals('Antiderivative of sin'));
     });
 
-    test('falls through to "Symbolic integration" for unrecognized shapes', () {
+    test('falls through to "Unevaluated" for unrecognized shapes', () {
       // sin(x^2) needs substitution but has no factor of 2x to detect
       // it, so even V3's non-linear u-sub doesn't fire — falls through.
+      // (Renamed from "Symbolic integration": the fall-through no longer
+      // hands off to engine.integrate, which would now recurse.)
       final rules = rulesFor('sin(x^2)', 'x');
-      expect(rules.first, equals('Symbolic integration'));
+      expect(rules.first, equals('Unevaluated'));
     });
 
     test('repeated IBP rule label fires for ∫x^2*sin(x) dx', () {
@@ -211,6 +214,34 @@ void main() {
       final steps = StepEngine.differentiate('42', 'x', engine);
       expect(steps.first.note, isNotNull);
       expect(steps.first.note, contains('does not depend'));
+    });
+  });
+
+  group('StepEngine.antiderivative — authoritative integrator', () {
+    // Many rules are pure Dart pattern matches (no engine round-trip), so
+    // they resolve even without the native bridge — power rule and the
+    // standard trig/exp antiderivatives among them. (Cases that need the
+    // bridge to verify a u-substitution etc. are exercised by the native-
+    // host suite, Track D.)
+    test('power rule produces a verifiable antiderivative for x^2', () {
+      final anti = StepEngine.antiderivative('x^2', 'x', engine);
+      expect(anti, isNotNull);
+      // Differentiating it back returns the integrand (via the web fallback).
+      expect(SymbolicWeb.differentiate(anti!.replaceAll('·', '*'), 'x'),
+          SymbolicWeb.expand('x^2'));
+    });
+
+    test('standard trig antiderivative resolves bridge-free', () {
+      // ∫ sin(x) dx = -cos(x) is a pattern rule, not an engine call.
+      expect(StepEngine.antiderivative('sin(x)', 'x', engine), '-cos(x)');
+    });
+
+    test('returns null (no crash / no recursion) for an unmatched shape', () {
+      // The key regression guard: the fall-through must NOT call
+      // engine.integrate (which now routes back here) — i.e. no stack
+      // overflow, just a clean null. exp(x^2) has no elementary
+      // antiderivative, so no rule matches.
+      expect(StepEngine.antiderivative('exp(x^2)', 'x', engine), isNull);
     });
   });
 }
