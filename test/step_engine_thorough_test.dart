@@ -334,7 +334,7 @@ void main() {
       expect(intRules('cosh(x)').first, equals('Antiderivative of cosh'));
     });
     test('sin(x^2) — non-linear argument still falls through', () {
-      expect(intRules('sin(x^2)').first, equals('Symbolic integration'));
+      expect(intRules('sin(x^2)').first, equals('Unevaluated'));
     });
   });
 
@@ -370,7 +370,7 @@ void main() {
     });
     test('non-linear arg leaves substitution untouched', () {
       // sin(x^2 + 1) is not linear in x; falls through.
-      expect(intRules('sin(x^2 + 1)').first, equals('Symbolic integration'));
+      expect(intRules('sin(x^2 + 1)').first, equals('Unevaluated'));
     });
   });
 

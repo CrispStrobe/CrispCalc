@@ -13,6 +13,7 @@ import 'numeric_fallback.dart';
 import 'numerical.dart';
 import 'polynomial.dart';
 import 'polynomial_mod.dart';
+import 'step_engine.dart';
 import 'symbolic_web.dart';
 import 'unit_expression.dart';
 
@@ -1136,61 +1137,58 @@ class CalculatorEngine {
     final bridge = _liveBridge;
     final indefinite = lower == null || upper == null;
 
-    // Web / native-less: the C wrapper stubs integrate() (SymEngine's C API
-    // exposes none), so resolve the polynomial subset exactly in Dart.
-    if (bridge == null) {
-      if (indefinite) {
-        final web = SymbolicWeb.integrate(expression, variable);
-        if (web != null) return '$web + C';
-        return 'Error: integrate requires native library';
-      }
-      final web =
-          SymbolicWeb.definiteIntegral(expression, variable, lower, upper);
-      if (web != null) return web;
-      return 'Error: integrate requires native library';
-    }
+    // SymEngine has NO symbolic integration (neither the C API nor the C++
+    // core — the wrapper stubs integrate() on every platform). The real
+    // integrator is therefore the pure-Dart StepEngine rule walker
+    // (manualintegrate-style: power / u-sub / IBP / partial-fractions /
+    // trig), which only needs differentiate/simplify/evaluate — all of
+    // which work on native (bridge) and partially on web (SymbolicWeb).
 
-    // Indefinite integration.
     if (indefinite) {
-      if (bridge.hasIntegrate) {
-        try {
-          final r = bridge.integrate(expression, variable);
-          if (!r.startsWith('Error')) return r;
-        } catch (_) {
-          // fall through to the Dart polynomial integrator
-        }
-      }
-      // The bridge lacks integrate() (or its stub errored): try the exact
-      // polynomial antiderivative in Dart before giving up.
-      final web = SymbolicWeb.integrate(expression, variable);
-      if (web != null) return '$web + C';
-      return 'Error: indefinite integrate() is not available in this '
-          'build of the symbolic_math_bridge';
+      // 1. Exact polynomial antiderivative (consistent format, no engine
+      //    round-trips) — reliable on every platform.
+      final poly = SymbolicWeb.integrate(expression, variable);
+      if (poly != null) return '$poly + C';
+      // 2. Broad textbook integrator (trig/exp/IBP/u-sub/partial fractions).
+      //    Resolves on native; on web it handles only what SymbolicWeb can
+      //    back its differentiate/simplify checks with.
+      final anti = StepEngine.antiderivative(expression, variable, this);
+      if (anti != null) return '$anti + C';
+      return bridge == null
+          ? 'Error: integrate requires native library'
+          : 'Error: could not integrate (no matching rule)';
     }
 
-    // Definite integration. Try the exact symbolic route first (FTC),
-    // then the exact Dart polynomial definite integral, then numerical.
-    if (bridge.hasIntegrate) {
-      final exact = _definiteFromAntiderivative(
-          bridge, expression, variable, lower, upper);
-      if (exact != null) return exact;
-    }
-    final webDef =
+    // Definite integration.
+    // 1. Exact Dart polynomial definite integral.
+    final polyDef =
         SymbolicWeb.definiteIntegral(expression, variable, lower, upper);
-    if (webDef != null) return webDef;
-    return _definiteNumerical(bridge, expression, variable, lower, upper);
+    if (polyDef != null) return polyDef;
+    // 2. FTC via a StepEngine antiderivative evaluated at the bounds
+    //    (needs the bridge to substitute + evaluate the result).
+    if (bridge != null) {
+      final anti = StepEngine.antiderivative(expression, variable, this);
+      if (anti != null) {
+        final ftc = _definiteFromAntiderivativeString(
+            bridge, anti, variable, lower, upper);
+        if (ftc != null) return ftc;
+      }
+      // 3. Numerical Simpson fallback.
+      return _definiteNumerical(bridge, expression, variable, lower, upper);
+    }
+    return 'Error: integrate requires native library';
   }
 
-  /// FTC: F(b) - F(a) using the bridge's symbolic integrate + substitute.
-  /// Returns null on any failure so the caller can fall back to Simpson.
-  String? _definiteFromAntiderivative(SymbolicMathBridge bridge,
-      String expression, String variable, String lower, String upper) {
+  /// FTC for a known antiderivative string: F(upper) − F(lower) via the
+  /// bridge's substitute + evaluate. Returns null on any parse/eval failure
+  /// so the caller can fall back to numerical integration.
+  String? _definiteFromAntiderivativeString(SymbolicMathBridge bridge,
+      String antiderivative, String variable, String lower, String upper) {
     try {
-      final antideriv = bridge.integrate(expression, variable);
-      if (antideriv.startsWith('Error')) return null;
-      final atUpper = bridge.substitute(antideriv, variable, '($upper)');
-      final atLower = bridge.substitute(antideriv, variable, '($lower)');
-      // Subtract symbolically; SymEngine will simplify.
+      // StepEngine renders products with "·"; SymEngine wants "*".
+      final f = antiderivative.replaceAll('·', '*');
+      final atUpper = bridge.substitute(f, variable, '($upper)');
+      final atLower = bridge.substitute(f, variable, '($lower)');
       final diff = bridge.evaluate('($atUpper) - ($atLower)');
       if (diff.startsWith('Error')) return null;
       return diff;
