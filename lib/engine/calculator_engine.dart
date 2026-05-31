@@ -242,13 +242,18 @@ class CalculatorEngine {
   }
 
   String factor(String expression) {
-    // The native/WASM C wrapper aliases factor() to expand() — a known
-    // upstream limitation (SymEngine's C API exposes no symbolic polynomial
-    // factorization, and the boostmp WASM build has no FLINT). So do real
-    // univariate-over-ℚ factoring in Dart first on EVERY platform; fall
-    // through to the bridge only for input outside the polynomial grammar
-    // (multivariate, transcendental, …), where the bridge's expand-alias is
-    // no worse than today.
+    // Native builds (bridge ≥ the FLINT-factor release) do COMPLETE
+    // univariate-over-ℤ factorization via FLINT — it splits irreducible
+    // quadratics (x⁴+4) and non-monic integer factors that the Dart
+    // fallback can't — so prefer it. The bridge gracefully returns the
+    // expanded form for multivariate/non-polynomial input (no worse than
+    // before). On web / native-less builds the FLINT path is unavailable,
+    // so fall back to the pure-Dart univariate-over-ℚ factorer (rational
+    // linear factors + irreducible remainder).
+    if (isNativeAvailable) {
+      final r = _bridgeCall('factor', (b) => b.factor(expression));
+      if (!r.startsWith('Error')) return r;
+    }
     final web = SymbolicWeb.factor(expression);
     if (web != null) return web;
     return _bridgeCall('factor', (b) => b.factor(expression));

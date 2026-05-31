@@ -28,7 +28,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "0100ef4"   # bridge main: SymEngine WASM web impl (js_interop) — full CAS on web
+      ref: "56bacf8"   # bridge main: real FLINT polynomial factor (native) + WASM web CAS
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine

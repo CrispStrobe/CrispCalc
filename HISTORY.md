@@ -2,6 +2,39 @@
 
 Completed work, newest first.
 
+## 2026-05-31 — Real FLINT factor (native, C++ wrapper) + native CAS test suite (Tracks A & D)
+
+Took `factor` past the Dart rational-linear fallback to **complete
+univariate-over-ℤ factorization** via FLINT, across the 3-repo native stack.
+
+- **math-stack-ios-builder** (`feature/flint-factor`): new C++ TU
+  `src/flutter_symengine_cas.cpp` — `flutter_symengine_factor_cpp` parses the
+  input, builds a `UIntPolyFlint` (`from_basic`, auto-detects the generator,
+  throws on multivariate / non-integer), factors via SymEngine's
+  `factors()` → FLINT `fmpz_poly_factor`, and rebuilds a product string
+  (mul() doesn't distribute, so the factored form survives). The C wrapper's
+  `flutter_symengine_factor` delegates to it on native; WASM (boostmp, no
+  FLINT) keeps the expand-alias. New `build_wrapper_incremental.sh` relinks
+  ONLY the wrapper against the cached per-arch `libsymengine.a` (no
+  GMP/FLINT/SymEngine recompile). Verified natively: `x^4+4 →
+  (2 + 2x + x²)(2 - 2x + x²)`, `6x²+5x-4 → (-1 + 2x)(4 + 3x)`.
+- **symbolic_math_bridge** (`main` `0100ef4 → 56bacf8`): re-vendored the
+  rebuilt `SymEngineFlutterWrapper.xcframework` (macOS slice symlinked from
+  iOS). v1.2.1.
+- **CrispCalc**: re-pinned to bridge `56bacf8`. `CalculatorEngine.factor`
+  now prefers the bridge (real FLINT) on native, falling back to the Dart
+  univariate-over-ℚ factorer on web/native-less. Multivariate/non-poly →
+  bridge's expand (no worse than before).
+- **Track D — native CAS test suite**: new `integration_test/cas_native_test.dart`
+  exercises the REAL bridge (`flutter test … -d macos`): FLINT factor
+  (incl. x⁴+4 quadratic split), integrate (Track C), and native ntheory
+  (isprime/factorint). 10/10 green on macOS against the pinned bridge.
+  Headless suite still 2805 pass (factor falls back to Dart there).
+
+Remaining: multivariate factor (SymEngine 0.11.2 only wraps univariate
+`fmpz_poly_factor`), a real `simplify` (still expand-alias), and web factor
+beyond the Dart subset — that last needs FLINT-in-WASM (Track B).
+
 ## 2026-05-31 — Web-CAS follow-ups: real factor/integrate, recalc-on-ready, browser smoke suite
 
 Methodical close-out of the loose ends from the WASM-wiring work, plus an
