@@ -75,6 +75,35 @@ TestFlight / App Store the rest compounds at zero.
 
 ---
 
+## Symbolic-stack survey (2026-05-31)
+
+Multi-agent audit of the three-repo chain (math-stack-ios-builder → symbolic_math_bridge → CrispCalc). **Verified against source.** Corrects a long-standing misconception and surfaces a credibility bug.
+
+**Reality check — web has NO SymEngine.** `web/` is stock Flutter scaffolding; the only `.wasm` present is Flutter's own `main.dart.wasm`. The bridge's web export is a throw-only stub, so on web `isNativeAvailable=false` and `calculator_engine.dart:76-79` routes everything through the pure-Dart `NumericFallbackEvaluator`. Every CAS / number-theory / matrix op returns "requires native library". `numeric_fallback.dart` is already feature-complete (arithmetic, ^, trig/hyperbolic + inverses, exp/ln/log/log10, sqrt/cbrt, abs/floor/ceil/round/trunc/sign, gamma, pi/e/tau, implicit multiplication, variable binding) — so the old "extend numeric fallback" candidate is **done**.
+
+**Credibility bug — fake ops.** `simplify()` and `factor()` are both literally aliased to `expand()` in `flutter_symengine_wrapper.c` (~lines 182-186, 222-225); `integrate()` is a hard-error stub. CrispCalc surfaces all three as first-class typed functions → silently misleading results. (`factorint` integer factorization via FLINT is real; only symbolic `factor` is fake.)
+
+**Disabled backends** in the iOS build: `WITH_LLVM` (JIT/lambdify), `WITH_ARB` (rigorous arithmetic), `WITH_ECM`/`WITH_PRIMESIEVE` all OFF. Stack: SymEngine 0.11.2, GMP 6.3.0, MPFR 4.2.2, MPC 1.3.1, FLINT 3.3.1.
+
+**No real CAS tests** in either repo (bridge tests only `getPlatformVersion`).
+
+**Toolchain:** `emcc` is NOT installed (web WASM needs an emsdk bootstrap); cmake/ninja/node present; xcframework rebuilds via `build_symengine.sh`.
+
+### Ranked opportunities (best-first)
+
+1. **Stop shipping fake simplify/factor** (high / L) — implement real `simplify`+`factor` via SymEngine C++ in the wrapper, or honestly degrade the UI. Most damaging correctness gap. *(repos: all 3)*
+2. **Close the web cliff: SymEngine→WASM** (high / L) — Emscripten build + `js_interop` web impl replacing the throw stub. Largest user-visible gap (web is the deployed surface). Blocked on emsdk install. *(all 3)*
+3. **Enable optional backends** WITH_LLVM / PRIMESIEVE / ECM / ARB (medium / M) — faster numeric eval + factoring past the 90-bit cap. *(builder + bridge)*
+4. **Real symbolic integrate** via C++ core (high / L) — replace the hard-error stub. *(all 3)*
+5. **Native `limit` + `series`** (medium / M) — replace fragile Dart sampling; adds Taylor/Laurent series. Supersedes the P1 "Native limit" item below. *(all 3)*
+6. **Surface matrix ops** eigenvalues/rank/trace/transpose + fix string-based zero detection (medium / M). *(all 3)*
+7. **Real CAS test suite** exercising actual ops on a native host (medium / M). *(bridge + CrispCalc)*
+8. **Android ABI coverage** x86_64/armeabi-v7a + finish gmpPower/evaluateWithPrecision stubs (low / M).
+
+**Session direction (2026-05-31):** user chose to pursue #2 (web gap) then #5 (limit/series). Both are multi-repo + native-build efforts; #2 additionally needs an emsdk bootstrap. Approach TBD (full WASM build vs. pragmatic pure-Dart web symbolic layer).
+
+---
+
 ## P1 — Open follow-ups
 
 - [x] ~~Make `CrispCalc` repo public.~~ Done 2026-05-17 — see HISTORY.
