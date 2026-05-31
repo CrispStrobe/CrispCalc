@@ -2,6 +2,51 @@
 
 Completed work, newest first.
 
+## 2026-05-31 — Wire up the WASM web CAS (make the merged arc actually run)
+
+The SymEngine→WASM arc merged earlier today shipped `web/symengine.js` +
+`symengine.wasm` and a real `dart:js_interop` bridge, but the running app
+never used any of it — the 1 MB WASM payload was downloaded and ignored.
+Three gaps, all app-side:
+
+1. **Nothing drove the bridge's two-phase load.** The web bridge throws
+   until `SymEngineModule()` resolves; the app never re-checked.
+2. **`CalculatorEngine` cached the bridge in a `late final` field at
+   construction** — on web the WASM module isn't ready at screen-build time,
+   so every engine came up unavailable *permanently* and stayed on the
+   pure-Dart fallback even after WASM finished loading.
+3. **The slow-op path went through an isolate.** `EngineService` offloads
+   `solve`/`factor`/`integrate`/… to a worker via `Isolate.spawn`, which
+   throws `UnsupportedError` on web — so those ops could never reach the
+   WASM bridge regardless.
+
+Fixed (`feature/wasm-web-wiring`):
+
+- New process-wide `nativeBridgeStatus` notifier (`loading` / `ready` /
+  `unavailable`) + `pollForNativeBridge()` driven from `main()`: it retries
+  constructing `SymbolicMathBridge()` until one succeeds (WASM live), then
+  flips to `ready`; after a 20 s timeout it settles on `unavailable`. On
+  native the first attempt succeeds instantly.
+- `CalculatorEngine` now holds a mutable bridge and re-acquires it lazily
+  through `_liveBridge` / `isNativeAvailable` once the signal flips, so
+  every per-screen and worker engine picks up the live bridge with no
+  rebuild and no global coordination. All internal guards route through the
+  re-acquiring accessors.
+- `EngineService` runs ops **inline** on web (one shared engine, no
+  isolate) — the `await` + progress-overlay flow is byte-identical, but the
+  call actually executes.
+- `WebUnsupportedBanner` tracks the three states: "loading the in-browser
+  engine…" → "symbolic CAS runs in your browser; high-precision &
+  number-theory functions (isprime, factorint, evalf, Bessel) still need the
+  app" → (on timeout) the original "needs the desktop/mobile app" message.
+- 2 new i18n strings × en/de/fr/es (`webBannerCasLoading`,
+  `webBannerCasPartial`). New `test/native_bridge_wiring_test.dart`;
+  `flutter build web --release` green (dart2js + Wasm dry-run), full suite
+  green.
+
+Known minor follow-up: history rows evaluated *before* WASM loads keep their
+"requires native" result until re-run; new evaluations use the live bridge.
+
 ## 2026-05-31 — Pure-Dart web CAS interim (expand / diff / solve)
 
 Closed a big slice of the web capability cliff without the SymEngine→WASM

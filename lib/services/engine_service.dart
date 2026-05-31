@@ -22,6 +22,8 @@
 import 'dart:async';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../engine/calculator_engine.dart';
 
 class EngineService {
@@ -117,6 +119,14 @@ class EngineCancelled implements Exception {
 /// Owns the worker isolate. Spawns lazily on the first request;
 /// `kill()` tears it down so the next request respawns.
 class _PersistentWorker {
+  // Web has no `Isolate.spawn` (it throws `UnsupportedError`), so on web
+  // every op runs inline on the main isolate against this one engine. The
+  // WASM bridge is single-threaded anyway, so there's no thread to offload
+  // to — the cost is a (usually fast) synchronous CAS call. The shared
+  // instance lazily re-acquires the bridge once the WASM module loads, same
+  // as every other CalculatorEngine.
+  CalculatorEngine? _inlineEngine;
+
   Isolate? _isolate;
   SendPort? _commandPort;
   ReceivePort? _responsePort;
@@ -155,6 +165,12 @@ class _PersistentWorker {
   }
 
   Future<String> send(EngineOp op) async {
+    if (kIsWeb) {
+      // No isolate on web — run the op directly. Still async so callers'
+      // `await` + progress-overlay flow is identical to native.
+      final engine = _inlineEngine ??= CalculatorEngine();
+      return _runOp(engine, op);
+    }
     await _ensureStarted();
     final id = _nextId++;
     final completer = Completer<String>();

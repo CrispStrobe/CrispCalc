@@ -490,6 +490,18 @@ void main() {
           expect(s.trim(), isNotEmpty);
         }
       });
+
+      test('web build banner strings are present', () {
+        for (final s in [
+          t.webBannerCasLoading,
+          t.webBannerCasPartial,
+          t.webBannerCasUnavailable,
+          t.webDownloadApp,
+          t.errorNativeRequiredWeb,
+        ]) {
+          expect(s.trim(), isNotEmpty);
+        }
+      });
     });
   }
 }

@@ -16,23 +16,106 @@ import 'polynomial_mod.dart';
 import 'symbolic_web.dart';
 import 'unit_expression.dart';
 
+/// Lifecycle of the native / WASM symbolic bridge, for UI that wants to
+/// distinguish "still loading" from "gave up".
+///   - [loading]     — no bridge yet; on web the WASM module may still be
+///                     fetching. Engines run in the pure-Dart fallback.
+///   - [ready]       — the bridge is live; full CAS is available.
+///   - [unavailable] — the bridge never came up (e.g. web WASM failed to
+///                     load within the poll window). Permanent fallback.
+enum NativeBridgeStatus { loading, ready, unavailable }
+
+/// Process-wide signal for the native / WASM bridge lifecycle.
+///
+/// On native platforms the bridge is ready the moment the first engine is
+/// constructed, so this flips to [NativeBridgeStatus.ready] immediately. On
+/// web the SymEngine WASM module loads *asynchronously* (the `<script>` +
+/// `SymEngineModule()` promise in `web/index.html`), so at app start
+/// `SymbolicMathBridge()` throws and engines come up in the pure-Dart
+/// fallback. Once the module finishes loading, [pollForNativeBridge] flips
+/// this notifier and every [CalculatorEngine] lazily re-acquires its bridge
+/// on the next call. UI surfaces (e.g. the web banner) can listen to react.
+final ValueNotifier<NativeBridgeStatus> nativeBridgeStatus =
+    ValueNotifier<NativeBridgeStatus>(NativeBridgeStatus.loading);
+
+/// True once the bridge is live. Hot-path convenience over reading the enum.
+bool get nativeBridgeReady =>
+    nativeBridgeStatus.value == NativeBridgeStatus.ready;
+
+/// Drive the asynchronous web-WASM handshake: repeatedly attempt to
+/// construct a [SymbolicMathBridge] until one succeeds, then flip
+/// [nativeBridgeStatus] to [NativeBridgeStatus.ready]. On native the very
+/// first attempt succeeds and the loop exits immediately; on web it spins on
+/// a short interval while the WASM module loads. After [timeout] it settles
+/// on [NativeBridgeStatus.unavailable] so a genuinely native-less web build
+/// (WASM failed to fetch) lands in the Dart fallback instead of polling
+/// forever.
+Future<void> pollForNativeBridge({
+  Duration interval = const Duration(milliseconds: 100),
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  if (nativeBridgeReady) return;
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    try {
+      // Construction succeeds only when the bridge (FFI symbols / WASM
+      // module) is actually live. A throw means "not ready yet".
+      SymbolicMathBridge();
+      nativeBridgeStatus.value = NativeBridgeStatus.ready;
+      return;
+    } catch (_) {
+      await Future<void>.delayed(interval);
+    }
+  }
+  if (!nativeBridgeReady) {
+    nativeBridgeStatus.value = NativeBridgeStatus.unavailable;
+  }
+}
+
 class CalculatorEngine {
   CalculatorEngine() {
+    _acquireBridge();
+  }
+
+  // Mutable (not `late final`): on web the bridge is unavailable at
+  // construction and re-acquired later once the WASM module loads, so the
+  // field has to be reassignable. Internal callers read it via [_liveBridge]
+  // (which re-acquires opportunistically) and capture a local so Dart can
+  // promote it to non-null.
+  SymbolicMathBridge? _bridge;
+  bool _nativeAvailable = false;
+
+  /// Attempt to (re)acquire the native/WASM bridge. Idempotent once
+  /// available. Returns whether the bridge is now usable.
+  bool _acquireBridge() {
+    if (_nativeAvailable) return true;
     try {
       _bridge = SymbolicMathBridge();
       _nativeAvailable = true;
+      if (!nativeBridgeReady) {
+        nativeBridgeStatus.value = NativeBridgeStatus.ready;
+      }
       _log('SymbolicMathBridge loaded');
     } catch (e) {
       _bridge = null;
       _nativeAvailable = false;
-      _log('SymbolicMathBridge unavailable: $e');
+      // Quiet on the common web "not ready yet" path — only log the first
+      // (constructor-time) attempt would be noise on every retry.
     }
+    return _nativeAvailable;
   }
 
-  late final SymbolicMathBridge? _bridge;
-  bool _nativeAvailable = false;
+  /// The live bridge, re-acquiring it if the global ready-signal has flipped
+  /// since this engine last looked. Returns `null` when still unavailable.
+  SymbolicMathBridge? get _liveBridge {
+    if (!_nativeAvailable && nativeBridgeReady) _acquireBridge();
+    return _bridge;
+  }
 
-  bool get isNativeAvailable => _nativeAvailable;
+  bool get isNativeAvailable {
+    if (!_nativeAvailable && nativeBridgeReady) _acquireBridge();
+    return _nativeAvailable;
+  }
 
   static void _log(String msg) {
     if (kDebugMode) {
@@ -42,8 +125,8 @@ class CalculatorEngine {
   }
 
   String _bridgeCall(String op, String Function(SymbolicMathBridge b) fn) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       return 'Error: $op requires native library';
     }
     try {
@@ -64,7 +147,7 @@ class CalculatorEngine {
     // doesn't recognize `Matrix([[...]])` literals. Route them through the
     // dedicated matrix FFI bindings first; fall back to the scalar parser
     // when the expression doesn't look matrix-shaped.
-    if (_nativeAvailable && expression.contains('Matrix(')) {
+    if (isNativeAvailable && expression.contains('Matrix(')) {
       final matrixResult = MatrixEvaluator.tryEvaluate(expression, this);
       if (matrixResult != null) return matrixResult;
     }
@@ -74,7 +157,7 @@ class CalculatorEngine {
     // variables, matrices, unknown functions) yields null here and falls
     // through to the native-only path below, which surfaces the proper
     // "needs the native app" message.
-    if (!_nativeAvailable) {
+    if (!isNativeAvailable) {
       final numeric = NumericFallbackEvaluator.tryEvaluate(expression);
       if (numeric != null) return numeric;
     }
@@ -93,8 +176,8 @@ class CalculatorEngine {
   }
 
   String evaluateForGraphing(String expression) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       return 'Error';
     }
     // Bessel functions can't go through SymEngine; intercept a standalone
@@ -127,8 +210,8 @@ class CalculatorEngine {
   }
 
   String solve(String expression, String symbol) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       // Web / native-less: solve linear & quadratic polynomials in pure
       // Dart so the browser build isn't limited to "requires native
       // library" for the most common cases. Higher-degree / non-
@@ -162,7 +245,7 @@ class CalculatorEngine {
 
   String expand(String expression) {
     // Web / native-less: expand single-variable polynomials in pure Dart.
-    if (!_nativeAvailable) {
+    if (!isNativeAvailable) {
       final web = SymbolicWeb.expand(expression);
       if (web != null) return web;
     }
@@ -175,7 +258,7 @@ class CalculatorEngine {
   String differentiate(String expression, String variable) {
     // Web / native-less: differentiate polynomials in pure Dart;
     // transcendental input falls through to the native-only path.
-    if (!_nativeAvailable) {
+    if (!isNativeAvailable) {
       final web = SymbolicWeb.differentiate(expression, variable);
       if (web != null) return web;
     }
@@ -194,15 +277,10 @@ class CalculatorEngine {
   String callUnary(String funcName, String expression) =>
       _bridgeCall(funcName, (b) => b.callUnary(funcName, expression));
 
-  String getPi() => _nativeAvailable && _bridge != null
-      ? _bridge.getPi()
-      : '3.141592653589793';
-  String getE() => _nativeAvailable && _bridge != null
-      ? _bridge.getE()
-      : '2.718281828459045';
-  String getEulerGamma() => _nativeAvailable && _bridge != null
-      ? _bridge.getEulerGamma()
-      : '0.5772156649015329';
+  String getPi() => _liveBridge?.getPi() ?? '3.141592653589793';
+  String getE() => _liveBridge?.getE() ?? '2.718281828459045';
+  String getEulerGamma() =>
+      _liveBridge?.getEulerGamma() ?? '0.5772156649015329';
 
   /// Round 85 (precision arc): π to [decimalDigits] decimal places via
   /// MPFR through SymEngine's `basic_evalf`. Routes through the bridge's
@@ -246,7 +324,7 @@ class CalculatorEngine {
       throw ArgumentError(
           'decimalDigits must be in 1..10000 (got $decimalDigits)');
     }
-    if (!_nativeAvailable || _bridge == null) {
+    if (!isNativeAvailable) {
       return fallback;
     }
     return _bridgeCall(
@@ -258,9 +336,10 @@ class CalculatorEngine {
   /// for prime, `false` otherwise. Falls back to a pure-Dart sieve
   /// for n ≤ 2^31 when the bridge isn't loaded.
   bool isprime(String n) {
-    if (!_nativeAvailable || _bridge == null) return _fallbackIsprime(n);
+    final bridge = _liveBridge;
+    if (bridge == null) return _fallbackIsprime(n);
     try {
-      return _bridge.ntheoryIsprime(n);
+      return bridge.ntheoryIsprime(n);
     } catch (e) {
       _log('isprime error: $e');
       return _fallbackIsprime(n);
@@ -295,10 +374,11 @@ class CalculatorEngine {
   /// usage via `_bridge!.ntheoryFactorint(...)` still surfaces
   /// the "input too large" error string.
   List<({int prime, int exponent})> factorint(String n) {
-    if (!_nativeAvailable || _bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       throw StateError('factorint requires native library');
     }
-    final raw = _bridge.ntheoryFactorint(n);
+    final raw = bridge.ntheoryFactorint(n);
     // Bridge swallowed an "Error in ..." prefix already — check
     // for "0" / "1" / "-1" trivial cases. The wrapper-side string
     // for negatives prefixes "-1*" but we strip it (factorint is
@@ -976,8 +1056,8 @@ class CalculatorEngine {
   /// converged value, or a descriptive error if the one-sided limits
   /// disagree. Pass `oo` / `inf` / `\\infty` for +∞; `-oo` / `-inf` for −∞.
   String limit(String expression, String variable, String point) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       return 'Error: limit requires native library';
     }
 
@@ -1035,8 +1115,8 @@ class CalculatorEngine {
   ///     rule with 200 subintervals.
   String integrate(String expression, String variable,
       [String? lower, String? upper]) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) {
+    final bridge = _liveBridge;
+    if (bridge == null) {
       return 'Error: integrate requires native library';
     }
 
@@ -1139,8 +1219,8 @@ class CalculatorEngine {
   }
 
   SymEngineMatrix? createMatrix(int rows, int cols) {
-    final bridge = _bridge;
-    if (!_nativeAvailable || bridge == null) return null;
+    final bridge = _liveBridge;
+    if (bridge == null) return null;
     try {
       return bridge.createMatrix(rows, cols);
     } catch (e) {

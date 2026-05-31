@@ -8,6 +8,8 @@
 //   < 720 px  : bottom navigation bar
 //   >= 720 px : NavigationRail (extended above 1100 px)
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -80,6 +82,14 @@ void main() async {
   // prints PASS/FAIL lines, and exits non-zero on any failure. On web this
   // is a no-op (the conditional import resolves to the stub).
   runDiagnosticsIfRequested();
+
+  // The SymEngine bridge loads synchronously on native, but on web the WASM
+  // module (web/symengine.js + symengine.wasm) resolves asynchronously after
+  // the page boots. Kick off the handshake so CalculatorEngine instances
+  // re-acquire the real bridge once it's live — until then they run in the
+  // pure-Dart fallback. Fire-and-forget: it flips `nativeBridgeReady` on
+  // success and gives up quietly if WASM never loads.
+  unawaited(pollForNativeBridge());
 
   runApp(const CrispCalcApp());
 }

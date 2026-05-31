@@ -2697,6 +2697,34 @@ Pages all serve `build/web/` cleanly. No backend needed.
 >
 > Branches: `feature/wasm-emscripten` (builder), `feature/wasm-web-impl`
 > (bridge), `feature/wasm-web-assets` (CrispCalc).
+>
+> **App-side wiring — DONE 2026-05-31 (`feature/wasm-web-wiring`).** The
+> merged WASM assets were inert in the running app: nothing drove the
+> bridge's two-phase load, `CalculatorEngine` cached an unavailable bridge
+> in a `late final` field at construction (web WASM isn't ready yet then),
+> and the slow-op path went through `EngineService`'s worker isolate —
+> `Isolate.spawn` throws `UnsupportedError` on web, so a `solve`/`factor`/
+> `integrate` would never reach the WASM bridge. Fixed:
+> - `pollForNativeBridge()` (driven from `main()`) retries constructing the
+>   bridge until the WASM module resolves, then flips the process-wide
+>   `nativeBridgeStatus` notifier (`loading → ready`, or `→ unavailable`
+>   after a 20 s timeout).
+> - `CalculatorEngine` holds a mutable bridge and lazily re-acquires it via
+>   `_liveBridge` / `isNativeAvailable` once the signal flips — so every
+>   per-screen + worker engine picks up the live bridge with no rebuild.
+> - `EngineService` runs ops **inline** on web (no isolate) against one
+>   shared engine, so the async/progress-overlay flow is identical but the
+>   call actually executes.
+> - `WebUnsupportedBanner` now tracks the three states: "loading the
+>   in-browser engine…" → "CAS runs in your browser; precision/number-theory
+>   still need the app" → (timeout) the original unavailable message.
+> - 2 new i18n strings × en/de/fr/es; `native_bridge_wiring_test.dart`;
+>   `flutter build web --release` green (dart2js + Wasm dry-run), full suite
+>   green.
+> - **Known minor follow-up**: history rows evaluated *before* WASM loads
+>   keep their "requires native" result until re-run; new evaluations use
+>   the live bridge. Proactive re-eval-on-ready was left out as risky/low
+>   value (WASM resolves within ~1 s of page load, before the user types).
 
 Compile SymEngine to WASM with emscripten, wrap it with a thin
 JS module, and call into it from Dart via `dart:js_interop`. The
