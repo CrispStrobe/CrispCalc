@@ -153,8 +153,7 @@ void main() {
 
     test('expand / differentiate / solve resolve instead of erroring', () {
       // The test host has no native bridge, mirroring the web build.
-      if (engine.isNativeAvailable)
-        return; // native present → SymEngine owns it
+      if (engine.isNativeAvailable) return; // native → SymEngine owns it
       expect(engine.expand('(x+1)^2'), 'x^2 + 2x + 1');
       expect(engine.differentiate('x^3', 'x'), '3x^2');
       expect(engine.solve('x^2 - 4', 'x'), 'x = {2, -2}');
