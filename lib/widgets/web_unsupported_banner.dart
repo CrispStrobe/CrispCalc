@@ -35,6 +35,13 @@ class WebUnsupportedBanner extends StatelessWidget {
         final t = AppLocalizations.of(context);
         final scheme = Theme.of(context).colorScheme;
 
+        // Ready = the FLINT-enabled WASM is live → full native CAS parity in
+        // the browser (factor, isprime/factorint, evalf, Bessel, …). Nothing
+        // to warn about, so render no banner at all.
+        if (status == NativeBridgeStatus.ready) {
+          return const SizedBox.shrink();
+        }
+
         final (String message, IconData icon, bool showDownload) =
             switch (status) {
           NativeBridgeStatus.loading => (
@@ -42,16 +49,12 @@ class WebUnsupportedBanner extends StatelessWidget {
               Icons.hourglass_top,
               false,
             ),
-          NativeBridgeStatus.ready => (
-              t.webBannerCasPartial,
-              Icons.check_circle_outline,
-              true,
-            ),
           NativeBridgeStatus.unavailable => (
               t.webBannerCasUnavailable,
               Icons.info_outline,
               true,
             ),
+          NativeBridgeStatus.ready => ('', Icons.check, false), // unreachable
         };
 
         return Material(

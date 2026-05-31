@@ -2687,7 +2687,20 @@ Pages all serve `build/web/` cleanly. No backend needed.
 
 ### Path B — SymEngine via WebAssembly + JS interop — SHIPPED (2026-05-31)
 
-> **Done.** SymEngine 0.11.2 compiled to 1.1 MB WASM via Emscripten 5.0.7
+> **Full-capability upgrade DONE 2026-05-31 (Track B).** The whole math stack
+> now compiles to WASM: GMP 6.3.0 (generic-C, `--disable-assembly`), MPFR,
+> MPC, FLINT 3.3.1, then SymEngine with `INTEGER_CLASS=gmp` +
+> `WITH_FLINT/MPFR/MPC`. `symengine.wasm` grew 1.05 MB → **5.9 MB** (~2 MB
+> gzipped). Web now has **full native parity**: real FLINT factor,
+> isprime/factorint/ntheory, evalf/cevalf high precision, Bessel — everything
+> that previously errored on web. No Dart/bridge change needed (the web
+> js_interop impl already called the functions; they'd hit the stub strings).
+> Build scripts: `math-stack build_wasm_deps.sh` + `build_wasm_flint.sh`
+> (`master 7ec308e8`). emsdk needs `EMSDK_OS=macos` on recent macOS; GMP needs
+> a native `CC_FOR_BUILD`. Verified 11/11 in headless Chrome (`tool/web_smoke.mjs`).
+> The boostmp note below is the original (now-superseded) interim.
+>
+> **Done (interim).** SymEngine 0.11.2 compiled to 1.1 MB WASM via Emscripten 5.0.7
 > with `INTEGER_CLASS=boostmp` (Boost 1.87, header-only — no GMP/MPFR/FLINT
 > native deps). Full CAS core works: evaluate, expand, differentiate, solve,
 > substitute, 17 unary math functions, gcd/lcm/factorial/fibonacci, matrix

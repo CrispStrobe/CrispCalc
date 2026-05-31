@@ -48,6 +48,11 @@ const CASES = [
   // The wrapper forces a complex evalf, so a real result reads as
   // "14.0 + 0.0*I" — assert the real part rather than an exact string.
   { name: 'evaluate', fn: 'flutter_symengine_evaluate', types: ['string'], args: ['2 + 3*4'], expect: (v) => Math.abs(parseFloat(v) - 14) < 1e-9 },
+  // FLINT/GMP/MPFR-backed (full WASM parity): real factorization, number
+  // theory, and arbitrary-precision evaluation in the browser.
+  { name: 'factor', fn: 'flutter_symengine_factor', types: ['string'], args: ['x**4 + 4'], expect: (v) => v.includes('2 + 2*x + x**2') && v.includes('2 - 2*x + x**2') },
+  { name: 'isprime', fn: 'flutter_symengine_isprime', types: ['string'], args: ['97'], expect: (v) => v.trim() === 'true' },
+  { name: 'factorint', fn: 'flutter_symengine_factorint', types: ['string'], args: ['360'], expect: (v) => v.replace(/\s/g, '') === '2^3*3^2*5' },
 ];
 
 function findChrome() {
