@@ -93,6 +93,7 @@ Multi-agent audit of the three-repo chain (math-stack-ios-builder → symbolic_m
 
 1. **Stop shipping fake simplify/factor** (high / L) — implement real `simplify`+`factor` via SymEngine C++ in the wrapper, or honestly degrade the UI. Most damaging correctness gap. *(repos: all 3)*
 2. **Close the web cliff: SymEngine→WASM** (high / L) — Emscripten build + `js_interop` web impl replacing the throw stub. Largest user-visible gap (web is the deployed surface). Blocked on emsdk install. *(all 3)*
+   - **Interim shipped 2026-05-31** (`lib/engine/symbolic_web.dart`): pure-Dart web CAS for the single-variable polynomial subset — `expand` (parens/products/integer powers), `differentiate`, and `solve` (linear + quadratic, incl. surd & complex roots). Built on the exact-rational `Polynomial` (extended with `+`/`*`/`pow`). Routed via `calculator_engine` when native-less; correct-or-silent (out-of-grammar input falls through to the native-only message). 29 tests. The WASM build remains the eventual complete path and supersedes this without UI changes.
 3. **Enable optional backends** WITH_LLVM / PRIMESIEVE / ECM / ARB (medium / M) — faster numeric eval + factoring past the 90-bit cap. *(builder + bridge)*
 4. **Real symbolic integrate** via C++ core (high / L) — replace the hard-error stub. *(all 3)*
 5. **Native `limit` + `series`** (medium / M) — replace fragile Dart sampling; adds Taylor/Laurent series. Supersedes the P1 "Native limit" item below. *(all 3)*
@@ -100,7 +101,7 @@ Multi-agent audit of the three-repo chain (math-stack-ios-builder → symbolic_m
 7. **Real CAS test suite** exercising actual ops on a native host (medium / M). *(bridge + CrispCalc)*
 8. **Android ABI coverage** x86_64/armeabi-v7a + finish gmpPower/evaluateWithPrecision stubs (low / M).
 
-**Session direction (2026-05-31):** user chose to pursue #2 (web gap) then #5 (limit/series). Both are multi-repo + native-build efforts; #2 additionally needs an emsdk bootstrap. Approach TBD (full WASM build vs. pragmatic pure-Dart web symbolic layer).
+**Session direction (2026-05-31):** user chose to pursue #2 (web gap) then #5 (limit/series). For #2 we shipped the pragmatic pure-Dart web CAS interim (above); the full SymEngine→WASM build is handed off to a separate agent (needs an emsdk bootstrap). Next per the plan is #5 (native `limit` + `series`), which is native-build-heavy (C++ wrapper + xcframework rebuild in math-stack-ios-builder + symbolic_math_bridge).
 
 ---
 
