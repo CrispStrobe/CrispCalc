@@ -87,6 +87,17 @@ class Polynomial {
 
   factory Polynomial.zero(String variable) => Polynomial._(const [], variable);
 
+  /// A degree-0 polynomial holding the constant [c] (or the zero
+  /// polynomial when [c] is zero). [variable] only matters once it is
+  /// combined with a non-constant polynomial.
+  factory Polynomial.constant(Rational c, [String variable = 'x']) => c.isZero
+      ? Polynomial.zero(variable)
+      : Polynomial._(List.unmodifiable([c]), variable);
+
+  /// The monomial `name` (i.e. `name^1`).
+  factory Polynomial.variable(String name) =>
+      Polynomial._(List.unmodifiable([Rational.zero, Rational.one]), name);
+
   int get degree => coeffs.length - 1;
   bool get isZero => coeffs.isEmpty;
   Rational get leading => coeffs[coeffs.length - 1];
@@ -194,12 +205,52 @@ class Polynomial {
 
   Polynomial operator -(Polynomial o) {
     final n = degree > o.degree ? degree : o.degree;
+    if (n < 0) return Polynomial.zero(isZero ? o.variable : variable);
     final out = List<Rational>.generate(n + 1, (i) {
       final a = i <= degree ? coeffs[i] : Rational.zero;
       final b = i <= o.degree ? o.coeffs[i] : Rational.zero;
       return a - b;
     });
+    return _trim(out, isZero ? o.variable : variable);
+  }
+
+  Polynomial operator +(Polynomial o) {
+    final n = degree > o.degree ? degree : o.degree;
+    if (n < 0) return Polynomial.zero(isZero ? o.variable : variable);
+    final out = List<Rational>.generate(n + 1, (i) {
+      final a = i <= degree ? coeffs[i] : Rational.zero;
+      final b = i <= o.degree ? o.coeffs[i] : Rational.zero;
+      return a + b;
+    });
+    return _trim(out, isZero ? o.variable : variable);
+  }
+
+  Polynomial operator *(Polynomial o) {
+    if (isZero || o.isZero) {
+      return Polynomial.zero(isZero ? o.variable : variable);
+    }
+    final out = List<Rational>.filled(degree + o.degree + 1, Rational.zero);
+    for (var i = 0; i <= degree; i++) {
+      for (var j = 0; j <= o.degree; j++) {
+        out[i + j] = out[i + j] + coeffs[i] * o.coeffs[j];
+      }
+    }
     return _trim(out, variable);
+  }
+
+  /// `this` raised to a non-negative integer power, by binary
+  /// exponentiation. `pow(0)` is the constant `1`.
+  Polynomial pow(int n) {
+    if (n < 0) throw ArgumentError('negative power');
+    var result = Polynomial.constant(Rational.one, variable);
+    var base = this;
+    var e = n;
+    while (e > 0) {
+      if (e.isOdd) result = result * base;
+      e >>= 1;
+      if (e > 0) base = base * base;
+    }
+    return result;
   }
 
   /// First derivative.

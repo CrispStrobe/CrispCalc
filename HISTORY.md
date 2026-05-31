@@ -2,6 +2,43 @@
 
 Completed work, newest first.
 
+## 2026-05-31 — Pure-Dart web CAS interim (expand / diff / solve)
+
+Closed a big slice of the web capability cliff without the SymEngine→WASM
+build. On the web (and any native-less) build, `expand`, `differentiate`,
+and `solve` previously returned "requires native library" for everything;
+now the single-variable polynomial subset resolves entirely in Dart:
+
+- `expand((x+1)^2)` → `x^2 + 2x + 1`
+- `diff(x^3)` → `3x^2`
+- `solve(x^2 - 4)` → `x = {2, -2}`
+- `solve(x^2 - x - 1)` → `x = {1/2 + 1/2*sqrt(5), 1/2 - 1/2*sqrt(5)}`
+
+New `lib/engine/symbolic_web.dart` parses a full polynomial expression
+(parens, `+ - *`, division by a constant, non-negative integer powers)
+into an expanded `Polynomial`; `solve` handles linear and quadratic
+exactly, including surd, pure-imaginary, and complex roots. Anything
+outside the grammar (transcendental functions, several variables,
+rational functions, degree > 2) returns null and falls through to the
+native-only path — correct-or-silent, never a wrong symbolic answer.
+
+Builds on the exact-rational `Polynomial` (precision arc Group B),
+extended with `+`, `*`, `pow`, and `constant` / `variable` constructors.
+Output matches the app's SymEngine/Polynomial format convention (`^`
+powers, juxtaposed integer coefficients, exact rationals).
+`calculator_engine` routes `expand`/`differentiate`/`solve` through the
+web fallback when the native bridge is unavailable, mirroring how
+`numeric_fallback` already backs `evaluate()`. 30 new tests; full suite
+green (2773 passing).
+
+Interim path; the SymEngine→WASM bridge remains the eventual complete web
+CAS and will supersede this without UI changes (PLAN.md "Symbolic-stack
+survey" → opportunity #2). Also this session: a verified three-repo
+symbolic-stack capability audit (see PLAN.md) surfacing that web had no
+SymEngine, that `simplify`/`factor` are `expand` aliases and `integrate`
+is a stub in the C wrapper, and that several SymEngine backends
+(LLVM/ARB/ECM/PRIMESIEVE) are disabled in the iOS build.
+
 ## 2026-05-30 (cont.) — Germany map coloring: the 4-color foil to Australia
 
 New `mapColoringGermany` DSL gallery entry — Germany's 16 Bundesländer
