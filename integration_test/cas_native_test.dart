@@ -61,6 +61,29 @@ void main() {
       test('irreducible stays intact (x^2 + 1)', () {
         expect(norm(engine.factor('x^2 + 1')), norm('1 + x^2'));
       });
+
+      test('multivariate: difference of squares (x^2 - y^2)', () {
+        // FLINT fmpz_mpoly_factor — the Dart fallback can't do multivariate.
+        final f = engine.factor('x^2 - y^2');
+        expect(f, contains('*'));
+        expect(norm(engine.expand(f)), norm(engine.expand('x^2 - y^2')));
+      });
+
+      test('multivariate: common + binomial factors (x*y + x + y + 1)', () {
+        final f = engine.factor('x*y + x + y + 1');
+        expect(f, contains('*'));
+        expect(norm(engine.expand(f)), norm(engine.expand('x*y + x + y + 1')));
+      });
+    });
+
+    group('simplify (real, not the expand-alias)', () {
+      test('rational cancellation: (x^2 - 1)/(x - 1) -> x + 1', () {
+        final s = engine.simplify('(x^2 - 1)/(x - 1)');
+        expect(norm(engine.expand(s)), norm(engine.expand('x + 1')));
+      });
+      test('collects like terms: 2*x + 3*x -> 5*x', () {
+        expect(norm(engine.simplify('2*x + 3*x')), norm('5*x'));
+      });
     });
 
     group('integrate (Track C, native)', () {

@@ -2,6 +2,38 @@
 
 Completed work, newest first.
 
+## 2026-05-31 — Multivariate factor (FLINT mpoly) + real simplify
+
+Closed the last two PLAN gaps in one C++ wrapper change + one rebuild cycle.
+
+- **Multivariate factor** (`flutter_symengine_cas.cpp::factor_multivariate`):
+  SymEngine has no multivariate FLINT wrapper, so bridge `MIntPoly`'s
+  (exponent-vector → integer) dict into a FLINT `fmpz_mpoly` and call
+  `fmpz_mpoly_factor`, pretty-printing each factor with the original var
+  names. Tried after the univariate path. `factor(x²-y²) → (x+y)(x-y)`,
+  `x³y-xy³ → x·y·(x+y)(x-y)`, `xy+x+y+1 → (x+1)(y+1)`.
+  **Native-only**: FLINT's `fmpz_mpoly_factor` traps under wasm32
+  (`RuntimeError: Aborted`; the univariate `fmpz_poly_factor` is fine), so
+  it's `#ifndef __EMSCRIPTEN__`-gated — web multivariate input degrades to
+  expand rather than crashing.
+- **Real simplify** (`flutter_symengine_simplify_cpp`): replaces the
+  expand-alias with SymEngine's `simplify()` + univariate rational
+  cancellation via `cancel<UIntPolyFlint>` — `(x²-1)/(x-1) → x+1`,
+  `2x+3x → 5x`. (SymEngine's simplify has no trig identities, so
+  `sin²+cos²` stays as-is — a documented limitation.) Works on native and
+  web (no FLINT mpoly needed).
+- **Repos**: math-stack `master 9b4b3c0c`, bridge `main 59ba08c` (v1.2.1,
+  re-vendored xcframework), CrispCalc re-pinned + new WASM (5.93 MB). No
+  CrispCalc engine change — the bridge does more (factor already prefers
+  the bridge on native; simplify already routes to it).
+- **Verified**: native integration suite 14/14 on macOS (incl. mvfactor +
+  simplify cancellation); web smoke 12/12 against the local build (simplify
+  in-browser; mvfactor correctly native-only). Headless 2805 pass.
+
+This clears the "still open" list from the FLINT-factor work — only trig/
+radical simplification and >wasm32 multivariate web factor remain (both
+upstream-engine limitations, not wiring gaps).
+
 ## 2026-05-31 — Full-capability web CAS: GMP/MPFR/FLINT → WASM (Track B)
 
 Brought the **web build to full native parity** by compiling the whole math
