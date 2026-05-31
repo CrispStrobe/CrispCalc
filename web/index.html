@@ -33,6 +33,24 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- SymEngine WASM: load before Flutter so the module is ready by the
+       time Dart code tries SymbolicMathBridge(). The factory returns a
+       promise; once resolved, Dart's @JS('symEngineInstance') finds it. -->
+  <script>
+    var symEngineReady = false;
+    var symEngineInstance = null;
+  </script>
+  <script src="symengine.js"></script>
+  <script>
+    SymEngineModule().then(function(instance) {
+      symEngineInstance = instance;
+      symEngineReady = true;
+      console.log('SymEngine WASM loaded (' +
+        instance.ccall('flutter_symengine_version', 'string', [], []) + ')');
+    }).catch(function(err) {
+      console.warn('SymEngine WASM failed to load:', err);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
