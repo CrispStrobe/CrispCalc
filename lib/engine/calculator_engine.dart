@@ -195,13 +195,13 @@ class CalculatorEngine {
       _bridgeCall(funcName, (b) => b.callUnary(funcName, expression));
 
   String getPi() => _nativeAvailable && _bridge != null
-      ? _bridge!.getPi()
+      ? _bridge.getPi()
       : '3.141592653589793';
   String getE() => _nativeAvailable && _bridge != null
-      ? _bridge!.getE()
+      ? _bridge.getE()
       : '2.718281828459045';
   String getEulerGamma() => _nativeAvailable && _bridge != null
-      ? _bridge!.getEulerGamma()
+      ? _bridge.getEulerGamma()
       : '0.5772156649015329';
 
   /// Round 85 (precision arc): π to [decimalDigits] decimal places via
@@ -260,7 +260,7 @@ class CalculatorEngine {
   bool isprime(String n) {
     if (!_nativeAvailable || _bridge == null) return _fallbackIsprime(n);
     try {
-      return _bridge!.ntheoryIsprime(n);
+      return _bridge.ntheoryIsprime(n);
     } catch (e) {
       _log('isprime error: $e');
       return _fallbackIsprime(n);
@@ -298,7 +298,7 @@ class CalculatorEngine {
     if (!_nativeAvailable || _bridge == null) {
       throw StateError('factorint requires native library');
     }
-    final raw = _bridge!.ntheoryFactorint(n);
+    final raw = _bridge.ntheoryFactorint(n);
     // Bridge swallowed an "Error in ..." prefix already — check
     // for "0" / "1" / "-1" trivial cases. The wrapper-side string
     // for negatives prefixes "-1*" but we strip it (factorint is
@@ -669,8 +669,8 @@ class CalculatorEngine {
     if (order == null) return null;
     try {
       final v = m.group(1)! == 'besselj'
-          ? besselJ(order, m.group(3))
-          : besselY(order, m.group(3));
+          ? besselJ(order, m.group(3)!)
+          : besselY(order, m.group(3)!);
       return v.startsWith('Error') ? 'Error' : v;
     } catch (_) {
       return 'Error';
@@ -901,8 +901,8 @@ class CalculatorEngine {
       final order = int.tryParse(m.group(2)!);
       if (order == null) return 'Error: bessel order must be an integer';
       return m.group(1)! == 'besselj'
-          ? besselJ(order, m.group(3))
-          : besselY(order, m.group(3));
+          ? besselJ(order, m.group(3)!)
+          : besselY(order, m.group(3)!);
     }
 
     return null;
