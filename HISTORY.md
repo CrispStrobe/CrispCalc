@@ -2,6 +2,37 @@
 
 Completed work, newest first.
 
+## 2026-05-31 — Full-capability web CAS: GMP/MPFR/FLINT → WASM (Track B)
+
+Brought the **web build to full native parity** by compiling the whole math
+stack to WebAssembly — the path `WASM_BUILD_PLAN.md` deliberately avoided
+(boostmp dodged GMP's hand-tuned assembly). It's now done:
+
+- **Toolchain**: bootstrapped emsdk (emscripten 5.0.7). It mis-detects recent
+  macOS (`platform.mac_ver()` empty) → `EMSDK_OS=macos` override fixes it.
+- **Deps → WASM** (`math-stack build_wasm_deps.sh`): GMP 6.3.0
+  (`--disable-assembly`, generic C, native `CC_FOR_BUILD=/usr/bin/cc` since
+  the toolchain clang lacks the SDK sysroot), MPFR, MPC, FLINT 3.3.1.
+- **SymEngine → WASM** (`build_wasm_flint.sh`): `INTEGER_CLASS=gmp` +
+  `WITH_FLINT/MPFR/MPC`, linked with the de-stubbed wrapper
+  (`SYM_HAS_NATIVE_LIBS`, `-DWASM_WITH_FLINT`) + the FLINT factor C++ TU.
+  Output `symengine.wasm` is **5.9 MB** (vs 1.05 MB boostmp; ~2 MB gzipped).
+- **CrispCalc**: dropped the new `web/symengine.{js,wasm}` in. No Dart/bridge
+  change needed — the web bridge js_interop impl already calls every
+  `flutter_symengine_*` function; they previously hit the stub strings.
+  So on web now: **real FLINT factor, isprime/factorint/nextprime/totient/
+  modpow, evalf/cevalf high precision, Bessel** — full parity with native.
+- **Banner**: collapses entirely once the WASM is ready (the old
+  "precision/ntheory need the app" caveat is obsolete — web has it all).
+- **`tool/web_smoke.mjs`** extended with `factor`/`isprime`/`factorint`
+  cases. Verified 11/11 in headless Chrome against the local build:
+  `factor(x⁴+4) → (2+2x+x²)(2-2x+x²)`, `isprime(97)=true`,
+  `factorint(360)=2³·3²·5`, all in the browser.
+
+math-stack `master` `7ec308e8`; reproducible build scripts committed.
+**Tracks C, A, D, B all complete.** Only multivariate factor and a real
+`simplify` remain (SymEngine 0.11.2 wraps only univariate `fmpz_poly_factor`).
+
 ## 2026-05-31 — Real FLINT factor (native, C++ wrapper) + native CAS test suite (Tracks A & D)
 
 Took `factor` past the Dart rational-linear fallback to **complete
