@@ -669,8 +669,8 @@ class CalculatorEngine {
     if (order == null) return null;
     try {
       final v = m.group(1)! == 'besselj'
-          ? besselJ(order, m.group(3)!)
-          : besselY(order, m.group(3)!);
+          ? besselJ(order, m.group(3))
+          : besselY(order, m.group(3));
       return v.startsWith('Error') ? 'Error' : v;
     } catch (_) {
       return 'Error';
@@ -901,8 +901,8 @@ class CalculatorEngine {
       final order = int.tryParse(m.group(2)!);
       if (order == null) return 'Error: bessel order must be an integer';
       return m.group(1)! == 'besselj'
-          ? besselJ(order, m.group(3)!)
-          : besselY(order, m.group(3)!);
+          ? besselJ(order, m.group(3))
+          : besselY(order, m.group(3));
     }
 
     return null;
