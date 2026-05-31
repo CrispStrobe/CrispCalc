@@ -2682,7 +2682,21 @@ Scope checklist when this round ships:
 Hosting: any static host. Vercel / Cloudflare Pages / GitHub
 Pages all serve `build/web/` cleanly. No backend needed.
 
-### Path B — SymEngine via WebAssembly + JS interop (medium risk, ~3-4 rounds)
+### Path B — SymEngine via WebAssembly + JS interop — SHIPPED (2026-05-31)
+
+> **Done.** SymEngine 0.11.2 compiled to 1.1 MB WASM via Emscripten 5.0.7
+> with `INTEGER_CLASS=boostmp` (Boost 1.87, header-only — no GMP/MPFR/FLINT
+> native deps). Full CAS core works: evaluate, expand, differentiate, solve,
+> substitute, 17 unary math functions, gcd/lcm/factorial/fibonacci, matrix
+> ops. GMP/MPFR/FLINT-only functions (isprime, factorint, Bessel, evalf,
+> modular arithmetic) return clean error strings. The bridge's
+> `symbolic_math_bridge_web.dart` is now a real `dart:js_interop` impl that
+> calls into the WASM module via `ccall`. Two-phase loading preserves the
+> existing fallback pattern. See `math-stack-ios-builder/WASM_BUILD_PLAN.md`
+> and `symbolic_math_bridge/CHANGELOG.md` v1.3.0 for details.
+>
+> Branches: `feature/wasm-emscripten` (builder), `feature/wasm-web-impl`
+> (bridge), `feature/wasm-web-assets` (CrispCalc).
 
 Compile SymEngine to WASM with emscripten, wrap it with a thin
 JS module, and call into it from Dart via `dart:js_interop`. The
