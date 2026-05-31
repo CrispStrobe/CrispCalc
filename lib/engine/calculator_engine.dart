@@ -13,6 +13,7 @@ import 'numeric_fallback.dart';
 import 'numerical.dart';
 import 'polynomial.dart';
 import 'polynomial_mod.dart';
+import 'symbolic_web.dart';
 import 'unit_expression.dart';
 
 class CalculatorEngine {
@@ -128,6 +129,16 @@ class CalculatorEngine {
   String solve(String expression, String symbol) {
     final bridge = _bridge;
     if (!_nativeAvailable || bridge == null) {
+      // Web / native-less: solve linear & quadratic polynomials in pure
+      // Dart so the browser build isn't limited to "requires native
+      // library" for the most common cases. Higher-degree / non-
+      // polynomial equations return null and fall through.
+      final web = SymbolicWeb.solveList(expression, symbol);
+      if (web != null) {
+        if (web.isEmpty) return '$symbol = (no solutions)';
+        if (web.length > 1) return '$symbol = {${web.join(', ')}}';
+        return '$symbol = ${web.single}';
+      }
       return 'Error: solve requires native library';
     }
     try {
@@ -149,16 +160,30 @@ class CalculatorEngine {
   String factor(String expression) =>
       _bridgeCall('factor', (b) => b.factor(expression));
 
-  String expand(String expression) =>
-      _bridgeCall('expand', (b) => b.expand(expression));
+  String expand(String expression) {
+    // Web / native-less: expand single-variable polynomials in pure Dart.
+    if (!_nativeAvailable) {
+      final web = SymbolicWeb.expand(expression);
+      if (web != null) return web;
+    }
+    return _bridgeCall('expand', (b) => b.expand(expression));
+  }
 
   String simplify(String expression) =>
       _bridgeCall('simplify', (b) => b.simplify(expression));
 
-  String differentiate(String expression, String variable) => _bridgeCall(
-        'differentiate',
-        (b) => b.differentiate(expression, variable),
-      );
+  String differentiate(String expression, String variable) {
+    // Web / native-less: differentiate polynomials in pure Dart;
+    // transcendental input falls through to the native-only path.
+    if (!_nativeAvailable) {
+      final web = SymbolicWeb.differentiate(expression, variable);
+      if (web != null) return web;
+    }
+    return _bridgeCall(
+      'differentiate',
+      (b) => b.differentiate(expression, variable),
+    );
+  }
 
   String substitute(String expression, String variable, String value) =>
       _bridgeCall(
