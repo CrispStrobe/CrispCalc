@@ -5,8 +5,10 @@ publish_to: 'none'
 version: 0.4.1+2
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.10.0"
+  # 3.3.0 floor: package:web ^1.0.0 (pulled in by the symbolic_math_bridge
+  # WASM web impl via dart:js_interop) requires Dart >= 3.3.0.
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: ">=3.16.0"
 
 dependencies:
   flutter:
@@ -26,7 +28,7 @@ dependencies:
   symbolic_math_bridge:
     git:
       url: https://github.com/CrispStrobe/symbolic_math_bridge.git
-      ref: "6f28db4"   # bridge main: conditional-import facade + web stub (web support)
+      ref: "0100ef4"   # bridge main: SymEngine WASM web impl (js_interop) — full CAS on web
 
   # Constraint Satisfaction Problem solver — pure Dart, no native
   # deps. Powers the Analysis-hub "Constraints" module (Diophantine
@@ -36,7 +38,7 @@ dependencies:
   dart_csp:
     git:
       url: https://github.com/CrispStrobe/dart_csp.git
-      ref: "9739dc41e33afd8288d75a73764da4cb0b76fe74"   # main: tagged v2.2.0 (dart2js-safe + propagation-trace API)
+      ref: "6b3f5f780930c8a9046eaf5cd37c3783a5b6a1c4"   # main: v2.2.0 (dart2js-safe + propagation-trace API)
 
   # Math rendering
   flutter_math_fork: ^0.7.2
