@@ -202,6 +202,41 @@ void main() {
     });
   });
 
+  group('normalizeComplexResult — unary vs binary minus', () {
+    // A `-` only gets spaced when it actually separates two operands.
+    // After an opening bracket or a comma it is a sign, and spacing it
+    // produced `{2, - 2}` from solve() and `( - 1 + x)` from factor().
+    String norm(String s) =>
+        ExpressionPreprocessingUtils.normalizeComplexResult(s);
+
+    test('sign inside a solution set stays glued', () {
+      expect(norm('x = {2, -2}'), 'x = {2, -2}');
+    });
+
+    test('sign after an opening parenthesis stays glued', () {
+      expect(norm('(1 + x)*(-1 + x)'), '(1 + x)*(-1 + x)');
+    });
+
+    test('sign after a bracket stays glued', () {
+      expect(norm('[-1, 2]'), '[-1, 2]');
+    });
+
+    test('binary minus is still spaced', () {
+      expect(norm('x-1'), 'x - 1');
+      expect(norm('5-2'), '5 - 2');
+      expect(norm('a-b-c'), 'a - b - c');
+      expect(norm('(x+1)-2'), '(x + 1) - 2');
+    });
+
+    test('leading unary minus stays glued', () {
+      expect(norm('-5'), '-5');
+    });
+
+    test('scientific-notation exponents are untouched', () {
+      expect(norm('1.5e-14'), '1.5e-14');
+    });
+  });
+
   group('normalizeComplexResult', () {
     test('strips zero imaginary part', () {
       expect(

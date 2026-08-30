@@ -10,6 +10,7 @@
 // global namespaces.
 
 import 'notepad.dart';
+import 'symbolic_expr.dart';
 
 /// Cached word-boundary RegExp patterns for scope name substitution.
 final _wordBoundaryCache = <String, RegExp>{};
@@ -1017,6 +1018,22 @@ class NotepadEvaluator {
         doc: doc, lineIndex: lineIndex, scope: scope);
     if (preprocessed == null) {
       // Shouldn't happen for assignment/expression, but be defensive.
+      line.cachedResult = null;
+      line.cachedError = null;
+      line.cachedFreeVars = freeVars;
+      return;
+    }
+
+    // A half-typed line is a valid *prefix*, not a mistake. Recalc runs
+    // 300 ms after every keystroke, so on the way to `2 + 3` the
+    // evaluator sees `2`, `2 `, `2 +` — and dispatching `2 +` is what
+    // used to paint "Error: evaluate failed: [object Object]" under the
+    // cursor while the user was still typing. Leave the line blank
+    // instead and let the result appear when the expression is
+    // finished. Only genuine prefixes are silenced; anything actually
+    // wrong (`foo(1)`, `2+3)`) still goes to the dispatcher and errors
+    // as before.
+    if (SymbolicExpressionEvaluator.isIncomplete(preprocessed)) {
       line.cachedResult = null;
       line.cachedError = null;
       line.cachedFreeVars = freeVars;

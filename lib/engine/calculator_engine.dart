@@ -17,6 +17,7 @@ import 'numerical.dart';
 import 'polynomial.dart';
 import 'polynomial_mod.dart';
 import 'step_engine.dart';
+import 'symbolic_expr.dart';
 import 'symbolic_limit.dart';
 import 'symbolic_web.dart';
 import 'unit_expression.dart';
@@ -129,6 +130,17 @@ class CalculatorEngine {
     }
   }
 
+  /// True when [msg] carries no information about what went wrong —
+  /// an Emscripten `{excPtr}` object, or an empty/`null` stringification.
+  static bool _isOpaqueJsError(String msg) {
+    final m = msg.trim();
+    return m.isEmpty ||
+        m == 'null' ||
+        m == '[object Object]' ||
+        m.startsWith('[object ') ||
+        RegExp(r'^\{\s*"?excPtr"?\s*:').hasMatch(m);
+  }
+
   String _bridgeCall(String op, String Function(SymbolicMathBridge b) fn) {
     final bridge = _liveBridge;
     if (bridge == null) {
@@ -144,6 +156,16 @@ class CalculatorEngine {
       if (msg.contains('RuntimeError') || msg.contains('Aborted')) {
         return 'Error: expression not supported in web mode';
       }
+      // Emscripten surfaces a C++ exception to Dart as a bare
+      // `{excPtr: <int>}` JS object; its `toString()` is the useless
+      // `[object Object]`, and this WASM build exports no
+      // `getExceptionMessage` helper to decode it. Pasting that into
+      // the UI is what produced "evaluate failed: [object Object]" for
+      // every symbolic or half-typed expression on web. There is no
+      // message to recover, so say something true instead: the caller
+      // (see `evaluate`) re-runs the input through the pure-Dart
+      // parser, which *can* explain what is wrong.
+      if (_isOpaqueJsError(msg)) return 'Error: $op failed';
       return 'Error: $op failed: $msg';
     }
   }
@@ -177,6 +199,17 @@ class CalculatorEngine {
       // Try pure-Dart symbolic evaluation for polynomial expressions
       final symbolic = SymbolicWeb.expand(expression);
       if (symbolic != null) return symbolic;
+      // General symbolic fallback. On web the bridge throws on *any*
+      // free symbol, so this is the path that makes `sin(x)`, `x*y`,
+      // `1/x` and `abc` work in the browser at all.
+      final general = SymbolicExpressionEvaluator.tryEvaluate(expression);
+      if (general != null) return general;
+      // Nothing could evaluate it — replace an opaque bridge error with
+      // the pure-Dart parser's actual diagnosis (`division by zero`,
+      // `unknown function foo`, …) so the user learns what to fix.
+      final diagnosed = engineErrorForDiagnosis(
+          SymbolicExpressionEvaluator.diagnose(expression));
+      if (diagnosed != null) return diagnosed;
     }
     return result;
   }

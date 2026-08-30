@@ -365,6 +365,19 @@ abstract class AppLocalizations {
 
   // -- Friendly errors (shown in history when an op fails) --
   String get errorParse;
+
+  /// A closing bracket with nothing open — `2+3)`.
+  String get errorUnbalancedParen;
+
+  /// Division by an exact zero.
+  String get errorDivisionByZero;
+
+  /// [name] isn't a function this build knows.
+  String errorUnknownFunction(String name);
+
+  /// [name] was called with the wrong number of arguments.
+  String errorWrongArity(String name);
+
   String get errorNativeRequired;
 
   /// Web-specific variant of [errorNativeRequired]: the browser build
@@ -1493,6 +1506,17 @@ class EnLocalizations implements AppLocalizations {
   @override
   String get errorParse =>
       'Couldn\'t understand the expression. Check for unmatched parentheses, typos, or missing operators.';
+  @override
+  String get errorUnbalancedParen =>
+      'There\'s a closing parenthesis with nothing to close.';
+  @override
+  String get errorDivisionByZero => 'Division by zero.';
+  @override
+  String errorUnknownFunction(String name) =>
+      '\u0022$name\u0022 isn\'t a function this app knows. Check the spelling.';
+  @override
+  String errorWrongArity(String name) =>
+      '\u0022$name\u0022 was given the wrong number of arguments.';
   @override
   String get errorNativeRequired =>
       'This operation needs the native math library, which isn\'t loaded on this platform.';
@@ -3235,6 +3259,17 @@ class DeLocalizations implements AppLocalizations {
   @override
   String get errorParse =>
       'Der Ausdruck konnte nicht verstanden werden. Bitte auf unausgewogene Klammern, Tippfehler oder fehlende Operatoren prüfen.';
+  @override
+  String get errorUnbalancedParen =>
+      'Hier steht eine schließende Klammer, zu der keine öffnende gehört.';
+  @override
+  String get errorDivisionByZero => 'Division durch null.';
+  @override
+  String errorUnknownFunction(String name) =>
+      '\u0022$name\u0022 ist keine bekannte Funktion. Bitte die Schreibweise prüfen.';
+  @override
+  String errorWrongArity(String name) =>
+      '\u0022$name\u0022 wurde mit der falschen Anzahl von Argumenten aufgerufen.';
   @override
   String get errorNativeRequired =>
       'Diese Operation benötigt die native Mathematik-Bibliothek, die auf dieser Plattform nicht geladen ist.';
@@ -6583,6 +6618,17 @@ class FrLocalizations implements AppLocalizations {
   String get errorParse =>
       'L\'expression n\'a pas pu être analysée. Vérifiez les parenthèses non appariées, les fautes de frappe ou les opérateurs manquants.';
   @override
+  String get errorUnbalancedParen =>
+      'Il y a une parenthèse fermante sans parenthèse ouvrante correspondante.';
+  @override
+  String get errorDivisionByZero => 'Division par zéro.';
+  @override
+  String errorUnknownFunction(String name) =>
+      '\u0022$name\u0022 n\'est pas une fonction connue. Vérifiez l\'orthographe.';
+  @override
+  String errorWrongArity(String name) =>
+      '\u0022$name\u0022 a reçu un nombre d\'arguments incorrect.';
+  @override
   String get errorNativeRequired =>
       'Cette opération nécessite la bibliothèque mathématique native, non chargée sur cette plateforme.';
   @override
@@ -9863,6 +9909,17 @@ class EsLocalizations implements AppLocalizations {
   @override
   String get errorParse =>
       'No se pudo analizar la expresión. Revisa paréntesis sin pareja, erratas u operadores ausentes.';
+  @override
+  String get errorUnbalancedParen =>
+      'Hay un paréntesis de cierre sin su correspondiente apertura.';
+  @override
+  String get errorDivisionByZero => 'División por cero.';
+  @override
+  String errorUnknownFunction(String name) =>
+      '\u0022$name\u0022 no es una función conocida. Revisa la ortografía.';
+  @override
+  String errorWrongArity(String name) =>
+      '\u0022$name\u0022 recibió un número de argumentos incorrecto.';
   @override
   String get errorNativeRequired =>
       'Esta operación necesita la biblioteca matemática nativa, no cargada en esta plataforma.';

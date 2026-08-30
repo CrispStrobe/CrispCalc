@@ -939,9 +939,15 @@ class ExpressionPreprocessingUtils {
     // operand and leave a chained `a-b-c` half-spaced as
     // `a - b-c` — the `b` was consumed by the first match and
     // the next iteration's start position skipped past it.
+    // Only space a `-` that is genuinely *binary*. The preceding
+    // character has to be one that can end an operand — a digit,
+    // letter, or a closing bracket. After `(`, `{`, `[`, `,` or another
+    // operator the `-` is a unary sign and belongs glued to its
+    // operand, otherwise `{2, -2}` renders as `{2, - 2}` and
+    // `(-1 + x)` as `( - 1 + x)`.
     normalized = normalized
         .replaceAllMapped(
-          RegExp(r'(\S)\s*-\s*(?=\S)'),
+          RegExp(r'([\w\)\]\}])\s*-\s*(?=\S)'),
           (m) => '${m[1]} - ',
         )
         .replaceAll(RegExp(r'\s*\*\s*'), '*')

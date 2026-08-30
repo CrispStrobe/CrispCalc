@@ -38,6 +38,34 @@ class EngineErrorFormatter {
       return t.errorIntegrateNotImplemented;
     }
 
+    // Precise diagnoses from the pure-Dart parser
+    // (`engineErrorForDiagnosis`). These are checked before the generic
+    // parse-failure branch below because each one can name the actual
+    // problem instead of listing everything it might have been.
+    if (lower.contains('unbalanced parenthesis')) {
+      return t.errorUnbalancedParen;
+    }
+    if (lower.contains('division by zero')) {
+      return t.errorDivisionByZero;
+    }
+    final unknownFn = RegExp(r'unknown function\s+(\S+)').firstMatch(raw);
+    if (unknownFn != null) {
+      return t.errorUnknownFunction(unknownFn.group(1)!);
+    }
+    final arity =
+        RegExp(r'wrong number of arguments for\s+(\S+)').firstMatch(raw);
+    if (arity != null) {
+      return t.errorWrongArity(arity.group(1)!);
+    }
+
+    // A bridge call that failed with nothing to say. The pure-Dart
+    // parser already had its turn by this point (see
+    // `CalculatorEngine.evaluate`), so all that's left is the generic
+    // advice — never the raw `[object Object]`.
+    if (RegExp(r'^error:\s+\w+ failed$').hasMatch(lower)) {
+      return t.errorParse;
+    }
+
     // SymEngine parser couldn't make sense of the expression.
     if (lower.contains('parse failed') ||
         lower.contains('parseerror') ||
