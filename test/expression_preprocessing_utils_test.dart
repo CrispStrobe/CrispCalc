@@ -22,10 +22,37 @@ void main() {
     });
 
     test('leaves non-matrix bracketed lists alone', () {
+      // This used to assert `[1.2,3]` — the decimal-comma rule rewrote
+      // the first separator, contradicting the test's own name. A comma
+      // inside brackets separates elements, so it is left alone now.
       expect(
         ExpressionPreprocessingUtils.preprocessNativeExpression('[1,2,3]'),
-        equals('[1.2,3]'), // see decimal-comma rule below
+        equals('[1,2,3]'),
       );
+    });
+
+    test('commas inside a call stay separators, not decimal points', () {
+      // `gcd(12,18)` became `gcd(12.18)` — two arguments silently merged
+      // into one decimal, with no error anywhere.
+      String pre(String s) =>
+          ExpressionPreprocessingUtils.preprocessNativeExpression(s);
+      expect(pre('gcd(12,18)'), 'gcd(12,18)');
+      expect(pre('max(1,2)'), 'max(1,2)');
+      expect(pre('atan2(1,2)'), 'atan2(1,2)');
+      expect(pre('Matrix([[1,2],[3,4]])'), 'Matrix([[1,2],[3,4]])');
+    });
+
+    test('a function name ending in a digit is not split', () {
+      // `log10(1000)` became `log10*(1000)` — the symbol `log10` times
+      // 1000, which rendered as the nonsense result `1000log10`.
+      String pre(String s) =>
+          ExpressionPreprocessingUtils.preprocessNativeExpression(s);
+      expect(pre('log10(1000)'), 'log10(1000)');
+      expect(pre('log2(8)'), 'log2(8)');
+      expect(pre('atan2(1, 2)'), 'atan2(1, 2)');
+      // Real implicit multiplication still applies.
+      expect(pre('2(x+1)'), '2*(x+1)');
+      expect(pre('(x+1)(x-1)'), '(x+1)*(x-1)');
     });
 
     test('converts German decimal comma to dot between digits', () {

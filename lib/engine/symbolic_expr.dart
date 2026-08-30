@@ -44,6 +44,7 @@
 // the Notepad tell "you are still typing" (`2 +`) apart from "this is
 // wrong" (`foo(1)`) without a second grammar to keep in sync.
 
+import 'function_reference.dart';
 import 'polynomial.dart' show Rational;
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,12 @@ enum ExpressionProblem {
 
   /// Called something that isn't a known function — `foo(1)`.
   unknownFunction,
+
+  /// A function the app really does have (`taylor`, `besselj`, …) that
+  /// this pure-Dart layer can't evaluate. Deliberately distinct from
+  /// [unknownFunction]: telling someone `taylor` doesn't exist would be
+  /// a lie, so callers keep whatever the real engine said instead.
+  unsupportedFunction,
 
   /// An exact division (or `0^-n`) by zero — `1/0`, `x/0`.
   divisionByZero,
@@ -148,6 +155,14 @@ const Map<String, Set<int>> kKnownFunctions = {
   'conjugate': {1},
   're': {1},
   'im': {1},
+};
+
+/// Every function name the app documents anywhere, from its own
+/// reference catalogue. Used only to avoid claiming a real function is
+/// unknown — being over-inclusive here is the safe direction.
+final Set<String> _appFunctionNames = {
+  ...kKnownFunctions.keys,
+  ...FunctionReferences.all.map((f) => f.id),
 };
 
 /// Symbols with a reserved mathematical meaning. They parse as plain
@@ -487,9 +502,51 @@ Rational? _powRational(Rational b, Rational e) {
   return n > BigInt.zero ? Rational(num, den) : Rational(den, num);
 }
 
+/// Functions whose value is an ordinary number whenever their
+/// arguments are numbers. Leaving one of these unevaluated would print
+/// `gcd(12, 18)` as if that were the answer, which reads like a result
+/// rather than a failure — so when the fold below can't produce a value
+/// for a fully numeric call, the whole expression is refused instead.
+const Set<String> _mustFoldWhenNumeric = {
+  'gcd',
+  'lcm',
+  'mod',
+  'floor',
+  'ceiling',
+  'ceil',
+  'round',
+  'sign',
+  'abs',
+  'min',
+  'max',
+  'factorial',
+};
+
+/// Logarithms, which are undefined at zero and below. `ln(2)` is left
+/// as an exact symbolic form (like `sqrt(2)`), but `ln(0)` must not be
+/// echoed back as though it were a value.
+const Set<String> _logFunctions = {'ln', 'log', 'log2', 'log10'};
+
 /// Exactly-representable function values only. Returns null to leave
 /// the call symbolic.
 SymExpr? _foldExactCall(String name, List<SymExpr> args) {
+  if (args.length == 1 &&
+      args.first is SymNum &&
+      _logFunctions.contains(name)) {
+    final v = (args.first as SymNum).value;
+    if (v.sign <= 0) {
+      throw SymbolicException(ExpressionProblem.malformed, name: name);
+    }
+  }
+  if (args.every((a) => a is SymNum)) {
+    final vals = args.map((a) => (a as SymNum).value).toList();
+    final folded = _foldNumericCall(name, vals);
+    if (folded != null) return folded;
+    if (_mustFoldWhenNumeric.contains(name)) {
+      // e.g. `ln(0)` (undefined) or `gcd(1/2, 3)` (not integers).
+      throw SymbolicException(ExpressionProblem.malformed, name: name);
+    }
+  }
   if (args.length == 1 && args.first is SymNum) {
     final v = (args.first as SymNum).value;
     switch (name) {
@@ -520,6 +577,122 @@ SymExpr? _foldExactCall(String name, List<SymExpr> args) {
       case 'log':
         return v == Rational.one ? SymNum.zero : null;
     }
+  }
+  return null;
+}
+
+/// Exact value of [name] applied to rational [v], or null when there
+/// isn't one (the caller decides whether that is fatal).
+SymNum? _foldNumericCall(String name, List<Rational> v) {
+  BigInt? asInt(Rational r) => r.isInteger ? r.numerator : null;
+
+  if (v.length == 2) {
+    final a = asInt(v[0]), b = asInt(v[1]);
+    switch (name) {
+      case 'gcd':
+        if (a == null || b == null) return null;
+        return SymNum(Rational(a.gcd(b), BigInt.one));
+      case 'lcm':
+        if (a == null || b == null) return null;
+        if (a == BigInt.zero || b == BigInt.zero) {
+          return SymNum(Rational.zero);
+        }
+        return SymNum(Rational((a * b).abs() ~/ a.gcd(b), BigInt.one));
+      case 'mod':
+        if (a == null || b == null || b == BigInt.zero) return null;
+        return SymNum(Rational(a.remainder(b), BigInt.one));
+      case 'min':
+        return SymNum(_lessThan(v[0], v[1]) ? v[0] : v[1]);
+      case 'max':
+        return SymNum(_lessThan(v[0], v[1]) ? v[1] : v[0]);
+    }
+    return null;
+  }
+  if (v.length != 1) {
+    if (name == 'min' || name == 'max') {
+      var best = v.first;
+      for (final x in v) {
+        if (name == 'min' ? _lessThan(x, best) : _lessThan(best, x)) best = x;
+      }
+      return SymNum(best);
+    }
+    return null;
+  }
+
+  final x = v.first;
+  switch (name) {
+    case 'abs':
+      return SymNum(x.abs);
+    case 'sign':
+      return SymNum(Rational.fromInt(x.sign));
+    case 'floor':
+      return SymNum(
+          Rational(_floorDiv(x.numerator, x.denominator), BigInt.one));
+    case 'ceiling':
+    case 'ceil':
+      return SymNum(
+          Rational(-_floorDiv(-x.numerator, x.denominator), BigInt.one));
+    case 'round':
+      // Half away from zero, matching the app's `round(2.5) == 3`.
+      // x >= 0: floor((2n + d) / 2d);  x < 0: -floor((-2n + d) / 2d).
+      final n2 = x.numerator * BigInt.two;
+      final d2 = x.denominator * BigInt.two;
+      final r = x.sign < 0
+          ? -_floorDiv(-n2 + x.denominator, d2)
+          : _floorDiv(n2 + x.denominator, d2);
+      return SymNum(Rational(r, BigInt.one));
+    case 'factorial':
+      final n = asInt(x);
+      if (n == null || n < BigInt.zero || n > BigInt.from(2000)) return null;
+      var acc = BigInt.one;
+      for (var i = BigInt.two; i <= n; i += BigInt.one) {
+        acc *= i;
+      }
+      return SymNum(Rational(acc, BigInt.one));
+    case 'log2':
+      return _exactLog(x, BigInt.two);
+    case 'log10':
+      return _exactLog(x, BigInt.from(10));
+  }
+  return null;
+}
+
+/// `a < b` for two rationals. [Rational] carries a positive denominator
+/// (its constructor normalizes the sign), so cross-multiplying is safe.
+bool _lessThan(Rational a, Rational b) =>
+    a.numerator * b.denominator < b.numerator * a.denominator;
+
+/// Floor of an exact integer division, for possibly-negative operands.
+BigInt _floorDiv(BigInt a, BigInt b) {
+  final q = a ~/ b;
+  return (a.remainder(b) != BigInt.zero && (a.sign * b.sign) < 0)
+      ? q - BigInt.one
+      : q;
+}
+
+/// `log_base(v)` when it is an exact integer (`log10(1000)` -> 3),
+/// else null. Negative exponents count too: `log10(1/100)` -> -2.
+SymNum? _exactLog(Rational v, BigInt base) {
+  if (v.isZero || v.sign < 0) return null;
+  BigInt? exponentOf(BigInt n) {
+    if (n < BigInt.one) return null;
+    var e = 0, cur = BigInt.one;
+    while (cur < n) {
+      cur *= base;
+      e++;
+      if (e > 4096) return null;
+    }
+    return cur == n ? BigInt.from(e) : null;
+  }
+
+  if (v.isInteger) {
+    final e = exponentOf(v.numerator);
+    return e == null ? null : SymNum(Rational(e, BigInt.one));
+  }
+  // 1/base^k
+  if (v.numerator == BigInt.one) {
+    final e = exponentOf(v.denominator);
+    return e == null ? null : SymNum(Rational(-e, BigInt.one));
   }
   return null;
 }
@@ -821,7 +994,12 @@ class SymParser {
     }
     final arities = kKnownFunctions[name];
     if (arities == null) {
-      throw SymbolicException(ExpressionProblem.unknownFunction, name: name);
+      throw SymbolicException(
+        _appFunctionNames.contains(name)
+            ? ExpressionProblem.unsupportedFunction
+            : ExpressionProblem.unknownFunction,
+        name: name,
+      );
     }
     if (!arities.contains(args.length)) {
       throw SymbolicException(ExpressionProblem.wrongArity, name: name);
@@ -1132,6 +1310,10 @@ String? engineErrorForDiagnosis(ExpressionDiagnosis d) {
   switch (d.problem) {
     case ExpressionProblem.none:
     case ExpressionProblem.incomplete:
+    // The function exists; this layer just can't do it. Returning null
+    // leaves the real engine's own error in place rather than
+    // overwriting it with a wrong explanation.
+    case ExpressionProblem.unsupportedFunction:
       return null;
     case ExpressionProblem.unbalancedClose:
       return 'Error: unbalanced parenthesis';

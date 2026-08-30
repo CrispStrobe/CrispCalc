@@ -58,6 +58,33 @@ class ExpressionPreprocessingUtils {
     }
   }
 
+  /// Rewrite a German decimal comma (`1,5`) to a period, but only when
+  /// the comma sits outside every bracket. A comma inside `(...)`,
+  /// `[...]` or `{...}` is an argument or matrix-row separator — see
+  /// the call site for what rewriting those did.
+  static String _germanDecimalComma(String s) {
+    final buf = StringBuffer();
+    var depth = 0;
+    for (var i = 0; i < s.length; i++) {
+      final c = s[i];
+      if (c == '(' || c == '[' || c == '{') depth++;
+      if (c == ')' || c == ']' || c == '}') depth--;
+      final isDecimalComma = c == ',' &&
+          depth == 0 &&
+          i > 0 &&
+          i + 1 < s.length &&
+          _isAsciiDigit(s[i - 1]) &&
+          _isAsciiDigit(s[i + 1]);
+      buf.write(isDecimalComma ? '.' : c);
+    }
+    return buf.toString();
+  }
+
+  static bool _isAsciiDigit(String c) {
+    final u = c.codeUnitAt(0);
+    return u >= 48 && u <= 57;
+  }
+
   static String preprocessNativeExpression(String expression) {
     var p = expression;
 
@@ -85,11 +112,20 @@ class ExpressionPreprocessingUtils {
       return match.group(0)!;
     });
 
-    // German decimal comma -> period (but only between digits).
-    p = p.replaceAllMapped(RegExp(r'(\d),(\d)'), (m) => '${m[1]!}.${m[2]!}');
+    // German decimal comma -> period. Only at bracket depth 0: inside
+    // brackets a comma separates arguments or matrix rows, and rewriting
+    // it merged two arguments into one decimal with no error at all —
+    // `gcd(12,18)` became `gcd(12.18)` and `Matrix([[1,2],[3,4]])` became
+    // `Matrix([[1.2],[3.4]])`.
+    p = _germanDecimalComma(p);
 
-    // Implicit multiplication.
-    p = p.replaceAllMapped(RegExp(r'(\d|\))(\()'), (m) => '${m[1]}*${m[2]}');
+    // Implicit multiplication. The digit must not be the tail of an
+    // identifier, or every function whose name ends in a digit gets
+    // split: `log10(1000)` became `log10*(1000)`, i.e. the symbol
+    // `log10` times 1000, which then rendered as `1000log10`.
+    p = p.replaceAllMapped(
+        RegExp(r'(?<![A-Za-z_]\d*)(\d)(\()'), (m) => '${m[1]}*${m[2]}');
+    p = p.replaceAllMapped(RegExp(r'(\))(\()'), (m) => '${m[1]}*${m[2]}');
     p = p.replaceAllMapped(
         RegExp(r'(\b[a-zA-Z]\b)(\()'), (m) => '${m[1]}*${m[2]}');
     p = p.replaceAllMapped(

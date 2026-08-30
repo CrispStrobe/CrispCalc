@@ -86,6 +86,21 @@ const _cases = <Expectation>[
   Expectation('factor(x^2 - 1)', result: '(1 + x)*(-1 + x)'),
   Expectation('simplify(x/x)', result: '1'),
 
+  // --- a comma inside a call used to be rewritten as a decimal point,
+  //     silently merging two arguments: `gcd(12,18)` -> `gcd(12.18)`,
+  //     `Matrix([[1,2],[3,4]])` -> `Matrix([[1.2],[3.4]])` (which is
+  //     also what broke det()).
+  Expectation('gcd(12, 18)', result: '6'),
+  Expectation('lcm(4, 6)', result: '12'),
+  Expectation('Matrix([[1,2],[3,4]])', result: 'Matrix([[1, 2], [3, 4]])'),
+  Expectation('det(Matrix([[1,2],[3,4]]))', result: '-2'),
+
+  // --- a function name ending in a digit used to be split by the
+  //     implicit-multiplication rule: `log10(1000)` -> `log10*(1000)`,
+  //     which rendered as the nonsense result `1000log10`.
+  Expectation('log10(1000)', result: '3'),
+  Expectation('log2(8)', result: '3'),
+
   // --- units
   Expectation('5 km + 3 m', result: '5.003 km'),
   Expectation('100 km in miles', result: '62.1371192237 mi'),

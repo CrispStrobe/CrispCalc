@@ -202,6 +202,71 @@ void main() {
     });
   });
 
+  group('numeric calls fold to a number, never echo', () {
+    // Echoing `gcd(12, 18)` back reads like an answer rather than a
+    // failure, so a numeric call either produces a value or is refused.
+    test('integer functions', () {
+      expect(ev('gcd(12, 18)'), '6');
+      expect(ev('lcm(4, 6)'), '12');
+      expect(ev('mod(17, 5)'), '2');
+      expect(ev('min(3, 7)'), '3');
+      expect(ev('max(3, 7)'), '7');
+      expect(ev('factorial(5)'), '120');
+    });
+
+    test('rounding family', () {
+      expect(ev('floor(2.7)'), '2');
+      expect(ev('floor(-2.3)'), '-3');
+      expect(ev('ceiling(2.3)'), '3');
+      expect(ev('ceiling(-2.7)'), '-2');
+      expect(ev('round(2.5)'), '3');
+      expect(ev('round(-2.5)'), '-3');
+      expect(ev('round(2.4)'), '2');
+    });
+
+    test('exact logarithms', () {
+      expect(ev('log10(1000)'), '3');
+      expect(ev('log2(8)'), '3');
+      expect(ev('log10(1/100)'), '-2');
+    });
+
+    test('undefined or inexact numeric calls are refused, not echoed', () {
+      expect(ev('ln(0)'), isNull);
+      expect(ev('log10(0)'), isNull);
+      expect(ev('gcd(1/2, 3)'), isNull);
+      // A positive log with no exact value stays symbolic, like sqrt(2).
+      expect(ev('log10(50)'), 'log10(50)');
+      expect(ev('ln(2)'), 'ln(2)');
+    });
+
+    test('symbolic arguments still stay symbolic', () {
+      expect(ev('gcd(x, y)'), 'gcd(x, y)');
+      expect(ev('max(x, 1)'), 'max(x, 1)');
+    });
+  });
+
+  group('unknown vs merely unsupported functions', () {
+    test('a genuine typo is reported as unknown', () {
+      final d = SymbolicExpressionEvaluator.diagnose('sinn(x)');
+      expect(d.problem, ExpressionProblem.unknownFunction);
+      expect(d.name, 'sinn');
+      expect(engineErrorForDiagnosis(d), contains('unknown function sinn'));
+    });
+
+    test('a real app function this layer cannot do is not called unknown', () {
+      // `taylor` and `besselj` are in the app's own catalogue. Saying
+      // they do not exist would be a lie, so nothing is claimed and the
+      // real engine keeps its own error.
+      for (final name in ['taylor', 'besselj', 'factorint', 'zeta']) {
+        final d = SymbolicExpressionEvaluator.diagnose('$name(x)');
+        expect(d.problem, ExpressionProblem.unsupportedFunction,
+            reason: '$name is a documented app function');
+        expect(engineErrorForDiagnosis(d), isNull,
+            reason: 'nothing should be claimed about $name');
+      }
+    });
+  });
+
   group('correct-or-silent', () {
     test('unparseable input yields null, never a guess', () {
       expect(ev('2 +'), isNull);
