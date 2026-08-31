@@ -69,7 +69,8 @@ const _cases = <Expectation>[
   //     so each is answered by the pure-Dart symbolic layer.
   Expectation('x + 1', result: 'x + 1'),
   Expectation('sin(x)', result: 'sin(x)'),
-  Expectation('x*y', result: 'xy'),
+  // Never `xy` — that reads back as a single symbol named `xy`.
+  Expectation('x*y', result: 'x*y'),
   Expectation('1/x', result: '1/x'),
   Expectation('sqrt(x)', result: 'sqrt(x)'),
   Expectation('abc', result: 'abc'),
@@ -81,10 +82,19 @@ const _cases = <Expectation>[
   // --- CAS calls, including the unary-minus display fix: these used to
   //     render as `x = {2, - 2}` and `(1 + x)*( - 1 + x)`.
   Expectation('diff(x^3, x)', result: '3x²'),
-  Expectation('expand((x+1)^2)', result: '1 + 2x + x²'),
+  Expectation('expand((x+1)^2)', result: 'x² + 2x + 1'),
   Expectation('solve(x^2 - 4, x)', result: 'x = {2, -2}'),
-  Expectation('factor(x^2 - 1)', result: '(1 + x)*(-1 + x)'),
+  Expectation('factor(x^2 - 1)', result: '(x - 1)*(x + 1)'),
   Expectation('simplify(x/x)', result: '1'),
+
+  // --- one reading order across every CAS surface. expand() used to
+  //     print low-degree-first while diff() printed high-degree-first,
+  //     and integrate() produced the ambiguous `1/3x^3 + C`.
+  Expectation('expand((x+1)^3)', result: 'x³ + 3x² + 3x + 1'),
+  Expectation('expand((x+y)^2)', result: 'x² + 2*x*y + y²'),
+  Expectation('diff(x^2 + 3x, x)', result: '2x + 3'),
+  Expectation('integrate(x^2, x)', result: 'x³/3 + C'),
+  Expectation('x^2 + 2x + 1', result: 'x² + 2x + 1'),
 
   // --- a comma inside a call used to be rewritten as a decimal point,
   //     silently merging two arguments: `gcd(12,18)` -> `gcd(12.18)`,

@@ -38,7 +38,7 @@ const _sheet = <(String, String?)>[
   ('1/x', '0.2'),
   // Free symbols never bound in the sheet: the WASM bridge throws on
   // these, so they are answered by the pure-Dart symbolic layer.
-  ('a*b + b*a', '2ab'),
+  ('a*b + b*a', '2*a*b'),
   ('---', null),
   ('## Units', null),
   ('5 km + 3 m', '5.003 km'),

@@ -120,7 +120,8 @@ void main() {
     const expected = {
       'x + 1': 'x + 1',
       'sin(x)': 'sin(x)',
-      'x*y': 'xy',
+      // Never `xy`: that reads back as one symbol named `xy`.
+      'x*y': 'x*y',
       '1/x': '1/x',
       'sqrt(x)': 'sqrt(x)',
       'abc': 'abc',

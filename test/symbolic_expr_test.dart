@@ -67,9 +67,9 @@ void main() {
     });
 
     test('multiple symbols', () {
-      expect(ev('x*y'), 'xy');
-      expect(ev('2*x*y'), '2xy');
-      expect(ev('x*y + y*x'), '2xy');
+      expect(ev('x*y'), 'x*y');
+      expect(ev('2*x*y'), '2*x*y');
+      expect(ev('x*y + y*x'), '2*x*y');
     });
 
     test('reciprocals render as division', () {
@@ -109,8 +109,8 @@ void main() {
     test('multi-letter symbols work like single-letter ones', () {
       // The native bridge rejects `abc` on web; the fallback must not.
       expect(ev('abc'), 'abc');
-      expect(ev('abc + abc'), '2abc');
-      expect(ev('foo_bar * 2'), '2foo_bar');
+      expect(ev('abc + abc'), '2*abc');
+      expect(ev('foo_bar * 2'), '2*foo_bar');
     });
 
     test('exactly-representable function values fold', () {
@@ -131,12 +131,13 @@ void main() {
     test('implicit multiplication', () {
       expect(ev('2x'), '2x');
       expect(ev('2(x+1)'), '2*(x + 1)');
-      expect(ev('x y'), 'xy');
+      expect(ev('x y'), 'x*y');
     });
 
     test('constants stay symbolic', () {
       expect(ev('pi'), 'pi');
-      expect(ev('2pi'), '2pi');
+      // Multi-letter names keep the `*`, same as `2*sin`.
+      expect(ev('2pi'), '2*pi');
     });
   });
 
@@ -276,11 +277,65 @@ void main() {
       expect(ev(''), isNull);
     });
 
+    test(
+        'rendered output re-parses to the SAME EXPRESSION, not just the '
+        'same text', () {
+      // A string-stability check is not enough. `x*y` was rendered as
+      // `xy`, which is stable text but re-parses as a single symbol
+      // named `xy` — a different expression. Results are read back
+      // (via `Ans`, via line references), so this has to compare
+      // meaning, and the canonical `key` is that comparison.
+      const inputs = [
+        'x*y',
+        'x*y*z',
+        '2*x*y',
+        'x^2*y',
+        '3*a*b',
+        'x*y + 1',
+        'x + 1',
+        'x^2 + 2x + 1',
+        '1/x',
+        'x/y',
+        'sin(x) + x',
+        '3/(2x)',
+        '2*(x + 1)',
+        '-x + 1',
+        'x*sin(x)',
+        'a/b/c',
+        'x^2 + 2*x*y + y^2',
+      ];
+      for (final input in inputs) {
+        final tree = SymbolicExpressionEvaluator.tryParse(input);
+        expect(tree, isNotNull, reason: 'failed to parse $input');
+        final rendered = renderSymExpr(tree!);
+        final reparsed = SymbolicExpressionEvaluator.tryParse(rendered);
+        expect(reparsed, isNotNull, reason: '"$rendered" did not re-parse');
+        expect(reparsed!.key, tree.key,
+            reason: '"$input" rendered as "$rendered", which is a '
+                'DIFFERENT expression');
+      }
+    });
+
+    test('two symbols are never glued together', () {
+      // `xy` would be read back as one identifier.
+      expect(ev('x*y'), 'x*y');
+      expect(ev('2*x*y'), '2*x*y');
+      expect(ev('x^2*y'), 'x^2*y');
+      // A coefficient on a single factor is still glued — a digit
+      // cannot start an identifier, so `2x` is unambiguous.
+      expect(ev('2*x'), '2x');
+      expect(ev('2*x^2'), '2x^2');
+    });
+
+    test('multivariate terms are ordered like a textbook', () {
+      expect(ev('2*x*y + x^2 + y^2'), 'x^2 + 2*x*y + y^2');
+      expect(ev('y^2 + x^2'), 'x^2 + y^2');
+    });
+
     test('round-trip: rendering a result re-parses to the same value', () {
       const inputs = [
         'x + 1',
         'x^2 + 2x + 1',
-        'x*y',
         '1/x',
         'x/y',
         'sin(x) + x',

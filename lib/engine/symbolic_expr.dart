@@ -724,13 +724,53 @@ int _displayRank(SymExpr e) {
   return 0;
 }
 
-/// Display order: higher degree first, then rank, then a stable key
-/// comparison so output never flickers between runs.
+/// Exponent-per-symbol for a plain monomial (`2x^2y` -> {x: 2, y: 1}),
+/// or null when [e] isn't one (it contains a call, a sum, or a
+/// non-integer power). Used to order multivariate terms the way a
+/// textbook does.
+Map<String, int>? _monomial(SymExpr e) {
+  final out = <String, int>{};
+  bool walk(SymExpr node) {
+    if (node is SymNum) return true;
+    if (node is SymSym) {
+      out[node.name] = (out[node.name] ?? 0) + 1;
+      return true;
+    }
+    if (node is SymMul) return node.factors.every(walk);
+    if (node is SymPow) {
+      final base = node.base, exp = node.exponent;
+      if (base is! SymSym || exp is! SymNum || !exp.value.isInteger) {
+        return false;
+      }
+      final n = exp.value.numerator.toInt();
+      out[base.name] = (out[base.name] ?? 0) + n;
+      return true;
+    }
+    return false;
+  }
+
+  return walk(e) ? out : null;
+}
+
+/// Display order: highest total degree first, then — for equal degree —
+/// lexicographic on the exponent vector so `x^2 + 2xy + y^2` comes out
+/// in that order rather than interleaved by an incidental string
+/// comparison. Ties fall back to the structural key so output never
+/// flickers between runs.
 int _compareForDisplay(SymExpr a, SymExpr b) {
   final r = _displayRank(a).compareTo(_displayRank(b));
   if (r != 0) return r;
   final d = b.sortDegree.compareTo(a.sortDegree);
   if (d != 0) return d;
+
+  final ma = _monomial(a), mb = _monomial(b);
+  if (ma != null && mb != null) {
+    final names = <String>{...ma.keys, ...mb.keys}.toList()..sort();
+    for (final n in names) {
+      final ea = ma[n] ?? 0, eb = mb[n] ?? 0;
+      if (ea != eb) return eb.compareTo(ea); // higher exponent first
+    }
+  }
   return a.key.compareTo(b.key);
 }
 
@@ -1098,6 +1138,15 @@ String _renderPow(SymPow p) {
   return '${_atom(p.base)}^${_atom(exp)}';
 }
 
+/// Whether [e]'s symbol name is a single letter, so a coefficient can
+/// be written against it without the result reading as a longer name.
+bool _singleLetterBase(SymExpr e) {
+  final name = e is SymSym
+      ? e.name
+      : (e is SymPow && e.base is SymSym ? (e.base as SymSym).name : null);
+  return name != null && name.length == 1;
+}
+
 /// True when [e] is a factor that reads correctly when juxtaposed
 /// directly against its neighbours (`x`, `x^2`) rather than needing an
 /// explicit `*` (`sin(x)`, `(x + 1)`).
@@ -1121,28 +1170,21 @@ bool _tightAtom(SymExpr e) => _juxtaposable(e) || e is SymCall;
 /// joined with an explicit `*` (`2x*sin(x)`).
 String _renderProduct(List<SymExpr> factors, BigInt lead) {
   final sorted = factors.toList()..sort(_compareForDisplay);
-  final mono = StringBuffer();
-  final loose = <String>[];
-  for (final f in sorted) {
-    if (_juxtaposable(f)) {
-      mono.write(renderSymExpr(f));
-    } else {
-      loose.add(_atom(f));
-    }
-  }
-  final chunks = <String>[];
-  final hasFactors = mono.isNotEmpty || loose.isNotEmpty;
-  if (lead != BigInt.one || !hasFactors) chunks.add('$lead');
-  if (mono.isNotEmpty) {
-    // An integer coefficient juxtaposes directly onto the monomial.
-    if (chunks.isNotEmpty) {
-      chunks[0] = '${chunks[0]}$mono';
-    } else {
-      chunks.add(mono.toString());
-    }
-  }
-  chunks.addAll(loose);
-  return chunks.isEmpty ? '1' : chunks.join('*');
+  final parts = [for (final f in sorted) _atom(f)];
+
+  // A coefficient may be glued to a single *one-letter* factor (`2x`,
+  // `2x^2`). Two symbols may NOT be glued: `x*y` written as `xy`
+  // re-parses as one identifier named `xy`, and results are read back —
+  // through `Ans`, through a line reference — so that silently becomes
+  // a different expression. A multi-letter name keeps its `*` too
+  // (`2*abc`, `2*sin`), matching the convention the display layer
+  // already uses for exactly that reason.
+  final gluable = sorted.length == 1 &&
+      _juxtaposable(sorted.first) &&
+      _singleLetterBase(sorted.first);
+  if (parts.isEmpty) return '$lead';
+  if (lead == BigInt.one) return parts.join('*');
+  return gluable ? '$lead${parts.first}' : '$lead*${parts.join('*')}';
 }
 
 String _renderMul(SymMul m) {

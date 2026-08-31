@@ -8,6 +8,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../engine/app_state.dart';
+import '../engine/cas_result_format.dart';
 import '../engine/vector_math.dart';
 
 class ExpressionPreprocessingUtils {
@@ -936,6 +937,14 @@ class ExpressionPreprocessingUtils {
         .replaceAll(RegExp(r'\s*\+\s*0\.0\s*\*\s*I\s*\*\s*\d+'), '')
         .replaceAll(RegExp(r'^\s*0(\.0*)?\s*\*\s*I\s*$'), '0');
 
+    // One reading order for every symbolic result, whichever backend
+    // produced it — see `cas_result_format.dart`. Runs here, after the
+    // zero-imaginary parts are gone but before any display sugar, since
+    // it needs plain `^`/`*` text to work with. Returns its input
+    // untouched for anything it can't rewrite safely, which includes
+    // every numeric result.
+    normalized = canonicalizeCasResult(normalized);
+
     // I -> i for display. Use replaceAllMapped — Dart's plain
     // `replaceAll(RegExp, String)` doesn't interpret `\1`-style
     // back-references; pass-through would otherwise emit the
@@ -999,11 +1008,17 @@ class ExpressionPreprocessingUtils {
       normalized = normalized.substring(0, normalized.length - 2).trim();
     }
 
-    // Python-style exponents for nicer display.
+    // Superscripts for nicer display. Both spellings of the power
+    // operator are handled: SymEngine emits `**`, while the pure-Dart
+    // symbolic layer and the canonicalizer emit `^`, and the two used
+    // to render differently (`x²` vs `x^2`) for the same algebra.
+    // The lookahead stops `x^21` from becoming `x²1`.
     normalized = normalized
         .replaceAll('**2', '²')
         .replaceAll('**3', '³')
-        .replaceAllMapped(RegExp(r'\*\*(\d+)'), (m) => '^${m.group(1)}');
+        .replaceAllMapped(RegExp(r'\*\*(\d+)'), (m) => '^${m.group(1)}')
+        .replaceAll(RegExp(r'\^2(?!\d)'), '²')
+        .replaceAll(RegExp(r'\^3(?!\d)'), '³');
 
     // Drop the `*` between a coefficient and a single-letter
     // variable. The negative lookahead must include `[a-zA-Z]` so

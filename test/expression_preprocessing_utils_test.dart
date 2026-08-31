@@ -241,7 +241,17 @@ void main() {
     });
 
     test('sign after an opening parenthesis stays glued', () {
-      expect(norm('(1 + x)*(-1 + x)'), '(1 + x)*(-1 + x)');
+      // Wrapped in an equation so the canonicalizer leaves the text
+      // alone and this isolates the minus-spacing rule. (On a bare
+      // expression the canonicalizer would also reorder the factors —
+      // see the case below.)
+      expect(norm('y = (1 + x)*(-1 + x)'), 'y = (1 + x)*(-1 + x)');
+    });
+
+    test('a bare factorisation is also put in canonical order', () {
+      // End-to-end: spacing plus the reordering from
+      // `cas_result_format.dart`.
+      expect(norm('(1 + x)*(-1 + x)'), '(x - 1)*(x + 1)');
     });
 
     test('sign after a bracket stays glued', () {
@@ -250,9 +260,17 @@ void main() {
 
     test('binary minus is still spaced', () {
       expect(norm('x-1'), 'x - 1');
-      expect(norm('5-2'), '5 - 2');
+      // Equation-wrapped so only the spacing rule is under test; a bare
+      // `a-b-c` is canonical already but `5-2` and `(x+1)-2` would be
+      // folded to their values by the canonicalizer.
+      expect(norm('y = 5-2'), 'y = 5 - 2');
       expect(norm('a-b-c'), 'a - b - c');
-      expect(norm('(x+1)-2'), '(x + 1) - 2');
+      expect(norm('y = (x+1)-2'), 'y = (x + 1) - 2');
+    });
+
+    test('a bare arithmetic result is folded, not just spaced', () {
+      // `(x+1)-2` really is `x - 1`; canonicalizing says so.
+      expect(norm('(x+1)-2'), 'x - 1');
     });
 
     test('leading unary minus stays glued', () {
